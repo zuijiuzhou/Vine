@@ -6,7 +6,8 @@ namespace etd{
     namespace ge{
         class ETD_GE_EXPORT Vector2d{
             public:
-            Vector2d(){};
+            Vector2d();
+            Vector2d(double xx, double yy);
             public:
             double length() const;
             public:
