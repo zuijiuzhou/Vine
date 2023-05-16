@@ -1,4 +1,5 @@
 #include <ge/Vector3d.h>
+#include <ge/GeConsts.h>
 
 #include <ge/Vector2d.h>
 #include <ge/Point3d.h>
@@ -88,11 +89,15 @@ namespace etd
             {
                 return 0.;
             }
-            return acos(dotProduct(vec) / (length() * vec.length()));
+            return acos((*this * vec) / (length() * vec.length()));
         }
         double Vector3d::angleTo(const Vector3d &vec, const Vector3d &refVec)
         {
-            return 0.;
+            auto rad = angleTo(vec);
+            if((*this ^ vec) * refVec > 0.){
+                    return rad;
+            }
+            return PIx2 - rad;
         }
 
         double Vector3d::length() const
@@ -193,6 +198,12 @@ namespace etd
             y /= scale;
             z /= scale;
             return *this;
+        }
+        Vector3d Vector3d::operator ^(const Vector3d& vec) const{
+            return crossProduct(vec);
+        }
+        double Vector3d::operator *(const Vector3d& vec) const{
+            return dotProduct(vec);
         }
     }
 }

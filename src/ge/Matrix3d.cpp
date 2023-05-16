@@ -8,25 +8,25 @@ namespace etd
     {
         Matrix3d::Matrix3d()
         {
-            setToIdentity();
+            makeIdentity();
         }
-        void Matrix3d::setToIdentity()
+        void Matrix3d::makeIdentity()
         {
             data[2][3]=4;data[1][2]=5;
             // std::fill((double*)data, ((double*)data)+16, 0.0);
             memset(data, 0, sizeof(data));
             data[0][0] = data[1][1] = data[2][2] = data[3][3] = 1.0;
         }
-        void Matrix3d::setToRotation(const Point3d &center, const Vector3d &axis, double angle)
+        void Matrix3d::makeRotation(const Point3d &center, const Vector3d &axis, double angle)
         {
         }
-        void Matrix3d::setToTranslation(const Vector3d &offset)
+        void Matrix3d::makeTranslation(const Vector3d &offset)
         {
         }
-        void Matrix3d::setToTranslation(double x, double y, double z)
+        void Matrix3d::makeTranslation(double x, double y, double z)
         {
         }
-        void Matrix3d::setLookAt(const Point3d &eye, const Point3d &target, const Vector3d &up)
+        void Matrix3d::makeLookAt(const Point3d &eye, const Point3d &target, const Vector3d &up)
         {
         }
         void Matrix3d::setCoordSystem(const Vector3d &xAxis, const Vector3d &yAxis, const Vector3d &zAxis)
@@ -46,6 +46,13 @@ namespace etd
         void Matrix3d::invert()
         {
             
+        }
+
+        bool Matrix3d::isAffine() const{
+            return false;
+        }
+        void Matrix3d::isIdentity() const{
+
         }
 
         double Matrix3d::operator()(int row, int col) const

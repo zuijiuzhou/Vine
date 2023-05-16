@@ -5,19 +5,22 @@
 #include "Point3d.h"
 #include "Vector3d.h"
 
-namespace etd{
-    namespace ge{
-        class ETD_GE_EXPORT Line3d{
-            public:
+namespace etd
+{
+    namespace ge
+    {
+        class ETD_GE_EXPORT Line3d
+        {
+        public:
             Line3d(Point3d origin, Vector3d direction);
 
-            public:
+        public:
             Point3d origin() const;
             Vector3d direction() const;
 
-            bool intersectWith(const Line3d& line, Point3d& intersectionPt) const;
+            bool intersectWith(const Line3d &line, Point3d &intersectionPt) const;
 
-            public:
+        public:
             Point3d m_origin;
             Vector3d m_direction;
         };
