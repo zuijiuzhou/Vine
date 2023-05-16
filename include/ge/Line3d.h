@@ -7,7 +7,7 @@
 
 namespace etd{
     namespace ge{
-        class ETD_GE_EXPORT Line3d{
+        class ETD_GE_API Line3d{
             public:
             Line3d(Point3d origin, Vector3d direction);
 

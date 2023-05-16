@@ -7,7 +7,7 @@
 
 namespace etd{
     namespace ge{
-        class ETD_GE_EXPORT Plane{
+        class ETD_GE_API Plane{
             public:
             Plane(Point3d origin, Vector3d normal);
             public:

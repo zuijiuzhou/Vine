@@ -6,7 +6,7 @@ namespace etd{
     namespace ge{
         class Vector2d;
         class Line2d;
-        class ETD_GE_EXPORT Point2d{
+        class ETD_GE_API Point2d{
             public:
             Point2d();
             Point2d(double xx, double yy);

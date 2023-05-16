@@ -1,4 +1,4 @@
-﻿set(CURRENT_LIB_NAME EtdGe)
+set(CURRENT_LIB_NAME EtdAppfw)
 
 file(GLOB SRC_FILE_LIST LIST_DIRECTORIES false *.cpp)
 file(GLOB HEADER_FILE_LIST LIST_DIRECTORIES false *.h)
@@ -11,4 +11,4 @@ set_target_properties(${CURRENT_LIB_NAME} PROPERTIES OUTPUT_NAME_DEBUG ${CURRENT
 set_target_properties(${CURRENT_LIB_NAME} PROPERTIES OUTPUT_NAME_Release ${CURRENT_LIB_NAME})
 
 # add_compile_definitions(ETD_GE_LIB)
-target_compile_definitions(${CURRENT_LIB_NAME} PRIVATE ETD_GE_LIB)
+target_compile_definitions(${CURRENT_LIB_NAME} PRIVATE ETD_APPFW_LIB)

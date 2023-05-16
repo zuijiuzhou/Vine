@@ -9,7 +9,7 @@ namespace etd
         class Vector2d;
         class Point3d;
         class Matrix3d;
-        class ETD_GE_EXPORT Vector3d
+        class ETD_GE_API Vector3d
         {
         public:
             Vector3d();

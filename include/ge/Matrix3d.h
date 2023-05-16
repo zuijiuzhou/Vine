@@ -6,7 +6,7 @@ namespace etd{
     namespace ge{
         class Point3d;
         class Vector3d;
-        class ETD_GE_EXPORT Matrix3d{
+        class ETD_GE_API Matrix3d{
             public:
                 double data[4][4];
 

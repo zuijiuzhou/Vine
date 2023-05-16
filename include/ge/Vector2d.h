@@ -4,7 +4,7 @@
 
 namespace etd{
     namespace ge{
-        class ETD_GE_EXPORT Vector2d{
+        class ETD_GE_API Vector2d{
             public:
             Vector2d();
             Vector2d(double xx, double yy);

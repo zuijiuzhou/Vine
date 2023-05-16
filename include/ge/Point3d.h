@@ -9,7 +9,7 @@ namespace etd
         class Vector3d;
         class Line3d;
         class Plane;
-        class ETD_GE_EXPORT Point3d
+        class ETD_GE_API Point3d
         {
         public:
             Point3d();

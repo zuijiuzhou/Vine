@@ -13,7 +13,6 @@ namespace etd
             : x(xx), y(yy)
         {
         }
-
         const Vector2d& Point2d::asVector() const
         {
             return reinterpret_cast<const Vector2d&>(*this);
@@ -21,7 +20,6 @@ namespace etd
         Vector2d Point2d::toVector() const{
             return Vector2d(x, y);
         }
-
         double Point2d::distanceTo(const Point2d &pt) const
         {
             return sqrt(x * pt.x + y * pt.y);
@@ -29,9 +27,7 @@ namespace etd
         double Point2d::distanceTo(const Line2d &line) const
         {
             return 0.;
-        }
-
-        
+        }  
         bool Point2d::operator==(const Point2d &right) const
         {
             return x == right.x && y == right.y;
