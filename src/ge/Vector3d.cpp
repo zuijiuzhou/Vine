@@ -1,5 +1,5 @@
 #include <ge/Vector3d.h>
-#include <ge/GeConsts.h>
+#include <ge/Ge.h>
 
 #include <ge/Vector2d.h>
 #include <ge/Point3d.h>

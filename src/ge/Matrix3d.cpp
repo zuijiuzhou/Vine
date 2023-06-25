@@ -12,7 +12,8 @@ namespace etd
         }
         void Matrix3d::makeIdentity()
         {
-            data[2][3]=4;data[1][2]=5;
+            data[2][3] = 4;
+            data[1][2] = 5;
             // std::fill((double*)data, ((double*)data)+16, 0.0);
             memset(data, 0, sizeof(data));
             data[0][0] = data[1][1] = data[2][2] = data[3][3] = 1.0;
@@ -45,14 +46,15 @@ namespace etd
         }
         void Matrix3d::invert()
         {
-            
         }
 
-        bool Matrix3d::isAffine() const{
-            return false;
+        bool Matrix3d::isAffine() const
+        {
+            return true;
         }
-        void Matrix3d::isIdentity() const{
-
+        bool Matrix3d::isIdentity() const
+        {
+            return true;
         }
 
         double Matrix3d::operator()(int row, int col) const
@@ -64,14 +66,14 @@ namespace etd
             return data[row][col];
         }
         Matrix3d Matrix3d::operator*(const Matrix3d &right) const
-        {            
+        {
             Matrix3d m;
             return m;
         }
         Matrix3d &Matrix3d::operator*=(const Matrix3d &right) const
         {
             Matrix3d m;
-            return const_cast<Matrix3d&>(*this);
+            return const_cast<Matrix3d &>(*this);
         }
     }
 }

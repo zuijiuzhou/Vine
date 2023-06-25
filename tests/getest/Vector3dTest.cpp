@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <ge/Vector3d.h>
+#include <ge/GeConsts.h>
 
 using namespace etd::ge;
 
