@@ -4,5 +4,5 @@
 
 ETD_CORE_NS_BEGIN
 template <typename T>
-using Ptr = std::shared_ptr<T>;
+using SharedPtr = std::shared_ptr<T>;
 ETD_CORE_NS_END

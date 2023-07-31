@@ -1,10 +1,9 @@
 #include <QCoreApplication>
 
-#include "appfw/AddinManager.h"
-#include "appfw/ServiceManager.h"
-#include "appfw/CommandManager.h"
-
-#include "appfw/Application.h"
+#include <appfw/AddinManager.h>
+#include <appfw/ServiceManager.h>
+#include <appfw/CommandManager.h>
+#include <appfw/Application.h>
 
 ETD_APPFW_NS_BEGIN
 
@@ -12,9 +11,9 @@ static Application *s_current_app = nullptr;
 
 struct Application::Data
 {
-    Ptr<AddinManager> addin_manager;
-    Ptr<ServiceManager> service_manager;
-    Ptr<CommandManager> command_manager;
+    AddinManager::Ptr addin_manager;
+    ServiceManager::Ptr service_manager;
+    CommandManager::Ptr command_manager;
     QCoreApplication *app = nullptr;
 
     int argc;

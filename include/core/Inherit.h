@@ -1,5 +1,4 @@
 #pragma once
-
 #include "Object.h"
 
 ETD_CORE_NS_BEGIN
@@ -8,6 +7,8 @@ template <typename TParent, typename TSub>
     requires std::is_base_of<Object, TParent>::value
 class Inherit : public TParent
 {
+public:
+    using Ptr = SharedPtr<TSub>;
 
 public:
     template <typename... TArgs>
@@ -26,15 +27,15 @@ public:
     }
 
     template <typename... TArgs>
-    static Ptr<TSub> create(TArgs &&...args)
+    static Ptr create(TArgs &&...args)
     {
-        return Ptr<TSub>(new TSub(args...));
+        return Ptr(new TSub(args...));
     }
 
     template <typename... TArgs>
-    static Ptr<TSub> create_if(bool flag, TArgs &&...args)
+    static Ptr create_if(bool flag, TArgs &&...args)
     {
-        return Ptr<TSub>(flag ? new TSub(args...) : nullptr);
+        return Ptr(flag ? new TSub(args...) : nullptr);
     }
 };
 

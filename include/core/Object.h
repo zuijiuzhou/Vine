@@ -12,6 +12,9 @@ class Class;
 class ETD_CORE_API Object
 {
 public:
+    using Ptr = SharedPtr<Object>;
+
+public:
     virtual ~Object();
 
 public:
@@ -32,7 +35,5 @@ private:
     struct Data;
     Data *d_ptr;
 };
-
-using ObjectPtr = Ptr<Object>;
 
 ETD_CORE_NS_END
