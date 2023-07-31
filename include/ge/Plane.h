@@ -1,26 +1,18 @@
 #pragma once
 
-#include "etd_ge_export.h"
+#include "line3d.h"
 
-#include "Point3d.h"
-#include "Vector3d.h"
-
-namespace etd
+ETD_GE_NS_BEGIN
+class ETD_GE_API Plane
 {
-    namespace ge
-    {
-        class ETD_GE_API Plane
-        {
-        public:
-            Plane(Point3d origin, Vector3d normal);
+public:
+    Plane(Point3d origin, Vector3d normal);
 
-        public:
-            double origin() const;
-            double normal() const;
+public:
+    bool intersectWith(const Line3d &line, Point3d &intersectionPt, double tol) const;
 
-        public:
-            Point3d m_origin;
-            Vector3d m_normal;
-        };
-    }
-}
+public:
+    Point3d origin;
+    Vector3d normal;
+};
+ETD_GE_NS_END

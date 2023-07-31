@@ -1,15 +1,23 @@
-#include <QApplication>
-#include <QMainWindow>
-#include <appfw/application.h>
+#include <iostream>
+#include <array>
+#include <ctime>
+#include <vector>
+
+#include <appfw/gui/GuiApplication.h>
+#include <appfw/gui/MainWindow.h>
+
+
 
 int main(int argc, char** argv){
-    QApplication qapp(argc, argv);
 
-    etd::appfw::Application app;
-    
-    QMainWindow wnd;
-    wnd.show();
+    etd::appfw::gui::GuiApplication app(argc, argv);
+    app.init();
+    bool b = app.isKindOf<etd::Object>();
 
-    int code = qapp.exec();
-    return code;
+    auto wnd = new etd::appfw::gui::MainWindow();
+
+    wnd->show();
+
+
+    return app.run();
 }

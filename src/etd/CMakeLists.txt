@@ -13,7 +13,7 @@ qt_add_executable(${CURRENT_LIB_NAME} ${SRC_FILE_LIST} ${HEADER_FILE_LIST} ${RC_
 set_target_properties(${CURRENT_LIB_NAME} PROPERTIES WIN32_EXECUTABLE TRUE MACOSX_BUNDLE TRUE)
 set_target_properties(${CURRENT_LIB_NAME} PROPERTIES OUTPUT_NAME_DEBUG ${CURRENT_LIB_NAME}d)
 set_target_properties(${CURRENT_LIB_NAME} PROPERTIES OUTPUT_NAME_Release ${CURRENT_LIB_NAME})
-target_link_libraries(${CURRENT_LIB_NAME} PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets)
+target_link_libraries(${CURRENT_LIB_NAME} PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets EtdAppfwGui)
 
 add_custom_command(TARGET ${CURRENT_LIB_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
