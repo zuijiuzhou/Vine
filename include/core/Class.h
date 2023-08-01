@@ -16,6 +16,6 @@ public:
     bool isSubclassOf(const Class* cls) const;
 private:
     struct Data;
-    Data *d_ptr;
+    Data *d;
 };
 ETD_CORE_NS_END

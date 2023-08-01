@@ -10,26 +10,26 @@ struct GuiApplication::Data
 };
 
 GuiApplication::GuiApplication(int argc, char **argv)
-    : Inherit(argc, argv), d_ptr(new Data)
+    : Inherit(argc, argv), d(new Data)
 {
 }
 GuiApplication::~GuiApplication()
 {
-    delete d_ptr;
+    delete d;
 }
 
 void GuiApplication::init()
 {
-    if (d_ptr->app == nullptr)
+    if (d->app == nullptr)
     {
         int c = this->argc();
-        d_ptr->app = new QApplication(c, argv());
+        d->app = new QApplication(c, argv());
     }
 }
 
 int GuiApplication::run()
 {
-    return d_ptr->app->exec();
+    return d->app->exec();
 }
 
 ETD_APPFW_GUI_NS_END

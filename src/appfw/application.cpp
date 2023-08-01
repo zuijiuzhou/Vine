@@ -21,37 +21,37 @@ struct Application::Data
 };
 
 Application::Application(int argc, char **argv)
-    : d_ptr(new Data())
+    : d(new Data())
 {
     if (s_current_app)
     {
         throw std::exception("");
     }
     s_current_app = this;
-    d_ptr->addin_manager = AddinManager::create();
-    d_ptr->service_manager = ServiceManager::create();
-    d_ptr->command_manager = CommandManager::create();
-    d_ptr->argc = argc;
-    d_ptr->argv = argv;
+    d->addin_manager = AddinManager::create();
+    d->service_manager = ServiceManager::create();
+    d->command_manager = CommandManager::create();
+    d->argc = argc;
+    d->argv = argv;
 }
 
 Application::~Application()
 {
-    delete d_ptr;
+    delete d;
     s_current_app = nullptr;
 }
 
 void Application::init()
 {
-    if (d_ptr->app == nullptr)
+    if (d->app == nullptr)
     {
-        d_ptr->app = new QCoreApplication(d_ptr->argc, d_ptr->argv);
+        d->app = new QCoreApplication(d->argc, d->argv);
     }
 }
 
 int Application::run()
 {
-    return d_ptr->app->exec();
+    return d->app->exec();
 }
 
 void Application::exit(int code)
@@ -61,17 +61,17 @@ void Application::exit(int code)
 
 CommandManager *Application::commandManager() const
 {
-    return d_ptr->command_manager.get();
+    return d->command_manager.get();
 }
 
 AddinManager *Application::addinManager() const
 {
-    return d_ptr->addin_manager.get();
+    return d->addin_manager.get();
 }
 
 ServiceManager *Application::serviceManager() const
 {
-    return d_ptr->service_manager.get();
+    return d->service_manager.get();
 }
 
 Application *Application::current()
@@ -81,12 +81,12 @@ Application *Application::current()
 
 int Application::argc() const
 {
-    return d_ptr->argc;
+    return d->argc;
 }
 
 char **Application::argv() const
 {
-    return d_ptr->argv;
+    return d->argv;
 }
 
 ETD_APPFW_NS_END

@@ -11,21 +11,21 @@ struct MainWindow::Data{
 
 
 MainWindow::MainWindow()
-: d_ptr(new Data)
+: d(new Data)
 {
-    d_ptr->mwnd = new QMainWindow();
+    d->mwnd = new QMainWindow();
 }
 
 MainWindow::~MainWindow(){
-    delete d_ptr;
+    delete d;
 }
 
 void MainWindow::show(){
-    d_ptr->mwnd->show();
+    d->mwnd->show();
 }
 
 void MainWindow::close(){
-    d_ptr->mwnd->close();
+    d->mwnd->close();
 }
 
 ETD_APPFW_GUI_NS_END

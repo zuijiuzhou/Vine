@@ -11,7 +11,8 @@
 int main(int argc, char** argv){
 
     etd::appfw::gui::GuiApplication app(argc, argv);
-    etd::appfw::gui::GuiApplication::Ptr ptr;
+    etd::appfw::gui::GuiApplication::Ptr ptr(&app);
+    etd::RefPtr<etd::appfw::gui::GuiApplication> ref_ptr(&app);
     app.init();
     bool b = app.isKindOf<etd::Object>();
 

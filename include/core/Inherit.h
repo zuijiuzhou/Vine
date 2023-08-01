@@ -1,5 +1,7 @@
 #pragma once
 #include "Object.h"
+#include "Class.h"
+#include "Str.h"
 
 ETD_CORE_NS_BEGIN
 

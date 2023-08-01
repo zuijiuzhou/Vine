@@ -22,6 +22,6 @@ public:
 
 private:
     struct Data;
-    Data *d_ptr;
+    Data *d;
 };
 ETD_APPFW_GUI_NS_END

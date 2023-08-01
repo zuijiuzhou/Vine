@@ -8,14 +8,14 @@ struct Class::Data
 };
 
 Class::Class(const Class *parent)
-    : d_ptr(new Data)
+    : d(new Data)
 {
-    d_ptr->parent = parent;
+    d->parent = parent;
 }
 
 const Class *Class::parent() const
 {
-    return d_ptr->parent;
+    return d->parent;
 }
 
 bool Class::isSubclassOf(const Class *cls) const

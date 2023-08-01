@@ -12,7 +12,7 @@ public:
     Str arguments() const;
 private:
     struct Data;
-    const Data *d_ptr;
+    const Data *d;
 };
 
 class ETD_APPFW_API Command : public Inherit<Object, Command>

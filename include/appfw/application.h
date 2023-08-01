@@ -40,6 +40,6 @@ public:
 
 private:
     struct Data;
-    Data *d_ptr;
+    Data *d;
 };
 ETD_APPFW_NS_END

@@ -1,13 +1,12 @@
 #pragma once
 
 #include <type_traits>
-
 #include "core_export.h"
-#include "Str.h"
-#include "Class.h"
+
 #include "Ptr.h"
 
 ETD_CORE_NS_BEGIN
+
 class Class;
 class ETD_CORE_API Object
 {
@@ -15,6 +14,7 @@ public:
     using Ptr = SharedPtr<Object>;
 
 public:
+    Object();
     virtual ~Object();
 
 public:
@@ -29,11 +29,16 @@ public:
         return isKindOf(T::desc());
     }
 
+    void addRef();
+
+    void removeRef();
+
     static const Class *desc();
+    
 
 private:
     struct Data;
-    Data *d_ptr;
+    Data *d;
 };
 
 ETD_CORE_NS_END
