@@ -6,6 +6,6 @@ if(WIN32)
     add_custom_command (
         TARGET ${VINE_DEPLOY_TARGET}
         POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E env VCINSTALLDIR="D:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Auxiliary/Build" ${WINDEPLOYQT_EXE} $<TARGET_FILE:Appfw>
+        COMMAND ${CMAKE_COMMAND} -E env VCINSTALLDIR="D:/Program Files/Microsoft Visual Studio/2022/Enterprise/" ${WINDEPLOYQT_EXE} $<TARGET_FILE:vi::AppfwGui>
         COMMENT "Run Qt6::windeployqt")
 endif()

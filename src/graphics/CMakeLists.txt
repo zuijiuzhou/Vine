@@ -1,0 +1,1 @@
+vine_internal_add_library(Graphics CURRENT_TARGET_NAME)

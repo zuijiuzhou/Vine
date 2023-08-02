@@ -24,7 +24,7 @@ include_directories(${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
 
 add_subdirectory(src)
 
-# include(cmake/etd_deploy.cmake)
+# include(cmake/vine_deploy.cmake)
 
 enable_testing()
 add_subdirectory(tests)
