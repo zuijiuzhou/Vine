@@ -1,6 +1,6 @@
 #include <ge/Line3d.h>
 
-ETD_GE_NS_BEGIN
+VINE_GE_NS_BEGIN
 Line3d::Line3d(Point3d origin, Vector3d direction)
     : origin(origin), direction(direction)
 {
@@ -16,4 +16,4 @@ bool Line3d::intersectWith(const Line3d &line, Point3d &intersectionPt, double t
 
     return false;
 }
-ETD_GE_NS_END
+VINE_GE_NS_END

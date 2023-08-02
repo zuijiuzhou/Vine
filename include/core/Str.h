@@ -1,8 +1,8 @@
 #pragma once
-#include "core_export.h"
+#include "core_global.h"
 
 #include <string>
 
-ETD_CORE_NS_BEGIN
+VINE_CORE_NS_BEGIN
 using Str = std::u32string;
-ETD_CORE_NS_END
+VINE_CORE_NS_END

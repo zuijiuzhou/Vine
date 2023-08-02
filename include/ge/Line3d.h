@@ -3,8 +3,8 @@
 #include "Point3d.h"
 #include "Vector3d.h"
 
-ETD_GE_NS_BEGIN
-class ETD_GE_API Line3d
+VINE_GE_NS_BEGIN
+class VINE_GE_API Line3d
 {
 public:
     Line3d(Point3d origin, Vector3d direction);
@@ -16,4 +16,4 @@ public:
     Point3d origin;
     Vector3d direction;
 };
-ETD_GE_NS_END
+VINE_GE_NS_END

@@ -5,7 +5,7 @@
 #include <appfw/CommandManager.h>
 #include <appfw/Application.h>
 
-ETD_APPFW_NS_BEGIN
+VINE_APPFW_NS_BEGIN
 
 static Application *s_current_app = nullptr;
 
@@ -89,4 +89,4 @@ char **Application::argv() const
     return d->argv;
 }
 
-ETD_APPFW_NS_END
+VINE_APPFW_NS_END

@@ -7,7 +7,7 @@
 
 #include <cmath>
 
-ETD_GE_NS_BEGIN
+VINE_GE_NS_BEGIN
 Vector3d::Vector3d() : Vector3d(0., 0., 0.)
 {
 }
@@ -205,4 +205,4 @@ double Vector3d::operator*(const Vector3d &vec) const
 {
     return dotProduct(vec);
 }
-ETD_GE_NS_END
+VINE_GE_NS_END

@@ -1,12 +1,12 @@
 #pragma once
 
-#include "ge_export.h"
+#include "ge_global.h"
 
-ETD_GE_NS_BEGIN
+VINE_GE_NS_BEGIN
 class Vector3d;
 class Line3d;
 class Plane;
-class ETD_GE_API Point3d
+class VINE_GE_API Point3d
 {
 public:
     Point3d();
@@ -33,4 +33,4 @@ public:
     double y;
     double z;
 };
-ETD_GE_NS_END
+VINE_GE_NS_END

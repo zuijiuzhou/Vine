@@ -1,14 +1,1 @@
-set(CURRENT_LIB_NAME EtdCore)
-
-file(GLOB SRC_FILE_LIST LIST_DIRECTORIES false *.cpp)
-file(GLOB HEADER_FILE_LIST LIST_DIRECTORIES false *.h)
-file(GLOB RC_FILE_LIST LIST_DIRECTORIES false *.rc)
-
-message(${SRC_FILE_LIST})
-
-add_library(${CURRENT_LIB_NAME} SHARED ${SRC_FILE_LIST} ${HEADER_FILE_LIST} ${RC_FILE_LIST})
-# set_target_properties(${CURRENT_LIB_NAME} PROPERTIES OUTPUT_NAME_DEBUG ${CURRENT_LIB_NAME}d)
-# set_target_properties(${CURRENT_LIB_NAME} PROPERTIES OUTPUT_NAME_Release ${CURRENT_LIB_NAME})
-
-# add_compile_definitions(ETD_GE_LIB)
-target_compile_definitions(${CURRENT_LIB_NAME} PRIVATE ETD_CORE_LIB)
+vine_internal_add_library(Core CURRENT_TARGET_NAME)

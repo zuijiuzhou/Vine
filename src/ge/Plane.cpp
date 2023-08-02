@@ -1,6 +1,6 @@
 #include <ge/Plane.h>
 
-ETD_GE_NS_BEGIN
+VINE_GE_NS_BEGIN
 Plane::Plane(Point3d origin, Vector3d normal)
     : origin(origin), normal(normal)
 {
@@ -10,4 +10,4 @@ bool Plane::intersectWith(const Line3d &line, Point3d &intersectionPt, double to
 {
     return false;
 }
-ETD_GE_NS_END
+VINE_GE_NS_END

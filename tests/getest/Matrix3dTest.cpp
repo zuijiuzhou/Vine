@@ -2,7 +2,7 @@
 
 #include <ge/Matrix4x4.h>
 
-using namespace etd::ge;
+using namespace vine::ge;
 
 
 

@@ -1,10 +1,13 @@
 #pragma once
 
+#include "core_global.h"
+
 #include <atomic>
 #include <memory>
 #include <type_traits>
 
-ETD_CORE_NS_BEGIN
+VINE_CORE_NS_BEGIN
+
 template <typename T>
 using SharedPtr = std::shared_ptr<T>;
 
@@ -19,13 +22,15 @@ public:
     }
     RefPtr(T *obj) : obj_(obj)
     {
-        if(obj_){
+        if (obj_)
+        {
             obj_->addRef();
         }
     }
     ~RefPtr()
     {
-        if(obj_){
+        if (obj_)
+        {
             obj_->removeRef();
         }
     }
@@ -34,4 +39,4 @@ private:
     T *obj_;
 };
 
-ETD_CORE_NS_END
+VINE_CORE_NS_END

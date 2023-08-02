@@ -2,7 +2,7 @@
 
 #include <memory>
 
-ETD_GE_NS_BEGIN
+VINE_GE_NS_BEGIN
 Matrix4x4::Matrix4x4()
 {
     makeIdentity();
@@ -123,4 +123,4 @@ Matrix4x4 Matrix4x4::lookAt(const Point3d &eye, const Point3d &target, const Vec
     m.makeLookAt(eye, target, up);
     return m;
 }
-ETD_GE_NS_END
+VINE_GE_NS_END

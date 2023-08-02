@@ -2,14 +2,14 @@
 
 #include "core/Inherit.h"
 
-#include "appfw_export.h"
+#include "appfw_global.h"
 
-ETD_APPFW_NS_BEGIN
+VINE_APPFW_NS_BEGIN
 class CommandManager;
 class AddinManager;
 class ServiceManager;
 
-class ETD_APPFW_API Application : public Inherit<Object, Application>
+class VINE_APPFW_API Application : public Inherit<Object, Application>
 {
 
 public:
@@ -42,4 +42,4 @@ private:
     struct Data;
     Data *d;
 };
-ETD_APPFW_NS_END
+VINE_APPFW_NS_END

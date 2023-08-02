@@ -1,14 +1,14 @@
 #pragma once
 
 #include <type_traits>
-#include "core_export.h"
+#include "core_global.h"
 
 #include "Ptr.h"
 
-ETD_CORE_NS_BEGIN
+VINE_CORE_NS_BEGIN
 
 class Class;
-class ETD_CORE_API Object
+class VINE_CORE_API Object
 {
 public:
     using Ptr = SharedPtr<Object>;
@@ -41,4 +41,4 @@ private:
     Data *d;
 };
 
-ETD_CORE_NS_END
+VINE_CORE_NS_END

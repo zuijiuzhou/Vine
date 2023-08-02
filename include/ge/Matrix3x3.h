@@ -1,11 +1,11 @@
 #pragma once
 
-#include "ge_export.h"
+#include "ge_global.h"
 
-ETD_GE_NS_BEGIN
+VINE_GE_NS_BEGIN
 class Point2d;
 class Vector2d;
-class ETD_GE_API Matrix3x3
+class VINE_GE_API Matrix3x3
 {
 public:
     double data[3][3];
@@ -40,4 +40,4 @@ public:
     static Matrix3x3 scale(double x, double y);
     static Matrix3x3 scale(double factor);
 };
-ETD_GE_NS_END
+VINE_GE_NS_END

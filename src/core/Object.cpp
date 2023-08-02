@@ -3,7 +3,7 @@
 #include <core/Object.h>
 #include <core/Class.h>
 
-ETD_CORE_NS_BEGIN
+VINE_CORE_NS_BEGIN
 
 struct Object::Data
 {
@@ -46,4 +46,4 @@ void Object::removeRef()
     d->num_refs.fetch_sub(1, std::memory_order_seq_cst);
 }
 
-ETD_CORE_NS_END
+VINE_CORE_NS_END

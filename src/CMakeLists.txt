@@ -8,9 +8,17 @@ set(CMAKE_CXX_STANDARD 20)
 include_directories(${CMAKE_SOURCE_DIR}/include)
 link_directories(${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/$<$<CONFIG:Debug>:Debug>$<$<CONFIG:Release>:Release>)
 
+# set(CMAKE_SHARED_LIBRARY_PREFIX vi)
+# # Prefix all static libraries with 'lib'.
+# set(CMAKE_STATIC_LIBRARY_PREFIX vi)
+
+set(VINE_SHARED_LIBRARY_PREFIX vi)
+
+include(../cmake/vine_library_helper.cmake)
+
 add_subdirectory(ge)
 add_subdirectory(core)
 # add_subdirectory(runtime)
 add_subdirectory(system)
 add_subdirectory(appfw)
-add_subdirectory(etd)
+add_subdirectory(vine)

@@ -2,8 +2,8 @@
 
 #include "line3d.h"
 
-ETD_GE_NS_BEGIN
-class ETD_GE_API Plane
+VINE_GE_NS_BEGIN
+class VINE_GE_API Plane
 {
 public:
     Plane(Point3d origin, Vector3d normal);
@@ -15,4 +15,4 @@ public:
     Point3d origin;
     Vector3d normal;
 };
-ETD_GE_NS_END
+VINE_GE_NS_END

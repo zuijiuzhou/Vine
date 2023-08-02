@@ -1,6 +1,6 @@
 #include <core/Class.h>
 
-ETD_CORE_NS_BEGIN
+VINE_CORE_NS_BEGIN
 
 struct Class::Data
 {
@@ -33,4 +33,4 @@ bool Class::isSubclassOf(const Class *cls) const
     return false;
 }
 
-ETD_CORE_NS_END
+VINE_CORE_NS_END

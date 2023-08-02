@@ -1,4 +1,4 @@
-﻿set(CURRENT_LIB_NAME Etd)
+﻿set(CURRENT_LIB_NAME Vine)
 
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets)
 qt_standard_project_setup()
@@ -9,9 +9,9 @@ file(GLOB RC_FILE_LIST LIST_DIRECTORIES false *.rc)
 
 
 
-qt_add_executable(${CURRENT_LIB_NAME} ${SRC_FILE_LIST} ${HEADER_FILE_LIST} ${RC_FILE_LIST})
+qt_add_executable(${CURRENT_LIB_NAME} WIN32 ${SRC_FILE_LIST} ${HEADER_FILE_LIST} ${RC_FILE_LIST})
 set_target_properties(${CURRENT_LIB_NAME} PROPERTIES WIN32_EXECUTABLE TRUE MACOSX_BUNDLE TRUE)
-target_link_libraries(${CURRENT_LIB_NAME} PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets EtdAppfwGui)
+target_link_libraries(${CURRENT_LIB_NAME} PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets vi::AppfwGui)
 
 add_custom_command(TARGET ${CURRENT_LIB_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different

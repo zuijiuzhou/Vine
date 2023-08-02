@@ -3,7 +3,7 @@
 #include <ge/Point2d.h>
 #include <cmath>
 
-ETD_GE_NS_BEGIN
+VINE_GE_NS_BEGIN
 Vector2d::Vector2d() : Vector2d(0., 0.)
 {
 }
@@ -172,4 +172,4 @@ double Vector2d::operator*(const Vector2d &vec) const
 {
     return dotProduct(vec);
 }
-ETD_GE_NS_END
+VINE_GE_NS_END

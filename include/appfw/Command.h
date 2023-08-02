@@ -2,11 +2,11 @@
 
 #include "core/Inherit.h"
 
-#include "appfw_export.h"
+#include "appfw_global.h"
 
-ETD_APPFW_NS_BEGIN
+VINE_APPFW_NS_BEGIN
 
-class ETD_APPFW_API CommandExecutingContext : public Inherit<Object, CommandExecutingContext>
+class VINE_APPFW_API CommandExecutingContext : public Inherit<Object, CommandExecutingContext>
 {
 public:
     Str arguments() const;
@@ -15,7 +15,7 @@ private:
     const Data *d;
 };
 
-class ETD_APPFW_API Command : public Inherit<Object, Command>
+class VINE_APPFW_API Command : public Inherit<Object, Command>
 {
 
 public:
@@ -25,4 +25,4 @@ public:
 
     virtual void Execute(CommandExecutingContext::Ptr context) = 0;
 };
-ETD_APPFW_NS_END
+VINE_APPFW_NS_END

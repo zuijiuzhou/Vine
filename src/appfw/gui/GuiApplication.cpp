@@ -2,7 +2,7 @@
 
 #include <appfw/gui/GuiApplication.h>
 
-ETD_APPFW_GUI_BEGIN
+VINE_APPFWGUI_BEGIN
 
 struct GuiApplication::Data
 {
@@ -32,4 +32,4 @@ int GuiApplication::run()
     return d->app->exec();
 }
 
-ETD_APPFW_GUI_NS_END
+VINE_APPFWGUI_NS_END

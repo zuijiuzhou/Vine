@@ -1,12 +1,12 @@
 #pragma once
 
-#include "ge_export.h"
+#include "ge_global.h"
 
 #include "Point2d.h"
 #include "Vector2d.h"
 
-ETD_GE_NS_BEGIN
-class ETD_GE_API Line2d
+VINE_GE_NS_BEGIN
+class VINE_GE_API Line2d
 {
 public:
     Line2d(Point2d origin, Vector2d direction);
@@ -21,4 +21,4 @@ public:
     Point2d m_origin;
     Vector2d m_direction;
 };
-ETD_GE_NS_END
+VINE_GE_NS_END

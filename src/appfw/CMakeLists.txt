@@ -1,17 +1,8 @@
-set(CURRENT_LIB_NAME EtdAppfw)
-
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets)
 qt_standard_project_setup()
+ 
+vine_internal_add_library(Appfw CURRENT_TARGET_NAME)
 
-file(GLOB SRC_FILE_LIST LIST_DIRECTORIES false *.cpp)
-file(GLOB HEADER_FILE_LIST LIST_DIRECTORIES false *.h)
-file(GLOB RC_FILE_LIST LIST_DIRECTORIES false *.rc)
-
-message(${SRC_FILE_LIST})
-
-add_library(${CURRENT_LIB_NAME} SHARED ${SRC_FILE_LIST} ${HEADER_FILE_LIST} ${RC_FILE_LIST})
-target_link_libraries(${CURRENT_LIB_NAME} PRIVATE Qt6::Core PUBLIC EtdCore)
-# add_compile_definitions(ETD_GE_LIB)
-target_compile_definitions(${CURRENT_LIB_NAME} PRIVATE ETD_APPFW_LIB)
+target_link_libraries(${CURRENT_TARGET_NAME} PRIVATE Qt6::Core PUBLIC vi::Core)
 
 add_subdirectory(gui)

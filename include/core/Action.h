@@ -2,11 +2,11 @@
 #include <list>
 #include <memory>
 
-#include "core_export.h"
+#include "core_global.h"
 
-ETD_CORE_NS_BEGIN
+VINE_CORE_NS_BEGIN
 template <typename... TArgs>
-class ETD_CORE_API Signal
+class VINE_CORE_API Signal
 {
 public:
     using Handler = std::function<void(TArgs...)>;
@@ -34,4 +34,4 @@ public:
 private:
     std::list<Handler> m_handlers;
 };
-ETD_CORE_NS_END
+VINE_CORE_NS_END

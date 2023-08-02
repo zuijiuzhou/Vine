@@ -1,13 +1,13 @@
 #pragma once
 #include "core/Inherit.h"
 
-#include "appfw_export.h"
+#include "appfw_global.h"
 
-ETD_APPFW_NS_BEGIN
+VINE_APPFW_NS_BEGIN
 
-class ETD_APPFW_API CommandManager : public Inherit<Object, CommandManager>{
+class VINE_APPFW_API CommandManager : public Inherit<Object, CommandManager>{
 
     
 };
 
-ETD_APPFW_NS_END
+VINE_APPFW_NS_END

@@ -1,10 +1,10 @@
 #pragma once
 
-#include "appfw_gui_export.h"
+#include "gui_global.h"
 
-ETD_APPFW_GUI_BEGIN
+VINE_APPFWGUI_BEGIN
 
-class ETD_APPFW_GUI_API MainWindow
+class VINE_APPFWGUI_API MainWindow
 {
 public:
 MainWindow();
@@ -19,4 +19,4 @@ private:
     Data *d;
 };
 
-ETD_APPFW_GUI_NS_END
+VINE_APPFWGUI_NS_END

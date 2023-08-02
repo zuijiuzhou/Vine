@@ -2,13 +2,13 @@
 
 #include "core/Inherit.h"
 
-#include "appfw_export.h"
+#include "appfw_global.h"
 
-ETD_APPFW_NS_BEGIN
+VINE_APPFW_NS_BEGIN
 
-class ETD_APPFW_API AddinLoadContext : public Inherit<Object, AddinLoadContext>
+class VINE_APPFW_API AddinLoadContext : public Inherit<Object, AddinLoadContext>
 {
 
 };
 
-ETD_APPFW_NS_END
+VINE_APPFW_NS_END

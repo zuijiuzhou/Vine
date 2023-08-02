@@ -2,11 +2,11 @@
 
 #include <type_traits>
 
-#include "core_export.h"
+#include "core_global.h"
 
-ETD_CORE_NS_BEGIN
+VINE_CORE_NS_BEGIN
 class Object;
-class ETD_CORE_API Class
+class VINE_CORE_API Class
 {
 public:
     Class(const Class *parent);
@@ -18,4 +18,4 @@ private:
     struct Data;
     Data *d;
 };
-ETD_CORE_NS_END
+VINE_CORE_NS_END

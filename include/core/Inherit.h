@@ -3,7 +3,7 @@
 #include "Class.h"
 #include "Str.h"
 
-ETD_CORE_NS_BEGIN
+VINE_CORE_NS_BEGIN
 
 template <typename TParent, typename TSub>
     requires std::is_base_of<Object, TParent>::value
@@ -16,6 +16,7 @@ public:
     template <typename... TArgs>
     Inherit(TArgs &&...args) : TParent(args...) {}
 
+    virtual ~Inherit(){}
 public:
     virtual const Class *isA() const override
     {
@@ -41,4 +42,4 @@ public:
     }
 };
 
-ETD_CORE_NS_END
+VINE_CORE_NS_END

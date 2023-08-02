@@ -1,5 +1,5 @@
 set(TEST_NAME getest)
 FILE(GLOB SRC_FILE_LIST *.cpp)
 add_executable(${TEST_NAME} ${SRC_FILE_LIST})
-target_link_libraries(${TEST_NAME} EtdGe) 
+target_link_libraries(${TEST_NAME} vi::Ge) 
 add_test(NAME ${TEST_NAME} COMMAND ${TEST_NAME})

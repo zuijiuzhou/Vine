@@ -1,6 +1,6 @@
 #include <ge/Line2d.h>
 
-ETD_GE_NS_BEGIN
+VINE_GE_NS_BEGIN
 Line2d::Line2d(Point2d origin, Vector2d direction)
     : m_origin(origin), m_direction(direction)
 {
@@ -20,4 +20,4 @@ bool Line2d::intersectWith(const Line2d &line, Point2d &intersectionPt) const
 {
     return false;
 }
-ETD_GE_NS_END
+VINE_GE_NS_END

@@ -3,7 +3,7 @@
 #include <appfw/gui/MainWindow.h>
 
 
-ETD_APPFW_GUI_BEGIN
+VINE_APPFWGUI_BEGIN
 
 struct MainWindow::Data{
     QMainWindow* mwnd;
@@ -28,4 +28,4 @@ void MainWindow::close(){
     d->mwnd->close();
 }
 
-ETD_APPFW_GUI_NS_END
+VINE_APPFWGUI_NS_END

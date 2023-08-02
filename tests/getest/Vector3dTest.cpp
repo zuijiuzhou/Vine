@@ -3,7 +3,7 @@
 #include <ge/Vector3d.h>
 #include <ge/Ge.h>
 
-using namespace etd::ge;
+using namespace vine::ge;
 
 
 

@@ -2,7 +2,7 @@
 
 #include <memory>
 
-ETD_GE_NS_BEGIN
+VINE_GE_NS_BEGIN
 Matrix3x3::Matrix3x3()
 {
     makeIdentity();
@@ -106,4 +106,4 @@ Matrix3x3 Matrix3x3::scale(double factor)
     m.makeScale(factor);
     return m;
 }
-ETD_GE_NS_END
+VINE_GE_NS_END

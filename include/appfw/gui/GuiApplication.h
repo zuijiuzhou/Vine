@@ -3,11 +3,11 @@
 #include "core/Inherit.h"
 #include "appfw/Application.h"
 
-#include "appfw_gui_export.h"
+#include "gui_global.h"
 
-ETD_APPFW_GUI_BEGIN
+VINE_APPFWGUI_BEGIN
 
-class ETD_APPFW_GUI_API GuiApplication : public Inherit<Application, GuiApplication>
+class VINE_APPFWGUI_API GuiApplication : public Inherit<Application, GuiApplication>
 {
 
 public:
@@ -24,4 +24,4 @@ private:
     struct Data;
     Data *d;
 };
-ETD_APPFW_GUI_NS_END
+VINE_APPFWGUI_NS_END
