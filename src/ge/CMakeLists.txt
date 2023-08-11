@@ -1,1 +1,1 @@
-﻿vine_internal_add_library(Ge CURRENT_TARGET_NAME)
+﻿vine_internal_add_library(Ge OUT_TARGET_NAME)

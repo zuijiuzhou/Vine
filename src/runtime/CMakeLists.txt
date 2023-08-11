@@ -1,1 +1,1 @@
-vine_internal_add_library(Runtime CURRENT_TARGET_NAME)
+vine_internal_add_library(Runtime OUT_TARGET_NAME)

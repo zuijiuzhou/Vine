@@ -1,4 +1,4 @@
-vine_internal_add_library(Graphics CURRENT_TARGET_NAME)
+vine_internal_add_library(Graphics OUT_TARGET_NAME)
 
 
-target_link_libraries(${CURRENT_TARGET_NAME} PUBLIC vi::Core)
+target_link_libraries(${OUT_TARGET_NAME} PUBLIC vi::Core)
