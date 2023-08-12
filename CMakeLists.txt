@@ -7,6 +7,8 @@ DESCRIPTION "Vine 3d modeling"
 HOMEPAGE_URL "https://github.com/zuijiuzhou/Vine"
 LANGUAGES C CXX)
 
+option(VINE_DEPLOY_WHEN_BUILDING "Whether to run the deploy command when building." OFF)
+
 if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug)
 endif()
@@ -24,7 +26,10 @@ include_directories(${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
 
 add_subdirectory(src)
 
-# include(cmake/vine_deploy.cmake)
+if(VINE_DEPLOY_WHEN_BUILDING)
+message(--------VINE_DEPLOY_WHEN_BUILDING)
+include(cmake/vine_deploy.cmake)
+endif()
 
 enable_testing()
 add_subdirectory(tests)
