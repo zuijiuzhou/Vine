@@ -7,6 +7,7 @@ VINE_APPFWGUI_BEGIN
 
 struct MainWindow::Data{
     QMainWindow* mwnd;
+    QString s;
 };
 
 

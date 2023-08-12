@@ -7,6 +7,11 @@ VINE_APPFW_NS_BEGIN
 
 class VINE_APPFW_API ServiceManager: public Inherit<Object, ServiceManager>{
 
+public:
+    
+
+public:
+    // void registerService(Type service_type, );
 
 };
 

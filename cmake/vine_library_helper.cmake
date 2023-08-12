@@ -5,7 +5,7 @@ function(vine_internal_add_library short_name out_target_name)
 
     set(LIB_FULL_NAME ${VINE_SHARED_LIBRARY_PREFIX}${short_name})
     set(LIB_ALIAS ${VINE_SHARED_LIBRARY_PREFIX}::${short_name})
-    message(----------------${LIB_ALIAS})
+    message(--------AddLib:${LIB_ALIAS})
     add_library(${LIB_FULL_NAME} SHARED ${SRC_FILE_LIST} ${HEADER_FILE_LIST} ${RC_FILE_LIST})
     add_library(${LIB_ALIAS} ALIAS ${LIB_FULL_NAME})
     set_target_properties(${LIB_FULL_NAME} PROPERTIES OUTPUT_NAME ${LIB_FULL_NAME})

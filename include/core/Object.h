@@ -42,3 +42,7 @@ private:
 };
 
 VINE_CORE_NS_END
+
+// #define VI_OBJ(TParent) \
+// static const Class* desc(); \
+// virtual const Class* isA() const override;

@@ -1,7 +1,7 @@
 #pragma once
 #include "Object.h"
 #include "Class.h"
-#include "Str.h"
+#include "String.h"
 
 VINE_CORE_NS_BEGIN
 
@@ -25,7 +25,7 @@ public:
 
     static const Class *desc()
     {
-        static const Class *cls = new Class(TParent::desc());
+        static const Class *cls = new Class(TParent::desc(), typeid(TSub));
         return cls;
     }
 

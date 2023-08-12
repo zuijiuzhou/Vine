@@ -18,7 +18,7 @@ include(../cmake/vine_library_helper.cmake)
 
 add_subdirectory(ge)
 add_subdirectory(core)
-# add_subdirectory(runtime)
+add_subdirectory(di)
 add_subdirectory(system)
 add_subdirectory(graphics)
 add_subdirectory(appfw)

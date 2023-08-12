@@ -32,7 +32,7 @@ bool Object::isKindOf(const Class *type) const
 
 const Class *Object::desc()
 {
-    static Class *cls = new Class(nullptr);
+    static Class *cls = new Class(nullptr, typeid(Object));
     return cls;
 }
 
