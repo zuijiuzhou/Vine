@@ -8,7 +8,15 @@ VINE_CORE_NS_BEGIN
 
 using Char = char32_t;
 
+/*
+字符串，内部UTF-32编码，字节序小端
+*/
 class VINE_CORE_API String{
+public:
+    using iterator = Char*;
+    using const_iterator = const Char*;
+    using resverse_iterator = std::reverse_iterator<iterator>;
+    using const_resverse_iterator = std::reverse_iterator<const_iterator>;
 public:
     String();
     String(const Char* data);
@@ -35,6 +43,47 @@ public:
 
     void set(const Char* data, size_t len);
 
+    Char& at(size_t idx);
+
+    long indexOf(Char c) const;
+    
+    long lastIndexOf(Char c) const;
+
+    bool equals(const String& other, bool ignore_case = false) const;
+
+    String toLower() const;
+
+    String toUpper() const;
+
+    String trimStart() const;
+
+    String trimEnd() const;
+
+    String trim() const;
+
+    bool startsWith(Char c, bool ignore_case = false) const;
+
+    bool startsWith(const String& str, bool ignore_case = false) const;
+
+    bool endsWith(Char c, bool ignore_case = false) const;
+
+    bool endsWith(const String& str, bool ignore_case = false) const;
+
+    iterator begin() const;
+
+    iterator end() const;
+
+    const_iterator cbegin() const;
+
+    const_iterator cend() const;
+
+    resverse_iterator rbegin() const;
+
+    resverse_iterator rend() const;
+
+    const_resverse_iterator crbegin() const;
+    
+    const_resverse_iterator crend() const;
 public:
     static String fromUtf8(const char* data);
 
@@ -48,9 +97,17 @@ public:
 
 public:
     String& operator =(const String& right);
+    Char& operator[](size_t idx);
+    bool operator ==(const String& right) const;
+    bool operator != (const String& right) const;
+    bool operator <(const String& right) const;
+    bool operator >(const String& right) const;
 
+    friend std::ostream& operator << (std::ostream& cout, const String& str);
+    friend std::wostream& operator << (std::wostream& wcout, const String& str);
 private:
     Char* data_ = nullptr;
     size_t len_ = 0;
 };
+
 VINE_CORE_NS_END

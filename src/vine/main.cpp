@@ -26,12 +26,11 @@ int main(int argc, char** argv){
     auto& x = typeid(你好);
     auto y = x.name();
     
-    vine::String s = U"你好Abc456";
-    auto s1 = s.substr(2);
-    auto s2 = s.substr(2, 3);
-    auto s3 = s.substr(8, 1);
+    vine::String s1 = U"abcAbc", s33;
+    auto b1 = s1.endsWith(U"", true);
+     
+     auto c1 = *s1.rbegin();
 
-    auto z =strlen(y);
     return app.run();
 
     
