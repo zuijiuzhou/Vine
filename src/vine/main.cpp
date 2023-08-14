@@ -29,8 +29,8 @@ int main(int argc, char** argv){
     vine::String s1 = U"abcAbc", s33;
     auto b1 = s1.endsWith(U"", true);
      
-     auto c1 = *s1.rbegin();
-
+     auto c1 = s1.rend();
+c1--;
     return app.run();
 
     

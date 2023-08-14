@@ -6,7 +6,6 @@
 #include "String.h"
 
 VINE_CORE_NS_BEGIN
-class Object;
 class VINE_CORE_API Class
 {
 public:

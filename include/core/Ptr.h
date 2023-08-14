@@ -20,7 +20,7 @@ public:
     RefPtr() : RefPtr(nullptr)
     {
     }
-    RefPtr(T *obj) : obj_(obj)
+    RefPtr(const T *obj) : obj_(obj)
     {
         if (obj_)
         {

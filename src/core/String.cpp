@@ -151,7 +151,7 @@ long String::lastIndexOf(Char c) const
         return -1;
 
     auto idx = len_;
-    while (idx >= len_)
+    while (idx > 0)
     {
         if (*(data_ + --idx) == c)
             return idx;
@@ -395,22 +395,22 @@ String::const_iterator String::cend() const
 
 String::resverse_iterator String::rbegin() const
 {
-    return resverse_iterator(begin());
+    return resverse_iterator(end());
 }
 
 String::resverse_iterator String::rend() const
 {
-    return resverse_iterator(end());
+    return resverse_iterator(begin());
 }
 
 String::const_resverse_iterator String::crbegin() const
 {
-    return const_resverse_iterator(cbegin());
+    return const_resverse_iterator(cend());
 }
 
 String::const_resverse_iterator String::crend() const
 {
-    return const_resverse_iterator(cend());
+    return const_resverse_iterator(cbegin());
 }
 
 String String::fromUtf8(const char *data)

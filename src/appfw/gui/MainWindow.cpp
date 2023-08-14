@@ -15,8 +15,8 @@ MainWindow::MainWindow()
 {
     d->mwnd = new QMainWindow();
     QString s("Abc");
-    auto x = * s.end();
-    auto y = * s.rend();
+    auto x = s.end();
+    auto y = s.rend();
 }
 
 MainWindow::~MainWindow(){

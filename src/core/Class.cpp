@@ -10,7 +10,9 @@ namespace{
         auto rn = ti.raw_name();
         full_name = String::fromUtf8(n);
         full_name = full_name.substr(6);
-        
+        auto idx = full_name.lastIndexOf(U':');
+        name = full_name.substr(idx + 1);
+        ns = full_name.substr(0, idx - 1);
         return true;
     }
 }
@@ -30,7 +32,7 @@ Class::Class(const Class *parent, const type_info& ti)
     d->parent = parent;
     d->ti = &ti;
 #if defined(_MSC_VER)
-    parseNameAndNS(ti, d->name, d->name, d->full_name);
+    parseNameAndNS(ti, d->name, d->ns, d->full_name);
 #else
 #error "NOT IMPLEMENTED!"
 #endif
