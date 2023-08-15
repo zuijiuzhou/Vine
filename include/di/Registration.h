@@ -37,4 +37,5 @@ __CONF_FUNC__ Registration *instance(const T* obj)
     return this->instance((Object*)obj);
 }
 
+using RegistrationPtr = RefPtr<Registration>;
 VINE_DI_NS_END

@@ -10,5 +10,6 @@ class VINE_APPFW_API AddinLoadContext : public Inherit<Object, AddinLoadContext>
 {
 
 };
+using AddinLoadContextPtr = RefPtr<AddinLoadContext>;
 
 VINE_APPFW_NS_END

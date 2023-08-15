@@ -11,9 +11,9 @@ static Application *s_current_app = nullptr;
 
 struct Application::Data
 {
-    AddinManager::Ptr addin_manager;
-    ServiceManager::Ptr service_manager;
-    CommandManager::Ptr command_manager;
+    AddinManagerPtr addin_manager;
+    ServiceManagerPtr service_manager;
+    CommandManagerPtr command_manager;
     QCoreApplication *app = nullptr;
 
     int argc;

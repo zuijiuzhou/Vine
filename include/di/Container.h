@@ -9,5 +9,6 @@ class VINE_DI_API Container : Inherit<Object, Container> {
     public:
 
 };
+using ContainerPtr = RefPtr<Container>;
 
 VINE_DI_NS_END

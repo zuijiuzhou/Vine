@@ -41,9 +41,11 @@ void Object::addRef()
     d->num_refs.fetch_add(1, std::memory_order_relaxed);
 }
 
-void Object::removeRef()
+void Object::removeRef(bool del)
 {
     d->num_refs.fetch_sub(1, std::memory_order_seq_cst);
+    if (!d->num_refs && del)
+        delete this;
 }
 
 VINE_CORE_NS_END

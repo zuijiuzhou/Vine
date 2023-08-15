@@ -11,9 +11,6 @@ class Class;
 class VINE_CORE_API Object
 {
 public:
-    using Ptr = SharedPtr<Object>;
-
-public:
     Object();
     virtual ~Object();
 
@@ -31,7 +28,7 @@ public:
 
     void addRef();
 
-    void removeRef();
+    void removeRef(bool del = true);
 
     static const Class *desc();
     
@@ -40,6 +37,8 @@ private:
     struct Data;
     Data *d;
 };
+
+using ObjectPtr = RefPtr<Object>;
 
 VINE_CORE_NS_END
 

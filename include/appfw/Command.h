@@ -14,6 +14,7 @@ private:
     struct Data;
     const Data *d;
 };
+using CommandExecutingContextPtr = RefPtr<CommandExecutingContext>;
 
 class VINE_APPFW_API Command : public Inherit<Object, Command>
 {
@@ -23,6 +24,8 @@ public:
 
     virtual String group() const = 0;
 
-    virtual void Execute(CommandExecutingContext::Ptr context) = 0;
+    virtual void Execute(CommandExecutingContext* context) = 0;
 };
+using CommandPtr = RefPtr<Command>;
+
 VINE_APPFW_NS_END

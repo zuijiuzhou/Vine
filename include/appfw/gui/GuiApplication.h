@@ -1,9 +1,9 @@
 #pragma once
+#include "gui_global.h"
 
 #include "core/Inherit.h"
 #include "appfw/Application.h"
 
-#include "gui_global.h"
 
 VINE_APPFWGUI_BEGIN
 
@@ -24,4 +24,7 @@ private:
     struct Data;
     Data *d;
 };
+
+using GuiApplicationPtr = RefPtr<GuiApplication>;
+
 VINE_APPFWGUI_NS_END

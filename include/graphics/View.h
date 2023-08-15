@@ -13,5 +13,6 @@ class VINE_GRAPHICS_API View : public Inherit<Object, View>
 public:
     void addModel() const;
 };
+using ViewPtr = RefPtr<View>;
 
 VINE_GRAPHICS_NS_END

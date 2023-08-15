@@ -1,8 +1,8 @@
 #pragma once
+#include "appfw_global.h"
 
 #include "core/Inherit.h"
 
-#include "appfw_global.h"
 
 VINE_APPFW_NS_BEGIN
 
@@ -13,5 +13,6 @@ public:
     void Load(AddinLoadContext* context);
     void Unload();
 };
+using AddinPtr = RefPtr<Addin>;
 
 VINE_APPFW_NS_END

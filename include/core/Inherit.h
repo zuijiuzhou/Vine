@@ -10,9 +10,6 @@ template <typename TParent, typename TSub>
 class Inherit : public TParent
 {
 public:
-    using Ptr = SharedPtr<TSub>;
-
-public:
     template <typename... TArgs>
     Inherit(TArgs &&...args) : TParent(args...) {}
 
@@ -30,15 +27,15 @@ public:
     }
 
     template <typename... TArgs>
-    static Ptr create(TArgs &&...args)
+    static TSub* create(TArgs &&...args)
     {
-        return Ptr(new TSub(args...));
+        return new TSub(args...);
     }
 
     template <typename... TArgs>
-    static Ptr create_if(bool flag, TArgs &&...args)
+    static TSub*create_if(bool flag, TArgs &&...args)
     {
-        return Ptr(flag ? new TSub(args...) : nullptr);
+        return flag ? new TSub(args...) : nullptr;
     }
 };
 

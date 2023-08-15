@@ -14,5 +14,6 @@ public:
     // void registerService(Type service_type, );
 
 };
+using ServiceManagerPtr = RefPtr<ServiceManager>;
 
 VINE_APPFW_NS_END

@@ -42,4 +42,6 @@ private:
     struct Data;
     Data *d;
 };
+using ApplicationPtr = RefPtr<Application>;
+
 VINE_APPFW_NS_END
