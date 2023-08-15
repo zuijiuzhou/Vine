@@ -1,11 +1,11 @@
 ﻿cmake_minimum_required(VERSION "3.20")
 
 project(
-Vine
-VERSION "1.0.0" 
-DESCRIPTION "Vine 3d modeling"
-HOMEPAGE_URL "https://github.com/zuijiuzhou/Vine"
-LANGUAGES C CXX)
+    Vine
+    VERSION "1.0.0" 
+    DESCRIPTION "Vine 3d modeling"
+    HOMEPAGE_URL "https://github.com/zuijiuzhou/Vine"
+    LANGUAGES C CXX)
 
 option(VINE_DEPLOY_WHEN_BUILDING "Whether to run the deploy command when building." OFF)
 

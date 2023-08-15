@@ -5,22 +5,28 @@
 
 #include "core/Inherit.h"
 
+#include "Lifetime.h"
+
 VINE_DI_NS_BEGIN
 
 #define __CONF_FUNC_TEMP__ template <typename T> \
     requires std::is_base_of<Object, T>::value
 
-class VINE_DI_API Registration : Inherit<Object, Registration>
+class VINE_DI_API Registration : public Inherit<Object, Registration>
 {
 private:
     Registration(Type type);
 
 public:
-    __CONF_FUNC_TEMP__ Registration *instance(const T *inst);
-    Registration *instance(const Object *inst);
+    Registration *instance(Object *inst);
+    __CONF_FUNC_TEMP__ Registration *instance(T *inst);
 
-    __CONF_FUNC_TEMP__ Registration *implementedBy();
-    Registration *implementedBy(Type type);
+    Registration *impl(Type type);
+    __CONF_FUNC_TEMP__ Registration *impl();
+
+    Registration *lifetime(Lifetime lt);
+
+    Lifetime lifetime() const;
 
 public:
     __CONF_FUNC_TEMP__ static Registration *create();
@@ -35,14 +41,14 @@ __CONF_FUNC_TEMP__ Registration *Registration::create()
     return new Registration(T::desc());
 }
 
-__CONF_FUNC_TEMP__ Registration *Registration::instance(const T *obj)
+__CONF_FUNC_TEMP__ Registration *Registration::instance(T *obj)
 {
     return instance((Object *)obj);
 }
 
-__CONF_FUNC_TEMP__ Registration *Registration::implementedBy()
+__CONF_FUNC_TEMP__ Registration *Registration::impl()
 {
-    return implementedBy(type);
+    return impl(T::desc());
 }
 #undef __CONF_FUNC_TEMP__
 

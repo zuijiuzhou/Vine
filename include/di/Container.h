@@ -5,9 +5,19 @@
 
 VINE_DI_NS_BEGIN
 
-class VINE_DI_API Container : Inherit<Object, Container> {
-    public:
+class Registration;
+class VINE_DI_API Container : Inherit<Object, Container>
+{
 
+public:
+    Container();
+
+public:
+    void add(Registration *reg);
+
+private:
+    struct Data;
+    Data *const d;
 };
 using ContainerPtr = RefPtr<Container>;
 

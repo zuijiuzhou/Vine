@@ -11,7 +11,7 @@ file(GLOB RC_FILE_LIST LIST_DIRECTORIES false *.rc)
 
 qt_add_executable(${CURRENT_LIB_NAME} WIN32 ${SRC_FILE_LIST} ${HEADER_FILE_LIST} ${RC_FILE_LIST})
 set_target_properties(${CURRENT_LIB_NAME} PROPERTIES WIN32_EXECUTABLE TRUE MACOSX_BUNDLE TRUE)
-target_link_libraries(${CURRENT_LIB_NAME} PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets vi::AppfwGui)
+target_link_libraries(${CURRENT_LIB_NAME} PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets vi::AppfwGui vi::Di)
 
 # add_custom_command(TARGET ${CURRENT_LIB_NAME} POST_BUILD
 #     COMMAND ${CMAKE_COMMAND} -E copy_if_different
