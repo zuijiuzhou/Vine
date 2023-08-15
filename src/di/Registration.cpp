@@ -4,18 +4,24 @@ VINE_DI_NS_BEGIN
 
 struct Registration::Data
 {
-    Object::Ptr obj;
+    ObjectPtr instance;
+    Type implemented_by;
 };
 
-Registration::Registration()
+Registration::Registration(Type type)
     : d(new Data())
 {
 
 }
 
-Registration *Registration::instance(const Object *obj)
+Registration *Registration::instance(const Object *inst)
 {
-    // d->obj = Object::Ptr(obj);
+    d->instance = inst;
+    return this;
+}
+
+Registration *Registration::implementedBy(Type type){
+    d->implemented_by = type;
     return this;
 }
 

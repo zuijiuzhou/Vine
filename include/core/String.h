@@ -53,6 +53,8 @@ public:
 
     String toLower() const;
 
+    String toLower2() const;
+
     String toUpper() const;
 
     String trimStart() const;

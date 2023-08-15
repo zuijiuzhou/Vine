@@ -1,6 +1,8 @@
 #include <core/String.h>
 
 #include <vector>
+#include <locale>
+#include <ctype.h>
 
 #include <core/Exception.h>
 
@@ -195,6 +197,11 @@ String String::toLower() const
         }
     }
     return s;
+}
+
+String String::toLower2() const{
+    auto& f = std::use_facet<std::ctype<char32_t>>(std::locale());
+    f.toupper(data_, data_+len_);
 }
 
 String String::toUpper() const
