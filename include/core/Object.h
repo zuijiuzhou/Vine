@@ -31,7 +31,6 @@ public:
     void removeRef(bool del = true);
 
     static const Class *desc();
-    
 
 private:
     struct Data;
@@ -39,6 +38,9 @@ private:
 };
 
 using ObjectPtr = RefPtr<Object>;
+
+template <typename T>
+concept is_base_of_object = std::is_base_of<Object, T>::value;
 
 VINE_CORE_NS_END
 

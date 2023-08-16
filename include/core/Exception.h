@@ -10,8 +10,9 @@ class VINE_CORE_API Exception
 {
 public:
     enum Code {
-        IndexOutOfRange,
-        ArgumentNull
+        IndexOutOfRange = 0x10001,
+        ArgumentNull,
+        ItemAlreadyExists,
     };
 
 public:

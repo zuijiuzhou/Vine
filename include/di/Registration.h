@@ -10,7 +10,11 @@
 VINE_DI_NS_BEGIN
 
 #define __CONF_FUNC_TEMP__ template <typename T> \
-    requires std::is_base_of<Object, T>::value
+    requires is_base_of_object<T>
+
+class Container;
+
+using InstanceFactory = std::function<Object*(Type, Container*)>;
 
 class VINE_DI_API Registration : public Inherit<Object, Registration>
 {
@@ -25,6 +29,8 @@ public:
     __CONF_FUNC_TEMP__ Registration *impl();
 
     Registration *lifetime(Lifetime lt);
+
+    Registration *useFactory(InstanceFactory fac);
 
     Lifetime lifetime() const;
 

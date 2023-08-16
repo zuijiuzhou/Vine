@@ -8,17 +8,29 @@ VINE_DI_NS_BEGIN
 class Registration;
 class VINE_DI_API Container : Inherit<Object, Container>
 {
-
 public:
     Container();
 
 public:
     void add(Registration *reg);
 
+    Object *resolve(Type type) const;
+
+    template <typename T>
+        requires is_base_of_object<T>
+    T *resolve() const;
+
 private:
     struct Data;
     Data *const d;
 };
 using ContainerPtr = RefPtr<Container>;
+
+template <typename T>
+    requires is_base_of_object<T>
+T *Container::resolve() const
+{
+    return resolve(T::desc());
+}
 
 VINE_DI_NS_END

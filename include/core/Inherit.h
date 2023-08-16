@@ -6,7 +6,8 @@
 VINE_CORE_NS_BEGIN
 
 template <typename TParent, typename TSub>
-    requires std::is_base_of<Object, TParent>::value
+    // requires std::is_base_of<Object, TParent>::value
+    requires is_base_of_object<TParent>
 class Inherit : public TParent
 {
 public:

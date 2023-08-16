@@ -3,7 +3,6 @@
 
 #include <set>
 
-
 VINE_DI_NS_BEGIN
 
 namespace
@@ -34,6 +33,11 @@ void Container::add(Registration *reg)
             reg->addRef();
         }
     }
+}
+
+Object *Container::resolve(Type type) const
+{
+    return nullptr;
 }
 
 VINE_DI_NS_END

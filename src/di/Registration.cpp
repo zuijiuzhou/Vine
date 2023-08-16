@@ -5,9 +5,9 @@ VINE_DI_NS_BEGIN
 struct Registration::Data
 {
     Type service_type = nullptr;
-    ;
     Type service_impl_type = nullptr;
-    ObjectPtr instance;
+    ObjectPtr inst;
+    InstanceFactory inst_fac;
     Lifetime lifetime = Lifetime::Transient;
 };
 
@@ -19,7 +19,7 @@ Registration::Registration(Type type)
 
 Registration *Registration::instance(Object *inst)
 {
-    d->instance = inst;
+    d->inst = inst;
     d->lifetime = Lifetime::Singleton;
     return this;
 }
@@ -33,6 +33,12 @@ Registration *Registration::impl(Type type)
 Registration *Registration::lifetime(Lifetime lt)
 {
     d->lifetime = lt;
+    return this;
+}
+
+Registration *Registration::useFactory(InstanceFactory fac)
+{
+    d->inst_fac = fac;
     return this;
 }
 
