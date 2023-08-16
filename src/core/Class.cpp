@@ -9,7 +9,7 @@ VINE_CORE_NS_BEGIN
 
 namespace
 {
-    bool parseNameAndNS(const type_info &ti, String &name, String &ns, String &full_name)
+    bool _parse_name(const type_info &ti, String &name, String &ns, String &full_name)
     {
         auto n = ti.name();
         auto rn = ti.raw_name();
@@ -26,7 +26,6 @@ struct Class::Data
 {
     Data(const type_info &i) : ti(i)
     {
-
     }
     const Class *parent = nullptr;
     const type_info &ti;
@@ -41,11 +40,11 @@ std::set<Class *> Class::Data::classes = {};
 Class::Class(const Class *parent, const type_info &ti)
     : d(new Data(ti))
 {
-    if(getClass(ti))
+    if (getClass(ti))
         throw Exception(Exception::ItemAlreadyExists);
     d->parent = parent;
 #if defined(_MSC_VER)
-    parseNameAndNS(ti, d->name, d->ns, d->full_name);
+    _parse_name(ti, d->name, d->ns, d->full_name);
 #else
 #error "NOT IMPLEMENTED!"
 #endif
