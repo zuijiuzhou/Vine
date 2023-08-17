@@ -17,7 +17,7 @@ public:
     Object *resolve(Type type) const;
 
     template <typename T>
-        requires is_base_of_object<T>
+        requires Objectifiable<T>
     T *resolve() const;
 
 private:
@@ -27,7 +27,7 @@ private:
 using ContainerPtr = RefPtr<Container>;
 
 template <typename T>
-    requires is_base_of_object<T>
+    requires Objectifiable<T>
 T *Container::resolve() const
 {
     return resolve(T::desc());

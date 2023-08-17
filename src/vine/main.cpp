@@ -16,11 +16,14 @@ namespace guifw = fw::gui;
 int main(int argc, char **argv)
 {
 
-    guifw::GuiApplicationPtr app = guifw::GuiApplication::create(argc, argv);
+    vine::RefPtr<guifw::GuiApplication> app = guifw::GuiApplication::create(argc, argv);
     app->init();
     guifw::MainWindowPtr wnd = guifw::MainWindow::create();
     wnd->show();
 
+    vine::ObjectPtr objptr = app.get();
+vine::ObjectPtr objptr2;
+objptr2 = app.get();
     vine::String s = U"Abc你好123DBS";
     vine::String s2 = s.toLower2();
 

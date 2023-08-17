@@ -93,7 +93,7 @@ public:
     }
 
     template <typename TOther>
-        requires std::is_base_of<T, TOther>::value
+        // requires std::is_base_of<T, TOther>::value
     RefPtr &operator=(const RefPtr<TOther> &right)
     {
         set(right.ptr_);

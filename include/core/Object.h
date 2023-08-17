@@ -8,6 +8,11 @@
 VINE_CORE_NS_BEGIN
 
 class Class;
+class Object;
+
+template <typename T>
+concept Objectifiable = std::is_base_of<Object, T>::value;
+
 class VINE_CORE_API Object
 {
 public:
@@ -19,11 +24,26 @@ public:
 
     bool isKindOf(const Class *type) const;
 
-    template <typename T>
-        requires std::is_base_of<Object, T>::value
+    template <Objectifiable T>
     bool isKindOf()
     {
         return isKindOf(T::desc());
+    }
+
+    template <Objectifiable T>
+    T *as()
+    {
+        if (isKindOf(T::desc()))
+            return static_cast<T *>(this);
+        return nullptr;
+    }
+
+    template <Objectifiable T>
+    const T *as() const
+    {
+        if (isKindOf(T::desc()))
+            return static_cast<const T *>(this);
+        return nullptr;
     }
 
     void addRef();
@@ -38,9 +58,6 @@ private:
 };
 
 using ObjectPtr = RefPtr<Object>;
-
-template <typename T>
-concept is_base_of_object = std::is_base_of<Object, T>::value;
 
 VINE_CORE_NS_END
 

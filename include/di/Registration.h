@@ -10,7 +10,7 @@
 VINE_DI_NS_BEGIN
 
 #define __CONF_FUNC_TEMP__ template <typename T> \
-    requires is_base_of_object<T>
+    requires Objectifiable<T>
 
 class Container;
 
