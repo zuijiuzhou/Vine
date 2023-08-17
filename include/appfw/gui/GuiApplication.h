@@ -5,7 +5,7 @@
 #include "appfw/Application.h"
 
 
-VINE_APPFWGUI_BEGIN
+VINE_APPFWGUI_NS_BEGIN
 
 class VINE_APPFWGUI_API GuiApplication : public Inherit<Application, GuiApplication>
 {

@@ -6,7 +6,7 @@
 #define VINE_APPFWGUI_API __declspec(dllimport)
 #endif
 
-#define VINE_APPFWGUI_BEGIN \
+#define VINE_APPFWGUI_NS_BEGIN \
 namespace VINE_NS_NAME { \
     namespace appfw { \
         namespace gui {

@@ -31,6 +31,17 @@ public:
             ptr_->addRef();
         }
     }
+
+    template <typename TOther>
+        requires std::is_base_of<Object, TOther>::value
+    RefPtr(const RefPtr<TOther> &other) : ptr_(other.ptr_)
+    {
+        if (ptr_)
+        {
+            ptr_->addRef();
+        }
+    }
+
     ~RefPtr()
     {
         if (ptr_)
@@ -93,7 +104,7 @@ public:
     }
 
     template <typename TOther>
-        // requires std::is_base_of<T, TOther>::value
+        requires std::is_base_of<T, TOther>::value
     RefPtr &operator=(const RefPtr<TOther> &right)
     {
         set(right.ptr_);
@@ -102,7 +113,7 @@ public:
 
     template <typename TOther>
         requires std::is_base_of<T, TOther>::value
-    RefPtr &operator=(TOther* ptr)
+    RefPtr &operator=(TOther *ptr)
     {
         set(ptr);
         return *this;

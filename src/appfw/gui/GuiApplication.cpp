@@ -2,7 +2,7 @@
 
 #include <appfw/gui/GuiApplication.h>
 
-VINE_APPFWGUI_BEGIN
+VINE_APPFWGUI_NS_BEGIN
 
 struct GuiApplication::Data
 {
