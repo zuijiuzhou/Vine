@@ -1,2 +1,5 @@
 #include <graphics/View.h>
 
+VINE_GRAPHICS_NS_BEGIN
+VI_OBJECT_META_IMPL(View, Object)
+VINE_GRAPHICS_NS_END

@@ -494,16 +494,6 @@ String String::fromLocal8Bit(const char *data)
     return String();
 }
 
-String String::fromStdString(const std::string &data)
-{
-    return String();
-}
-
-String String::fromStdWString(const std::wstring &data)
-{
-    return String();
-}
-
 String &String::operator=(const String &right)
 {
     set(right.data_, right.len_);

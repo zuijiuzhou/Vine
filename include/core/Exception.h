@@ -32,3 +32,5 @@ private:
 };
 
 VINE_CORE_NS_END
+
+#define VI_THROW_IF_NULL(var) if(!var) throw vine::Exception(vine::Exception::ArgumentNull);

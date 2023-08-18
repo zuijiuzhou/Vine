@@ -1,13 +1,13 @@
 #pragma once
-#include "core/Inherit.h"
-
 #include "appfw_global.h"
+
+#include "core/Object.h"
 
 VINE_APPFW_NS_BEGIN
 
-class VINE_APPFW_API CommandManager : public Inherit<Object, CommandManager>{
-
-    
+class VINE_APPFW_API CommandManager : public Object
+{
+    VI_OBJECT_META
 };
 using CommandManagerPtr = RefPtr<CommandManager>;
 

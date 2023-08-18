@@ -1,7 +1,6 @@
 #include <core/Class.h>
 
 #include <set>
-#include <typeinfo>
 
 #include <core/Exception.h>
 
@@ -56,19 +55,19 @@ const Class *Class::parent() const
     return d->parent;
 }
 
-const String &Class::name() const
+const Char *Class::name() const
 {
-    return d->name;
+    return d->name.data();
 }
 
-const String &Class::ns() const
+const Char *Class::ns() const
 {
-    return d->ns;
+    return d->ns.data();
 }
 
-const String &Class::fullName() const
+const Char *Class::fullName() const
 {
-    return d->full_name;
+    return d->full_name.data();
 }
 
 const type_info &Class::ctype() const
@@ -101,7 +100,7 @@ Class *Class::getClass(const type_info &ti)
     return *iter;
 }
 
-Class *Class::getClass(const String &full_name)
+Class *Class::getClass(const Char *full_name)
 {
     auto iter = std::find_if(
         Data::classes.begin(), Data::classes.end(), [&full_name](Class *c)

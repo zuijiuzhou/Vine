@@ -1,10 +1,7 @@
 #pragma once
 #include "di_global.h"
-
 #include <functional>
-
-#include "core/Inherit.h"
-
+#include "core/Object.h"
 #include "Lifetime.h"
 
 VINE_DI_NS_BEGIN
@@ -16,8 +13,9 @@ class Container;
 
 using InstanceFactory = std::function<Object*(Type, Container*)>;
 
-class VINE_DI_API Registration : public Inherit<Object, Registration>
+class VINE_DI_API Registration : public Object
 {
+    VI_OBJECT_META
 private:
     Registration(Type type);
 
@@ -38,8 +36,7 @@ public:
     __CONF_FUNC_TEMP__ static Registration *create();
 
 private:
-    struct Data;
-    Data *const d;
+    VI_OBJECT_DATA
 };
 
 __CONF_FUNC_TEMP__ Registration *Registration::create()

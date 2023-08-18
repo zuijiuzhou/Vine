@@ -9,6 +9,8 @@ VINE_APPFW_NS_BEGIN
 
 static Application *s_current_app = nullptr;
 
+VI_OBJECT_META_IMPL(Application, Object)
+
 struct Application::Data
 {
     AddinManagerPtr addin_manager;
@@ -28,9 +30,9 @@ Application::Application(int argc, char **argv)
         throw std::exception("");
     }
     s_current_app = this;
-    d->addin_manager = AddinManager::create();
-    d->service_manager = ServiceManager::create();
-    d->command_manager = CommandManager::create();
+    d->addin_manager = new AddinManager;
+    d->service_manager = new ServiceManager;
+    d->command_manager = new CommandManager;
     d->argc = argc;
     d->argv = argv;
 }

@@ -1,15 +1,15 @@
 #pragma once
 #include "gui_global.h"
 
-#include "core/Inherit.h"
+#include "core/Object.h"
 #include "appfw/Application.h"
 
 
 VINE_APPFWGUI_NS_BEGIN
 
-class VINE_APPFWGUI_API GuiApplication : public Inherit<Application, GuiApplication>
+class VINE_APPFWGUI_API GuiApplication : public Application
 {
-
+    VI_OBJECT_META
 public:
     GuiApplication(int argc, char** argv);
     virtual ~GuiApplication();

@@ -7,6 +7,8 @@
 
 VINE_CORE_NS_BEGIN
 
+using Char = char32_t;
+
 using Byte = uint8_t;
 using SByte = int8_t;
 using Short = int16_t;

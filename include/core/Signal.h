@@ -1,17 +1,24 @@
 #pragma once
 #include <list>
-#include <memory>
+#include <functional>
 
 #include "core_global.h"
 
 VINE_CORE_NS_BEGIN
+
 template <typename... TArgs>
-class VINE_CORE_API Signal
+class Signal
 {
 public:
     using Handler = std::function<void(TArgs...)>;
     using HandlerId = std::list<Handler>::const_iterator;
 
+public:
+    Signal() = default;
+    Signal(const Signal&) = delete;
+    Signal& operator=(const Signal&) = delete;
+
+public:
     HandlerId addHandler(const Handler &handler)
     {
         auto x = m_handlers.emplace_back(handler);
@@ -31,7 +38,12 @@ public:
         }
     }
 
+    void clear(){
+        m_handlers.clear();
+    }
+
 private:
     std::list<Handler> m_handlers;
 };
+
 VINE_CORE_NS_END

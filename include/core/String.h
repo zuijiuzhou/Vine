@@ -1,12 +1,13 @@
 #pragma once
 #include "core_global.h"
 
-#include <string>
+#include <iostream>
+
+#include "Std.h"
 
 VINE_CORE_NS_BEGIN
 // using String = std::u32string;
 
-using Char = char32_t;
 
 /*
 字符串，内部UTF-32编码，字节序小端
@@ -92,10 +93,6 @@ public:
     static String fromUtf16(const char16_t* data);
 
     static String fromLocal8Bit(const char* data);
-
-    static String fromStdString(const std::string& data);
-
-    static String fromStdWString(const std::wstring& data);
 
 public:
     String& operator =(const String& right);

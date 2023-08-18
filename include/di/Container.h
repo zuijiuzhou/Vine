@@ -1,13 +1,14 @@
 #pragma once
 #include "di_global.h"
-
-#include "core/Inherit.h"
+#include "core/Object.h"
 
 VINE_DI_NS_BEGIN
 
 class Registration;
-class VINE_DI_API Container : Inherit<Object, Container>
+class VINE_DI_API Container : public Object
 {
+    VI_OBJECT_META
+    
 public:
     Container();
 

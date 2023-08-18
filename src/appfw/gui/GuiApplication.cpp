@@ -4,13 +4,15 @@
 
 VINE_APPFWGUI_NS_BEGIN
 
+VI_OBJECT_META_IMPL(GuiApplication, Application)
+
 struct GuiApplication::Data
 {
     QApplication *app = nullptr;
 };
 
 GuiApplication::GuiApplication(int argc, char **argv)
-    : Inherit(argc, argv), d(new Data)
+    : Application(argc, argv), d(new Data)
 {
 }
 GuiApplication::~GuiApplication()

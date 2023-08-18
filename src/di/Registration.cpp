@@ -2,6 +2,8 @@
 
 VINE_DI_NS_BEGIN
 
+VI_OBJECT_META_IMPL(Registration, Object)
+
 struct Registration::Data
 {
     Type service_type = nullptr;

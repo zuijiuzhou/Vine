@@ -1,9 +1,9 @@
 #pragma once
-
-#include <type_traits>
-
 #include "core_global.h"
-#include "String.h"
+
+#include <typeinfo>
+
+#include "Std.h"
 
 VINE_CORE_NS_BEGIN
 class VINE_CORE_API Class
@@ -16,15 +16,15 @@ public:
 
     const Class *parent() const;
 
-    const String &name() const;
+    const Char *name() const;
 
-    const String &ns() const;
+    const Char *ns() const;
 
-    const String &fullName() const;
+    const Char *fullName() const;
 
     bool isSubclassOf(const Class *cls) const;
 
-    const type_info& ctype() const;
+    const type_info &ctype() const;
 
 public:
     bool operator==(const Class &right) const;
@@ -32,7 +32,7 @@ public:
 
 public:
     static Class *getClass(const type_info &ti);
-    static Class *getClass(const String &full_name);
+    static Class *getClass(const Char *full_name);
 
 private:
     struct Data;

@@ -12,6 +12,7 @@ namespace
         return true;
     }
 }
+VI_OBJECT_META_IMPL(Container, Object)
 
 struct Container::Data
 {

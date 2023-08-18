@@ -16,10 +16,13 @@ namespace guifw = fw::gui;
 int main(int argc, char **argv)
 {
 
-    guifw::GuiApplicationPtr app = guifw::GuiApplication::create(argc, argv);
+    guifw::GuiApplicationPtr app = new guifw::GuiApplication(argc, argv);
     app->init();
     guifw::MainWindowPtr wnd = guifw::MainWindow::create();
     wnd->show();
+
+    auto b = app->isKindOf<vine::Object>();
+    auto bb = app->isKindOf<vine::di::Container>();
 
     vine::ObjectPtr objptr = app;
     auto n = objptr->numRefs();
