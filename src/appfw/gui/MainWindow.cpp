@@ -1,14 +1,17 @@
 #include <QMainWindow>
 
+#include <SARibbon.h>
+
 #include <appfw/gui/MainWindow.h>
 #include <appfw/gui/RibbonBar.h>
 #include <appfw/gui/StatusBar.h>
 
 
+
 VINE_APPFWGUI_NS_BEGIN
 
 struct MainWindow::Data{
-    QMainWindow* mwnd;
+    SARibbonMainWindow* mwnd;
     RibbonBar* ribbon_bar;
     StatusBar* status_bar;
 };
@@ -17,7 +20,7 @@ struct MainWindow::Data{
 MainWindow::MainWindow()
 : d(new Data)
 {
-    d->mwnd = new QMainWindow();
+    d->mwnd = new SARibbonMainWindow(nullptr, true);
     d->ribbon_bar = new RibbonBar();
     d->status_bar = new StatusBar();
 }

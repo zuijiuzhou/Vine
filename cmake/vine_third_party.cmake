@@ -1,0 +1,5 @@
+SET(THIRD_PARTY_ROOT ${CMAKE_SOURCE_DIR}/third_party)
+
+message(--------ThirdParty:${THIRD_PARTY_ROOT})
+
+SET(THIRD_SARIBBON_ROOT ${THIRD_PARTY_ROOT}/SARibbon)

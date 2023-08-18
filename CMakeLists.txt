@@ -22,7 +22,11 @@ add_definitions(-DUNICODE -D_UNICODE)
 add_definitions(-DVINE_NS_NAME=vine)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+include(cmake/vine_third_party.cmake)
+
 include_directories(${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
+
 
 add_subdirectory(src)
 
