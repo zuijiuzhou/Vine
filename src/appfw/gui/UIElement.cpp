@@ -7,12 +7,13 @@ VI_OBJECT_META_IMPL(UIElement, Object)
 struct UIElement::Data
 {
     String name;
+    void* impl;
 };
 
-UIElement::UIElement()
+UIElement::UIElement(void* impl)
     : d(new Data())
 {
-    
+    d->impl = impl;
 }
 
 String UIElement::name() const
@@ -24,6 +25,10 @@ UIElement *UIElement::name(const String &name)
 {
     d->name = name;
     return this;
+}
+
+void* UIElement::impl() const{
+    return d->impl;
 }
 
 VINE_APPFWGUI_NS_END

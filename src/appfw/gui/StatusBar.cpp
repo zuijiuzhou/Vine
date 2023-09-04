@@ -1,17 +1,22 @@
 #include <appfw/gui/StatusBar.h>
 
+#include <QStatusBar>
+#include <appfw/gui/MainWindow.h>
+
 VINE_APPFWGUI_NS_BEGIN
 
 VI_OBJECT_META_IMPL(StatusBar, UIElement)
 
 struct StatusBar::Data
 {
-
+    MainWindow* wnd;
 };
 
-StatusBar::StatusBar()
-    : d(new Data())
+StatusBar::StatusBar(MainWindow* wnd)
+    : Control(new QStatusBar())
+    , d(new Data())
 {
+    d->wnd = wnd;
 }
 
 VINE_APPFWGUI_NS_END

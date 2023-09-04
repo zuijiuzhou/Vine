@@ -11,8 +11,8 @@ VINE_APPFWGUI_NS_BEGIN
 class VINE_APPFWGUI_API UIElement : public Object
 {
     VI_OBJECT_META
-public:
-    UIElement();
+protected:
+    UIElement(void* impl);
 
 private:
     VI_DISABLE_COPY_MOVE(UIElement);
@@ -23,6 +23,14 @@ public:
 
 public:
     const Event<UIElement, PropertyChangedEventArgs<String>> NameChanged;
+
+protected:
+    virtual void* impl() const;
+
+    template<typename TImpl>
+    TImpl* impl() const{
+        return static_cast<TImpl*>(impl());
+    }
 
 private:
     VI_OBJECT_DATA

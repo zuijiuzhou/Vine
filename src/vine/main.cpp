@@ -18,7 +18,7 @@ int main(int argc, char **argv)
 
     guifw::GuiApplicationPtr app = new guifw::GuiApplication(argc, argv);
     app->init();
-    guifw::MainWindowPtr wnd = guifw::MainWindow::create();
+    guifw::MainWindowPtr wnd = new guifw::MainWindow();
     wnd->show();
 
     auto b = app->isKindOf<vine::Object>();

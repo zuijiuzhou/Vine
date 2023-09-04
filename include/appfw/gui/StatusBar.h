@@ -2,19 +2,21 @@
 
 #include "gui_global.h"
 
-#include "UIElement.h"
+#include "Control.h"
 
 VINE_APPFWGUI_NS_BEGIN
 
-class VINE_APPFWGUI_API StatusBar : public UIElement
+class VINE_APPFWGUI_API StatusBar : public Control
 {
     VI_OBJECT_META
+
+friend class MainWindow;
 
 private:
     VI_DISABLE_COPY_MOVE(StatusBar)
 
 public:
-    StatusBar();
+    StatusBar(MainWindow* wnd);
 
 private:
     VI_OBJECT_DATA

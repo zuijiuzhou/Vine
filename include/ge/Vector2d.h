@@ -31,7 +31,6 @@ public:
 
     Point2d toPoint() const;
     const Point2d &asPoint();
-    Vector2d convert2d() const;
 
 public:
     bool operator==(const Vector2d &right) const;

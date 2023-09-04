@@ -105,11 +105,6 @@ const Point2d &Vector2d::asPoint()
     return reinterpret_cast<const Point2d &>(*this);
 }
 
-Vector2d Vector2d::convert2d() const
-{
-    return Vector2d(x, y);
-}
-
 bool Vector2d::operator==(const Vector2d &right) const
 {
     return x == right.x && y == right.y;

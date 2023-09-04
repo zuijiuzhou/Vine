@@ -1,9 +1,10 @@
 #include <appfw/gui/RibbonBar.h>
 
 #include <vector>
-
+#include <SARibbon.h>
 #include <core/Exception.h>
 #include <appfw/gui/RibbonTab.h>
+#include <appfw/gui/MainWindow.h>
 
 VINE_APPFWGUI_NS_BEGIN
 
@@ -13,11 +14,14 @@ struct RibbonBar::Data
 {
     std::vector<RibbonTab *> tabs;
     RibbonTab *current_tab = nullptr;
+    MainWindow* wnd;
 };
 
-RibbonBar::RibbonBar()
-    : d(new Data())
+RibbonBar::RibbonBar(MainWindow* wnd)
+    : Control(static_cast<SARibbonMainWindow*>(wnd->impl())->ribbonBar())
+    , d(new Data())
 {
+    d->wnd = wnd;
 }
 
 ULong RibbonBar::numTabs() const
