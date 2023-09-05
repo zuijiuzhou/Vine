@@ -9,7 +9,7 @@ VINE_GE_NS_BEGIN
 class VINE_GE_API Line2d
 {
 public:
-    Line2d(Point2d origin, Vector2d direction);
+    Line2d(const Point2d& origin, const Vector2d& direction);
 
 public:
     Point2d origin() const;

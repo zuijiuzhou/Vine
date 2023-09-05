@@ -1,7 +1,7 @@
 #include <ge/Line2d.h>
 
 VINE_GE_NS_BEGIN
-Line2d::Line2d(Point2d origin, Vector2d direction)
+Line2d::Line2d(const Point2d& origin, const Vector2d& direction)
     : m_origin(origin), m_direction(direction)
 {
 }

@@ -6,6 +6,8 @@
 #include "core/Events.h"
 #include "core/String.h"
 
+#include "Gui.h"
+
 VINE_APPFWGUI_NS_BEGIN
 
 class VINE_APPFWGUI_API UIElement : public Object

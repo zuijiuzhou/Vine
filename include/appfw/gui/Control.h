@@ -1,7 +1,6 @@
 #pragma once
 
 #include "UIElement.h"
-#include "Rect.h"
 
 VINE_APPFWGUI_NS_BEGIN
 
@@ -11,7 +10,6 @@ class VINE_APPFWGUI_API Control : public UIElement
 
 protected:
     Control(void* impl);
-
 
 private:
     VI_DISABLE_COPY_MOVE(Control);
