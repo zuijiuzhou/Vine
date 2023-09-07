@@ -3,7 +3,7 @@
 
 #include <type_traits>
 
-#include "Defs.h"
+#include "core_defs.h"
 #include "Class.h"
 #include "Ptr.h"
 

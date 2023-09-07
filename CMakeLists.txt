@@ -18,12 +18,14 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
+list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_SOURCE_DIR}/cmake)
+
 add_definitions(-DUNICODE -D_UNICODE)
 add_definitions(-DVI_NS_NAME=vine)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-include(cmake/vine_third_party.cmake)
+include(vine_third_party)
 
 include_directories(${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
 
@@ -31,8 +33,7 @@ include_directories(${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
 add_subdirectory(src)
 
 if(VI_DEPLOY_WHEN_BUILDING)
-message(--------VI_DEPLOY_WHEN_BUILDING)
-include(cmake/vine_deploy.cmake)
+include(vine_deploy)
 endif()
 
 enable_testing()

@@ -14,7 +14,7 @@ link_directories(${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/$<$<CONFIG:Debug>:Debug>$<$<C
 
 set(VI_SHARED_LIBRARY_PREFIX vi)
 
-include(../cmake/vine_library_helper.cmake)
+include(vine_library_helper)
 
 add_subdirectory(ge)
 add_subdirectory(core)
