@@ -17,6 +17,10 @@ struct RibbonBar::Data
     MainWindow* wnd;
 };
 
+namespace{
+    using itype = SARibbonBar;
+}
+
 RibbonBar::RibbonBar(MainWindow* wnd)
     : Control(static_cast<SARibbonMainWindow*>(wnd->impl())->ribbonBar())
     , d(new Data())
@@ -36,28 +40,31 @@ RibbonTab *RibbonBar::tabAt(ULong idx) const
 
 RibbonBar *RibbonBar::addTab(RibbonTab *tab)
 {
-    VI_THROW_IF_NULL(tab)
+    VI_CHECK_NULL(tab)
+    auto w = impl<itype>();
+    w->addCategoryPage(tab->impl<SARibbonCategory>());
     return this;
 }
 
 RibbonBar *RibbonBar::removeTab(RibbonTab *tab)
 {
-    VI_THROW_IF_NULL(tab)
+    VI_CHECK_NULL(tab)
+    auto w = impl<itype>();
+    w->removeCategory(tab->impl<SARibbonCategory>());
     return this;
 }
 
-RibbonTab *RibbonBar::currentTab()
+Int RibbonBar::currentIndex()
 {
-    return d->current_tab;
+    auto w = impl<itype>();
+    auto idx = w->currentIndex();
+    return idx;
 }
 
-RibbonBar *RibbonBar::currentTab(ULong idx)
+RibbonBar *RibbonBar::currentIndex(Int idx)
 {
-    return this;
-}
-
-RibbonBar *RibbonBar::currentTab(const String &name)
-{
+    auto w = impl<itype>();
+    w->setCurrentIndex(idx);
     return this;
 }
 

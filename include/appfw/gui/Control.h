@@ -19,7 +19,11 @@ public:
     Rect rect() const;
     Control* rect(const Rect& rect);
 
+    Point position() const;
+    Control* position(const Point& posi);
 
+    Size size() const;
+    Control* size(const Size& s);
 private:
     VI_OBJECT_DATA
 };

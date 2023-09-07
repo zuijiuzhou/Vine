@@ -6,6 +6,7 @@
 
 VI_APPFWGUI_NS_BEGIN
 
+class MainWindow;
 class VI_APPFWGUI_API StatusBar : public Control
 {
     VI_OBJECT_META

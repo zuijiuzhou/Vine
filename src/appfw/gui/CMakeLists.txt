@@ -1,7 +1,12 @@
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets)
 qt_standard_project_setup()
 vi_internal_add_library(AppfwGui OUT_TARGET_NAME)
-target_sources(${OUT_TARGET_NAME} PRIVATE ${THIRD_SARIBBON_ROOT}/SARibbon.cpp ${THIRD_SARIBBON_ROOT}/resource.qrc)
+
+file(GLOB THIRD_SARIBBON_SRC_FILE_LIST ${THIRD_SARIBBON_ROOT}/*.cpp)
+file(GLOB THIRD_SARIBBON_RES_FILE_LIST ${THIRD_SARIBBON_ROOT}/*.qrc)
+
+target_sources(${OUT_TARGET_NAME} PRIVATE ${THIRD_SARIBBON_SRC_FILE_LIST} ${THIRD_SARIBBON_RES_FILE_LIST})
+source_group(qres FILES ${THIRD_SARIBBON_RES_FILE_LIST})
 target_include_directories(${OUT_TARGET_NAME} PRIVATE ${THIRD_SARIBBON_ROOT})
 
 target_link_libraries(${OUT_TARGET_NAME} PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets PUBLIC vi::Ge vi::Core vi::Appfw)

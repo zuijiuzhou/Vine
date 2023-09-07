@@ -23,9 +23,8 @@ public:
     RibbonTab *tabAt(ULong idx) const;
     RibbonBar *addTab(RibbonTab *tab);
     RibbonBar *removeTab(RibbonTab *tab);
-    RibbonTab *currentTab();
-    RibbonBar *currentTab(ULong idx);
-    RibbonBar *currentTab(const String &name);
+    Int currentIndex();
+    RibbonBar *currentIndex(Int idx);
 
 private:
     struct Data;

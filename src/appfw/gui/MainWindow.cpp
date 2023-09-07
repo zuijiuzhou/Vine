@@ -20,6 +20,7 @@ MainWindow::MainWindow()
 : Control(new SARibbonMainWindow(nullptr, true))
 , d(new Data)
 {
+    size(Size(600, 400));
     d->ribbon_bar = new RibbonBar(this);
     d->status_bar = new StatusBar(this);
 

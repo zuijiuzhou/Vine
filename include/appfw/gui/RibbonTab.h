@@ -9,15 +9,16 @@ class VI_APPFWGUI_API RibbonTab : public Control
 {
     VI_OBJECT_META
 
-    private:
+friend class RibbonBar;
+
+private:
     VI_DISABLE_COPY_MOVE(RibbonTab)
-    
-    public:
-        RibbonTab(void* impl);
+
+public:
+    RibbonTab(void *impl);
 
 private:
     VI_OBJECT_DATA
-
 };
 
 VI_APPFWGUI_NS_END
