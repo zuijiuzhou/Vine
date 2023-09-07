@@ -2,9 +2,9 @@
 
 #include "ge_global.h"
 
-VINE_GE_NS_BEGIN
+VI_GE_NS_BEGIN
 class Vector2i;
-class VINE_GE_API Point2i
+class VI_GE_API Point2i
 {
 public:
     Point2i();
@@ -27,4 +27,4 @@ public:
     int x;
     int y;
 };
-VINE_GE_NS_END
+VI_GE_NS_END

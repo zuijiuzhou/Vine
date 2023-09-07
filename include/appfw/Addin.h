@@ -4,10 +4,10 @@
 #include "core/Object.h"
 
 
-VINE_APPFW_NS_BEGIN
+VI_APPFW_NS_BEGIN
 
 class AddinLoadContext;
-class VINE_APPFW_API Addin : public Object
+class VI_APPFW_API Addin : public Object
 {
     VI_OBJECT_META
 public:
@@ -16,4 +16,4 @@ public:
 };
 using AddinPtr = RefPtr<Addin>;
 
-VINE_APPFW_NS_END
+VI_APPFW_NS_END

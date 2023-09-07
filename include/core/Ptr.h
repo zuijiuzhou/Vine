@@ -6,7 +6,7 @@
 #include <memory>
 #include <type_traits>
 
-VINE_CORE_NS_BEGIN
+VI_CORE_NS_BEGIN
 
 class Object;
 template <typename T>
@@ -148,4 +148,4 @@ private:
     T *ptr_;
 };
 
-VINE_CORE_NS_END
+VI_CORE_NS_END

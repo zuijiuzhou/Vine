@@ -4,9 +4,9 @@
 
 #include "core/Object.h"
 
-VINE_APPFW_NS_BEGIN
+VI_APPFW_NS_BEGIN
 
-class VINE_APPFW_API CommandExecutingContext : public Object
+class VI_APPFW_API CommandExecutingContext : public Object
 {
     VI_OBJECT_META
 
@@ -19,7 +19,7 @@ private:
 };
 using CommandExecutingContextPtr = RefPtr<CommandExecutingContext>;
 
-class VINE_APPFW_API Command : public Object
+class VI_APPFW_API Command : public Object
 {
     VI_OBJECT_META
 
@@ -32,4 +32,4 @@ public:
 };
 using CommandPtr = RefPtr<Command>;
 
-VINE_APPFW_NS_END
+VI_APPFW_NS_END

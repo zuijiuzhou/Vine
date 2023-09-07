@@ -3,7 +3,7 @@
 #include "Class.h"
 #include "String.h"
 
-VINE_CORE_NS_BEGIN
+VI_CORE_NS_BEGIN
 
 template <typename TParent, typename TSub>
     // requires std::is_base_of<Object, TParent>::value
@@ -40,4 +40,4 @@ public:
     }
 };
 
-VINE_CORE_NS_END
+VI_CORE_NS_END

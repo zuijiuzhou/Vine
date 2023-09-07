@@ -2,11 +2,11 @@
 
 #include "ge_global.h"
 
-VINE_GE_NS_BEGIN
+VI_GE_NS_BEGIN
 class Vector3d;
 class Line3d;
 class Plane;
-class VINE_GE_API Point3d
+class VI_GE_API Point3d
 {
 public:
     Point3d();
@@ -33,4 +33,4 @@ public:
     double y;
     double z;
 };
-VINE_GE_NS_END
+VI_GE_NS_END

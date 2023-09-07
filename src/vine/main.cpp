@@ -16,6 +16,13 @@ namespace guifw = fw::gui;
 int main(int argc, char **argv)
 {
 
+    std::vector<int> ints ={ 3 };
+    auto third = std::find(ints.begin(), ints.end(), 3);
+
+    std::vector<int> ints2(ints.size());
+    auto iter = std::copy(third, ints.end(), ints2.begin());
+    std::copy(ints.begin(), third, iter);
+    
     guifw::GuiApplicationPtr app = new guifw::GuiApplication(argc, argv);
     app->init();
     guifw::MainWindowPtr wnd = new guifw::MainWindow();

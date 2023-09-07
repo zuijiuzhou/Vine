@@ -2,8 +2,8 @@
 
 #include "line3d.h"
 
-VINE_GE_NS_BEGIN
-class VINE_GE_API Plane
+VI_GE_NS_BEGIN
+class VI_GE_API Plane
 {
 public:
     Plane(Point3d origin, Vector3d normal);
@@ -15,4 +15,4 @@ public:
     Point3d origin;
     Vector3d normal;
 };
-VINE_GE_NS_END
+VI_GE_NS_END

@@ -5,9 +5,9 @@
 #include "appfw/Application.h"
 
 
-VINE_APPFWGUI_NS_BEGIN
+VI_APPFWGUI_NS_BEGIN
 
-class VINE_APPFWGUI_API GuiApplication : public Application
+class VI_APPFWGUI_API GuiApplication : public Application
 {
     VI_OBJECT_META
 public:
@@ -27,4 +27,4 @@ private:
 
 using GuiApplicationPtr = RefPtr<GuiApplication>;
 
-VINE_APPFWGUI_NS_END
+VI_APPFWGUI_NS_END

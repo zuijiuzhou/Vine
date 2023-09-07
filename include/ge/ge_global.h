@@ -1,15 +1,15 @@
 #pragma once
 
-#ifdef VINE_GE_LIB
-#define VINE_GE_API __declspec(dllexport)
+#ifdef VI_GE_LIB
+#define VI_GE_API __declspec(dllexport)
 #else
-#define VINE_GE_API __declspec(dllimport)
+#define VI_GE_API __declspec(dllimport)
 #endif
 
-#define VINE_GE_NS_BEGIN \
-namespace VINE_NS_NAME { \
+#define VI_GE_NS_BEGIN \
+namespace VI_NS_NAME { \
     namespace ge { 
 
-#define VINE_GE_NS_END \
+#define VI_GE_NS_END \
     }\
 }

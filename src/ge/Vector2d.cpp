@@ -1,9 +1,8 @@
-#include "ge/Vector2d.h"
-#include <ge/Ge.h>
+#include <ge/Vector2d.h>
 #include <ge/Point2d.h>
 #include <cmath>
 
-VINE_GE_NS_BEGIN
+VI_GE_NS_BEGIN
 Vector2d::Vector2d() : Vector2d(0., 0.)
 {
 }
@@ -167,4 +166,4 @@ double Vector2d::operator*(const Vector2d &vec) const
 {
     return dotProduct(vec);
 }
-VINE_GE_NS_END
+VI_GE_NS_END

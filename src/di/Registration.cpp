@@ -1,6 +1,6 @@
 #include <di/Registration.h>
 
-VINE_DI_NS_BEGIN
+VI_DI_NS_BEGIN
 
 VI_OBJECT_META_IMPL(Registration, Object)
 
@@ -49,4 +49,4 @@ Lifetime Registration::lifetime() const
     return d->lifetime;
 }
 
-VINE_DI_NS_END
+VI_DI_NS_END

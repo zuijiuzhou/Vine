@@ -1,6 +1,6 @@
 #include <ge/Rect2i.h>
 
-VINE_GE_NS_BEGIN
+VI_GE_NS_BEGIN
 Rect2i::Rect2i() : Rect2i(0, 0, 0, 0)
 {
 }
@@ -36,4 +36,4 @@ Vector2i Rect2i::size() const
 
     return Vector2i(w, h);
 }
-VINE_GE_NS_END
+VI_GE_NS_END

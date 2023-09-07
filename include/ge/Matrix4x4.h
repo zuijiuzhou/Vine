@@ -2,10 +2,10 @@
 
 #include "ge_global.h"
 
-VINE_GE_NS_BEGIN
+VI_GE_NS_BEGIN
 class Point3d;
 class Vector3d;
-class VINE_GE_API Matrix4x4
+class VI_GE_API Matrix4x4
 {
 public:
     double data[4][4];
@@ -43,4 +43,4 @@ public:
     static Matrix4x4 scale(double factor);
     static Matrix4x4 lookAt(const Point3d &eye, const Point3d &target, const Vector3d &up);
 };
-VINE_GE_NS_END
+VI_GE_NS_END

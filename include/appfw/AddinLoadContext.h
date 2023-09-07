@@ -4,9 +4,9 @@
 
 #include "appfw_global.h"
 
-VINE_APPFW_NS_BEGIN
+VI_APPFW_NS_BEGIN
 
-class VINE_APPFW_API AddinLoadContext : public Object
+class VI_APPFW_API AddinLoadContext : public Object
 {
     VI_OBJECT_META
 
@@ -14,4 +14,4 @@ class VINE_APPFW_API AddinLoadContext : public Object
 };
 using AddinLoadContextPtr = RefPtr<AddinLoadContext>;
 
-VINE_APPFW_NS_END
+VI_APPFW_NS_END

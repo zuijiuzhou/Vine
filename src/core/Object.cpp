@@ -5,7 +5,7 @@
 
 #include <core/Class.h>
 
-VINE_CORE_NS_BEGIN
+VI_CORE_NS_BEGIN
 
 struct Object::Data
 {
@@ -58,4 +58,4 @@ const Class *Object::desc()
     return cls;
 }
 
-VINE_CORE_NS_END
+VI_CORE_NS_END

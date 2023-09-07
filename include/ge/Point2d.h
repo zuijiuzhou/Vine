@@ -2,10 +2,10 @@
 
 #include "ge_global.h"
 
-VINE_GE_NS_BEGIN
+VI_GE_NS_BEGIN
 class Vector2d;
 class Line2d;
-class VINE_GE_API Point2d
+class VI_GE_API Point2d
 {
 public:
     Point2d();
@@ -29,4 +29,4 @@ public:
     double x;
     double y;
 };
-VINE_GE_NS_END
+VI_GE_NS_END

@@ -4,7 +4,7 @@
 #include "core/Object.h"
 #include "Lifetime.h"
 
-VINE_DI_NS_BEGIN
+VI_DI_NS_BEGIN
 
 #define __CONF_FUNC_TEMP__ template <typename T> \
     requires Objectifiable<T>
@@ -13,7 +13,7 @@ class Container;
 
 using InstanceFactory = std::function<Object*(Type, Container*)>;
 
-class VINE_DI_API Registration : public Object
+class VI_DI_API Registration : public Object
 {
     VI_OBJECT_META
 private:
@@ -56,4 +56,4 @@ __CONF_FUNC_TEMP__ Registration *Registration::impl()
 #undef __CONF_FUNC_TEMP__
 
 using RegistrationPtr = RefPtr<Registration>;
-VINE_DI_NS_END
+VI_DI_NS_END

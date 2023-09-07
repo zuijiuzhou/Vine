@@ -5,8 +5,8 @@
 
 #include "Std.h"
 
-VINE_CORE_NS_BEGIN
-class VINE_CORE_API Class
+VI_CORE_NS_BEGIN
+class VI_CORE_API Class
 {
 public:
     Class(const Class *parent, const type_info &ti);
@@ -41,4 +41,4 @@ private:
 
 using Type = const Class *;
 
-VINE_CORE_NS_END
+VI_CORE_NS_END

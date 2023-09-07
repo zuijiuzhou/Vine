@@ -4,9 +4,9 @@
 
 #include "Object.h"
 
-VINE_CORE_NS_BEGIN
+VI_CORE_NS_BEGIN
 
-class VINE_CORE_API EventArgs : public Object
+class VI_CORE_API EventArgs : public Object
 {
     VI_OBJECT_META
 public:
@@ -41,4 +41,4 @@ template <typename TSender, typename TEventArgs = EventArgs>
     requires std::is_base_of<EventArgs, TEventArgs>::value
 using Event = Signal<TSender, TEventArgs>;
 
-VINE_CORE_NS_END
+VI_CORE_NS_END

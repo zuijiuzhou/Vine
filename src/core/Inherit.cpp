@@ -1,7 +1,7 @@
 #include <core/Inherit.h>
 
-VINE_CORE_NS_BEGIN
+VI_CORE_NS_BEGIN
 
 
 
-VINE_CORE_NS_END
+VI_CORE_NS_END

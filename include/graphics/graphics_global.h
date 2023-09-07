@@ -1,15 +1,15 @@
 #pragma once
 
-#ifdef VINE_GRAPHICS_LIB
-#define VINE_GRAPHICS_API __declspec(dllexport)
+#ifdef VI_GRAPHICS_LIB
+#define VI_GRAPHICS_API __declspec(dllexport)
 #else
-#define VINE_GRAPHICS_API __declspec(dllimport)
+#define VI_GRAPHICS_API __declspec(dllimport)
 #endif
 
-#define VINE_GRAPHICS_NS_BEGIN \
-namespace VINE_NS_NAME { \
+#define VI_GRAPHICS_NS_BEGIN \
+namespace VI_NS_NAME { \
     namespace graphics { 
 
-#define VINE_GRAPHICS_NS_END \
+#define VI_GRAPHICS_NS_END \
     }\
 }

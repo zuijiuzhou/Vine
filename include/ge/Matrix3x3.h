@@ -2,10 +2,10 @@
 
 #include "ge_global.h"
 
-VINE_GE_NS_BEGIN
+VI_GE_NS_BEGIN
 class Point2d;
 class Vector2d;
-class VINE_GE_API Matrix3x3
+class VI_GE_API Matrix3x3
 {
 public:
     double data[3][3];
@@ -40,4 +40,4 @@ public:
     static Matrix3x3 scale(double x, double y);
     static Matrix3x3 scale(double factor);
 };
-VINE_GE_NS_END
+VI_GE_NS_END

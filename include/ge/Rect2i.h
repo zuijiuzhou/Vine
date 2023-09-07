@@ -5,8 +5,8 @@
 #include "Point2i.h"
 #include "Vector2i.h"
 
-VINE_GE_NS_BEGIN
-class VINE_GE_API Rect2i
+VI_GE_NS_BEGIN
+class VI_GE_API Rect2i
 {
 public:
     Rect2i();
@@ -24,4 +24,4 @@ public:
 public:
     int x, y, w, h;
 };
-VINE_GE_NS_END
+VI_GE_NS_END

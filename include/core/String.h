@@ -5,14 +5,14 @@
 
 #include "Std.h"
 
-VINE_CORE_NS_BEGIN
+VI_CORE_NS_BEGIN
 // using String = std::u32string;
 
 
 /*
 字符串，内部UTF-32编码，字节序小端
 */
-class VINE_CORE_API String{
+class VI_CORE_API String{
 public:
     using iterator = Char*;
     using const_iterator = const Char*;
@@ -109,4 +109,4 @@ private:
     size_t len_ = 0;
 };
 
-VINE_CORE_NS_END
+VI_CORE_NS_END

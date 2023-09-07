@@ -1,16 +1,17 @@
 #pragma once
 
-#ifdef VINE_APPFWGUI_LIB
-#define VINE_APPFWGUI_API __declspec(dllexport)
+#ifdef VI_APPFWGUI_LIB
+#define VI_APPFWGUI_API __declspec(dllexport)
 #else
-#define VINE_APPFWGUI_API __declspec(dllimport)
+#define VI_APPFWGUI_API __declspec(dllimport)
 #endif
 
-#define VINE_APPFWGUI_NS_BEGIN \
-namespace VINE_NS_NAME { \
+#define VI_APPFWGUI_NS_BEGIN \
+namespace VI_NS_NAME { \
     namespace appfw { \
         namespace gui {
-#define VINE_APPFWGUI_NS_END \
+#define VI_APPFWGUI_NS_END \
         }\
     }\
 }
+

@@ -6,7 +6,7 @@
 
 #include <core/Exception.h>
 
-VINE_CORE_NS_BEGIN
+VI_CORE_NS_BEGIN
 
 namespace
 {
@@ -534,4 +534,4 @@ std::wostream &operator<<(std::wostream &wcout, const String &str)
 {
     return wcout;
 }
-VINE_CORE_NS_END
+VI_CORE_NS_END

@@ -2,7 +2,7 @@
 
 #include <QWidget>
 
-VINE_APPFWGUI_NS_BEGIN
+VI_APPFWGUI_NS_BEGIN
 
 VI_OBJECT_META_IMPL(Control, UIElement)
 
@@ -33,4 +33,4 @@ Control* Control::rect(const Rect& rect){
     return this;
 }
 
-VINE_APPFWGUI_NS_END
+VI_APPFWGUI_NS_END

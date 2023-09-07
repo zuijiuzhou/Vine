@@ -4,12 +4,12 @@
 
 #include "core/Object.h"
 
-VINE_APPFW_NS_BEGIN
+VI_APPFW_NS_BEGIN
 class CommandManager;
 class AddinManager;
 class ServiceManager;
 
-class VINE_APPFW_API Application : public Object
+class VI_APPFW_API Application : public Object
 {
     VI_OBJECT_META
 public:
@@ -42,4 +42,4 @@ private:
 };
 using ApplicationPtr = RefPtr<Application>;
 
-VINE_APPFW_NS_END
+VI_APPFW_NS_END

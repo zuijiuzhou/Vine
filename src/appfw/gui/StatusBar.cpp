@@ -3,7 +3,7 @@
 #include <QStatusBar>
 #include <appfw/gui/MainWindow.h>
 
-VINE_APPFWGUI_NS_BEGIN
+VI_APPFWGUI_NS_BEGIN
 
 VI_OBJECT_META_IMPL(StatusBar, UIElement)
 
@@ -19,4 +19,4 @@ StatusBar::StatusBar(MainWindow* wnd)
     d->wnd = wnd;
 }
 
-VINE_APPFWGUI_NS_END
+VI_APPFWGUI_NS_END

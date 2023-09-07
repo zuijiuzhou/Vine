@@ -3,10 +3,10 @@
 
 #include "Control.h"
 
-VINE_APPFWGUI_NS_BEGIN
+VI_APPFWGUI_NS_BEGIN
 
 class RibbonTab;
-class VINE_APPFWGUI_API RibbonBar : Control
+class VI_APPFWGUI_API RibbonBar : Control
 {
     VI_OBJECT_META
 
@@ -32,4 +32,4 @@ private:
     Data *const d;
 };
 
-VINE_APPFWGUI_NS_END
+VI_APPFWGUI_NS_END

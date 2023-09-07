@@ -2,7 +2,7 @@
 #include <ge/Vector3d.h>
 #include <ge/Line3d.h>
 
-VINE_GE_NS_BEGIN
+VI_GE_NS_BEGIN
 Point3d::Point3d() : Point3d(0., 0., 0.)
 {
 }
@@ -63,4 +63,4 @@ Point3d &Point3d::operator-=(const Vector3d &right)
     z -= right.z;
     return *this;
 }
-VINE_GE_NS_END
+VI_GE_NS_END

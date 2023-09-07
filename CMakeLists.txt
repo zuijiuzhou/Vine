@@ -7,7 +7,7 @@ project(
     HOMEPAGE_URL "https://github.com/zuijiuzhou/Vine"
     LANGUAGES C CXX)
 
-option(VINE_DEPLOY_WHEN_BUILDING "Whether to run the deploy command when building." OFF)
+option(VI_DEPLOY_WHEN_BUILDING "Whether to run the deploy command when building." OFF)
 
 if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug)
@@ -19,7 +19,7 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
 add_definitions(-DUNICODE -D_UNICODE)
-add_definitions(-DVINE_NS_NAME=vine)
+add_definitions(-DVI_NS_NAME=vine)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -30,8 +30,8 @@ include_directories(${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
 
 add_subdirectory(src)
 
-if(VINE_DEPLOY_WHEN_BUILDING)
-message(--------VINE_DEPLOY_WHEN_BUILDING)
+if(VI_DEPLOY_WHEN_BUILDING)
+message(--------VI_DEPLOY_WHEN_BUILDING)
 include(cmake/vine_deploy.cmake)
 endif()
 

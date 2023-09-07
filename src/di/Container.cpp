@@ -3,7 +3,7 @@
 
 #include <set>
 
-VINE_DI_NS_BEGIN
+VI_DI_NS_BEGIN
 
 namespace
 {
@@ -41,4 +41,4 @@ Object *Container::resolve(Type type) const
     return nullptr;
 }
 
-VINE_DI_NS_END
+VI_DI_NS_END

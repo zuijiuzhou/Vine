@@ -1,1 +1,1 @@
-vine_internal_add_library(Core OUT_TARGET_NAME)
+vi_internal_add_library(Core OUT_TARGET_NAME)

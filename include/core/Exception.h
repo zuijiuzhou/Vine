@@ -4,9 +4,9 @@
 
 #include "String.h"
 
-VINE_CORE_NS_BEGIN
+VI_CORE_NS_BEGIN
 
-class VINE_CORE_API Exception
+class VI_CORE_API Exception
 {
 public:
     enum Code {
@@ -31,6 +31,6 @@ private:
     String msg_;
 };
 
-VINE_CORE_NS_END
+VI_CORE_NS_END
 
 #define VI_THROW_IF_NULL(var) if(!var) throw vine::Exception(vine::Exception::ArgumentNull);

@@ -2,7 +2,7 @@
 #include <ge/Vector2d.h>
 #include <cmath>
 
-VINE_GE_NS_BEGIN
+VI_GE_NS_BEGIN
 Point2d::Point2d() : Point2d(0., 0.)
 {
 }
@@ -54,4 +54,4 @@ Point2d &Point2d::operator-=(const Vector2d &right)
     y -= right.y;
     return *this;
 }
-VINE_GE_NS_END
+VI_GE_NS_END

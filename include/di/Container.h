@@ -2,10 +2,10 @@
 #include "di_global.h"
 #include "core/Object.h"
 
-VINE_DI_NS_BEGIN
+VI_DI_NS_BEGIN
 
 class Registration;
-class VINE_DI_API Container : public Object
+class VI_DI_API Container : public Object
 {
     VI_OBJECT_META
     
@@ -34,4 +34,4 @@ T *Container::resolve() const
     return resolve(T::desc());
 }
 
-VINE_DI_NS_END
+VI_DI_NS_END

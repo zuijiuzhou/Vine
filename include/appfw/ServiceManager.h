@@ -3,9 +3,9 @@
 
 #include "core/Inherit.h"
 
-VINE_APPFW_NS_BEGIN
+VI_APPFW_NS_BEGIN
 
-class VINE_APPFW_API ServiceManager : public Object
+class VI_APPFW_API ServiceManager : public Object
 {
     VI_OBJECT_META
 public:
@@ -14,4 +14,4 @@ public:
 };
 using ServiceManagerPtr = RefPtr<ServiceManager>;
 
-VINE_APPFW_NS_END
+VI_APPFW_NS_END

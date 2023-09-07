@@ -5,7 +5,7 @@
 
 #include <stdint.h>
 
-VINE_CORE_NS_BEGIN
+VI_CORE_NS_BEGIN
 
 using Char = char32_t;
 
@@ -22,4 +22,4 @@ using Double = double;
 using Float = float;
 using Boolean = bool;
 
-VINE_CORE_NS_END
+VI_CORE_NS_END

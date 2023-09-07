@@ -1,13 +1,12 @@
 #include <ge/Vector3d.h>
 #include <ge/Ge.h>
-
 #include <ge/Vector2d.h>
 #include <ge/Point3d.h>
 #include <ge/Matrix4x4.h>
 
 #include <cmath>
 
-VINE_GE_NS_BEGIN
+VI_GE_NS_BEGIN
 Vector3d::Vector3d() : Vector3d(0., 0., 0.)
 {
 }
@@ -205,4 +204,4 @@ double Vector3d::operator*(const Vector3d &vec) const
 {
     return dotProduct(vec);
 }
-VINE_GE_NS_END
+VI_GE_NS_END

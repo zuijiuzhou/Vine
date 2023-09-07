@@ -4,11 +4,11 @@
 #include "core/Inherit.h"
 #include "Control.h"
 
-VINE_APPFWGUI_NS_BEGIN
+VI_APPFWGUI_NS_BEGIN
 
 class RibbonBar;
 class StatusBar;
-class VINE_APPFWGUI_API MainWindow : public Control
+class VI_APPFWGUI_API MainWindow : public Control
 {
 
 VI_OBJECT_META
@@ -33,4 +33,4 @@ private:
 
 using MainWindowPtr = RefPtr<MainWindow>;
 
-VINE_APPFWGUI_NS_END
+VI_APPFWGUI_NS_END

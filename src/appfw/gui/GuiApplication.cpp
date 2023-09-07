@@ -2,7 +2,7 @@
 
 #include <appfw/gui/GuiApplication.h>
 
-VINE_APPFWGUI_NS_BEGIN
+VI_APPFWGUI_NS_BEGIN
 
 VI_OBJECT_META_IMPL(GuiApplication, Application)
 
@@ -34,4 +34,4 @@ int GuiApplication::run()
     return d->app->exec();
 }
 
-VINE_APPFWGUI_NS_END
+VI_APPFWGUI_NS_END

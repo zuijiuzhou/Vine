@@ -7,9 +7,9 @@
 #include "ge/Vector3d.h"
 
 
-VINE_GRAPHICS_NS_BEGIN
+VI_GRAPHICS_NS_BEGIN
 
-class VINE_GRAPHICS_API View : public Object
+class VI_GRAPHICS_API View : public Object
 {
     VI_OBJECT_META
 public:
@@ -17,4 +17,4 @@ public:
 };
 using ViewPtr = RefPtr<View>;
 
-VINE_GRAPHICS_NS_END
+VI_GRAPHICS_NS_END

@@ -2,7 +2,7 @@
 #include <ge/Vector2i.h>
 #include <cmath>
 
-VINE_GE_NS_BEGIN
+VI_GE_NS_BEGIN
 Point2i::Point2i() : Point2i(0, 0)
 {
 }
@@ -50,4 +50,4 @@ Point2i &Point2i::operator-=(const Vector2i &right)
     y -= right.y;
     return *this;
 }
-VINE_GE_NS_END
+VI_GE_NS_END

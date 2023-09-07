@@ -7,7 +7,7 @@
 #include "Class.h"
 #include "Ptr.h"
 
-VINE_CORE_NS_BEGIN
+VI_CORE_NS_BEGIN
 
 class String;
 class Object;
@@ -46,7 +46,7 @@ concept Enumerable = requires(T t, ULong i) {
     };
 };
 
-class VINE_CORE_API Object
+class VI_CORE_API Object
 {
 public:
     Object();
@@ -97,7 +97,7 @@ private:
 
 using ObjectPtr = RefPtr<Object>;
 
-VINE_CORE_NS_END
+VI_CORE_NS_END
 
 
 #define VI_OBJECT_META                                                    \

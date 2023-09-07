@@ -4,7 +4,7 @@
 
 #include "core_global.h"
 
-VINE_CORE_NS_BEGIN
+VI_CORE_NS_BEGIN
 
 template <typename... TArgs>
 class Signal
@@ -46,4 +46,4 @@ private:
     std::list<Handler> m_handlers;
 };
 
-VINE_CORE_NS_END
+VI_CORE_NS_END

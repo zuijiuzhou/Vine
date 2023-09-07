@@ -6,7 +6,7 @@
 #include <appfw/gui/RibbonTab.h>
 #include <appfw/gui/MainWindow.h>
 
-VINE_APPFWGUI_NS_BEGIN
+VI_APPFWGUI_NS_BEGIN
 
 VI_OBJECT_META_IMPL(RibbonBar, UIElement)
 
@@ -61,4 +61,4 @@ RibbonBar *RibbonBar::currentTab(const String &name)
     return this;
 }
 
-VINE_APPFWGUI_NS_END
+VI_APPFWGUI_NS_END

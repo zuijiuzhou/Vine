@@ -3,7 +3,7 @@
 #include <appfw/gui/RibbonBar.h>
 #include <appfw/gui/StatusBar.h>
 
-VINE_APPFWGUI_NS_BEGIN
+VI_APPFWGUI_NS_BEGIN
 
 VI_OBJECT_META_IMPL(MainWindow, Control)
 
@@ -57,4 +57,4 @@ StatusBar* MainWindow::statusBar() const{
 }
 
 
-VINE_APPFWGUI_NS_END
+VI_APPFWGUI_NS_END
