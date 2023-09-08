@@ -5,7 +5,7 @@
 
 VI_APPFWGUI_NS_BEGIN
 
-VI_OBJECT_META_IMPL(StatusBar, UIElement)
+VI_OBJECT_META_IMPL(StatusBar, Control)
 
 struct StatusBar::Data
 {
@@ -17,6 +17,10 @@ StatusBar::StatusBar(MainWindow* wnd)
     , d(new Data())
 {
     d->wnd = wnd;
+}
+
+StatusBar::~StatusBar(){
+    delete d;
 }
 
 VI_APPFWGUI_NS_END

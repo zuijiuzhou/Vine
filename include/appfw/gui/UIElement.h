@@ -14,7 +14,10 @@ class VI_APPFWGUI_API UIElement : public Object
 {
     VI_OBJECT_META
 protected:
-    UIElement(void* impl);
+    UIElement(void *impl);
+
+public:
+    virtual ~UIElement();
 
 private:
     VI_DISABLE_COPY_MOVE(UIElement);
@@ -27,11 +30,12 @@ public:
     const Event<UIElement, PropertyChangedEventArgs<String>> NameChanged;
 
 protected:
-    virtual void* impl() const;
+    virtual void *impl() const;
 
-    template<typename TImpl>
-    TImpl* impl() const{
-        return static_cast<TImpl*>(impl());
+    template <typename TImpl>
+    TImpl *impl() const
+    {
+        return static_cast<TImpl *>(impl());
     }
 
 private:

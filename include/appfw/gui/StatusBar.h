@@ -11,13 +11,14 @@ class VI_APPFWGUI_API StatusBar : public Control
 {
     VI_OBJECT_META
 
-friend class MainWindow;
+    friend class MainWindow;
 
 private:
     VI_DISABLE_COPY_MOVE(StatusBar)
 
 public:
-    StatusBar(MainWindow* wnd);
+    StatusBar(MainWindow *wnd);
+    virtual ~StatusBar();
 
 private:
     VI_OBJECT_DATA

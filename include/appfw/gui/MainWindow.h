@@ -11,21 +11,21 @@ class StatusBar;
 class VI_APPFWGUI_API MainWindow : public Control
 {
 
-VI_OBJECT_META
+    VI_OBJECT_META
 
-friend class RibbonBar;
-friend class StatusBar;
+    friend class RibbonBar;
+    friend class StatusBar;
 
 public:
-MainWindow();
-virtual ~MainWindow();
+    MainWindow();
+    virtual ~MainWindow();
 
 public:
     void show();
     void close();
 
-    RibbonBar* ribbonBar() const;
-    StatusBar* statusBar() const;
+    RibbonBar *ribbonBar() const;
+    StatusBar *statusBar() const;
 
 private:
     VI_OBJECT_DATA

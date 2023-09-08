@@ -2,11 +2,11 @@
 
 #include "gui_global.h"
 #include "core/Object.h"
-#include "UIElement.h"
+#include "Control.h"
 
 VI_APPFWGUI_NS_BEGIN
 
-class VI_APPFWGUI_API DockPanel : public Object
+class VI_APPFWGUI_API DockPanel : public Control
 {
     VI_OBJECT_META
 
@@ -15,7 +15,8 @@ private:
 
 public:
     DockPanel();
-
+    virtual ~DockPanel();
+    
 private:
     VI_OBJECT_DATA;
 };

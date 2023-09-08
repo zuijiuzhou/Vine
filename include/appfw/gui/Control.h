@@ -11,6 +11,9 @@ class VI_APPFWGUI_API Control : public UIElement
 protected:
     Control(void* impl);
 
+public:
+    virtual ~Control();
+    
 private:
     VI_DISABLE_COPY_MOVE(Control);
 

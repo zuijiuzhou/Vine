@@ -15,6 +15,9 @@ UIElement::UIElement(void* impl)
 {
     d->impl = impl;
 }
+UIElement::~UIElement(){
+    delete d;
+}
 
 String UIElement::name() const
 {

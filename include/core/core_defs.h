@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Std.h"
-#include "Platform.h"
 
 #define VI_DISABLE_COPY(Cls) \
     Cls(const Cls &) = delete;\

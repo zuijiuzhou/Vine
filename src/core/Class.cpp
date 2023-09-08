@@ -1,6 +1,7 @@
 #include <core/Class.h>
 
 #include <set>
+#include <typeinfo>
 
 #include <core/Exception.h>
 

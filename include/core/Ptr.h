@@ -2,8 +2,6 @@
 
 #include "core_global.h"
 
-#include <atomic>
-#include <memory>
 #include <type_traits>
 
 VI_CORE_NS_BEGIN

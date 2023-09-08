@@ -21,8 +21,7 @@ public:
     virtual int run() override;
 
 private:
-    struct Data;
-    Data *d;
+    VI_OBJECT_DATA
 };
 
 using GuiApplicationPtr = RefPtr<GuiApplication>;

@@ -14,8 +14,7 @@ public:
     String arguments() const;
 
 private:
-    struct Data;
-    const Data *d;
+    VI_OBJECT_DATA
 };
 using CommandExecutingContextPtr = RefPtr<CommandExecutingContext>;
 

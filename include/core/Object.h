@@ -2,6 +2,7 @@
 #include "core_global.h"
 
 #include <type_traits>
+#include <concepts>
 
 #include "core_defs.h"
 #include "Class.h"
@@ -37,10 +38,10 @@ concept Comparable = requires(T t, const Object *obj) {
 };
 
 template <typename T>
-concept Enumerable = requires(T t, ULong i) {
+concept Enumerable = requires(T t, UInt64 i) {
     {
         t.count()
-    } -> std::same_as<ULong>;
+    } -> std::same_as<UInt64>;
     {
         t.at(i)
     };
@@ -83,7 +84,7 @@ public:
 
     void removeRef(bool del = true);
 
-    UInt numRefs() const;
+    UInt64 numRefs() const;
 
     virtual bool equals(const Object &other) const;
 

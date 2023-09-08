@@ -1,9 +1,8 @@
 #pragma once
 #include "core_global.h"
-
-#include <typeinfo>
-
 #include "Std.h"
+
+class type_info;
 
 VI_CORE_NS_BEGIN
 class VI_CORE_API Class

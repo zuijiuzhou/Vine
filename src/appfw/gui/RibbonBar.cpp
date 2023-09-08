@@ -1,6 +1,5 @@
 #include <appfw/gui/RibbonBar.h>
 
-#include <vector>
 #include <SARibbon.h>
 #include <core/Exception.h>
 #include <appfw/gui/RibbonTab.h>
@@ -8,32 +7,35 @@
 
 VI_APPFWGUI_NS_BEGIN
 
-VI_OBJECT_META_IMPL(RibbonBar, UIElement)
+VI_OBJECT_META_IMPL(RibbonBar, Control)
 
 struct RibbonBar::Data
 {
     std::vector<RibbonTab *> tabs;
-    RibbonTab *current_tab = nullptr;
-    MainWindow* wnd;
+    MainWindow *wnd;
 };
 
-namespace{
+namespace
+{
     using itype = SARibbonBar;
 }
 
-RibbonBar::RibbonBar(MainWindow* wnd)
-    : Control(static_cast<SARibbonMainWindow*>(wnd->impl())->ribbonBar())
-    , d(new Data())
+RibbonBar::RibbonBar(MainWindow *wnd)
+    : Control(static_cast<SARibbonMainWindow *>(wnd->impl())->ribbonBar()), d(new Data())
 {
     d->wnd = wnd;
 }
 
-ULong RibbonBar::numTabs() const
+RibbonBar::~RibbonBar(){
+    delete d;
+}
+
+Int32 RibbonBar::numTabs() const
 {
     return d->tabs.size();
 }
 
-RibbonTab *RibbonBar::tabAt(ULong idx) const
+RibbonTab *RibbonBar::tabAt(Int32 idx) const
 {
     return d->tabs.at(idx);
 }
@@ -41,6 +43,9 @@ RibbonTab *RibbonBar::tabAt(ULong idx) const
 RibbonBar *RibbonBar::addTab(RibbonTab *tab)
 {
     VI_CHECK_NULL(tab)
+    if (std::any_of(d->tabs.begin(), d->tabs.end(), [tab](RibbonTab *t)
+                    { return tab == t; }))
+        return this;
     auto w = impl<itype>();
     w->addCategoryPage(tab->impl<SARibbonCategory>());
     return this;
@@ -49,19 +54,21 @@ RibbonBar *RibbonBar::addTab(RibbonTab *tab)
 RibbonBar *RibbonBar::removeTab(RibbonTab *tab)
 {
     VI_CHECK_NULL(tab)
+    if (std::none_of(d->tabs.begin(), d->tabs.end(), [tab](RibbonTab *t)
+                     { return tab == t; }))
+        return this;
     auto w = impl<itype>();
     w->removeCategory(tab->impl<SARibbonCategory>());
     return this;
 }
 
-Int RibbonBar::currentIndex()
+Int32 RibbonBar::currentIndex()
 {
     auto w = impl<itype>();
-    auto idx = w->currentIndex();
-    return idx;
+    return w->currentIndex();
 }
 
-RibbonBar *RibbonBar::currentIndex(Int idx)
+RibbonBar *RibbonBar::currentIndex(Int32 idx)
 {
     auto w = impl<itype>();
     w->setCurrentIndex(idx);

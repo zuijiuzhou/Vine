@@ -5,9 +5,9 @@
 
 #include "Std.h"
 
+
 VI_CORE_NS_BEGIN
 // using String = std::u32string;
-
 
 /*
 字符串，内部UTF-32编码，字节序小端
@@ -15,6 +15,7 @@ VI_CORE_NS_BEGIN
 class VI_CORE_API String{
 public:
     using iterator = Char*;
+    using c = std::u32string;
     using const_iterator = const Char*;
     using resverse_iterator = std::reverse_iterator<iterator>;
     using const_resverse_iterator = std::reverse_iterator<const_iterator>;

@@ -9,7 +9,7 @@ VI_CORE_NS_BEGIN
 
 struct Object::Data
 {
-    std::atomic_uint num_refs = 0;
+    std::atomic<Int32> num_refs = 0;
 };
 
 Object::Object()
@@ -44,7 +44,7 @@ void Object::removeRef(bool del)
         delete this;
 }
 
-UInt Object::numRefs() const{
+UInt64 Object::numRefs() const{
     return d->num_refs.load();
 }
 

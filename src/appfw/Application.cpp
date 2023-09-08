@@ -1,5 +1,7 @@
 #include <QCoreApplication>
 
+#include <core/Exception.h>
+
 #include <appfw/AddinManager.h>
 #include <appfw/ServiceManager.h>
 #include <appfw/CommandManager.h>
@@ -27,7 +29,7 @@ Application::Application(int argc, char **argv)
 {
     if (s_current_app)
     {
-        throw std::exception("");
+        throw Exception(-1);
     }
     s_current_app = this;
     d->addin_manager = new AddinManager;

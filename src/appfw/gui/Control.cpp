@@ -21,6 +21,10 @@ Control::Control(void *impl)
 {
 }
 
+Control::~Control(){
+    delete d;
+}
+
 Rect Control::rect() const
 {
     auto w = impl<itype>();

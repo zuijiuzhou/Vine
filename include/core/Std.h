@@ -1,22 +1,23 @@
 #pragma once
 #include "core_global.h"
 
-#include "Platform.h"
-
-#include <stdint.h>
+#if defined(__LP64__) || defined(_LP64) || defined(_WIN64) || defined(__x86_64__)
+#define VI_64
+#endif
 
 VI_CORE_NS_BEGIN
 
-using Char = char32_t;
+using byte = unsigned char;
+using Char = char32_t; 
 
-using Byte = uint8_t;
-using SByte = int8_t;
-using Short = int16_t;
-using UShort = uint16_t;
-using Int = int32_t;
-using UInt = uint32_t;
-using Long = int64_t;
-using ULong = uint64_t;
+using Int8 = signed char;
+using Int16 = short;
+using Int32 = int;
+using Int64 = long long;
+using UInt8 = unsigned char;
+using UInt16 = unsigned short;
+using UInt32 = unsigned int;
+using UInt64 = unsigned long long;
 
 using Double = double;
 using Float = float;
