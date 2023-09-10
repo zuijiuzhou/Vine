@@ -16,12 +16,13 @@ namespace
     using itype = QWidget;
 }
 
-Control::Control(void *impl)
+Control::Control(QWidget *impl)
     : UIElement(impl), d(new Data())
 {
+    
 }
-
-Control::~Control(){
+Control::~Control()
+{
     delete d;
 }
 

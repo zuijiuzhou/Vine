@@ -4,6 +4,7 @@
 #include <core/Exception.h>
 #include <appfw/gui/RibbonTab.h>
 #include <appfw/gui/MainWindow.h>
+#include <appfw/gui/RibbonMenuItem.h>
 
 VI_APPFWGUI_NS_BEGIN
 
@@ -13,6 +14,7 @@ struct RibbonBar::Data
 {
     std::vector<RibbonTab *> tabs;
     MainWindow *wnd;
+    QMenu *application_menu = nullptr;
 };
 
 namespace
@@ -24,9 +26,13 @@ RibbonBar::RibbonBar(MainWindow *wnd)
     : Control(static_cast<SARibbonMainWindow *>(wnd->impl())->ribbonBar()), d(new Data())
 {
     d->wnd = wnd;
+    d->application_menu = new QMenu();
+    auto app_btn = qobject_cast<SARibbonApplicationButton *>(impl<itype>()->applicationButton());
+    app_btn->setMenu(d->application_menu);
 }
 
-RibbonBar::~RibbonBar(){
+RibbonBar::~RibbonBar()
+{
     delete d;
 }
 
@@ -73,6 +79,11 @@ RibbonBar *RibbonBar::currentIndex(Int32 idx)
     auto w = impl<itype>();
     w->setCurrentIndex(idx);
     return this;
+}
+
+void RibbonBar::appendApplicationMenu(RibbonMenuItem *mi)
+{
+    d->application_menu->addAction(mi->impl<QAction>());
 }
 
 VI_APPFWGUI_NS_END

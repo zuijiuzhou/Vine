@@ -1,5 +1,7 @@
 #include <appfw/gui/UIElement.h>
 
+#include <QAction>
+
 VI_APPFWGUI_NS_BEGIN
 
 VI_OBJECT_META_IMPL(UIElement, Object)
@@ -7,15 +9,38 @@ VI_OBJECT_META_IMPL(UIElement, Object)
 struct UIElement::Data
 {
     String name;
-    void* impl;
+    QObject *impl;
+    QMetaObject::Connection impl_destroyed_connection;
 };
 
-UIElement::UIElement(void* impl)
+namespace
+{
+    void ImplDestroyed(QObject *obj)
+    {
+    }
+}
+
+UIElement::UIElement(QObject *impl)
     : d(new Data())
 {
     d->impl = impl;
+    Data *dptr = d;
+    d->impl_destroyed_connection = QObject::connect(
+        impl, &QObject::destroyed, [this, dptr](QObject *obj)
+        { 
+            dptr->impl = nullptr; 
+            delete this; 
+        }
+    );
 }
-UIElement::~UIElement(){
+
+UIElement::~UIElement()
+{
+    if (d->impl)
+    {
+        QObject::disconnect(d->impl_destroyed_connection);
+        delete d->impl;
+    }
     delete d;
 }
 
@@ -30,7 +55,8 @@ UIElement *UIElement::name(const String &name)
     return this;
 }
 
-void* UIElement::impl() const{
+QObject *UIElement::impl() const
+{
     return d->impl;
 }
 

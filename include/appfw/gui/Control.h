@@ -2,6 +2,8 @@
 
 #include "UIElement.h"
 
+class QWidget;
+
 VI_APPFWGUI_NS_BEGIN
 
 class VI_APPFWGUI_API Control : public UIElement
@@ -9,7 +11,7 @@ class VI_APPFWGUI_API Control : public UIElement
     VI_OBJECT_META
 
 protected:
-    Control(void* impl);
+    Control(QWidget* impl);
 
 public:
     virtual ~Control();

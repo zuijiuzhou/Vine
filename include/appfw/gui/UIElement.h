@@ -8,13 +8,14 @@
 
 #include "Gui.h"
 
-VI_APPFWGUI_NS_BEGIN
+class QObject;
 
+VI_APPFWGUI_NS_BEGIN
 class VI_APPFWGUI_API UIElement : public Object
 {
     VI_OBJECT_META
 protected:
-    UIElement(void *impl);
+    UIElement(QObject *impl);
 
 public:
     virtual ~UIElement();
@@ -30,12 +31,12 @@ public:
     const Event<UIElement, PropertyChangedEventArgs<String>> NameChanged;
 
 protected:
-    virtual void *impl() const;
+    virtual QObject *impl() const;
 
     template <typename TImpl>
     TImpl *impl() const
     {
-        return static_cast<TImpl *>(impl());
+        return (TImpl*)(impl());
     }
 
 private:

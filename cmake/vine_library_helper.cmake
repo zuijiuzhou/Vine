@@ -18,6 +18,8 @@ function(vi_internal_add_library short_name out_target_name)
     add_library(${LIB_ALIAS} ALIAS ${LIB_FULL_NAME})
     # 设置输出文件名
     set_target_properties(${LIB_FULL_NAME} PROPERTIES OUTPUT_NAME ${LIB_FULL_NAME})
+
+    set_target_properties(${LIB_FULL_NAME} PROPERTIES FOLDER vi)
     # 设置源文件分组
     source_group(sdk FILES ${SDK_HEADER_FILE_LIST})
     # source_group(inc FILES ${HEADER_FILE_LIST})

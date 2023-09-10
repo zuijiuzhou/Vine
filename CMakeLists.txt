@@ -29,6 +29,7 @@ include(vine_third_party)
 
 include_directories(${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
 
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 add_subdirectory(src)
 

@@ -28,7 +28,7 @@ MainWindow::MainWindow()
     helper->setRubberBandOnResize(false);
     impl<itype>()->setWindowTitle(("Vine"));
       
-    impl<itype>()->setStatusBar(static_cast<QStatusBar*>(d->status_bar->impl()));
+    impl<itype>()->setStatusBar(d->status_bar->impl<QStatusBar>());
 
     SARibbonBar* ribbon = impl<itype>()->ribbonBar();
     //通过setContentsMargins设置ribbon四周的间距

@@ -6,6 +6,8 @@
 VI_APPFWGUI_NS_BEGIN
 
 class RibbonTab;
+class RibbonMenuItem;
+class MainWindow;
 class VI_APPFWGUI_API RibbonBar : Control
 {
     VI_OBJECT_META
@@ -27,6 +29,7 @@ public:
     Int32 currentIndex();
     RibbonBar *currentIndex(Int32 idx);
 
+    void appendApplicationMenu(RibbonMenuItem* mi);
 private:
     VI_OBJECT_DATA
 };

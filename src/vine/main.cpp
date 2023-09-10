@@ -13,6 +13,7 @@
 #include <appfw/gui/RibbonBar.h>
 #include <appfw/gui/RibbonTab.h>
 #include <appfw/gui/RibbonGroup.h>
+#include <appfw/gui/RibbonMenuItem.h>
 
 namespace fw = vine::appfw;
 namespace guifw = fw::gui;
@@ -51,6 +52,10 @@ int main(int argc, char **argv)
     auto rgroup = new guifw::RibbonGroup();
     rgroup->title(U"Group1");
     rtab->addGroup(rgroup);
+
+    auto mi1 = new guifw::RibbonMenuItem();
+    mi1->text(U"Open")->data((void*)123);
+    bar->appendApplicationMenu(mi1);
 
     return app->run();
 }
