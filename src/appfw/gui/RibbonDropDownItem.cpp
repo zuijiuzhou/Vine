@@ -1,11 +1,11 @@
-#include <appfw/gui/RibbonMenuItem.h>
+#include <appfw/gui/RibbonDropDownItem.h>
 #include <QAction>
 
 VI_APPFWGUI_NS_BEGIN
 
-VI_OBJECT_META_IMPL(RibbonMenuItem, UIElement);
+VI_OBJECT_META_IMPL(RibbonDropDownItem, UIElement);
 
-struct RibbonMenuItem::Data
+struct RibbonDropDownItem::Data
 {
 };
 
@@ -14,36 +14,36 @@ namespace
     using itype = QAction;
 }
 
-RibbonMenuItem::RibbonMenuItem()
+RibbonDropDownItem::RibbonDropDownItem()
     : UIElement(new QAction()), d(new Data())
 {
 }
 
-RibbonMenuItem::~RibbonMenuItem()
+RibbonDropDownItem::~RibbonDropDownItem()
 {
     delete d;
 }
 
-String RibbonMenuItem::text() const
+String RibbonDropDownItem::text() const
 {
     auto ac = impl<itype>();
     return String(ac->text().toStdU32String().data());
 }
 
-RibbonMenuItem *RibbonMenuItem::text(const String &txt)
+RibbonDropDownItem *RibbonDropDownItem::text(const String &txt)
 {
     auto ac = impl<itype>();
     ac->setText(QString::fromStdU32String(txt.data()));
     return this;
 }
 
-void *RibbonMenuItem::data() const
+void *RibbonDropDownItem::data() const
 {
     auto ac = impl<itype>();
     return ac->data().data();
 }
 
-RibbonMenuItem *RibbonMenuItem::data(void *v)
+RibbonDropDownItem *RibbonDropDownItem::data(void *v)
 {
     auto ac = impl<itype>();
     ac->setData(QVariant::fromValue(v));

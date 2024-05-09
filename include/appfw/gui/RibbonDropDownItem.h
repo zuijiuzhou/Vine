@@ -6,24 +6,24 @@
 
 VI_APPFWGUI_NS_BEGIN
 
-class VI_APPFWGUI_API RibbonMenuItem : public UIElement
+class VI_APPFWGUI_API RibbonDropDownItem : public UIElement
 {
     VI_OBJECT_META
     friend class RibbonBar;
 
 private:
-    VI_DISABLE_COPY_MOVE(RibbonMenuItem)
+    VI_DISABLE_COPY_MOVE(RibbonDropDownItem)
 
 public:
-    RibbonMenuItem();
-    virtual ~RibbonMenuItem();
+    RibbonDropDownItem();
+    virtual ~RibbonDropDownItem();
 
 public:
     String text() const;
-    RibbonMenuItem *text(const String &txt);
+    RibbonDropDownItem *text(const String &txt);
 
     void *data() const;
-    RibbonMenuItem *data(void *v);
+    RibbonDropDownItem *data(void *v);
 
 private:
     VI_OBJECT_DATA

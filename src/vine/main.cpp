@@ -13,20 +13,16 @@
 #include <appfw/gui/RibbonBar.h>
 #include <appfw/gui/RibbonTab.h>
 #include <appfw/gui/RibbonGroup.h>
-#include <appfw/gui/RibbonMenuItem.h>
+#include <appfw/gui/RibbonDropDownItem.h>
 
 namespace fw = vine::appfw;
 namespace guifw = fw::gui;
 
 int main(int argc, char **argv)
 {
-
-    std::vector<int> ints = {3};
-    auto third = std::find(ints.begin(), ints.end(), 3);
-
-    std::vector<int> ints2(ints.size());
-    auto iter = std::copy(third, ints.end(), ints2.begin());
-    std::copy(ints.begin(), third, iter);
+    std::vector<double> ints ;
+    std::vector<double> ints2 ;
+    auto b2 = memcmp(ints.data(), ints2.data(), sizeof(int) * ints.size());
 
     guifw::GuiApplicationPtr app = new guifw::GuiApplication(argc, argv);
     app->init();
@@ -53,7 +49,7 @@ int main(int argc, char **argv)
     rgroup->title(U"Group1");
     rtab->addGroup(rgroup);
 
-    auto mi1 = new guifw::RibbonMenuItem();
+    auto mi1 = new guifw::RibbonDropDownItem();
     mi1->text(U"Open")->data((void*)123);
     bar->appendApplicationMenu(mi1);
 

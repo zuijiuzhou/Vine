@@ -6,7 +6,7 @@
 VI_APPFWGUI_NS_BEGIN
 
 class RibbonTab;
-class RibbonMenuItem;
+class RibbonDropDownItem;
 class MainWindow;
 class VI_APPFWGUI_API RibbonBar : Control
 {
@@ -29,7 +29,7 @@ public:
     Int32 currentIndex();
     RibbonBar *currentIndex(Int32 idx);
 
-    void appendApplicationMenu(RibbonMenuItem* mi);
+    void appendApplicationMenu(RibbonDropDownItem* mi);
 private:
     VI_OBJECT_DATA
 };

@@ -4,7 +4,7 @@
 #include <core/Exception.h>
 #include <appfw/gui/RibbonTab.h>
 #include <appfw/gui/MainWindow.h>
-#include <appfw/gui/RibbonMenuItem.h>
+#include <appfw/gui/RibbonDropDownItem.h>
 
 VI_APPFWGUI_NS_BEGIN
 
@@ -81,7 +81,7 @@ RibbonBar *RibbonBar::currentIndex(Int32 idx)
     return this;
 }
 
-void RibbonBar::appendApplicationMenu(RibbonMenuItem *mi)
+void RibbonBar::appendApplicationMenu(RibbonDropDownItem *mi)
 {
     d->application_menu->addAction(mi->impl<QAction>());
 }

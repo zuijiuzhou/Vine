@@ -9,7 +9,7 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 link_directories(${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/$<$<CONFIG:Debug>:Debug>$<$<CONFIG:Release>:Release>)
 
 # set(CMAKE_SHARED_LIBRARY_PREFIX vi)
-# # Prefix all static libraries with 'lib'.
+# # Prefix all static libraries with 'vi'.
 # set(CMAKE_STATIC_LIBRARY_PREFIX vi)
 
 set(VI_SHARED_LIBRARY_PREFIX vi)

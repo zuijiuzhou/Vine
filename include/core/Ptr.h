@@ -7,6 +7,7 @@
 VI_CORE_NS_BEGIN
 
 class Object;
+
 template <typename T>
     requires std::is_base_of<Object, T>::value
 class RefPtr
@@ -82,7 +83,7 @@ public:
 public:
     bool operator!()
     {
-        return !!ptr_;
+        return !ptr_;
     }
 
     T *operator->()
@@ -145,5 +146,17 @@ private:
 private:
     T *ptr_;
 };
+
+template<typename T, typename Y>
+requires std::is_base_of<Object, T>::value && std::is_base_of<Object, Y>::value
+inline RefPtr<T> static_pointer_cast(const RefPtr<Y>& rp) { return static_cast<T*>(rp.get()); }
+
+template<class T, class Y>
+requires std::is_base_of<Object, T>::value && std::is_base_of<Object, Y>::value
+inline RefPtr<T> dynamic_pointer_cast(const RefPtr<Y>& rp) { return dynamic_cast<T*>(rp.get()); }
+
+template<class T, class Y>
+requires std::is_base_of<Object, T>::value && std::is_base_of<Object, Y>::value
+inline RefPtr<T> const_pointer_cast(const RefPtr<Y>& rp) { return const_cast<T*>(rp.get()); }
 
 VI_CORE_NS_END
