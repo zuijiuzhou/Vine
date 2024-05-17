@@ -1,9 +1,7 @@
 #pragma once
 #include "core_global.h"
 #include "Std.h"
-
 class type_info;
-
 VI_CORE_NS_BEGIN
 class VI_CORE_API Class
 {
@@ -13,17 +11,17 @@ public:
     Class(const Class &&cls) = delete;
     Class &operator=(const Class &cls) = delete;
 
-    const Class *parent() const;
+    const Class *parent() const noexcept;
 
-    const Char *name() const;
+    const Char *name() const noexcept;
 
-    const Char *ns() const;
+    const Char *ns() const noexcept;
 
-    const Char *fullName() const;
+    const Char *fullName() const noexcept;
 
     bool isSubclassOf(const Class *cls) const;
 
-    const type_info &ctype() const;
+    const type_info &ctype() const noexcept;
 
 public:
     bool operator==(const Class &right) const;

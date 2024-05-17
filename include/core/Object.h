@@ -1,8 +1,9 @@
 #pragma once
 #include "core_global.h"
 
-#include <type_traits>
 #include <concepts>
+#include <type_traits>
+#include <typeinfo>
 
 #include "core_defs.h"
 #include "Class.h"
@@ -84,7 +85,7 @@ public:
 
     void removeRef(bool del = true);
 
-    UInt64 numRefs() const;
+    UInt64 numRefs() const noexcept;
 
     virtual bool equals(const Object &other) const;
 

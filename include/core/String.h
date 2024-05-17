@@ -18,6 +18,7 @@ public:
     using const_iterator = const Char*;
     using resverse_iterator = std::reverse_iterator<iterator>;
     using const_resverse_iterator = std::reverse_iterator<const_iterator>;
+    
 public:
     String();
     String(const Char* data);

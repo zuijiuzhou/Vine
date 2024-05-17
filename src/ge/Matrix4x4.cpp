@@ -3,6 +3,7 @@
 #include <memory>
 
 VI_GE_NS_BEGIN
+
 Matrix4x4::Matrix4x4()
 {
     makeIdentity();

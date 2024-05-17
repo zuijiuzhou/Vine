@@ -44,7 +44,7 @@ void Object::removeRef(bool del)
         delete this;
 }
 
-UInt64 Object::numRefs() const{
+UInt64 Object::numRefs() const noexcept{
     return d->num_refs.load();
 }
 

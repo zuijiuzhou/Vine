@@ -13,6 +13,8 @@ if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug)
 endif()
 
+# make cache variables for install destinations
+include(GNUInstallDirs)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
@@ -25,17 +27,36 @@ add_definitions(-DVI_NS_NAME=vine)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-include(vine_third_party)
+include(VineThirdParty)
 
-include_directories(${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
+# link_directories(${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 add_subdirectory(src)
 
 if(VI_DEPLOY_WHEN_BUILDING)
-include(vine_deploy)
+include(VineDeploy)
 endif()
 
 enable_testing()
 add_subdirectory(tests)
+
+include(CMakePackageConfigHelpers)
+
+message(${CMAKE_CURRENT_BINARY_DIR})
+message(${CMAKE_BINARY_DIR})
+configure_package_config_file(${CMAKE_SOURCE_DIR}/cmake/VineConfig.cmake.in
+  "${CMAKE_BINARY_DIR}/VineConfig.cmake"
+  INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/VineConfig
+)
+install(
+    FILES
+        "${CMAKE_BINARY_DIR}/VineConfig.cmake"
+        #"${CMAKE_BINARY_DIR}/VineConfigVersion.cmake"
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/vine
+)
+install(EXPORT VineTargets
+        #NAMESPACE MathFunctions::
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/vine
+)

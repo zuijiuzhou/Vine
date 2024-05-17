@@ -51,27 +51,27 @@ Class::Class(const Class *parent, const type_info &ti)
     Data::classes.insert(this);
 }
 
-const Class *Class::parent() const
+const Class *Class::parent() const noexcept
 {
     return d->parent;
 }
 
-const Char *Class::name() const
+const Char *Class::name() const noexcept
 {
     return d->name.data();
 }
 
-const Char *Class::ns() const
+const Char *Class::ns() const noexcept
 {
     return d->ns.data();
 }
 
-const Char *Class::fullName() const
+const Char *Class::fullName() const noexcept
 {
     return d->full_name.data();
 }
 
-const type_info &Class::ctype() const
+const type_info &Class::ctype() const noexcept
 {
     return d->ti;
 }

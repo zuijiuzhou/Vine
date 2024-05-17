@@ -120,6 +120,9 @@ void String::set(const Char *data, size_t len)
         auto temp = new Char[len + 1];
         memcpy(temp, data, len * sizeof(Char));
         temp[len] = 0;
+        if(data_){
+            delete[] data_;
+        }
         data_ = temp;
         len_ = len;
     }

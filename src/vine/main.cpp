@@ -20,22 +20,10 @@ namespace guifw = fw::gui;
 
 int main(int argc, char **argv)
 {
-    std::vector<double> ints ;
-    std::vector<double> ints2 ;
-    auto b2 = memcmp(ints.data(), ints2.data(), sizeof(int) * ints.size());
-
     guifw::GuiApplicationPtr app = new guifw::GuiApplication(argc, argv);
     app->init();
     guifw::MainWindowPtr wnd = new guifw::MainWindow();
     wnd->show();
-
-    auto b = app->isKindOf<vine::Object>();
-    auto bb = app->isKindOf<vine::di::Container>();
-
-    vine::ObjectPtr objptr = app;
-    auto n = objptr->numRefs();
-    vine::String s = U"Abc你好123DBS";
-    vine::String s2 = s.toLower2();
 
     vine::di::Container c;
     auto reg = vine::di::Registration::create<vine::Object>()->impl<fw::AddinManager>()->lifetime(vine::di::Lifetime::Singleton);
