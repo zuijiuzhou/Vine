@@ -55,7 +55,7 @@ public:
     virtual ~Object();
 
 public:
-    virtual const Class *isA() const;
+    virtual const Class *getType() const;
 
     bool isKindOf(const Class *type) const;
 
@@ -104,11 +104,11 @@ VI_CORE_NS_END
 
 #define VI_OBJECT_META                                                    \
 public:                                                                   \
-    virtual const Class *isA() const override;                            \
+    virtual const Class *getType() const override;                            \
     static const Class *desc();
 
 #define VI_OBJECT_META_IMPL(Sub, Parent)                                  \
-    const Class *Sub::isA() const                                         \
+    const Class *Sub::getType() const                                         \
     {                                                                     \
         return desc();                                                    \
     }                                                                     \
@@ -120,7 +120,7 @@ public:                                                                   \
     }
 
 #define VI_TMPL_OBJECT_META(Sub, Parent)                                  \
-    const Class *isA() const override                                     \
+    const Class *getType() const override                                     \
     {                                                                     \
         return desc();                                                    \
     }                                                                     \
@@ -138,4 +138,4 @@ public:                                                                   \
 
 // #define VI_OBJ(TParent) \
 // static const Class* desc(); \
-// virtual const Class* isA() const override;
+// virtual const Class* getType() const override;

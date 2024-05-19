@@ -40,7 +40,7 @@ Registration *Registration::lifetime(Lifetime lt)
 
 Registration *Registration::useFactory(InstanceFactory fac)
 {
-    d->inst_fac = fac;
+    d->inst_fac = std::move(fac);
     return this;
 }
 

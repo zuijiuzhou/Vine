@@ -16,7 +16,7 @@ public:
 
     virtual ~Inherit(){}
 public:
-    virtual const Class *isA() const override
+    virtual const Class *getType() const override
     {
         return desc();
     }

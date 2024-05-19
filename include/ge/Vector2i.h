@@ -15,13 +15,13 @@ public:
     int crossProduct(const Vector2i &vec) const;
     Vector2i perpVector() const;
 
-    int length() const;
+    double length() const;
     int lengthSqrd() const;
 
     void set(int xx, int yy);
     void get(int &xx, int &yy) const;
 
-    int angleTo(const Vector2i &vec);
+    double angleTo(const Vector2i &vec);
 
     bool isZeroLength() const;
     bool isParalleTo(const Vector2i &vec) const;

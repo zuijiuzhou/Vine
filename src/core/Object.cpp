@@ -22,14 +22,14 @@ Object::~Object()
     delete d;
 }
 
-const Class *Object::isA() const
+const Class *Object::getType() const
 {
     return desc();
 }
 
 bool Object::isKindOf(const Class *type) const
 {
-    return isA()->isSubclassOf(type);
+    return getType()->isSubclassOf(type);
 }
 
 void Object::addRef()

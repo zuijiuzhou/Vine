@@ -29,7 +29,8 @@ public:
     Int32 currentIndex();
     RibbonBar *currentIndex(Int32 idx);
 
-    void appendApplicationMenu(RibbonDropDownItem* mi);
+    void appendApplicationMenu(RibbonDropDownItem *mi);
+
 private:
     VI_OBJECT_DATA
 };
