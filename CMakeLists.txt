@@ -57,6 +57,6 @@ install(
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/vine
 )
 install(EXPORT VineTargets
-        #NAMESPACE MathFunctions::
+        NAMESPACE vi::
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/vine
 )

@@ -13,9 +13,6 @@ class VI_APPFWGUI_API StatusBar : public Control
 
     friend class MainWindow;
 
-private:
-    VI_DISABLE_COPY_MOVE(StatusBar)
-
 public:
     StatusBar(MainWindow *wnd);
     virtual ~StatusBar();

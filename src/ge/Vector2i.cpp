@@ -38,7 +38,7 @@ void Vector2i::get(int &xx, int &yy) const
 // void Vector2i::rotate(const Matrix4x4 &mat)
 // {
 // }
-int Vector2i::angleTo(const Vector2i &vec)
+double Vector2i::angleTo(const Vector2i &vec)
 {
     if (isZeroLength() || vec.isZeroLength())
     {
@@ -47,7 +47,7 @@ int Vector2i::angleTo(const Vector2i &vec)
     return acos((*this * vec) / (length() * vec.length()));
 }
 
-int Vector2i::length() const
+double Vector2i::length() const
 {
     return sqrt(x * x + y * y);
 }

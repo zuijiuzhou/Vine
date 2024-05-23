@@ -10,9 +10,6 @@ class VI_APPFWGUI_API DockPanel : public Control
 {
     VI_OBJECT_META
 
-private:
-    VI_DISABLE_COPY_MOVE(DockPanel)
-
 public:
     DockPanel();
     virtual ~DockPanel();

@@ -11,9 +11,6 @@ class VI_APPFWGUI_API RibbonDropDownItem : public UIElement
     VI_OBJECT_META
     friend class RibbonBar;
 
-private:
-    VI_DISABLE_COPY_MOVE(RibbonDropDownItem)
-
 public:
     RibbonDropDownItem();
     virtual ~RibbonDropDownItem();

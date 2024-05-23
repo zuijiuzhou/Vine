@@ -9,7 +9,7 @@ VI_OBJECT_META_IMPL(RibbonTab, Control)
 
 struct RibbonTab::Data
 {
-    std::vector<RibbonGroup *> groups;
+    std::vector<RefPtr<RibbonGroup>> groups;
 };
 
 namespace
@@ -43,7 +43,7 @@ RibbonTab *RibbonTab::title(const String &ti)
 RibbonTab *RibbonTab::addGroup(RibbonGroup *group)
 {
     VI_CHECK_NULL(group)
-    if (std::any_of(d->groups.begin(), d->groups.end(), [group](RibbonGroup *g)
+    if (std::any_of(d->groups.begin(), d->groups.end(), [group](RefPtr<RibbonGroup>& g)
                     { return g == group; }))
         return this;
     auto w = impl<itype>();
@@ -55,8 +55,8 @@ RibbonTab *RibbonTab::addGroup(RibbonGroup *group)
 RibbonTab *RibbonTab::removeGroup(RibbonGroup *group)
 {
     VI_CHECK_NULL(group)
-    if (std::none_of(d->groups.begin(), d->groups.end(), [group](RibbonGroup *g)
-                     { return group == g; }))
+    if (std::none_of(d->groups.begin(), d->groups.end(), [group](RefPtr<RibbonGroup>& g)
+                     { return g == group; }))
         return this;
     auto w = impl<itype>();
     w->removePannel(group->impl<SARibbonPannel>());
@@ -70,7 +70,7 @@ Int32 RibbonTab::numGroups() const
 
 RibbonGroup *RibbonTab::groupAt(Int32 idx) const
 {
-    return d->groups.at(idx);
+    return d->groups.at(idx).get();
 }
 
 VI_APPFWGUI_NS_END

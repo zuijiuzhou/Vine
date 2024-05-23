@@ -9,7 +9,7 @@ VI_OBJECT_META_IMPL(StatusBar, Control)
 
 struct StatusBar::Data
 {
-    MainWindow* wnd;
+    RefPtr<MainWindow> wnd;
 };
 
 StatusBar::StatusBar(MainWindow* wnd)

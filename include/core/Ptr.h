@@ -12,6 +12,11 @@ template <typename T>
     requires std::is_base_of<Object, T>::value
 class RefPtr
 {
+private:
+    template <typename TOther>
+        requires std::is_base_of<Object, TOther>::value
+    friend class RefPtr;
+
 public:
     RefPtr() : ptr_(nullptr)
     {
@@ -81,17 +86,17 @@ public:
     }
 
 public:
-    bool operator!()
+    bool operator!() const
     {
         return !ptr_;
     }
 
-    T *operator->()
+    T *operator->() const
     {
         return ptr_;
     }
 
-    T &operator*()
+    T &operator*() const
     {
         return *ptr_;
     }
@@ -118,30 +123,33 @@ public:
         return *this;
     }
 
-    bool operator==(const RefPtr &right)
+    bool operator==(const RefPtr &right) const
     {
         return ptr_ == right.ptr_;
     }
 
-    bool operator==(const T *right)
+    bool operator==(const T *right) const
     {
         return ptr_ == right;
     }
 
-    bool operator!=(const RefPtr &right)
-    {
-        return !(*this == right);
+    friend bool operator ==(const T* left, const RefPtr& right) {
+        return left == right.ptr_;
     }
 
-    bool operator!=(const T *right)
+    bool operator!=(const RefPtr &right) const
+    {
+        return ptr_ != right.ptr_;
+    }
+
+    bool operator!=(const T *right) const
     {
         return ptr_ != right;
     }
 
-private:
-    template <typename TOther>
-        requires std::is_base_of<Object, TOther>::value
-    friend class RefPtr;
+    friend bool operator !=(const T* left, const RefPtr& right) {
+        return left != right.ptr_;
+    }
 
 private:
     T *ptr_;

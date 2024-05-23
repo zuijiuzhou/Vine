@@ -16,9 +16,6 @@ protected:
 public:
     virtual ~Control();
 
-private:
-    VI_DISABLE_COPY_MOVE(Control);
-
 public:
     Rect rect() const;
     Control *rect(const Rect &rect);

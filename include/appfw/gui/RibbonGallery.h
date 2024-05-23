@@ -11,9 +11,6 @@ class VI_APPFWGUI_API RibbonGallery : public UIElement
     VI_OBJECT_META
     friend class RibbonBar;
 
-private:
-    VI_DISABLE_COPY_MOVE(RibbonGallery)
-
 public:
     RibbonGallery();
     virtual ~RibbonGallery();

@@ -66,7 +66,7 @@ public:
     }
 
     template <Objectifiable T>
-    T *as()
+    T *cast()
     {
         if (isKindOf(T::desc()))
             return static_cast<T *>(this);
@@ -74,7 +74,7 @@ public:
     }
 
     template <Objectifiable T>
-    const T *as() const
+    const T *cast() const
     {
         if (isKindOf(T::desc()))
             return static_cast<const T *>(this);
@@ -92,6 +92,41 @@ public:
 public:
     static const Class *desc();
 
+    template <Objectifiable T>
+    static T *cast(T *obj)
+    {
+        if (obj)
+            return obj->cast<T>();
+        return nullptr;
+    }
+
+    template <Objectifiable T>
+    static const T *cast(const T *obj)
+    {
+        if (obj)
+            return obj->cast<T>();
+        return nullptr;
+    }
+
+    template <Objectifiable T>
+    static T &cast(Object &obj)
+    {
+        if (obj.getType() == T::desc())
+            return static_cast<T &>(obj);
+        throw std::exception();
+    }
+
+    template <Objectifiable T>
+    static const T &cast(const T &obj)
+    {
+        if (obj.getType() == T::desc())
+            return static_cast<const T &>(obj);
+        throw std::exception();
+    }
+
+private:
+    VI_DISABLE_COPY_MOVE(Object);
+
 private:
     struct Data;
     Data *d;
@@ -104,11 +139,11 @@ VI_CORE_NS_END
 
 #define VI_OBJECT_META                                                    \
 public:                                                                   \
-    virtual const Class *getType() const override;                            \
+    virtual const Class *getType() const override;                        \
     static const Class *desc();
 
 #define VI_OBJECT_META_IMPL(Sub, Parent)                                  \
-    const Class *Sub::getType() const                                         \
+    const Class *Sub::getType() const                                     \
     {                                                                     \
         return desc();                                                    \
     }                                                                     \
@@ -120,7 +155,7 @@ public:                                                                   \
     }
 
 #define VI_TMPL_OBJECT_META(Sub, Parent)                                  \
-    const Class *getType() const override                                     \
+    const Class *getType() const override                                 \
     {                                                                     \
         return desc();                                                    \
     }                                                                     \
@@ -131,10 +166,9 @@ public:                                                                   \
         return cls;                                                       \
     }
 
-#define VI_OBJECT_DATA                                                    \
-    struct Data;                                                          \
-    Data* const d;
-
+#define VI_OBJECT_DATA \
+    struct Data;       \
+    Data *const d;
 
 // #define VI_OBJ(TParent) \
 // static const Class* desc(); \

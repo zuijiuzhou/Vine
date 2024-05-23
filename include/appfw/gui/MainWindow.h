@@ -10,7 +10,6 @@ class RibbonBar;
 class StatusBar;
 class VI_APPFWGUI_API MainWindow : public Control
 {
-
     VI_OBJECT_META
 
     friend class RibbonBar;

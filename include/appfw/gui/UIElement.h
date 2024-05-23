@@ -20,9 +20,6 @@ protected:
 public:
     virtual ~UIElement();
 
-private:
-    VI_DISABLE_COPY_MOVE(UIElement);
-
 public:
     String name() const;
     virtual UIElement *name(const String &name);

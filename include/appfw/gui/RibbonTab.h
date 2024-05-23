@@ -14,9 +14,6 @@ class VI_APPFWGUI_API RibbonTab : public Control
 
     friend class RibbonBar;
 
-private:
-    VI_DISABLE_COPY_MOVE(RibbonTab)
-
 public:
     RibbonTab();
     virtual ~RibbonTab();

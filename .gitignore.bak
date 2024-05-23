@@ -1,6 +1,6 @@
 /build
 /vs_build
 /vsc_build
-/dist
 .vscode
 .vs
+/dist

@@ -8,14 +8,11 @@ VI_APPFWGUI_NS_BEGIN
 class RibbonTab;
 class RibbonDropDownItem;
 class MainWindow;
-class VI_APPFWGUI_API RibbonBar : Control
+class VI_APPFWGUI_API RibbonBar : public Control
 {
     VI_OBJECT_META
 
     friend class MainWindow;
-
-private:
-    VI_DISABLE_COPY_MOVE(RibbonBar)
 
 public:
     RibbonBar(MainWindow *wnd);

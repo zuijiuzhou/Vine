@@ -9,7 +9,8 @@ VI_OBJECT_META_IMPL(UIElement, Object)
 struct UIElement::Data
 {
     String name;
-    QObject *impl;
+    QObject *impl = nullptr;
+    bool impl_deleted = false;
     QMetaObject::Connection impl_destroyed_connection;
 };
 
@@ -29,7 +30,7 @@ UIElement::UIElement(QObject *impl)
         impl, &QObject::destroyed, [this, dptr](QObject *obj)
         { 
             dptr->impl = nullptr; 
-            delete this; 
+            dptr->impl_deleted = true;
         }
     );
 }

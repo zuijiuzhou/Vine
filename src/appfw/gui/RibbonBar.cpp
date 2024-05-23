@@ -12,8 +12,8 @@ VI_OBJECT_META_IMPL(RibbonBar, Control)
 
 struct RibbonBar::Data
 {
-    std::vector<RibbonTab *> tabs;
-    MainWindow *wnd;
+    std::vector<RefPtr<RibbonTab>> tabs;
+    RefPtr<MainWindow> wnd;
     QMenu *application_menu = nullptr;
 };
 
@@ -43,14 +43,14 @@ Int32 RibbonBar::numTabs() const
 
 RibbonTab *RibbonBar::tabAt(Int32 idx) const
 {
-    return d->tabs.at(idx);
+    return d->tabs.at(idx).get();
 }
 
 RibbonBar *RibbonBar::addTab(RibbonTab *tab)
 {
     VI_CHECK_NULL(tab)
-    if (std::any_of(d->tabs.begin(), d->tabs.end(), [tab](RibbonTab *t)
-                    { return tab == t; }))
+    if (std::any_of(d->tabs.begin(), d->tabs.end(), [tab](RefPtr<RibbonTab>& t)
+                    { return  tab == t; }))
         return this;
     auto w = impl<itype>();
     w->addCategoryPage(tab->impl<SARibbonCategory>());
@@ -60,8 +60,8 @@ RibbonBar *RibbonBar::addTab(RibbonTab *tab)
 RibbonBar *RibbonBar::removeTab(RibbonTab *tab)
 {
     VI_CHECK_NULL(tab)
-    if (std::none_of(d->tabs.begin(), d->tabs.end(), [tab](RibbonTab *t)
-                     { return tab == t; }))
+    if (std::none_of(d->tabs.begin(), d->tabs.end(), [tab](RefPtr<RibbonTab>& t)
+                     { return t == tab; }))
         return this;
     auto w = impl<itype>();
     w->removeCategory(tab->impl<SARibbonCategory>());

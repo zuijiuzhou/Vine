@@ -8,8 +8,8 @@ VI_APPFWGUI_NS_BEGIN
 VI_OBJECT_META_IMPL(MainWindow, Control)
 
 struct MainWindow::Data{
-    RibbonBar* ribbon_bar;
-    StatusBar* status_bar;
+    RefPtr<RibbonBar> ribbon_bar;
+    RefPtr<StatusBar> status_bar;
 };
 
 namespace{
@@ -50,11 +50,11 @@ void MainWindow::close(){
 }
 
 RibbonBar* MainWindow::ribbonBar() const{
-    return d->ribbon_bar;
+    return d->ribbon_bar.get();
 }
 
 StatusBar* MainWindow::statusBar() const{
-    return d->status_bar;
+    return d->status_bar.get();
 }
 
 

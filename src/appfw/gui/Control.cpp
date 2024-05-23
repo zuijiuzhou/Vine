@@ -19,8 +19,8 @@ namespace
 Control::Control(QWidget *impl)
     : UIElement(impl), d(new Data())
 {
-    
 }
+
 Control::~Control()
 {
     delete d;
