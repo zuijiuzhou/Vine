@@ -36,6 +36,8 @@ function(vi_internal_add_library short_name out_target_name)
         set(${out_target_name} ${LIB_NAME} PARENT_SCOPE)
     endif ()
 
+    target_include_directories(${LIB_NAME} INTERFACE "$<INSTALL_INTERFACE:include>")
+
     STRING(TOLOWER ${short_name} short_name_lowercase)
     STRING(TOLOWER ${CMAKE_PROJECT_NAME} proj_name_lowercase)
 

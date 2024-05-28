@@ -5,7 +5,9 @@ add_definitions(-DUNICODE -D_UNICODE)
 
 set(CMAKE_CXX_STANDARD 20)
 
-include_directories(${CMAKE_SOURCE_DIR}/include)
+include_directories(
+    "$<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>")
+    
 link_directories(${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/$<$<CONFIG:Debug>:Debug>$<$<CONFIG:Release>:Release>)
 
 # set(CMAKE_SHARED_LIBRARY_PREFIX vi)
@@ -20,6 +22,7 @@ add_subdirectory(ge)
 add_subdirectory(core)
 add_subdirectory(di)
 add_subdirectory(system)
+add_subdirectory(runtime)
 add_subdirectory(graphics)
 add_subdirectory(appfw)
 add_subdirectory(vine)

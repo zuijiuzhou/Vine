@@ -14,12 +14,36 @@ class VI_APPFWGUI_API MainWindow : public Control
 
     friend class RibbonBar;
     friend class StatusBar;
+public:
+    enum StartupPosition {
+        MANUAL,
+        CENTER_SCREEN
+    };
+
+    enum WindowState{
+        NORMAL,
+        MINIMIZED,
+        MAXIMIZED,
+    };
 
 public:
     MainWindow();
     virtual ~MainWindow();
 
 public:
+    MainWindow* startupPosition(StartupPosition position);
+    StartupPosition startupPosition() const;
+
+    MainWindow* windowState(WindowState state);
+    WindowState windowState() const;
+    
+    MainWindow* activate();
+    MainWindow* setEnabled();
+    MainWindow* setDisabled();
+
+    bool isActive() const;
+    bool isEnabled() const;
+
     void show();
     void close();
 
