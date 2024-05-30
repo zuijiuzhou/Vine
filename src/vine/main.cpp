@@ -3,6 +3,8 @@
 #include <ctime>
 #include <vector>
 
+#include <core/core_stl.h>
+
 #include <di/Registration.h>
 #include <di/Container.h>
 
@@ -17,6 +19,7 @@
 
 namespace fw = vine::appfw;
 namespace guifw = fw::gui;
+
 
 int main(int argc, char **argv)
 {

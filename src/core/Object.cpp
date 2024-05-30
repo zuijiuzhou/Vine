@@ -4,6 +4,7 @@
 #include <atomic>
 
 #include <core/Class.h>
+#include <core/String.h>
 
 VI_CORE_NS_BEGIN
 
@@ -12,17 +13,30 @@ struct Object::Data
     std::atomic<Int32> num_refs = 0;
 };
 
-Object::Object()
+Object::Object() noexcept
     : d(new Data())
 {
+
 }
 
-Object::~Object()
+Object::Object(const Object& other) noexcept
+    : d(new Data())
+{
+    
+}
+
+Object::Object(Object&& other) noexcept
+    : d(new Data())
+{
+
+}
+
+Object::~Object() noexcept
 {
     delete d;
 }
 
-const Class *Object::getType() const
+const Class *Object::getType() const noexcept
 {
     return desc();
 }
@@ -48,8 +62,23 @@ UInt64 Object::numRefs() const noexcept{
     return d->num_refs.load();
 }
 
-bool Object::equals(const Object& other) const{
+bool Object::equals(const Object& other) const noexcept {
     return this == &other;
+}
+
+String Object::toString() const
+{
+    return getType()->fullName();
+}
+
+Object& Object::operator=(const Object& right) noexcept
+{
+    return *this;
+}
+
+Object& Object::operator=(Object&& right) noexcept
+{
+    return *this;
 }
 
 const Class *Object::desc()

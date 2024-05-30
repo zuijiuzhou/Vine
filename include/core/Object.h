@@ -51,11 +51,13 @@ concept Enumerable = requires(T t, UInt64 i) {
 class VI_CORE_API Object
 {
 public:
-    Object();
-    virtual ~Object();
+    Object() noexcept;
+    Object(const Object& other) noexcept;
+    Object(Object&& other) noexcept;
+    virtual ~Object() noexcept;
 
 public:
-    virtual const Class *getType() const;
+    virtual const Class *getType() const noexcept;
 
     bool isKindOf(const Class *type) const;
 
@@ -87,7 +89,13 @@ public:
 
     UInt64 numRefs() const noexcept;
 
-    virtual bool equals(const Object &other) const;
+    virtual bool equals(const Object &other) const noexcept;
+
+    virtual String toString() const;
+
+public:
+    Object& operator=(const Object& right) noexcept;
+    Object& operator=(Object&& right) noexcept;
 
 public:
     static const Class *desc();
@@ -125,9 +133,6 @@ public:
     }
 
 private:
-    VI_DISABLE_COPY_MOVE(Object);
-
-private:
     struct Data;
     Data *d;
 };
@@ -139,11 +144,11 @@ VI_CORE_NS_END
 
 #define VI_OBJECT_META                                                    \
 public:                                                                   \
-    virtual const Class *getType() const override;                        \
+    virtual const Class *getType() const noexcept override;               \
     static const Class *desc();
 
 #define VI_OBJECT_META_IMPL(Sub, Parent)                                  \
-    const Class *Sub::getType() const                                     \
+    const Class *Sub::getType() const noexcept                            \
     {                                                                     \
         return desc();                                                    \
     }                                                                     \
@@ -155,7 +160,8 @@ public:                                                                   \
     }
 
 #define VI_TMPL_OBJECT_META(Sub, Parent)                                  \
-    const Class *getType() const override                                 \
+public:                                                                   \
+    const Class *getType() const noexcept override                        \
     {                                                                     \
         return desc();                                                    \
     }                                                                     \

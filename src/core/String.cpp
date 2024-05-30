@@ -528,13 +528,4 @@ bool String::operator>(const String &right) const
     return false;
 }
 
-std::ostream &operator<<(std::ostream &cout, const String &str)
-{
-    return cout;
-}
-
-std::wostream &operator<<(std::wostream &wcout, const String &str)
-{
-    return wcout;
-}
 VI_CORE_NS_END

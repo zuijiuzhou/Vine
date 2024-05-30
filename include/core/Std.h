@@ -7,7 +7,7 @@
 
 VI_CORE_NS_BEGIN
 
-using byte = unsigned char;
+using Byte = unsigned char;
 using Char = char32_t; 
 
 using Int8 = signed char;
