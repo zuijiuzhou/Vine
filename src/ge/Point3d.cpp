@@ -1,6 +1,6 @@
 #include <ge/Point3d.h>
 #include <ge/Vector3d.h>
-#include <ge/Line3d.h>
+#include <ge/Line.h>
 
 VI_GE_NS_BEGIN
 Point3d::Point3d() : Point3d(0., 0., 0.)
@@ -24,10 +24,18 @@ double Point3d::distanceTo(const Plane &pt) const
     return 0.0;
 }
 
+bool Point3d::equals(const Point3d& other, double epsl) const noexcept{
+    return ge::isEqual(x, other.x, epsl) && ge::isEqual(y, other.y, epsl) && ge::isEqual(z, other.z, epsl);
+}
+
 Vector3d Point3d::toVector() const
 {
     return Vector3d(x, y, z);
 }
+const Point2d& Point3d::asPoint2d() const{
+    return reinterpret_cast<const Point2d &>(*this);   
+}
+
 const Vector3d &Point3d::asVector() const
 {
     return reinterpret_cast<const Vector3d &>(*this);

@@ -1,7 +1,7 @@
 #include <ge/Plane.h>
 
 VI_GE_NS_BEGIN
-Plane::Plane(Point3d origin, Vector3d normal)
+Plane::Plane(const Point3d& origin, const Vector3d& normal)
     : origin(origin), normal(normal)
 {
 }

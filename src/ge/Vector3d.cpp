@@ -1,4 +1,5 @@
 #include <ge/Vector3d.h>
+
 #include <ge/Ge.h>
 #include <ge/Vector2d.h>
 #include <ge/Point3d.h>
@@ -12,196 +13,220 @@ Vector3d::Vector3d() : Vector3d(0., 0., 0.)
 }
 
 Vector3d::Vector3d(double xx, double yy, double zz)
-    : x(xx), y(yy), z(zz)
+	: x(xx), y(yy), z(zz)
 {
 }
 
-double Vector3d::dotProduct(const Vector3d &vec) const
+double Vector3d::dotProduct(const Vector3d& vec) const noexcept
 {
-    return x * vec.x + y * vec.y + z * vec.z;
-}
-Vector3d Vector3d::crossProduct(const Vector3d &vec) const
-{
-    Vector3d v;
-    v.x = y * vec.z - z * vec.y;
-    v.y = z * vec.x - x * vec.z;
-    v.z = x * vec.y - y * vec.x;
-    return v;
+	return x * vec.x + y * vec.y + z * vec.z;
 }
 
-void Vector3d::normalize()
+Vector3d Vector3d::crossProduct(const Vector3d& vec) const noexcept
 {
-    double len = length();
-    if (len == 0)
-    {
-        return;
-    }
-    *this /= len;
+	Vector3d v;
+	v.x = y * vec.z - z * vec.y;
+	v.y = z * vec.x - x * vec.z;
+	v.z = x * vec.y - y * vec.x;
+	return v;
 }
 
-Vector3d Vector3d::perpVector() const
+double Vector3d::normalize() noexcept
 {
-    if (x != 0. || y != 0)
-    {
-        return Vector3d(y, -x, 0.);
-    }
-    else
-    {
-        return Vector3d(z, 0., -x);
-    }
+	double len = length();
+	if (len > EPS_L) {
+		*this /= len;
+	}
+	return len;
 }
 
-void Vector3d::setLength(double len)
+Vector3d Vector3d::perpVector() const noexcept
 {
-    double currentLen = length();
-    if (currentLen == 0)
-    {
-        Vector3d v;
-        v.x = v.y = v.z = len / sqrt(3.);
-    }
-    else
-    {
-        *this *= (len / currentLen);
-    }
-}
-void Vector3d::set(double xx, double yy, double zz)
-{
-    x = xx;
-    y = yy;
-    z = zz;
-}
-void Vector3d::get(double &xx, double &yy, double &zz) const
-{
-    xx = x;
-    yy = y;
-    zz = z;
-}
-void Vector3d::rotate(const Matrix4x4 &mat)
-{
-}
-double Vector3d::angleTo(const Vector3d &vec)
-{
-    if (isZeroLength() || vec.isZeroLength())
-    {
-        return 0.;
-    }
-    return acos((*this * vec) / (length() * vec.length()));
-}
-double Vector3d::angleTo(const Vector3d &vec, const Vector3d &refVec)
-{
-    auto rad = angleTo(vec);
-    if ((*this ^ vec) * refVec > 0.)
-    {
-        return rad;
-    }
-    return PIx2 - rad;
+	if (ge::isZero(x, EPS_L) || ge::isZero(y, EPS_L))
+		return Vector3d(z, 0., -x);
+	else
+		return Vector3d(y, -x, 0.);
 }
 
-double Vector3d::length() const
+void Vector3d::setLength(double len) noexcept
 {
-    return sqrt(x * x + y * y + z * z);
+	double cur_len = length();
+	if (cur_len < EPS_L && cur_len >-EPS_A)
+	{
+		Vector3d v;
+		v.x = v.y = v.z = len / sqrt(3.);
+	}
+	else
+	{
+		*this *= len / cur_len;
+	}
 }
 
-double Vector3d::lengthSqrd() const
+void Vector3d::set(double xx, double yy, double zz) noexcept
 {
-    return x * x + y * y + z * z;
+	x = xx;
+	y = yy;
+	z = zz;
 }
 
-bool Vector3d::isZeroLength() const
+void Vector3d::get(double& xx, double& yy, double& zz) const noexcept
 {
-    return x == 0. && y == 0. && z == 0.;
-}
-bool Vector3d::isParalleTo(const Vector3d &vec) const
-{
-    return crossProduct(vec).isZeroLength();
+	xx = x;
+	yy = y;
+	zz = z;
 }
 
-bool Vector3d::isPerpendicularTo(const Vector3d &vec) const
+void Vector3d::rotate(const Matrix4x4& mat)
 {
-    return dotProduct(vec) == 0.;
 }
 
-Point3d Vector3d::toPoint() const
+double Vector3d::angleTo(const Vector3d& vec) const noexcept
 {
-    return Point3d(x, y, z);
+	if (isZero() || vec.isZero())
+		return 0.;
+	auto v = *this * vec / length() * vec.length();
+	if (v > 1.)
+		v = 1.;
+	else if (v < -1.)
+		v = -1.;
+	return acos(v);
 }
 
-const Point3d &Vector3d::asPoint()
+double Vector3d::angleTo(const Vector3d& vec, const Vector3d& refVec) const noexcept
 {
-    return reinterpret_cast<const Point3d &>(*this);
+	auto rad = angleTo(vec);
+	if ((*this ^ vec) * refVec > 0.)
+	{
+		return rad;
+	}
+	return PIPI - rad;
 }
 
-Vector2d Vector3d::convert2d() const
+double Vector3d::length() const noexcept
 {
-    return Vector2d(x, y);
+	return sqrt(x * x + y * y + z * z);
 }
 
-bool Vector3d::operator==(const Vector3d &right) const
+double Vector3d::lengthSqrd() const noexcept
 {
-    return x == right.x && y == right.y && z == right.z;
+	return x * x + y * y + z * z;
 }
-bool Vector3d::operator!=(const Vector3d &right) const
+
+bool Vector3d::isZero(double eps) const noexcept
 {
-    return !(*this == right);
+	return ge::isZero(x, eps) && ge::isZero(y, eps) && ge::isZero(z, eps);
 }
-Vector3d Vector3d::operator-(const Vector3d &right) const
+
+bool Vector3d::isParalleTo(const Vector3d& vec, double epsa) const noexcept
 {
-    return Vector3d(x - right.x, y - right.y, z - right.z);
+	if (isZero() || vec.isZero())
+		return false;
+	return ge::isZero(angleTo(vec), epsa);
 }
-Vector3d Vector3d::operator+(const Vector3d &right) const
+
+bool Vector3d::isPerpendicularTo(const Vector3d& vec, double epsa) const noexcept
 {
-    return Vector3d(x + right.x, y + right.y, z + right.z);
+	if (isZero() || vec.isZero())
+		return false;
+	return ge::isEqual(angleTo(vec), ge::PI_2, epsa);
 }
-Vector3d &Vector3d::operator+=(const Vector3d &right)
+
+bool Vector3d::equals(const Vector3d& other, double epsl) const{
+	return ge::isEqual(x, other.x, epsl) && ge::isEqual(y, other.y, epsl) && ge::isEqual(z, other.z, epsl);
+}
+
+Point3d Vector3d::toPoint() const noexcept
 {
-    x += right.x;
-    y += right.y;
-    z += right.z;
-    return *this;
+	return Point3d(x, y, z);
 }
-Vector3d &Vector3d::operator-=(const Vector3d &right)
+
+const Point3d& Vector3d::asPoint() const noexcept
 {
-    x -= right.x;
-    y -= right.y;
-    z -= right.z;
-    return *this;
+	return reinterpret_cast<const Point3d&>(*this);
 }
-Vector3d Vector3d::operator*(double scale) const
+
+const Vector2d& Vector3d::asVector2d() const noexcept
 {
-    Vector3d v(*this);
-    v.x *= scale;
-    v.y *= scale;
-    v.z *= scale;
-    return v;
+	return reinterpret_cast<const Vector2d&>(*this);
 }
-Vector3d &Vector3d::operator*=(double scale)
+
+bool Vector3d::operator==(const Vector3d& right) const noexcept
 {
-    x *= scale;
-    y *= scale;
-    z *= scale;
-    return *this;
+	return x == right.x && y == right.y && z == right.z;
 }
+
+bool Vector3d::operator!=(const Vector3d& right) const noexcept
+{
+	return !(*this == right);
+}
+
+Vector3d Vector3d::operator-(const Vector3d& right) const noexcept
+{
+	return Vector3d(x - right.x, y - right.y, z - right.z);
+}
+
+Vector3d Vector3d::operator+(const Vector3d& right) const noexcept
+{
+	return Vector3d(x + right.x, y + right.y, z + right.z);
+}
+
+Vector3d& Vector3d::operator+=(const Vector3d& right) noexcept
+{
+	x += right.x;
+	y += right.y;
+	z += right.z;
+	return *this;
+}
+
+Vector3d& Vector3d::operator-=(const Vector3d& right) noexcept
+{
+	x -= right.x;
+	y -= right.y;
+	z -= right.z;
+	return *this;
+}
+
+Vector3d Vector3d::operator*(double scale) const noexcept
+{
+	Vector3d v(*this);
+	v.x *= scale;
+	v.y *= scale;
+	v.z *= scale;
+	return v;
+}
+
+Vector3d& Vector3d::operator*=(double scale) noexcept
+{
+	x *= scale;
+	y *= scale;
+	z *= scale;
+	return *this;
+}
+
 Vector3d Vector3d::operator/(double scale) const
 {
-    Vector3d v(*this);
-    v.x /= scale;
-    v.y /= scale;
-    v.z /= scale;
-    return v;
+	Vector3d v(*this);
+	v.x /= scale;
+	v.y /= scale;
+	v.z /= scale;
+	return v;
 }
-Vector3d &Vector3d::operator/=(double scale)
+
+Vector3d& Vector3d::operator/=(double scale)
 {
-    x /= scale;
-    y /= scale;
-    z /= scale;
-    return *this;
+	x /= scale;
+	y /= scale;
+	z /= scale;
+	return *this;
 }
-Vector3d Vector3d::operator^(const Vector3d &vec) const
+
+Vector3d Vector3d::operator^(const Vector3d& vec) const noexcept
 {
-    return crossProduct(vec);
+	return crossProduct(vec);
 }
-double Vector3d::operator*(const Vector3d &vec) const
+
+double Vector3d::operator*(const Vector3d& vec) const noexcept
 {
-    return dotProduct(vec);
+	return dotProduct(vec);
 }
 VI_GE_NS_END

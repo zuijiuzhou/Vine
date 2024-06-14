@@ -38,16 +38,6 @@ concept Comparable = requires(T t, const Object *obj) {
     } -> std::same_as<int>;
 };
 
-template <typename T>
-concept Enumerable = requires(T t, UInt64 i) {
-    {
-        t.count()
-    } -> std::same_as<UInt64>;
-    {
-        t.at(i)
-    };
-};
-
 class VI_CORE_API Object
 {
 public:
