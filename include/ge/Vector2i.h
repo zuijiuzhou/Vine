@@ -21,14 +21,14 @@ public:
     void set(int xx, int yy);
     void get(int &xx, int &yy) const;
 
-    double angleTo(const Vector2i &vec);
+    double angleTo(const Vector2i &vec) const;
 
-    bool isZeroLength() const;
+    bool isZero() const;
     bool isParalleTo(const Vector2i &vec) const;
     bool isPerpendicularTo(const Vector2i &vec) const;
 
     Point2i toPoint() const;
-    const Point2i &asPoint();
+    const Point2i &asPoint() const;
 
 public:
     bool operator==(const Vector2i &right) const;

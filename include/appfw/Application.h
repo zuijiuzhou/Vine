@@ -11,34 +11,37 @@ class ServiceManager;
 
 class VI_APPFW_API Application : public Object
 {
-    VI_OBJECT_META
-public:
-    Application(int argc, char **argv);
-    virtual ~Application();
+	VI_OBJECT_META;
+	VI_DISABLE_COPY_MOVE(Application);
 
 public:
-    virtual void init();
+	Application(int argc, char** argv);
+	virtual ~Application();
+
 
 public:
-    virtual int run();
-
-    void exit(int code);
-
-    CommandManager *commandManager() const;
-
-    AddinManager *addinManager() const;
-
-    ServiceManager *serviceManager() const;
-
-    int argc() const;
-
-    char **argv() const;
+	virtual void init();
 
 public:
-    static Application *current();
+	virtual int run();
+
+	void exit(int code);
+
+	CommandManager* commandManager() const;
+
+	AddinManager* addinManager() const;
+
+	ServiceManager* serviceManager() const;
+
+	int argc() const;
+
+	char** argv() const;
+
+public:
+	static Application* current();
 
 private:
-    VI_OBJECT_DATA
+	VI_OBJECT_DATA
 };
 using ApplicationPtr = RefPtr<Application>;
 

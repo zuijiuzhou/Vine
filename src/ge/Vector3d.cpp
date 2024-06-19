@@ -34,7 +34,7 @@ Vector3d Vector3d::crossProduct(const Vector3d& vec) const noexcept
 double Vector3d::normalize() noexcept
 {
 	double len = length();
-	if (len > EPS_L) {
+	if (len > EPS) {
 		*this /= len;
 	}
 	return len;
@@ -42,7 +42,7 @@ double Vector3d::normalize() noexcept
 
 Vector3d Vector3d::perpVector() const noexcept
 {
-	if (ge::isZero(x, EPS_L) || ge::isZero(y, EPS_L))
+	if (ge::isZero(x, EPS) || ge::isZero(y, EPS))
 		return Vector3d(z, 0., -x);
 	else
 		return Vector3d(y, -x, 0.);
@@ -51,7 +51,7 @@ Vector3d Vector3d::perpVector() const noexcept
 void Vector3d::setLength(double len) noexcept
 {
 	double cur_len = length();
-	if (cur_len < EPS_L && cur_len >-EPS_A)
+	if (cur_len < EPS && cur_len >-EPS)
 	{
 		Vector3d v;
 		v.x = v.y = v.z = len / sqrt(3.);
@@ -117,22 +117,22 @@ bool Vector3d::isZero(double eps) const noexcept
 	return ge::isZero(x, eps) && ge::isZero(y, eps) && ge::isZero(z, eps);
 }
 
-bool Vector3d::isParalleTo(const Vector3d& vec, double epsa) const noexcept
+bool Vector3d::isParalleTo(const Vector3d& vec, double eps) const noexcept
 {
-	if (isZero() || vec.isZero())
-		return false;
-	return ge::isZero(angleTo(vec), epsa);
+	if (isZero(eps) || vec.isZero(eps))
+		return true;
+	return crossProduct(vec).isZero(eps);
 }
 
-bool Vector3d::isPerpendicularTo(const Vector3d& vec, double epsa) const noexcept
+bool Vector3d::isPerpendicularTo(const Vector3d& vec, double eps) const noexcept
 {
-	if (isZero() || vec.isZero())
-		return false;
-	return ge::isEqual(angleTo(vec), ge::PI_2, epsa);
+	if (isZero(eps) || vec.isZero(eps))
+		return true;
+	return ge::isEqual(angleTo(vec), ge::PI_2, eps);
 }
 
-bool Vector3d::equals(const Vector3d& other, double epsl) const{
-	return ge::isEqual(x, other.x, epsl) && ge::isEqual(y, other.y, epsl) && ge::isEqual(z, other.z, epsl);
+bool Vector3d::equals(const Vector3d& other, double eps) const{
+	return ge::isEqual(x, other.x, eps) && ge::isEqual(y, other.y, eps) && ge::isEqual(z, other.z, eps);
 }
 
 Point3d Vector3d::toPoint() const noexcept

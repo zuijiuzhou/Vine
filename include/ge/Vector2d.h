@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ge_global.h"
+#include "Ge.h"
 
 VI_GE_NS_BEGIN
 class Point2d;
@@ -23,11 +24,11 @@ public:
     void set(double xx, double yy, double zz);
     void get(double &xx, double &yy, double &zz) const;
     // void rotate(const Matrix3x3& mat);
-    double angleTo(const Vector2d &vec);
+    double angleTo(const Vector2d &vec) const;
 
-    bool isZeroLength() const;
-    bool isParalleTo(const Vector2d &vec) const;
-    bool isPerpendicularTo(const Vector2d &vec) const;
+    bool isZero(double eps = EPS) const;
+    bool isParalleTo(const Vector2d &vec, double eps = EPS) const;
+    bool isPerpendicularTo(const Vector2d &vec, double eps = EPS) const;
 
     Point2d toPoint() const;
     const Point2d &asPoint();

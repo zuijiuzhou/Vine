@@ -151,6 +151,30 @@ public:
         return left != right.ptr_;
     }
 
+    bool operator<(const RefPtr<T>& right) const
+    {
+        return ptr_ < right.ptr_;
+    }
+
+    bool operator<(const T* right) const
+    {
+        return ptr_ < right;
+    }
+
+    bool operator>(const RefPtr<T>& right) const
+    {
+        return ptr_ > right.ptr_;
+    }
+
+    bool operator>(const T* right) const
+    {
+        return ptr_ > right;
+    }
+
+    bool hasValue() const {
+        return ptr_ != nullptr;
+    }
+
 private:
     T *ptr_;
 };

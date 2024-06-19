@@ -1,4 +1,5 @@
 #include <ge/Vector2i.h>
+#include <ge/Ge.h>
 #include <ge/Point2i.h>
 #include <cmath>
 
@@ -38,13 +39,16 @@ void Vector2i::get(int &xx, int &yy) const
 // void Vector2i::rotate(const Matrix4x4 &mat)
 // {
 // }
-double Vector2i::angleTo(const Vector2i &vec)
+double Vector2i::angleTo(const Vector2i &vec) const
 {
-    if (isZeroLength() || vec.isZeroLength())
-    {
+    if (isZero() || vec.isZero())
         return 0;
-    }
-    return acos((*this * vec) / (length() * vec.length()));
+    auto cos = (*this * vec) / (length() * vec.length());
+    if (cos > 1.)
+        cos = 1.;
+    else if (cos < -1.)
+        cos = -1.;
+    return acos(cos);
 }
 
 double Vector2i::length() const
@@ -57,7 +61,7 @@ int Vector2i::lengthSqrd() const
     return x * x + y * y;
 }
 
-bool Vector2i::isZeroLength() const
+bool Vector2i::isZero() const
 {
     return x == 0 && y == 0;
 }
@@ -76,7 +80,7 @@ Point2i Vector2i::toPoint() const
     return Point2i(x, y);
 }
 
-const Point2i &Vector2i::asPoint()
+const Point2i &Vector2i::asPoint() const
 {
     return reinterpret_cast<const Point2i &>(*this);
 }

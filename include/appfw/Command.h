@@ -8,7 +8,8 @@ VI_APPFW_NS_BEGIN
 
 class VI_APPFW_API CommandExecutingContext : public Object
 {
-    VI_OBJECT_META
+    VI_OBJECT_META;
+    VI_DISABLE_COPY_MOVE(CommandExecutingContext);
 
 public:
     String arguments() const;
@@ -20,7 +21,8 @@ using CommandExecutingContextPtr = RefPtr<CommandExecutingContext>;
 
 class VI_APPFW_API Command : public Object
 {
-    VI_OBJECT_META
+    VI_OBJECT_META;
+    VI_DISABLE_COPY_MOVE(Command);
 
 public:
     virtual String name() const = 0;

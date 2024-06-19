@@ -1,2 +1,4 @@
 
+add_definitions(-DVI_NS_NAME=vine)
+
 include("${CMAKE_CURRENT_LIST_DIR}/VineTargets.cmake")

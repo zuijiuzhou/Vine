@@ -14,8 +14,7 @@ constexpr double LOG10E = 0.434294481903251827651; // log10(e)
 constexpr double LN2 = 0.693147180559945309417; // ln(2)
 constexpr double LN10 = 2.30258509299404568402; // ln(10)
 
-constexpr double EPS_L = 1e-6; // length
-constexpr double EPS_A = 1e-6; // angle
+constexpr double EPS = 1e-8;
 
 constexpr inline bool isZero(double val, double eps) {
 	if (eps < 0)

@@ -36,14 +36,14 @@ Object::~Object() noexcept
     delete d;
 }
 
-const Class *Object::getType() const noexcept
+const Class *Object::getClass() const noexcept
 {
     return desc();
 }
 
 bool Object::isKindOf(const Class *type) const
 {
-    return getType()->isSubclassOf(type);
+    return getClass()->isSubclassOf(type);
 }
 
 void Object::addRef()
@@ -58,7 +58,7 @@ void Object::removeRef(bool del)
         delete this;
 }
 
-UInt64 Object::numRefs() const noexcept{
+UInt64 Object::getRefs() const noexcept{
     return d->num_refs.load();
 }
 
@@ -68,7 +68,7 @@ bool Object::equals(const Object& other) const noexcept {
 
 String Object::toString() const
 {
-    return getType()->fullName();
+    return getClass()->fullName();
 }
 
 Object& Object::operator=(const Object& right) noexcept

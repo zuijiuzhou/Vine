@@ -15,7 +15,8 @@ using InstanceFactory = std::function<Object*(Type, Container*)>;
 
 class VI_DI_API Registration : public Object
 {
-    VI_OBJECT_META
+    VI_OBJECT_META;
+
 private:
     Registration(Type type);
 

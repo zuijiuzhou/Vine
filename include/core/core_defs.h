@@ -9,7 +9,7 @@ private:                      \
 
 #define VI_DISABLE_MOVE(Cls)  \
 private:                      \
-    Cls(Class &&) = delete;   \
+    Cls(Cls &&) = delete;     \
     Cls &operator=(Cls &&) = delete;
 
 #define VI_DISABLE_COPY_MOVE(Cls) \
