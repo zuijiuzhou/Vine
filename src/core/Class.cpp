@@ -41,7 +41,7 @@ Class::Class(const Class *parent, const type_info &ti)
     : d(new Data(ti))
 {
     if (getClass(ti))
-        throw Exception(Exception::ItemAlreadyExists);
+        throw Exception(Exception::ITEM_ALREADY_EXISTS);
     d->parent = parent;
 #if defined(_MSC_VER)
     _parse_name(ti, d->name, d->ns, d->full_name);

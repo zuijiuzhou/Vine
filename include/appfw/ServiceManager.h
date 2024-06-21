@@ -1,7 +1,6 @@
 #pragma once
 #include "appfw_global.h"
 
-#include "core/Inherit.h"
 #include "di/Registration.h"
 
 VI_APPFW_NS_BEGIN

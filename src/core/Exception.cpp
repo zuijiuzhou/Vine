@@ -10,10 +10,10 @@ Exception::Exception(Code code) noexcept
 {
     switch (code)
     {
-    case IndexOutOfRange:
+    case INDEX_OUT_OF_RANGE:
         msg_ = U"Index was out of range.";
         break;
-    case ArgumentNull:
+    case ARGUMENT_NULL:
         msg_ = U"The parameter cannot be null.";
         break;
     default:

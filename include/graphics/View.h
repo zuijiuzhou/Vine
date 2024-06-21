@@ -2,18 +2,21 @@
 
 #include "core/Object.h"
 
-#include "ge/Matrix4x4.h"
-#include "ge/Point3d.h"
-#include "ge/Vector3d.h"
-
-
 VI_GRAPHICS_NS_BEGIN
 
-class VI_GRAPHICS_API View : public Object
-{
-    VI_OBJECT_META
+class Scene;
+class VI_GRAPHICS_API View : public Object {
+  VI_OBJECT_META;
+  VI_DISABLE_MOVE(View);
+
 public:
-    void addModel() const;
+  View();
+
+public:
+  void setScene(Scene* scene);
+
+private:
+  VI_OBJECT_DATA;
 };
 using ViewPtr = RefPtr<View>;
 

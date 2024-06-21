@@ -25,7 +25,7 @@ namespace
 
     inline bool isWhiteChar(Char c)
     {
-        return c == 32 || c == U'\r' || c == '\n';
+        return c == ' ' || c == '\r' || c == '\n';
     }
 }
 
@@ -39,12 +39,12 @@ String::String(const Char *data)
     set(data);
 }
 
-String::String(const String &other)
+String::String(const String &other) noexcept
 {
     (*this) = other;
 }
 
-String::String(String &&other)
+String::String(String &&other) noexcept
 {
     if (data_)
         delete[] data_;
@@ -73,20 +73,20 @@ String String::substr(int start, int count) const
             s.set(data_ + start, count);
         return s;
     }
-    throw Exception(Exception::IndexOutOfRange);
+    throw Exception(Exception::INDEX_OUT_OF_RANGE);
 }
 
-size_t String::size() const
+size_t String::size() const noexcept
 {
     return len_;
 }
 
-size_t String::length() const
+size_t String::length() const noexcept
 {
     return len_;
 }
 
-void String::clear()
+void String::clear() noexcept
 {
     if (data_)
     {
@@ -97,12 +97,12 @@ void String::clear()
     data_ = new Char[1]{0};
 }
 
-bool String::empty() const
+bool String::empty() const noexcept
 {
     return len_ == 0;
 }
 
-const Char *String::data() const
+const Char *String::data() const noexcept
 {
     return data_;
 }
@@ -131,7 +131,7 @@ void String::set(const Char *data, size_t len)
 Char &String::at(size_t idx)
 {
     if (idx >= len_)
-        throw Exception(Exception::IndexOutOfRange);
+        throw Exception(Exception::INDEX_OUT_OF_RANGE);
     return *(data_ + idx);
 }
 
@@ -187,40 +187,44 @@ bool String::equals(const String &other, bool ignore_case) const
     return true;
 }
 
-String String::toLower() const
+String String::toLower(bool is_asc_only) const
 {
+    if (len_ == 0)
+        return *this;
+
     auto s = *this;
-    if (!s.empty())
-    {
+    if (is_asc_only) {
         for (size_t i = 0; i < s.len_; i++)
         {
-            auto &c = s.at(i);
+            auto& c = s.at(i);
             if (c >= 65 && c <= 90)
                 c += 32;
         }
     }
+    else {
+        auto& f = std::use_facet<std::ctype<char32_t>>(std::locale(""));
+        f.tolower(s.data_, s.data_ + s.len_);
+    }
     return s;
 }
 
-String String::toLower2() const
+String String::toUpper(bool is_asc_only) const
 {
-    auto s = *this;
-    auto &f = std::use_facet<std::ctype<char32_t>>(std::locale(""));
-    f.tolower(s.data_, s.data_ + s.len_);
-    return s;
-}
+    if (len_ == 0)
+        return *this;
 
-String String::toUpper() const
-{
     auto s = *this;
-    if (!s.empty())
-    {
+    if (is_asc_only) {
         for (size_t i = 0; i < s.len_; i++)
         {
-            auto &c = s.at(i);
+            auto& c = s.at(i);
             if (c >= 97 && c <= 122)
                 c -= 32;
         }
+    }
+    else {
+        auto& f = std::use_facet<std::ctype<char32_t>>(std::locale(""));
+        f.toupper(s.data_, s.data_ + s.len_);
     }
     return s;
 }
@@ -429,6 +433,7 @@ String::const_resverse_iterator String::crend() const
 String String::fromUtf8(const char *data)
 {
     String s;
+
     if (!data)
         return s;
 
@@ -520,6 +525,18 @@ bool String::operator!=(const String &right) const
 
 bool String::operator<(const String &right) const
 {
+    if (data_ && right.data_) {
+        return memcmp(data_, right.data_, std::min(len_, right.len_));
+    }
+    else if (data_) {
+        
+    }
+    else if (right.data_) {
+
+    }
+    else {
+        return false;
+    }
     return false;
 }
 

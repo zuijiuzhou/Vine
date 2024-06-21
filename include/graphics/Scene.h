@@ -1,18 +1,19 @@
 #pragma once
 #include "graphics_global.h"
-#include "Drawable.h"
+
+#include "core/Object.h"
 
 VI_GRAPHICS_NS_BEGIN
 
-class VI_GRAPHICS_API Geometry : public Drawable {
+class VI_GRAPHICS_API Scene : public Object {
   VI_OBJECT_META;
+  VI_DISABLE_COPY_MOVE(Scene);
 
 public:
-  Geometry();
+  Scene();
 
-public:
+private:
   VI_OBJECT_DATA;
 };
-using GeometryPtr = RefPtr<Geometry>;
 
 VI_GRAPHICS_NS_END

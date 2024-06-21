@@ -6,9 +6,6 @@
 #include "Std.h"
 
 VI_CORE_NS_BEGIN
-/*
-字符串，内部UTF-32编码，字节序小端
-*/
 class VI_CORE_API String {
 
 public:
@@ -20,8 +17,8 @@ public:
 public:
 	String();
 	String(const Char* data);
-	String(const String& other);
-	String(String&& other);
+	String(const String& other) noexcept;
+	String(String&& other) noexcept;
 	virtual ~String();
 
 public:
@@ -29,15 +26,15 @@ public:
 
 	String substr(int start, int count) const;
 
-	size_t size() const;
+	size_t size() const noexcept;
 
-	size_t length() const;
+	size_t length() const noexcept;
 
-	void clear();
+	void clear() noexcept;
 
-	bool empty() const;
+	bool empty() const noexcept;
 
-	const Char* data() const;
+	const Char* data() const noexcept;
 
 	void set(const Char* data);
 
@@ -51,11 +48,9 @@ public:
 
 	bool equals(const String& other, bool ignore_case = false) const;
 
-	String toLower() const;
+	String toLower(bool is_asc_only = true) const;
 
-	String toLower2() const;
-
-	String toUpper() const;
+	String toUpper(bool is_asc_only = true) const;
 
 	String trimStart() const;
 
