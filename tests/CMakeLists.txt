@@ -17,3 +17,4 @@ link_directories(${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/$<$<CONFIG:Debug>:Debug>$<$<C
 link_libraries(gtest gtest_main)
 add_subdirectory(test_ge)
 add_subdirectory(test_core)
+add_subdirectory(test_cppstd)
