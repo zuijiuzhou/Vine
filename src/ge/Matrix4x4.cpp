@@ -10,8 +10,6 @@ Matrix4x4::Matrix4x4()
 }
 void Matrix4x4::makeIdentity()
 {
-    data[2][3] = 4;
-    data[1][2] = 5;
     // std::fill((double*)data, ((double*)data)+16, 0.0);
     memset(data, 0, sizeof(data));
     data[0][0] = data[1][1] = data[2][2] = data[3][3] = 1.0;

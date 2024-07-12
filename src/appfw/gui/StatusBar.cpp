@@ -1,25 +1,25 @@
 #include <appfw/gui/StatusBar.h>
 
 #include <QStatusBar>
+
 #include <appfw/gui/MainWindow.h>
+#include <core/Ptr.h>
 
 VI_APPFWGUI_NS_BEGIN
 
 VI_OBJECT_META_IMPL(StatusBar, Control)
 
-struct StatusBar::Data
-{
+struct StatusBar::Data {
     RefPtr<MainWindow> wnd;
 };
 
 StatusBar::StatusBar(MainWindow* wnd)
-    : Control(new QStatusBar())
-    , d(new Data())
-{
+  : Control(new QStatusBar())
+  , d(new Data()) {
     d->wnd = wnd;
 }
 
-StatusBar::~StatusBar(){
+StatusBar::~StatusBar() {
     delete d;
 }
 

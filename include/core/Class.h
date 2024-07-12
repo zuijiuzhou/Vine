@@ -1,41 +1,43 @@
 #pragma once
-#include "core_global.h"
 #include "Std.h"
+#include "core_global.h"
+
 class type_info;
+
 VI_CORE_NS_BEGIN
-class VI_CORE_API Class
-{
-public:
-    Class(const Class *parent, const type_info &ti);
-    Class(const Class &cls) = delete;
-    Class(const Class &&cls) = delete;
-    Class &operator=(const Class &cls) = delete;
 
-    const Class *parent() const noexcept;
+class VI_CORE_API Class {
+  public:
+    Class(const Class* parent, const type_info& ti);
+    Class(const Class& cls)            = delete;
+    Class(const Class&& cls)           = delete;
+    Class& operator=(const Class& cls) = delete;
 
-    const Char *name() const noexcept;
+    const Class* parent() const noexcept;
 
-    const Char *ns() const noexcept;
+    const Char* name() const noexcept;
 
-    const Char *fullName() const noexcept;
+    const Char* ns() const noexcept;
 
-    bool isSubclassOf(const Class *cls) const;
+    const Char* fullName() const noexcept;
 
-    const type_info &ctype() const noexcept;
+    bool isSubclassOf(const Class* cls) const;
 
-public:
-    bool operator==(const Class &right) const;
-    bool operator!=(const Class &right) const;
+    const type_info& ctype() const noexcept;
 
-public:
-    static Class *getClass(const type_info &ti);
-    static Class *getClass(const Char *full_name);
+  public:
+    bool operator==(const Class& right) const;
+    bool operator!=(const Class& right) const;
 
-private:
+  public:
+    static Class* getClass(const type_info& ti);
+    static Class* getClass(const Char* full_name);
+
+  private:
     struct Data;
-    Data *d;
+    Data* d;
 };
 
-using Type = const Class *;
+using Type = const Class*;
 
 VI_CORE_NS_END

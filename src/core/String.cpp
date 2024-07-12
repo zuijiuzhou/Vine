@@ -29,6 +29,8 @@ namespace
     }
 }
 
+const String String::nstr = U"";
+
 String::String()
 {
     clear();

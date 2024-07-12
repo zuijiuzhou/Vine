@@ -97,6 +97,9 @@ public:
 	bool operator <(const String& right) const;
 	bool operator >(const String& right) const;
 
+public:
+    static const String nstr;
+
 private:
 	Char* data_ = nullptr;
 	size_t len_ = 0;
