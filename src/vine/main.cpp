@@ -7,7 +7,7 @@
 #include <ge/Vector3d.h>
 
 #include <core/Ptr.h>
-#include <core/core_stl.h>
+#include <core/stl++.h>
 
 #include <di/Container.h>
 #include <di/Registration.h>

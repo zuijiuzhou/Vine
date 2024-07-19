@@ -6,12 +6,13 @@ class type_info;
 
 VI_CORE_NS_BEGIN
 
-class VI_CORE_API Class {
+class VI_CORE_API Class final{
   public:
     Class(const Class* parent, const type_info& ti);
     Class(const Class& cls)            = delete;
     Class(const Class&& cls)           = delete;
     Class& operator=(const Class& cls) = delete;
+    ~Class();
 
     const Class* parent() const noexcept;
 

@@ -11,7 +11,7 @@ VI_CORE_NS_BEGIN
 namespace
 {
     template <typename T>
-    size_t getDataLength(const T *data)
+    size_t get_data_len(const T *data)
     {
         size_t len = 0;
         while (true)
@@ -23,13 +23,13 @@ namespace
         return len;
     }
 
-    inline bool isWhiteChar(Char c)
+    inline bool is_white_char(Char c)
     {
-        return c == ' ' || c == '\r' || c == '\n';
+        return c == U' ' || c == U'\r' || c == U'\n' || c == U'\t';
     }
 }
 
-const String String::nstr = U"";
+const String String::E = U"";
 
 String::String()
 {
@@ -111,7 +111,7 @@ const Char *String::data() const noexcept
 
 void String::set(const Char *data)
 {
-    set(data, getDataLength(data));
+    set(data, get_data_len(data));
 }
 
 void String::set(const Char *data, size_t len)
@@ -240,7 +240,7 @@ String String::trimStart() const
     auto data = data_;
     while (len > 0)
     {
-        if (isWhiteChar(*data))
+        if (is_white_char(*data))
         {
             len--;
             data++;
@@ -263,7 +263,7 @@ String String::trimEnd() const
     auto data = (data_ + len_ - 1);
     while (len > 0)
     {
-        if (isWhiteChar(*data))
+        if (is_white_char(*data))
         {
             len--;
             data--;
@@ -286,7 +286,7 @@ String String::trim() const
     auto data_start = data_;
     while (len > 0)
     {
-        if (isWhiteChar(*data_start))
+        if (is_white_char(*data_start))
         {
             len--;
             data_start++;
@@ -299,7 +299,7 @@ String String::trim() const
     auto data_end = (data_ + len_ - 1);
     while (len > 0)
     {
-        if (isWhiteChar(*data_end))
+        if (is_white_char(*data_end))
         {
             len--;
             data_end--;

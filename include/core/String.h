@@ -6,7 +6,7 @@
 #include "Std.h"
 
 VI_CORE_NS_BEGIN
-class VI_CORE_API String {
+class VI_CORE_API String final {
 
 public:
 	using iterator = Char*;
@@ -98,7 +98,7 @@ public:
 	bool operator >(const String& right) const;
 
 public:
-    static const String nstr;
+    static const String E;
 
 private:
 	Char* data_ = nullptr;

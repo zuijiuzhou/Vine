@@ -1,5 +1,6 @@
 #include <core/Class.h>
 
+#include <mutex>
 #include <set>
 #include <typeinfo>
 
@@ -8,7 +9,7 @@
 VI_CORE_NS_BEGIN
 
 namespace {
-bool _parse_name(const type_info& ti, String& name, String& ns, String& full_name) {
+bool parse_type_info_vc(const type_info& ti, String& name, String& ns, String& full_name) {
     auto n    = ti.name();
     auto rn   = ti.raw_name();
     full_name = String::fromUtf8(n);
@@ -38,11 +39,15 @@ Class::Class(const Class* parent, const type_info& ti)
     if (getClass(ti)) throw Exception(Exception::ITEM_ALREADY_EXISTS);
     d->parent = parent;
 #if defined(_MSC_VER)
-    _parse_name(ti, d->name, d->ns, d->full_name);
+    parse_type_info_vc(ti, d->name, d->ns, d->full_name);
 #else
 #    error "NOT IMPLEMENTED!"
 #endif
     Data::classes.insert(this);
+}
+
+Class::~Class() {
+    Data::classes.erase(this);
 }
 
 const Class* Class::parent() const noexcept {
@@ -83,8 +88,9 @@ Class* Class::getClass(const type_info& ti) {
 }
 
 Class* Class::getClass(const Char* full_name) {
-    auto iter = std::find_if(
-        Data::classes.begin(), Data::classes.end(), [&full_name](Class* c) { return c->fullName() == full_name; });
+    auto iter = std::find_if(Data::classes.begin(), Data::classes.end(), [&full_name](Class* c) {
+        return c->fullName() == full_name;
+    });
     if (iter == Data::classes.end()) return nullptr;
     return *iter;
 }
