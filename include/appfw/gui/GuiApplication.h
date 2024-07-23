@@ -1,26 +1,25 @@
 #pragma once
 #include "gui_global.h"
 
-#include "core/Object.h"
 #include "appfw/Application.h"
+#include "core/Object.h"
 
 
 VI_APPFWGUI_NS_BEGIN
 
-class VI_APPFWGUI_API GuiApplication : public Application
-{
+class VI_APPFWGUI_API GuiApplication : public Application {
     VI_OBJECT_META
-public:
+  public:
     GuiApplication(int argc, char** argv);
     virtual ~GuiApplication();
 
-public:
+  public:
     virtual void init() override;
 
-public:
+  public:
     virtual int run() override;
 
-private:
+  private:
     VI_OBJECT_DATA
 };
 

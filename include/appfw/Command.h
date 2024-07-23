@@ -6,30 +6,28 @@
 
 VI_APPFW_NS_BEGIN
 
-class VI_APPFW_API CommandExecutingContext : public Object
-{
+class VI_APPFW_API CommandExecutingContext : public Object {
     VI_OBJECT_META;
     VI_DISABLE_COPY_MOVE(CommandExecutingContext);
 
-public:
+  public:
     String arguments() const;
 
-private:
+  private:
     VI_OBJECT_DATA
 };
 using CommandExecutingContextPtr = RefPtr<CommandExecutingContext>;
 
-class VI_APPFW_API Command : public Object
-{
+class VI_APPFW_API Command : public Object {
     VI_OBJECT_META;
     VI_DISABLE_COPY_MOVE(Command);
 
-public:
+  public:
     virtual String name() const = 0;
 
     virtual String group() const = 0;
 
-    virtual void Execute(CommandExecutingContext *context) = 0;
+    virtual void Execute(CommandExecutingContext* context) = 0;
 };
 using CommandPtr = RefPtr<Command>;
 

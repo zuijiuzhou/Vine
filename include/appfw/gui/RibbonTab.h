@@ -8,26 +8,25 @@ VI_APPFWGUI_NS_BEGIN
 class RibbonBar;
 class RibbonGroup;
 
-class VI_APPFWGUI_API RibbonTab : public Control
-{
+class VI_APPFWGUI_API RibbonTab : public Control {
     VI_OBJECT_META
 
     friend class RibbonBar;
 
-public:
+  public:
     RibbonTab();
     virtual ~RibbonTab();
 
-public:
+  public:
     String title() const;
-    RibbonTab *title(const String &ti);
+    void   title(const String& ti);
 
-    RibbonTab *addGroup(RibbonGroup *group);
-    RibbonTab *removeGroup(RibbonGroup *group);
+    void  addGroup(RibbonGroup* group);
+    void  removeGroup(RibbonGroup* group);
     Int32 numGroups() const;
-    RibbonGroup *groupAt(Int32 idx) const;
+    void  groupAt(Int32 idx) const;
 
-private:
+  private:
     VI_OBJECT_DATA
 };
 

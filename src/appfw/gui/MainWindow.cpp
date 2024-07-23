@@ -1,9 +1,16 @@
+#include <QDockWidget>
+#include <QTabWidget>
+
 #include <SARibbon.h>
 
 #include <appfw/gui/MainWindow.h>
 #include <appfw/gui/RibbonBar.h>
 #include <appfw/gui/StatusBar.h>
+#include <appfw/gui/Gui.h>
+#include <appfw/gui/DockPanel.h>
 #include <core/Ptr.h>
+
+#include "Convert.h"
 
 VI_APPFWGUI_NS_BEGIN
 
@@ -19,8 +26,6 @@ struct MainWindow::Data {
 
 namespace {
 using itype           = SARibbonMainWindow;
-using StartupPosition = MainWindow::StartupPosition;
-using WindowState     = MainWindow::WindowState;
 } // namespace
 
 MainWindow::MainWindow()
@@ -36,67 +41,67 @@ MainWindow::MainWindow()
 
     impl<itype>()->setStatusBar(d->status_bar->impl<QStatusBar>());
 
-    SARibbonBar* ribbon = impl<itype>()->ribbonBar();
+    auto ribbon = impl<itype>()->ribbonBar();
     // 通过setContentsMargins设置ribbon四周的间距
     ribbon->setContentsMargins(5, 0, 5, 0);
     // 设置applicationButton
     ribbon->applicationButton()->setText(("File"));
+
+    auto central_widget = new QTabWidget();
+    auto wnd            = impl<itype>();
+    wnd->setCentralWidget(central_widget);
+    
 }
 
 MainWindow::~MainWindow() {
     delete d;
 }
 
-MainWindow* MainWindow::startupPosition(StartupPosition position) {
+void MainWindow::startupPosition(StartupPosition position) {
     d->startup_posi = position;
-    return this;
 }
 
 StartupPosition MainWindow::startupPosition() const {
     return d->startup_posi;
 }
 
-MainWindow* MainWindow::windowState(WindowState state) {
+void MainWindow::windowState(WindowState state) {
     d->wnd_state = state;
     Qt::WindowState qstate;
-    if (state == MINIMIZED)
+    if (state == WindowState::Minimized)
         qstate = Qt::WindowState::WindowMinimized;
-    else if (state == MAXIMIZED)
-        qstate = Qt::WindowState::WindowMinimized;
+    else if (state == WindowState::Maximized)
+        qstate = Qt::WindowState::WindowMaximized;
     else
         qstate = Qt::WindowState::WindowNoState;
     impl<itype>()->setWindowState(qstate);
-    return this;
 }
 
 WindowState MainWindow::windowState() const {
     WindowState state;
     auto        qstate = impl<itype>()->windowState();
     if (qstate & Qt::WindowState::WindowFullScreen)
-        state = MAXIMIZED;
+        state = WindowState::Maximized;
     else if (qstate & Qt::WindowState::WindowMaximized)
-        state = MAXIMIZED;
+        state = WindowState::Maximized;
     else if (qstate & Qt::WindowState::WindowMinimized)
-        state = MINIMIZED;
+        state = WindowState::Minimized;
     else
-        state = NORMAL;
+        state = WindowState::Normal;
     return state;
 }
 
-MainWindow* MainWindow::activate() {
+void MainWindow::activate() {
     auto qstate = impl<itype>()->windowState();
     impl<itype>()->activateWindow();
-    return this;
 }
 
-MainWindow* MainWindow::setEnabled() {
+void MainWindow::setEnabled() {
     impl<itype>()->setEnabled(true);
-    return this;
 }
 
-MainWindow* MainWindow::setDisabled() {
+void MainWindow::setDisabled() {
     impl<itype>()->setEnabled(false);
-    return this;
 }
 
 bool MainWindow::isActive() const {
@@ -124,6 +129,15 @@ RibbonBar* MainWindow::ribbonBar() const {
 
 StatusBar* MainWindow::statusBar() const {
     return d->status_bar.get();
+}
+
+void MainWindow::addDockPanel(DockPanel* panel, DockAreas area){
+    auto qdockpanel = panel->impl<QDockWidget>();
+    auto qwnd = impl<itype>();
+    auto qarea = Convert::toQDockAreas(area);
+    qdockpanel->setAllowedAreas(qarea);
+    qwnd->addDockWidget((Qt::DockWidgetArea)qarea.toInt(), qdockpanel);
+
 }
 
 VI_APPFWGUI_NS_END

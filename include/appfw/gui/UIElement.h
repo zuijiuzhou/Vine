@@ -1,9 +1,9 @@
 #pragma once
 
-#include "gui_global.h"
-#include "core/Object.h"
 #include "core/Events.h"
+#include "core/Object.h"
 #include "core/String.h"
+#include "gui_global.h"
 
 #include "Gui.h"
 
@@ -11,36 +11,31 @@ class QObject;
 
 VI_APPFWGUI_NS_BEGIN
 
-class VI_APPFWGUI_API UIElement : public Object
-{
-	VI_OBJECT_META
-	
-	VI_DISABLE_COPY_MOVE(UIElement)
+class VI_APPFWGUI_API UIElement : public Object {
+    VI_OBJECT_META
 
-protected:
-	UIElement(QObject* impl);
+    VI_DISABLE_COPY_MOVE(UIElement)
 
-public:
-	virtual ~UIElement();
+  protected:
+    UIElement(QObject* impl);
 
-public:
-	String name() const;
-	virtual UIElement* name(const String& name);
+  public:
+    virtual ~UIElement();
 
-public:
-	const Event<UIElement, PropertyChangedEventArgs<String>> NameChanged;
+  public:
+    String       name() const;
+    virtual void name(const String& name);
 
-protected:
-	virtual QObject* impl() const;
+  public:
+    const Event<UIElement, PropertyChangedEventArgs<String>> NameChanged;
 
-	template <typename TImpl>
-	TImpl* impl() const
-	{
-		return (TImpl*)(impl());
-	}
+  //protected:
+    virtual QObject* impl() const;
 
-private:
-	VI_OBJECT_DATA
+    template <typename TImpl> TImpl* impl() const { return (TImpl*)(impl()); }
+
+  private:
+    VI_OBJECT_DATA
 };
 
 VI_APPFWGUI_NS_END

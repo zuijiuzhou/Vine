@@ -1,5 +1,7 @@
 #pragma once
 
+#include <type_traits>
+
 #include "Std.h"
 
 #define VI_DISABLE_COPY(_TCls)                                                                                         \
@@ -15,8 +17,6 @@
 #define VI_DISABLE_COPY_MOVE(_TCls)                                                                                    \
     VI_DISABLE_COPY(_TCls)                                                                                             \
     VI_DISABLE_MOVE(_TCls)
-
-#pragma once
 
 #define VI_ENUM_CLASS_FLAGS(_TEnum)                                                                                    \
     inline constexpr _TEnum& operator|=(_TEnum& x, _TEnum y) {                                                         \
@@ -49,7 +49,9 @@
     inline constexpr _TEnum operator~(_TEnum x) {                                                                      \
         return static_cast<_TEnum>(~static_cast<std::underlying_type_t<_TEnum>>(x));                                   \
     }
-
+    
+VI_CORE_NS_BEGIN
 template <typename _TEnum> inline constexpr bool testFlag(_TEnum a, _TEnum b) {
     return static_cast<bool>(static_cast<std::underlying_type_t<_TEnum>>(a & b));
 }
+VI_CORE_NS_END

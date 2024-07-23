@@ -1,6 +1,6 @@
 #pragma once
 
-#include "line3d.h"
+#include "line.h"
 
 VI_GE_NS_BEGIN
 class VI_GE_API Plane

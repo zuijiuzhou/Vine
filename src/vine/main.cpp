@@ -20,46 +20,22 @@
 #include <appfw/gui/RibbonDropDownItem.h>
 #include <appfw/gui/RibbonGroup.h>
 #include <appfw/gui/RibbonTab.h>
+#include <appfw/gui/DockPanel.h>
 
 namespace fw    = vine::appfw;
 namespace guifw = fw::gui;
-
-class Base1 {
-  public:
-    virtual ~Base1() { std::cout << "Base1 destructor called" << std::endl; }
-};
-
-class Base2 {
-  public:
-    virtual ~Base2() { std::cout << "Base2 destructor called" << std::endl; }
-};
-
-class Derived : public Base1, public Base2 {
-  public:
-    ~Derived() override { std::cout << "Derived destructor called" << std::endl; }
-};
-
+namespace di    = vine::di;
 
 
 int main(int argc, char** argv) {
-    Base1* b1 = new Derived();
-    delete b1; // 输出 Derived destructor called 和 Base1 destructor called
-
-    Base2* b2 = new Derived();
-    delete b2; // 输出 Derived destructor called 和 Base2 destructor called
-
-    vine::ge::Vector3d v(1, 2, 3);
-
-    vine::ge::Point3d p = v.asPoint();
 
     guifw::GuiApplicationPtr app = new guifw::GuiApplication(argc, argv);
     app->init();
     guifw::MainWindowPtr wnd = new guifw::MainWindow();
     wnd->show();
 
-    vine::di::Container c;
-    auto                reg = vine::di::Registration::create<vine::Object>()->impl<fw::AddinManager>()->lifetime(
-        vine::di::Lifetime::Singleton);
+    di::Container c;
+    auto reg = di::Registration::create<vine::Object>()->impl<fw::AddinManager>()->lifetime(di::Lifetime::Singleton);
     c.add(reg);
 
     auto bar  = wnd->ribbonBar();
@@ -71,8 +47,22 @@ int main(int argc, char** argv) {
     rtab->addGroup(rgroup);
 
     auto mi1 = new guifw::RibbonDropDownItem();
-    mi1->text(U"Open")->data((void*)123);
+    mi1->text(U"Open");
+    mi1->data((void*)123);
     bar->appendApplicationMenu(mi1);
+
+    auto panel_left = new guifw::DockPanel();
+    panel_left->setTitle(U"Left");
+    wnd->addDockPanel(panel_left, guifw::DockAreas::Left);
+    auto panel_top = new guifw::DockPanel();
+    panel_top->setTitle(U"Top");
+    wnd->addDockPanel(panel_top, guifw::DockAreas::Top);
+    auto panel_right = new guifw::DockPanel();
+    panel_right->setTitle(U"Right");
+    wnd->addDockPanel(panel_right, guifw::DockAreas::Right);
+    auto panel_bottom = new guifw::DockPanel();
+    panel_bottom->setTitle(U"Bottom");
+    wnd->addDockPanel(panel_bottom, guifw::DockAreas::Bottom);
 
     return app->run();
 }

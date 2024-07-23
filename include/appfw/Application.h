@@ -9,39 +9,38 @@ class CommandManager;
 class AddinManager;
 class ServiceManager;
 
-class VI_APPFW_API Application : public Object
-{
-	VI_OBJECT_META;
-	VI_DISABLE_COPY_MOVE(Application);
+class VI_APPFW_API Application : public Object {
+    VI_OBJECT_META;
+    VI_DISABLE_COPY_MOVE(Application);
 
-public:
-	Application(int argc, char** argv);
-	virtual ~Application();
+  public:
+    Application(int argc, char** argv);
+    virtual ~Application();
 
 
-public:
-	virtual void init();
+  public:
+    virtual void init();
 
-public:
-	virtual int run();
+  public:
+    virtual int run();
 
-	void exit(int code);
+    void exit(int code);
 
-	CommandManager* commandManager() const;
+    CommandManager* commandManager() const;
 
-	AddinManager* addinManager() const;
+    AddinManager* addinManager() const;
 
-	ServiceManager* serviceManager() const;
+    ServiceManager* serviceManager() const;
 
-	int argc() const;
+    int argc() const;
 
-	char** argv() const;
+    char** argv() const;
 
-public:
-	static Application* current();
+  public:
+    static Application* current();
 
-private:
-	VI_OBJECT_DATA
+  private:
+    VI_OBJECT_DATA
 };
 using ApplicationPtr = RefPtr<Application>;
 

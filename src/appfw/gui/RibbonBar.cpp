@@ -42,20 +42,18 @@ RibbonTab* RibbonBar::tabAt(Int32 idx) const {
     return d->tabs.at(idx).get();
 }
 
-RibbonBar* RibbonBar::addTab(RibbonTab* tab) {
+void RibbonBar::addTab(RibbonTab* tab) {
     VI_CHECK_NULL(tab)
-    if (std::any_of(d->tabs.begin(), d->tabs.end(), [tab](RefPtr<RibbonTab>& t) { return tab == t; })) return this;
+    if (std::any_of(d->tabs.begin(), d->tabs.end(), [tab](RefPtr<RibbonTab>& t) { return tab == t; })) return;
     auto w = impl<itype>();
     w->addCategoryPage(tab->impl<SARibbonCategory>());
-    return this;
 }
 
-RibbonBar* RibbonBar::removeTab(RibbonTab* tab) {
+void RibbonBar::removeTab(RibbonTab* tab) {
     VI_CHECK_NULL(tab)
-    if (std::none_of(d->tabs.begin(), d->tabs.end(), [tab](RefPtr<RibbonTab>& t) { return t == tab; })) return this;
+    if (std::none_of(d->tabs.begin(), d->tabs.end(), [tab](RefPtr<RibbonTab>& t) { return t == tab; })) return;
     auto w = impl<itype>();
     w->removeCategory(tab->impl<SARibbonCategory>());
-    return this;
 }
 
 Int32 RibbonBar::currentIndex() {
@@ -63,10 +61,9 @@ Int32 RibbonBar::currentIndex() {
     return w->currentIndex();
 }
 
-RibbonBar* RibbonBar::currentIndex(Int32 idx) {
+void RibbonBar::currentIndex(Int32 idx) {
     auto w = impl<itype>();
     w->setCurrentIndex(idx);
-    return this;
 }
 
 void RibbonBar::appendApplicationMenu(RibbonDropDownItem* mi) {

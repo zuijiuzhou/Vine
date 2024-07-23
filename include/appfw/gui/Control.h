@@ -6,27 +6,26 @@ class QWidget;
 
 VI_APPFWGUI_NS_BEGIN
 
-class VI_APPFWGUI_API Control : public UIElement
-{
+class VI_APPFWGUI_API Control : public UIElement {
     VI_OBJECT_META
 
-protected:
-    Control(QWidget *impl);
+  protected:
+    Control(QWidget* impl);
 
-public:
+  public:
     virtual ~Control();
 
-public:
+  public:
     Rect rect() const;
-    Control *rect(const Rect &rect);
+    void rect(const Rect& rect);
 
     Point position() const;
-    Control *position(const Point &posi);
+    void  position(const Point& posi);
 
     Size size() const;
-    Control *size(const Size &s);
+    void size(const Size& s);
 
-private:
+  private:
     VI_OBJECT_DATA
 };
 

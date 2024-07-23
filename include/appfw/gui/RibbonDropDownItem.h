@@ -6,23 +6,22 @@
 
 VI_APPFWGUI_NS_BEGIN
 
-class VI_APPFWGUI_API RibbonDropDownItem : public UIElement
-{
+class VI_APPFWGUI_API RibbonDropDownItem : public UIElement {
     VI_OBJECT_META
     friend class RibbonBar;
 
-public:
+  public:
     RibbonDropDownItem();
     virtual ~RibbonDropDownItem();
 
-public:
+  public:
     String text() const;
-    RibbonDropDownItem *text(const String &txt);
+    void   text(const String& txt);
 
-    void *data() const;
-    RibbonDropDownItem *data(void *v);
+    void* data() const;
+    void  data(void* v);
 
-private:
+  private:
     VI_OBJECT_DATA
 };
 

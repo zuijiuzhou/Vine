@@ -7,21 +7,20 @@ VI_APPFWGUI_NS_BEGIN
 
 class RibbonTab;
 
-class VI_APPFWGUI_API RibbonGroup : public Control
-{
+class VI_APPFWGUI_API RibbonGroup : public Control {
     VI_OBJECT_META
 
     friend class RibbonTab;
 
-public:
+  public:
     RibbonGroup();
     virtual ~RibbonGroup();
 
-public:
+  public:
     String title() const;
-    RibbonGroup *title(const String &ti);
+    void   title(const String& ti);
 
-private:
+  private:
     VI_OBJECT_DATA
 };
 
