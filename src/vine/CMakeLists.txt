@@ -1,25 +1,28 @@
-﻿set(CURRENT_LIB_NAME Vine)
+﻿set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets)
-qt_standard_project_setup()
+add_definitions(-DUNICODE -D_UNICODE)
 
-file(GLOB SRC_FILE_LIST LIST_DIRECTORIES false *.cpp)
-file(GLOB HEADER_FILE_LIST LIST_DIRECTORIES false *.h)
-file(GLOB RC_FILE_LIST LIST_DIRECTORIES false *.rc)
+set(CMAKE_CXX_STANDARD 20)
 
+include_directories(
+    "$<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>")
+    
+link_directories(${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/$<$<CONFIG:Debug>:Debug>$<$<CONFIG:Release>:Release>)
 
+# set(CMAKE_SHARED_LIBRARY_PREFIX vi)
+# # Prefix all static libraries with 'vi'.
+# set(CMAKE_STATIC_LIBRARY_PREFIX vi)
 
-qt_add_executable(${CURRENT_LIB_NAME} WIN32 ${SRC_FILE_LIST} ${HEADER_FILE_LIST} ${RC_FILE_LIST})
-set_target_properties(${CURRENT_LIB_NAME} PROPERTIES WIN32_EXECUTABLE TRUE MACOSX_BUNDLE TRUE FOLDER vi)
-target_link_libraries(${CURRENT_LIB_NAME} PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets vi::AppfwGui vi::Di)
+set(VI_SHARED_LIBRARY_PREFIX vi)
 
-# add_custom_command(TARGET ${CURRENT_LIB_NAME} POST_BUILD
-#     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-#         $<TARGET_FILE:Qt6::Core>
-#         $<TARGET_FILE:Qt6::Gui>
-#         $<TARGET_FILE:Qt6::Widgets>
-#         $<TARGET_FILE_DIR:${CURRENT_LIB_NAME}>)
-# set_target_properties(${CURRENT_LIB_NAME} PROPERTIES WIN32_EXECUTABLE TRUE)
+include(VineLibraryHelper)
 
-# copy_qt_dependencies(${CURRENT_LIB_NAME} Qt::Core Qt::Widgets Qt::Gui)
-
+add_subdirectory(ge)
+add_subdirectory(core)
+add_subdirectory(di)
+add_subdirectory(system)
+add_subdirectory(runtime)
+add_subdirectory(graphics)
+add_subdirectory(appfw)
+add_subdirectory(app)

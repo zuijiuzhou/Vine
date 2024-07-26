@@ -41,7 +41,7 @@ function(vi_internal_add_library short_name out_target_name)
     STRING(TOLOWER ${short_name} short_name_lowercase)
     STRING(TOLOWER ${CMAKE_PROJECT_NAME} proj_name_lowercase)
 
-    install(FILES ${SDK_HEADER_FILE_LIST} DESTINATION ${CMAKE_INSTALL_PREFIX}/include/${proj_name_lowercase}/${REL_CURRENT_SOURCE_DIR})
+    install(FILES ${SDK_HEADER_FILE_LIST} DESTINATION ${CMAKE_INSTALL_PREFIX}/include/${REL_CURRENT_SOURCE_DIR})
     install(
         TARGETS ${LIB_NAME}
         EXPORT ${CMAKE_PROJECT_NAME}Targets

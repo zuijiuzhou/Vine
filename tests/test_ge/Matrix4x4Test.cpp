@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include <ge/Matrix4x4.h>
+#include <vine/ge/Matrix4x4.h>
 
 using namespace vine::ge;
 

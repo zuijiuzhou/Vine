@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 
-#include <ge/Vector3d.h>
-#include <ge/Ge.h>
+#include <vine/ge/Vector3d.h>
+#include <vine/ge/Ge.h>
 
 using namespace vine::ge;
 
