@@ -119,6 +119,9 @@ VI_CORE_NS_END
                                                                                                                        \
     const vine::Class* TSub::desc() {                                                                                  \
         static const vine::Class* cls = new vine::Class(TParent::desc(), typeid(TSub));                                \
+        if constexpr (std::is_default_constructible<TSub>::value) {                                                    \
+            /*auto fac = []() { return new TSub(); };     */                                                               \
+        }                                                                                                              \
         return cls;                                                                                                    \
     }
 

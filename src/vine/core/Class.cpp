@@ -41,7 +41,7 @@ Class::Class(const Class* parent, const type_info& ti)
 #if defined(_MSC_VER)
     parse_type_info_vc(ti, d->name, d->ns, d->full_name);
 #else
-#    error "NOT IMPLEMENTED!"
+#error "NOT IMPLEMENTED!"
 #endif
     Data::classes.insert(this);
 }
