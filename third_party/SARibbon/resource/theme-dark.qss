@@ -121,7 +121,6 @@ SARibbonTabBar::tab {
   margin-left: 5px;
   margin-bottom: 0px;
   min-width: 50px;
-  min-height: 28px;
   padding-left: 5px;
   padding-right: 5px;
 }
@@ -216,7 +215,7 @@ SARibbonControlButton:hover {
   background-color: #a0a0a0;
  }
 
-SARibbonControlButton#SARibbonGalleryButtonUp,#SARibbonGalleryButtonDown,#SARibbonGalleryButtonMore{
+SARibbonGalleryButton{
   background-color:#b2b2b2;
   border: 1px solid #888888;
   color: #242424;
@@ -318,10 +317,6 @@ SARibbonComboBox::down-arrow {
 }
 
 
-/*SARibbonSeparatorWidget*/
-SARibbonSeparatorWidget {
-  background-color: #a4a4a4;
-}
 
 /*SARibbonCategoryScrollButton*/
 SARibbonCategoryScrollButton {
