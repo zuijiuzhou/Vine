@@ -13,3 +13,4 @@ namespace VI_NS_NAME { \
 #define VI_RUNTIME_NS_END \
     }\
 }
+

@@ -3,15 +3,26 @@
 #include <mutex>
 #include <set>
 #include <typeinfo>
+#include <algorithm>
 
 #include <vine/core/Exception.h>
 
 VI_CORE_NS_BEGIN
 
 namespace {
-bool parse_type_info_vc(const type_info& ti, String& name, String& ns, String& full_name) {
+
+bool parse_type_info_vc(const std::type_info& ti, String& name, String& ns, String& full_name) {
     auto n    = ti.name();
-    auto rn   = ti.raw_name();
+    full_name = String::fromUtf8(n);
+    full_name = full_name.substr(6);
+    auto idx  = full_name.lastIndexOf(U':');
+    name      = full_name.substr(idx + 1);
+    ns        = full_name.substr(0, idx - 1);
+    return true;
+}
+
+bool parse_type_info_gcc(const std::type_info& ti, String& name, String& ns, String& full_name) {
+    auto n    = ti.name();
     full_name = String::fromUtf8(n);
     full_name = full_name.substr(6);
     auto idx  = full_name.lastIndexOf(U':');
@@ -22,10 +33,10 @@ bool parse_type_info_vc(const type_info& ti, String& name, String& ns, String& f
 } // namespace
 
 struct Class::Data {
-    Data(const type_info& i)
+    Data(const std::type_info& i)
       : ti(i) {}
     const Class*            parent = nullptr;
-    const type_info&        ti;
+    const std::type_info&   ti;
     String                  name;
     String                  ns;
     String                  full_name;
@@ -34,14 +45,15 @@ struct Class::Data {
 
 std::set<Class*> Class::Data::classes = {};
 
-Class::Class(const Class* parent, const type_info& ti)
+Class::Class(const Class* parent, const std::type_info& ti)
   : d(new Data(ti)) {
-    if (getClass(ti)) throw Exception(Exception::ITEM_ALREADY_EXISTS);
+    if (getClass(ti)) 
+        throw Exception(Exception::ITEM_ALREADY_EXISTS);
     d->parent = parent;
 #if defined(_MSC_VER)
     parse_type_info_vc(ti, d->name, d->ns, d->full_name);
 #else
-#error "NOT IMPLEMENTED!"
+    parse_type_info_gcc(ti, d->name, d->ns, d->full_name);
 #endif
     Data::classes.insert(this);
 }
@@ -66,7 +78,7 @@ const Char* Class::fullName() const noexcept {
     return d->full_name.data();
 }
 
-const type_info& Class::ctype() const noexcept {
+const std::type_info& Class::ctype() const noexcept {
     return d->ti;
 }
 
@@ -81,7 +93,7 @@ bool Class::isSubclassOf(const Class* cls) const {
     return false;
 }
 
-Class* Class::getClass(const type_info& ti) {
+Class* Class::getClass(const std::type_info& ti) {
     auto iter = std::find_if(Data::classes.begin(), Data::classes.end(), [&ti](Class* c) { return c->ctype() == ti; });
     if (iter == Data::classes.end()) return nullptr;
     return *iter;

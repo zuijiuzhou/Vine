@@ -1,6 +1,6 @@
-#pragma once
+﻿#pragma once
 
-#include "line.h"
+#include "Line.h"
 
 VI_GE_NS_BEGIN
 class VI_GE_API Plane

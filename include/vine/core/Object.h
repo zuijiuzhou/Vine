@@ -79,12 +79,16 @@ class VI_CORE_API Object {
     static const Class* desc();
 
     template <Objectifiable T> static T* cast(T* obj) {
-        if (obj) return obj->cast<T>();
+        if (obj && obj->isKindOf(T::desc())){
+            return static_cast<T*>(obj);
+        }
         return nullptr;
     }
 
     template <Objectifiable T> static const T* cast(const T* obj) {
-        if (obj) return obj->cast<T>();
+       if (obj && obj->isKindOf(T::desc())){
+            return static_cast<T*>(obj);
+        }
         return nullptr;
     }
 

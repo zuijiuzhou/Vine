@@ -1,5 +1,6 @@
 #include <vine/ge/Matrix4x4.h>
 
+#include <cstring>
 #include <memory>
 
 VI_GE_NS_BEGIN

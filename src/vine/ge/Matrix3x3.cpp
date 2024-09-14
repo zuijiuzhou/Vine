@@ -1,5 +1,6 @@
 #include <vine/ge/Matrix3x3.h>
 
+#include <cstring>
 #include <memory>
 
 VI_GE_NS_BEGIN
@@ -9,11 +10,9 @@ Matrix3x3::Matrix3x3()
 }
 void Matrix3x3::makeIdentity()
 {
-    data[2][3] = 4;
-    data[1][2] = 5;
     // std::fill((double*)data, ((double*)data)+16, 0.0);
     memset(data, 0, sizeof(data));
-    data[0][0] = data[1][1] = data[2][2] = data[3][3] = 1.0;
+    data[0][0] = data[1][1] = data[2][2] = 1.0;
 }
 void Matrix3x3::makeRotation(const Point2d &center, double angle)
 {

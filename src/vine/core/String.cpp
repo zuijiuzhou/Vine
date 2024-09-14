@@ -3,6 +3,7 @@
 #include <vector>
 #include <locale>
 #include <ctype.h>
+#include <cstring>
 
 #include <vine/core/Exception.h>
 

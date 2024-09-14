@@ -22,6 +22,8 @@ function(vi_internal_add_library short_name out_target_name)
     set_target_properties(${LIB_NAME} PROPERTIES OUTPUT_NAME ${LIB_FILE_NAME})
 
     set_target_properties(${LIB_NAME} PROPERTIES FOLDER vi)
+
+    set_target_properties(${LIB_NAME} PROPERTIES PREFIX "")
     # 设置源文件分组
     source_group(sdk FILES ${SDK_HEADER_FILE_LIST})
     # source_group(inc FILES ${HEADER_FILE_LIST})

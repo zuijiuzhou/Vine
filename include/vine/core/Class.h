@@ -2,13 +2,15 @@
 #include "Std.h"
 #include "core_global.h"
 
+namespace std{
 class type_info;
+}
 
 VI_CORE_NS_BEGIN
 
 class VI_CORE_API Class final{
   public:
-    Class(const Class* parent, const type_info& ti);
+    Class(const Class* parent, const std::type_info& ti);
     Class(const Class& cls)            = delete;
     Class(const Class&& cls)           = delete;
     Class& operator=(const Class& cls) = delete;
@@ -24,14 +26,14 @@ class VI_CORE_API Class final{
 
     bool isSubclassOf(const Class* cls) const;
 
-    const type_info& ctype() const noexcept;
+    const std::type_info& ctype() const noexcept;
 
   public:
     bool operator==(const Class& right) const;
     bool operator!=(const Class& right) const;
 
   public:
-    static Class* getClass(const type_info& ti);
+    static Class* getClass(const std::type_info& ti);
     static Class* getClass(const Char* full_name);
 
   private:

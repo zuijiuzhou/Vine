@@ -13,3 +13,4 @@
 #define VI_APPFW_NS_END                                                                                                \
     }                                                                                                                  \
     }
+

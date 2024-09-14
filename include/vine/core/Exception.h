@@ -40,4 +40,4 @@ private:
 
 VI_CORE_NS_END
 
-#define VI_CHECK_NULL(var) if(!var) throw vine::Exception(vine::Exception::ARGUMENT_NULL, U#var);
+#define VI_CHECK_NULL(var) if(!var) throw vine::Exception(vine::Exception::ARGUMENT_NULL, U ## #var);
