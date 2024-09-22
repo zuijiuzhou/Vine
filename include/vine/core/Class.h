@@ -2,13 +2,20 @@
 #include "Std.h"
 #include "core_global.h"
 
-namespace std{
+#if defined(_MSC_VER)
+class type_info;
+namespace std {
+using type_info = ::type_info;
+}
+#elif defined(_MSC_VER)
+namespace std {
 class type_info;
 }
+#endif
 
 VI_CORE_NS_BEGIN
 
-class VI_CORE_API Class final{
+class VI_CORE_API Class final {
   public:
     Class(const Class* parent, const std::type_info& ti);
     Class(const Class& cls)            = delete;
@@ -41,7 +48,7 @@ class VI_CORE_API Class final{
     Data* d;
 };
 
-using Type = const Class*;
+using Type     = const Class*;
 using TypeInfo = const Class*;
 
 VI_CORE_NS_END

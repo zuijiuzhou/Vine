@@ -43,14 +43,14 @@ RibbonTab* RibbonBar::tabAt(Int32 idx) const {
 }
 
 void RibbonBar::addTab(RibbonTab* tab) {
-    VI_CHECK_NULL(tab)
+    VI_CHECK_NULL_THROW(tab)
     if (std::any_of(d->tabs.begin(), d->tabs.end(), [tab](RefPtr<RibbonTab>& t) { return tab == t; })) return;
     auto w = impl<itype>();
     w->addCategoryPage(tab->impl<SARibbonCategory>());
 }
 
 void RibbonBar::removeTab(RibbonTab* tab) {
-    VI_CHECK_NULL(tab)
+    VI_CHECK_NULL_THROW(tab)
     if (std::none_of(d->tabs.begin(), d->tabs.end(), [tab](RefPtr<RibbonTab>& t) { return t == tab; })) return;
     auto w = impl<itype>();
     w->removeCategory(tab->impl<SARibbonCategory>());

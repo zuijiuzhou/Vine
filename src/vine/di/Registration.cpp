@@ -13,7 +13,7 @@ VI_OBJECT_META_IMPL(Registration, Object)
 
 Registration::Registration(Type type)
   : d(new RegistrationPrivate()) {
-    VI_CHECK_NULL(type);
+    VI_CHECK_NULL_THROW(type);
     d->service_type = type;
 }
 

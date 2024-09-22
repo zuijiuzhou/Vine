@@ -40,7 +40,7 @@ void RibbonTab::title(const String& ti) {
 }
 
 void RibbonTab::addGroup(RibbonGroup* group) {
-    VI_CHECK_NULL(group)
+    VI_CHECK_NULL_THROW(group)
     if (std::any_of(d->groups.begin(), d->groups.end(), [group](RefPtr<RibbonGroup>& g) { return g == group; })) return;
     auto w = impl<itype>();
     w->addPannel(group->impl<SARibbonPannel>());
@@ -49,7 +49,7 @@ void RibbonTab::addGroup(RibbonGroup* group) {
 }
 
 void RibbonTab::removeGroup(RibbonGroup* group) {
-    VI_CHECK_NULL(group)
+    VI_CHECK_NULL_THROW(group)
     if (std::none_of(d->groups.begin(), d->groups.end(), [group](RefPtr<RibbonGroup>& g) { return g == group; }))
         return;
     auto w = impl<itype>();

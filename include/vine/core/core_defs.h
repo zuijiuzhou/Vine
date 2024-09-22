@@ -1,4 +1,5 @@
 #pragma once
+#include "core_global.h"
 
 #include <type_traits>
 

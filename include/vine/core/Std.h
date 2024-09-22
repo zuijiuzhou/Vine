@@ -2,7 +2,7 @@
 #include "core_global.h"
 
 #if defined(__LP64__) || defined(_LP64) || defined(_WIN64) || defined(__x86_64__)
-#define VI_64
+#define __VI64__
 #endif
 
 VI_CORE_NS_BEGIN
