@@ -57,11 +57,11 @@ void RibbonTab::removeGroup(RibbonGroup* group) {
     this;
 }
 
-Int32 RibbonTab::numGroups() const {
+int RibbonTab::numGroups() const {
     return d->groups.size();
 }
 
-void RibbonTab::groupAt(Int32 idx) const {
+void RibbonTab::groupAt(int idx) const {
     d->groups.at(idx).get();
 }
 

@@ -1,9 +1,8 @@
 #pragma once
+
 #include "core_global.h"
 
 #include <type_traits>
-
-#include "Std.h"
 
 #define VI_DISABLE_COPY(_TCls)                                                                                         \
   private:                                                                                                             \

@@ -23,8 +23,8 @@ class VI_APPFWGUI_API RibbonTab : public Control {
 
     void  addGroup(RibbonGroup* group);
     void  removeGroup(RibbonGroup* group);
-    Int32 numGroups() const;
-    void  groupAt(Int32 idx) const;
+    int numGroups() const;
+    void  groupAt(int idx) const;
 
   private:
     VI_OBJECT_DATA

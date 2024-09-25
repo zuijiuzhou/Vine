@@ -2,6 +2,7 @@
 #include <vine/core/Object.h>
 
 #include <atomic>
+#include <stddef.h>
 
 #include <vine/core/Class.h>
 #include <vine/core/String.h>
@@ -9,7 +10,7 @@
 VI_CORE_NS_BEGIN
 
 struct Object::Data {
-    std::atomic<Int32> num_refs = 0;
+    std::atomic<size_t> num_refs = 0;
 };
 
 Object::Object() noexcept
@@ -35,7 +36,7 @@ void Object::removeRef(bool del) {
         delete this;
 }
 
-UInt64 Object::getRefs() const noexcept { return d->num_refs.load(); }
+size_t Object::getRefs() const noexcept { return d->num_refs.load(); }
 
 bool Object::equals(const Object& other) const noexcept { return this == &other; }
 

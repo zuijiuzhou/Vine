@@ -18,12 +18,12 @@ class VI_APPFWGUI_API RibbonBar : public Control {
     virtual ~RibbonBar();
 
   public:
-    Int32      numTabs() const;
-    RibbonTab* tabAt(Int32 idx) const;
+    int        numTabs() const;
+    RibbonTab* tabAt(int idx) const;
     void       addTab(RibbonTab* tab);
     void       removeTab(RibbonTab* tab);
-    Int32      currentIndex();
-    void       currentIndex(Int32 idx);
+    int        currentIndex();
+    void       currentIndex(int idx);
 
     void appendApplicationMenu(RibbonDropDownItem* mi);
 

@@ -1,13 +1,14 @@
 #pragma once
-#include "Std.h"
 #include "core_global.h"
+
+#include "Char.h"
 
 #if defined(_MSC_VER)
 class type_info;
 namespace std {
 using type_info = ::type_info;
 }
-#elif defined(_MSC_VER)
+#else
 namespace std {
 class type_info;
 }
@@ -45,7 +46,7 @@ class VI_CORE_API Class final {
 
   private:
     struct Data;
-    Data* d;
+    Data* const d;
 };
 
 using Type     = const Class*;

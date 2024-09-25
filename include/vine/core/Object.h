@@ -7,7 +7,6 @@
 
 #include "Class.h"
 #include "Ptr.h"
-#include "Std.h"
 #include "String.h"
 #include "core_defs.h"
 
@@ -65,7 +64,7 @@ class VI_CORE_API Object {
 
     void removeRef(bool del = true);
 
-    UInt64 getRefs() const noexcept;
+    size_t getRefs() const noexcept;
 
     virtual bool equals(const Object& other) const noexcept;
 
@@ -79,14 +78,14 @@ class VI_CORE_API Object {
     static const Class* desc();
 
     template <Objectifiable T> static T* cast(T* obj) {
-        if (obj && obj->isKindOf(T::desc())){
+        if (obj && obj->isKindOf(T::desc())) {
             return static_cast<T*>(obj);
         }
         return nullptr;
     }
 
     template <Objectifiable T> static const T* cast(const T* obj) {
-       if (obj && obj->isKindOf(T::desc())){
+        if (obj && obj->isKindOf(T::desc())) {
             return static_cast<T*>(obj);
         }
         return nullptr;
@@ -124,7 +123,7 @@ VI_CORE_NS_END
     const vine::Class* TSub::desc() {                                                                                  \
         static const vine::Class* cls = new vine::Class(TParent::desc(), typeid(TSub));                                \
         if constexpr (std::is_default_constructible<TSub>::value) {                                                    \
-            /*auto fac = []() { return new TSub(); };     */                                                               \
+            /*auto fac = []() { return new TSub(); };     */                                                           \
         }                                                                                                              \
         return cls;                                                                                                    \
     }

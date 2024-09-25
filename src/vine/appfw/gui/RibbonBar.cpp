@@ -34,11 +34,11 @@ RibbonBar::~RibbonBar() {
     delete d;
 }
 
-Int32 RibbonBar::numTabs() const {
+int RibbonBar::numTabs() const {
     return d->tabs.size();
 }
 
-RibbonTab* RibbonBar::tabAt(Int32 idx) const {
+RibbonTab* RibbonBar::tabAt(int idx) const {
     return d->tabs.at(idx).get();
 }
 
@@ -56,12 +56,12 @@ void RibbonBar::removeTab(RibbonTab* tab) {
     w->removeCategory(tab->impl<SARibbonCategory>());
 }
 
-Int32 RibbonBar::currentIndex() {
+int RibbonBar::currentIndex() {
     auto w = impl<itype>();
     return w->currentIndex();
 }
 
-void RibbonBar::currentIndex(Int32 idx) {
+void RibbonBar::currentIndex(int idx) {
     auto w = impl<itype>();
     w->setCurrentIndex(idx);
 }
