@@ -2,7 +2,6 @@
 #include "core_global.h"
 
 #include <stddef.h>
-#include <iterator>
 
 #include "Char.h"
 
@@ -13,8 +12,6 @@ class VI_CORE_API String final {
   public:
     using iterator                = Char*;
     using const_iterator          = const Char*;
-    using resverse_iterator       = std::reverse_iterator<iterator>;
-    using const_resverse_iterator = std::reverse_iterator<const_iterator>;
 
   public:
     String();
@@ -75,14 +72,6 @@ class VI_CORE_API String final {
     const_iterator cbegin() const;
 
     const_iterator cend() const;
-
-    resverse_iterator rbegin() const;
-
-    resverse_iterator rend() const;
-
-    const_resverse_iterator crbegin() const;
-
-    const_resverse_iterator crend() const;
 
   public:
     static String fromUtf8(const char* data);
