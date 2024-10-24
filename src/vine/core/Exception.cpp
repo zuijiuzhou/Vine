@@ -1,5 +1,7 @@
 #include <vine/core/Exception.h>
 
+#include <utility>
+
 VI_CORE_NS_BEGIN
 
 Exception::Exception() noexcept

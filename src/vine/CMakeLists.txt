@@ -26,3 +26,7 @@ add_subdirectory(runtime)
 add_subdirectory(graphics)
 add_subdirectory(appfw)
 add_subdirectory(app)
+
+file(GLOB VI_GLOBAL_HEADER_FILES LIST_DIRECTORIES false ${CMAKE_SOURCE_DIR}/include/vine/*.h)
+
+install(FILES ${VI_GLOBAL_HEADER_FILES} DESTINATION ${CMAKE_INSTALL_PREFIX}/include/vine)

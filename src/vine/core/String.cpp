@@ -413,26 +413,6 @@ String::const_iterator String::cend() const
     return data_ + len_;
 }
 
-String::resverse_iterator String::rbegin() const
-{
-    return resverse_iterator(end());
-}
-
-String::resverse_iterator String::rend() const
-{
-    return resverse_iterator(begin());
-}
-
-String::const_resverse_iterator String::crbegin() const
-{
-    return const_resverse_iterator(cend());
-}
-
-String::const_resverse_iterator String::crend() const
-{
-    return const_resverse_iterator(cbegin());
-}
-
 String String::fromUtf8(const char *data)
 {
     String s;
