@@ -26,6 +26,9 @@ double Point2d::distanceTo(const Line2d &line) const
 {
     return 0.;
 }
+bool Point2d::equals(const Point2d& other, double eps) const noexcept {
+    return ge::isEqual(x, other.x, eps) && ge::isEqual(y, other.y, eps);
+}
 bool Point2d::operator==(const Point2d &right) const
 {
     return x == right.x && y == right.y;

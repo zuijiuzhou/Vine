@@ -18,7 +18,7 @@ Vector2i Point2i::toVector() const
 {
     return Vector2i(x, y);
 }
-int Point2i::distanceTo(const Point2i &pt) const
+double Point2i::distanceTo(const Point2i &pt) const
 {
     return sqrt(x * pt.x + y * pt.y);
 }

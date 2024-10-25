@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ge_global.h"
+#include "Ge.h"
 
 VI_GE_NS_BEGIN
 class Point2d;
@@ -17,7 +18,7 @@ class VI_GE_API Point3d {
     double distanceTo(const Line3d& pt) const;
     double distanceTo(const Plane& pt) const;
 
-    bool equals(const Point3d& other, double epsl) const noexcept;
+    bool equals(const Point3d& other, double eps = EPS) const noexcept;
 
     Vector3d        toVector() const;
     const Point2d&  asPoint2d() const;

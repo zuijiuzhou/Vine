@@ -13,7 +13,7 @@ public:
 public:
     const Vector2i &asVector() const;
     Vector2i toVector() const;
-    int distanceTo(const Point2i &pt) const;
+    double distanceTo(const Point2i &pt) const;
 
 public:
     bool operator==(const Point2i &right) const;

@@ -22,8 +22,8 @@ double Point3d::distanceTo(const Plane& pt) const {
     return 0.0;
 }
 
-bool Point3d::equals(const Point3d& other, double epsl) const noexcept {
-    return ge::isEqual(x, other.x, epsl) && ge::isEqual(y, other.y, epsl) && ge::isEqual(z, other.z, epsl);
+bool Point3d::equals(const Point3d& other, double eps) const noexcept {
+    return ge::isEqual(x, other.x, eps) && ge::isEqual(y, other.y, eps) && ge::isEqual(z, other.z, eps);
 }
 
 Vector3d Point3d::toVector() const {

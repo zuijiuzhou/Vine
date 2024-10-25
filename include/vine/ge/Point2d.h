@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ge_global.h"
+#include "Ge.h"
 
 VI_GE_NS_BEGIN
 class Vector2d;
@@ -16,6 +17,8 @@ public:
     Vector2d toVector() const;
     double distanceTo(const Point2d &pt) const;
     double distanceTo(const Line2d &line) const;
+
+    bool equals(const Point2d& other, double eps = EPS) const noexcept;
 
 public:
     bool operator==(const Point2d &right) const;

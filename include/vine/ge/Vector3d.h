@@ -22,7 +22,7 @@ public:
 	double length() const noexcept;
 	double lengthSqrd() const noexcept;
 
-	void setLength(double len) noexcept;
+	bool setLength(double len) noexcept;
 	void set(double xx, double yy, double zz) noexcept;
 	void get(double& xx, double& yy, double& zz) const noexcept;
 	void rotate(const Matrix4x4& mat);
@@ -32,11 +32,12 @@ public:
 	bool isZero(double eps = EPS) const noexcept;
 	bool isParalleTo(const Vector3d& vec, double eps = EPS) const noexcept;
 	bool isPerpendicularTo(const Vector3d& vec, double eps = EPS) const noexcept;
+	bool isNormalized(double eps = EPS) const noexcept;
 
 	Point3d toPoint() const noexcept;
 	const Point3d& asPoint() const noexcept;
 	const Vector2d& asVector2d() const noexcept;
-    bool equals(const Vector3d& other, double eps) const;
+    bool equals(const Vector3d& other, double eps = EPS) const;
 
 public:
 	bool operator==(const Vector3d& right) const noexcept;
@@ -53,6 +54,8 @@ public:
 
 	Vector3d operator^(const Vector3d& vec) const noexcept;
 	double operator*(const Vector3d& vec) const noexcept;
+
+	double& operator[](size_t index);
 
 public:
 	double x;
