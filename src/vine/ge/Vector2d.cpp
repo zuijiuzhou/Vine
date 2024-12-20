@@ -6,6 +6,7 @@ VI_GE_NS_BEGIN
 Vector2d::Vector2d()
   : Vector2d(0., 0.) {
 }
+
 Vector2d::Vector2d(double xx, double yy)
   : x(xx)
   , y(yy) {
@@ -14,6 +15,7 @@ Vector2d::Vector2d(double xx, double yy)
 double Vector2d::dotProduct(const Vector2d& vec) const {
     return x * vec.x + y * vec.y;
 }
+
 double Vector2d::crossProduct(const Vector2d& vec) const {
     return x * vec.y - y * vec.x;
 }
@@ -37,10 +39,12 @@ bool Vector2d::setLength(double len) {
     *this *= (len / cur_len);
     return true;
 }
+
 void Vector2d::set(double xx, double yy) {
     x = xx;
     y = yy;
 }
+
 void Vector2d::get(double& xx, double& yy) const {
     xx = x;
     yy = y;
@@ -79,7 +83,8 @@ bool Vector2d::isPerpendicularTo(const Vector2d& vec, double eps) const {
     if (isZero(eps) || vec.isZero(eps)) return true;
     return ge::isZero(dotProduct(vec), eps);
 }
-bool Vector2d::isNormalized(double eps = EPS) const noexcept {
+
+bool Vector2d::isNormalized(double eps) const noexcept {
     return ge::isEqual(length(), 1.0, eps);
 }
 
@@ -98,50 +103,61 @@ bool Vector2d::equals(const Vector2d& other, double eps) const {
 bool Vector2d::operator==(const Vector2d& right) const {
     return x == right.x && y == right.y;
 }
+
 bool Vector2d::operator!=(const Vector2d& right) const {
     return !(*this == right);
 }
+
 Vector2d Vector2d::operator-(const Vector2d& right) const {
     return Vector2d(x - right.x, y - right.y);
 }
+
 Vector2d Vector2d::operator+(const Vector2d& right) const {
     return Vector2d(x + right.x, y + right.y);
 }
+
 Vector2d& Vector2d::operator+=(const Vector2d& right) {
     x += right.x;
     y += right.y;
     return *this;
 }
+
 Vector2d& Vector2d::operator-=(const Vector2d& right) {
     x -= right.x;
     y -= right.y;
     return *this;
 }
+
 Vector2d Vector2d::operator*(double scale) const {
     Vector2d v(*this);
     v.x *= scale;
     v.y *= scale;
     return v;
 }
+
 Vector2d& Vector2d::operator*=(double scale) {
     x *= scale;
     y *= scale;
     return *this;
 }
+
 Vector2d Vector2d::operator/(double scale) const {
     Vector2d v(*this);
     v.x /= scale;
     v.y /= scale;
     return v;
 }
+
 Vector2d& Vector2d::operator/=(double scale) {
     x /= scale;
     y /= scale;
     return *this;
 }
+
 double Vector2d::operator^(const Vector2d& vec) const {
     return crossProduct(vec);
 }
+
 double Vector2d::operator*(const Vector2d& vec) const {
     return dotProduct(vec);
 }

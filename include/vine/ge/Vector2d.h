@@ -11,7 +11,17 @@ class VI_GE_API Vector2d {
     Vector2d(double xx, double yy);
 
   public:
-    double   dotProduct(const Vector2d& vec) const;
+    /*
+    >0 -- 夹角小于90
+    =0 -- 正交
+    <0 -- 夹角大于90
+    */
+    double dotProduct(const Vector2d& vec) const;
+    /*
+    >0 -- 逆时针排列
+    =0 -- 共线或平行
+    <0 -- 顺时针排列
+    */
     double   crossProduct(const Vector2d& vec) const;
     void     normalize();
     Vector2d perpVector() const;

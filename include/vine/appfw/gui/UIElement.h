@@ -7,9 +7,16 @@
 
 #include "Gui.h"
 
+#ifdef VI_APPFWGUI_IMPL_QT
 class QObject;
+#endif
 
 VI_APPFWGUI_NS_BEGIN
+#ifdef VI_APPFWGUI_IMPL_QT
+using UIObject = QObject;
+#else
+using UIObject = void;
+#endif
 
 class VI_APPFWGUI_API UIElement : public Object {
     VI_OBJECT_META
@@ -30,9 +37,8 @@ class VI_APPFWGUI_API UIElement : public Object {
     const Event<UIElement, PropertyChangedEventArgs<String>> NameChanged;
 
   //protected:
-    virtual QObject* impl() const;
-
-    template <typename TImpl> TImpl* impl() const { return (TImpl*)(impl()); }
+    virtual UIObject* impl() const;
+    template <typename TImpl> TImpl* impl() const { return (TImpl*)impl(); }
 
   private:
     VI_OBJECT_DATA

@@ -16,3 +16,5 @@ set_target_properties(${OUT_TARGET_NAME} PROPERTIES
     AUTOUIC ON
     AUTORCC ON
 )
+
+target_compile_definitions(${OUT_TARGET_NAME} PUBLIC VI_APPFWGUI_IMPL_QT)

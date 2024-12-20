@@ -40,6 +40,12 @@ double Vector3d::normalize() noexcept {
     return len;
 }
 
+Vector3d Vector3d::normalized() const noexcept {
+    auto v = *this;
+    v.normalize();
+    return v;
+}
+
 Vector3d Vector3d::perpVector() const noexcept {
     if (ge::isZero(x, EPS) || ge::isZero(y, EPS))
         return Vector3d(z, 0., -x);
@@ -109,7 +115,8 @@ bool Vector3d::isPerpendicularTo(const Vector3d& vec, double eps) const noexcept
     if (isZero(eps) || vec.isZero(eps)) return true;
     return ge::isEqual(angleTo(vec), ge::PI_2, eps);
 }
-bool Vector3d::isNormalized(double eps = EPS) const noexcept {
+
+bool Vector3d::isNormalized(double eps) const noexcept {
     return ge::isEqual(length(), 1.0, eps);
 }
 
