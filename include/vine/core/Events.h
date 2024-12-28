@@ -1,7 +1,7 @@
 #pragma once
+#pragma once
 
 #include "Signal.h"
-
 #include "Object.h"
 
 VI_CORE_NS_BEGIN
@@ -12,20 +12,20 @@ class VI_CORE_API EventArgs : public Object {
 };
 
 template <typename TVal> class PropertyChangedEventArgs : public EventArgs {
-    VI_TMPL_OBJECT_META(PropertyChangedEventArgs<TVal>, EventArgs)
+    VI_OBJECT_META;
 
   public:
-    using ValType   = typename std::remove_reference<typename std::remove_const<TVal>::type>::type;
-    using ValTypeCR = typename std::add_lvalue_reference<typename std::add_const<ValType>::type>::type;
+    // using ValType   = typename std::remove_reference<typename std::remove_const<TVal>::type>::type;
+    // using ValTypeCR = typename std::add_lvalue_reference<typename std::add_const<ValType>::type>::type;
+
+    using ValType = TVal;
 
   public:
-    PropertyChangedEventArgs(ValTypeCR new_val, ValTypeCR old_val)
-      : new_val_(new_val)
-      , old_val_(old_val) {}
+    PropertyChangedEventArgs(ValType new_val, ValType old_val);
 
   public:
-    ValTypeCR newValue() const { return new_val_; }
-    ValTypeCR oldValue() const { return old_val_; }
+    ValType newValue() const { return new_val_; }
+    ValType oldValue() const { return old_val_; }
 
   private:
     ValType new_val_;

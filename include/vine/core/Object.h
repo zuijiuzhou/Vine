@@ -128,16 +128,33 @@ VI_CORE_NS_END
         return cls;                                                                                                    \
     }
 
-#define VI_TMPL_OBJECT_META(TSub, TParent)                                                                             \
-  public:                                                                                                              \
-    const vine::Class* getClass() const noexcept override {                                                            \
+// #define VI_TMPL_OBJECT_META(TSub, TParent)                                                                             \
+//   public:                                                                                                              \
+//     const vine::Class* getClass() const noexcept override {                                                            \
+//         return desc();                                                                                                 \
+//     }                                                                                                                  \
+//                                                                                                                        \
+//     static const vine::Class* desc() {                                                                                 \
+//         static const vine::Class* cls = new vine::Class(TParent::desc(), typeid(TSub));                                \
+//         return cls;                                                                                                    \
+//     }
+
+/*
+    VI_TMPL_OBJECT_META_IMPL({template<typename T>}, Sub<T>, Parent<T>);
+ */
+#define VI_TMPL_OBJECT_META_IMPL(Tmpl, TSub, TParent)                                                                  \
+    Tmpl const vine::Class* TSub::getClass() const noexcept {                                                          \
         return desc();                                                                                                 \
     }                                                                                                                  \
                                                                                                                        \
-    static const vine::Class* desc() {                                                                                 \
+    Tmpl const vine::Class* TSub::desc() {                                                                             \
         static const vine::Class* cls = new vine::Class(TParent::desc(), typeid(TSub));                                \
+        if constexpr (std::is_default_constructible<TSub>::value) {                                                    \
+            /*auto fac = []() { return new TSub(); };     */                                                           \
+        }                                                                                                              \
         return cls;                                                                                                    \
     }
+
 
 #define VI_OBJECT_DATA                                                                                                 \
     struct Data;                                                                                                       \
