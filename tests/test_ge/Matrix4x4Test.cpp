@@ -1,12 +1,12 @@
 #include <gtest/gtest.h>
 
-#include <vine/ge/Matrix4x4.h>
+#include <vine/ge/Matrixd4x4.h>
 
 using namespace vine::ge;
 
 TEST(Matrix4x4, setToIdentity)
 {
-    Matrix4x4 m;
+    Matrixd4x4 m;
     for (int i = 0; i < 4; i++)
     {
         for (int j = 0; j < 4; j++)
@@ -25,7 +25,7 @@ TEST(Matrix4x4, setToIdentity)
 
 TEST(Matrix4x4, transpose)
 {
-    Matrix4x4 m;
+    Matrixd4x4 m;
     m(1, 3) = 6;
     m.transpose();
     ASSERT_TRUE(m(3, 1) == 6);

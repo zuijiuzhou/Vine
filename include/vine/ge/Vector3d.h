@@ -6,10 +6,11 @@
 VI_GE_NS_BEGIN
 class Vector2d;
 class Point3d;
-class Matrix4x4;
+class Matrixd4x4;
 class VI_GE_API Vector3d {
   public:
     Vector3d();
+    Vector3d(const Vector2d& v, double zz = 0.);
     Vector3d(double xx, double yy, double zz);
 
   public:
@@ -33,19 +34,18 @@ class VI_GE_API Vector3d {
     bool   setLength(double len) noexcept;
     void   set(double xx, double yy, double zz) noexcept;
     void   get(double& xx, double& yy, double& zz) const noexcept;
-    void   rotate(const Matrix4x4& mat);
     double angleTo(const Vector3d& vec) const noexcept;
     double angleTo(const Vector3d& vec, const Vector3d& refVec) const noexcept;
 
-    bool isZero(double eps = EPS) const noexcept;
-    bool isParalleTo(const Vector3d& vec, double eps = EPS) const noexcept;
-    bool isPerpendicularTo(const Vector3d& vec, double eps = EPS) const noexcept;
-    bool isNormalized(double eps = EPS) const noexcept;
+    bool isZero(double eps = EPSD) const noexcept;
+    bool isParalleTo(const Vector3d& vec, double eps = EPSD) const noexcept;
+    bool isPerpendicularTo(const Vector3d& vec, double eps = EPSD) const noexcept;
+    bool isNormalized(double eps = EPSD) const noexcept;
 
     Point3d         toPoint() const noexcept;
     const Point3d&  asPoint() const noexcept;
     const Vector2d& asVector2d() const noexcept;
-    bool            equals(const Vector3d& other, double eps = EPS) const;
+    bool            equals(const Vector3d& other, double eps = EPSD) const;
 
   public:
     bool operator==(const Vector3d& right) const noexcept;

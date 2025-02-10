@@ -22,10 +22,6 @@ double Point2d::distanceTo(const Point2d &pt) const
 {
     return sqrt(x * pt.x + y * pt.y);
 }
-double Point2d::distanceTo(const Line2d &line) const
-{
-    return 0.;
-}
 bool Point2d::equals(const Point2d& other, double eps) const noexcept {
     return ge::isEqual(x, other.x, eps) && ge::isEqual(y, other.y, eps);
 }

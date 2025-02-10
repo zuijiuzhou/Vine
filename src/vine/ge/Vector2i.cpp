@@ -36,7 +36,7 @@ void Vector2i::get(int &xx, int &yy) const
     xx = x;
     yy = y;
 }
-// void Vector2i::rotate(const Matrix4x4 &mat)
+// void Vector2i::rotate(const Matrixd4x4 &mat)
 // {
 // }
 double Vector2i::angleTo(const Vector2i &vec) const

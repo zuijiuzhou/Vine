@@ -6,8 +6,7 @@ Plane::Plane(const Point3d& origin, const Vector3d& normal)
 {
 }
 
-bool Plane::intersectWith(const Line3d &line, Point3d &intersectionPt, double tol) const
-{
+bool Plane::intersectWith(const Line& line, Point3d& intersectionPt, double tol) const {
     return false;
 }
 VI_GE_NS_END

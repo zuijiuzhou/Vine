@@ -3,7 +3,6 @@
 #include <stdexcept>
 
 #include <vine/ge/Ge.h>
-#include <vine/ge/Matrix4x4.h>
 #include <vine/ge/Point3d.h>
 #include <vine/ge/Vector2d.h>
 
@@ -13,7 +12,11 @@ VI_GE_NS_BEGIN
 Vector3d::Vector3d()
   : Vector3d(0., 0., 0.) {
 }
-
+Vector3d::Vector3d(const Vector2d& v, double zz)
+  : x(v.x)
+  , y(v.y)
+  , z(zz) {
+}
 Vector3d::Vector3d(double xx, double yy, double zz)
   : x(xx)
   , y(yy)
@@ -34,7 +37,7 @@ Vector3d Vector3d::crossProduct(const Vector3d& vec) const noexcept {
 
 double Vector3d::normalize() noexcept {
     double len = length();
-    if (len > EPS) {
+    if (len > EPSD) {
         *this /= len;
     }
     return len;
@@ -47,7 +50,7 @@ Vector3d Vector3d::normalized() const noexcept {
 }
 
 Vector3d Vector3d::perpVector() const noexcept {
-    if (ge::isZero(x, EPS) || ge::isZero(y, EPS))
+    if (ge::isZero(x, EPSD) || ge::isZero(y, EPSD))
         return Vector3d(z, 0., -x);
     else
         return Vector3d(y, -x, 0.);
@@ -71,9 +74,6 @@ void Vector3d::get(double& xx, double& yy, double& zz) const noexcept {
     xx = x;
     yy = y;
     zz = z;
-}
-
-void Vector3d::rotate(const Matrix4x4& mat) {
 }
 
 double Vector3d::angleTo(const Vector3d& vec) const noexcept {

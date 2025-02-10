@@ -1,24 +1,22 @@
 #pragma once
 
 #include "ge_global.h"
+
 #include "Ge.h"
 
 VI_GE_NS_BEGIN
 class Point2d;
 class Vector3d;
-class Line3d;
-class Plane;
 class VI_GE_API Point3d {
   public:
     Point3d();
+    Point3d(const Point2d& pt, double zz = 0.);
     Point3d(double xx, double yy, double zz);
 
   public:
     double distanceTo(const Point3d& pt) const;
-    double distanceTo(const Line3d& pt) const;
-    double distanceTo(const Plane& pt) const;
 
-    bool equals(const Point3d& other, double eps = EPS) const noexcept;
+    bool equals(const Point3d& other, double eps = EPSD) const noexcept;
 
     Vector3d        toVector() const;
     const Point2d&  asPoint2d() const;

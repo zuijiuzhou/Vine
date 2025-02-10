@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Ge.h"
 #include "ge_global.h"
@@ -32,17 +32,17 @@ class VI_GE_API Vector2d {
     bool setLength(double len);
     void set(double xx, double yy);
     void get(double& xx, double& yy) const;
-    // void rotate(const Matrix3x3& mat);
+    // void rotate(const Matrixd3x3& mat);
     double angleTo(const Vector2d& vec) const;
 
-    bool isZero(double eps = EPS) const;
-    bool isParalleTo(const Vector2d& vec, double eps = EPS) const;
-    bool isPerpendicularTo(const Vector2d& vec, double eps = EPS) const;
-    bool isNormalized(double eps = EPS) const noexcept;
+    bool isZero(double eps = EPSD) const;
+    bool isParalleTo(const Vector2d& vec, double eps = EPSD) const;
+    bool isPerpendicularTo(const Vector2d& vec, double eps = EPSD) const;
+    bool isNormalized(double eps = EPSD) const noexcept;
 
     Point2d        toPoint() const;
     const Point2d& asPoint();
-    bool           equals(const Vector2d& other, double eps = EPS) const;
+    bool           equals(const Vector2d& other, double eps = EPSD) const;
 
   public:
     bool      operator==(const Vector2d& right) const;

@@ -5,7 +5,6 @@
 
 VI_GE_NS_BEGIN
 class Vector2d;
-class Line2d;
 class VI_GE_API Point2d
 {
 public:
@@ -16,9 +15,8 @@ public:
     const Vector2d &asVector() const;
     Vector2d toVector() const;
     double distanceTo(const Point2d &pt) const;
-    double distanceTo(const Line2d &line) const;
 
-    bool equals(const Point2d& other, double eps = EPS) const noexcept;
+    bool equals(const Point2d& other, double eps = EPSD) const noexcept;
 
 public:
     bool operator==(const Point2d &right) const;

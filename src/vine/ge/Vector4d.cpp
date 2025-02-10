@@ -3,9 +3,7 @@
 #include <stdexcept>
 
 #include <vine/ge/Ge.h>
-#include <vine/ge/Matrix4x4.h>
-#include <vine/ge/Point3d.h>
-#include <vine/ge/Vector2d.h>
+#include <vine/ge/Vector3d.h>
 
 #include <cmath>
 
@@ -13,7 +11,12 @@ VI_GE_NS_BEGIN
 Vector4d::Vector4d()
   : Vector4d(0., 0., 0., 0.) {
 }
-
+Vector4d::Vector4d(const Vector3d& v, double ww)
+  : x(v.x)
+  , y(v.y)
+  , z(v.z)
+  , w(ww) {
+}
 Vector4d::Vector4d(double xx, double yy, double zz, double ww)
   : x(xx)
   , y(yy)
@@ -27,7 +30,7 @@ double Vector4d::dotProduct(const Vector4d& vec) const noexcept {
 
 double Vector4d::normalize() noexcept {
     double len = length();
-    if (len > EPS) {
+    if (len > EPSD) {
         *this /= len;
     }
     return len;
@@ -56,7 +59,7 @@ void Vector4d::get(double& xx, double& yy, double& zz, double& ww) const noexcep
 }
 
 double Vector4d::angleTo(const Vector4d& vec) const noexcept {
-  if (isZero() || vec.isZero()) return 0.;
+    if (isZero() || vec.isZero()) return 0.;
     auto v = *this * vec / length() * vec.length();
     if (v > 1.)
         v = 1.;
@@ -79,13 +82,15 @@ bool Vector4d::isZero(double eps) const noexcept {
 
 bool Vector4d::isParalleTo(const Vector4d& vec, double eps) const noexcept {
     if (isZero(eps) || vec.isZero(eps)) return true;
-    
+#pragma message("[not impl] Vector4d::isParalleTo")
+    return false;
 }
 
 bool Vector4d::isPerpendicularTo(const Vector4d& vec, double eps) const noexcept {
     if (isZero(eps) || vec.isZero(eps)) return true;
     return ge::isZero(dotProduct(vec), eps);
 }
+
 bool Vector4d::isNormalized(double eps) const noexcept {
     return ge::isEqual(length(), 1.0, eps);
 }

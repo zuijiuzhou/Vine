@@ -8,6 +8,7 @@ class Vector3d;
 class VI_GE_API Vector4d {
   public:
     Vector4d();
+    Vector4d(const Vector3d& v, double ww = 1.0);
     Vector4d(double xx, double yy, double zz, double ww);
 
   public:
@@ -17,7 +18,7 @@ class VI_GE_API Vector4d {
     <0 -- ¼Ð½Ç´óÓÚ90
     */
     double dotProduct(const Vector4d& vec) const noexcept;
-	  double angleTo(const Vector4d& vec) const noexcept;
+    double angleTo(const Vector4d& vec) const noexcept;
     double length() const noexcept;
     double lengthSqrd() const noexcept;
 
@@ -26,13 +27,13 @@ class VI_GE_API Vector4d {
     void   set(double xx, double yy, double zz, double ww) noexcept;
     void   get(double& xx, double& yy, double& zz, double& ww) const noexcept;
 
-    bool isZero(double eps = EPS) const noexcept;
-    bool isParalleTo(const Vector4d& vec, double eps = EPS) const noexcept;
-    bool isPerpendicularTo(const Vector4d& vec, double eps = EPS) const noexcept;
-    bool isNormalized(double eps = EPS) const noexcept;
+    bool isZero(double eps = EPSD) const noexcept;
+    bool isParalleTo(const Vector4d& vec, double eps = EPSD) const noexcept;
+    bool isPerpendicularTo(const Vector4d& vec, double eps = EPSD) const noexcept;
+    bool isNormalized(double eps = EPSD) const noexcept;
 
     const Vector3d& asVector3d() const noexcept;
-    bool            equals(const Vector4d& other, double eps = EPS) const;
+    bool            equals(const Vector4d& other, double eps = EPSD) const;
 
   public:
     bool operator==(const Vector4d& right) const noexcept;
@@ -47,7 +48,7 @@ class VI_GE_API Vector4d {
     Vector4d  operator/(double scale) const;
     Vector4d& operator/=(double scale);
 
-    double   operator*(const Vector4d& vec) const noexcept;
+    double operator*(const Vector4d& vec) const noexcept;
 
     double& operator[](size_t index);
 

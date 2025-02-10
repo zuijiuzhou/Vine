@@ -1,15 +1,16 @@
-#include <vine/ge/Matrix4x4.h>
+﻿#include <vine/ge/Matrixd4x4.h>
 
 #include <cmath>
 #include <memory>
 
 #include <vine/ge/Point3d.h>
+#include <vine/ge/Point3f.h>
 #include <vine/ge/Vector3d.h>
-
+#include <vine/ge/Vector3f.h>
 
 VI_GE_NS_BEGIN
 
-Matrix4x4::Matrix4x4()
+Matrixd4x4::Matrixd4x4()
   : data{
       1, 0, 0, 0, // row0
       0, 1, 0, 0, // row1
@@ -17,14 +18,14 @@ Matrix4x4::Matrix4x4()
       0, 0, 0, 1  // row3
   } {
 }
-void Matrix4x4::makeIdentity() {
+void Matrixd4x4::makeIdentity() {
     // std::fill((double*)data, ((double*)data)+16, 0.0);
     memset(data, 0, sizeof(data));
     data[0][0] = data[1][1] = data[2][2] = data[3][3] = 1.0;
 }
-void Matrix4x4::makeRotation(const Vector3d& start, const Vector3d& end) {
+void Matrixd4x4::makeRotation(const Vector3d& start, const Vector3d& end) {
 }
-void Matrix4x4::makeRotation(const Vector3d& axis, double angle) {
+void Matrixd4x4::makeRotation(const Vector3d& axis, double angle) {
     // 参考罗德里格旋转公式
     // c=cos(angle)
     // s=sin(angle)
@@ -59,39 +60,39 @@ void Matrix4x4::makeRotation(const Vector3d& axis, double angle) {
     data[2][1] = y * z * ic - x * s;
     data[2][2] = z * z * ic + c;
 }
-void Matrix4x4::makeRotation(const Point3d& center, const Vector3d& axis, double angle) {
+void Matrixd4x4::makeRotation(const Point3d& center, const Vector3d& axis, double angle) {
 }
-void Matrix4x4::makeTranslation(const Vector3d& offset) {
+void Matrixd4x4::makeTranslation(const Vector3d& offset) {
     makeIdentity();
     data[3][0] = offset.x;
     data[3][1] = offset.y;
     data[3][2] = offset.z;
 }
-void Matrix4x4::makeTranslation(double x, double y, double z) {
+void Matrixd4x4::makeTranslation(double x, double y, double z) {
     makeIdentity();
     data[3][0] = x;
     data[3][1] = y;
     data[3][2] = z;
 }
-void Matrix4x4::makeScale(const Vector3d& vec) {
+void Matrixd4x4::makeScale(const Vector3d& vec) {
     makeIdentity();
     data[0][0] = vec.x;
     data[1][1] = vec.y;
     data[2][2] = vec.z;
 }
-void Matrix4x4::makeScale(double x, double y, double z) {
+void Matrixd4x4::makeScale(double x, double y, double z) {
     makeIdentity();
     data[0][0] = x;
     data[1][1] = y;
     data[2][2] = z;
 }
-void Matrix4x4::makeScale(double factor) {
+void Matrixd4x4::makeScale(double factor) {
     makeIdentity();
     data[0][0] = factor;
     data[1][1] = factor;
     data[2][2] = factor;
 }
-void Matrix4x4::makeLookAt(const Point3d& eye, const Point3d& target, const Vector3d& up) {
+void Matrixd4x4::makeLookAt(const Point3d& eye, const Point3d& target, const Vector3d& up) {
     auto f = eye - target;
     auto s = up ^ f;
     auto u = f ^ s;
@@ -101,10 +102,10 @@ void Matrix4x4::makeLookAt(const Point3d& eye, const Point3d& target, const Vect
     setCoordSystem(eye, s, u, f);
     invert();
 }
-void Matrix4x4::setCoordSystem(const Point3d&  origin,
-                               const Vector3d& xAxis,
-                               const Vector3d& yAxis,
-                               const Vector3d& zAxis) {
+void Matrixd4x4::setCoordSystem(const Point3d&  origin,
+                                const Vector3d& xAxis,
+                                const Vector3d& yAxis,
+                                const Vector3d& zAxis) {
     // col0
     data[0][0] = xAxis.x;
     data[0][1] = xAxis.y;
@@ -126,7 +127,7 @@ void Matrix4x4::setCoordSystem(const Point3d&  origin,
     data[3][2] = origin.z;
     data[3][3] = 0;
 }
-void Matrix4x4::getCoordSystem(Point3d& o_origin, Vector3d& o_xAxis, Vector3d& o_yAxis, Vector3d& o_zAxis) const {
+void Matrixd4x4::getCoordSystem(Point3d& o_origin, Vector3d& o_xAxis, Vector3d& o_yAxis, Vector3d& o_zAxis) const {
     // row0
     o_xAxis.x  = data[0][0];
     o_xAxis.y  = data[0][1];
@@ -144,7 +145,7 @@ void Matrix4x4::getCoordSystem(Point3d& o_origin, Vector3d& o_xAxis, Vector3d& o
     o_origin.y = data[3][1];
     o_origin.z = data[3][2];
 }
-void Matrix4x4::transpose() {
+void Matrixd4x4::transpose() {
     std::swap(data[0][1], data[1][0]);
     std::swap(data[0][2], data[2][0]);
     std::swap(data[0][3], data[3][0]);
@@ -154,19 +155,19 @@ void Matrix4x4::transpose() {
 
     std::swap(data[2][3], data[3][2]);
 }
-Matrix4x4 Matrix4x4::transposed() const {
+Matrixd4x4 Matrixd4x4::transposed() const {
     auto m = *this;
     m.transpose();
     return m;
 }
-void Matrix4x4::invert() {
+void Matrixd4x4::invert() {
 }
-Matrix4x4 Matrix4x4::inverted() const {
+Matrixd4x4 Matrixd4x4::inverted() const {
     auto m = *this;
     m.invert();
     return m;
 }
-bool Matrix4x4::isRigid() const {
+bool Matrixd4x4::isRigid() const {
     if (!isAffine()) return false;
     Point3d  o;
     Vector3d x, y, z;
@@ -179,63 +180,76 @@ bool Matrix4x4::isRigid() const {
            && y.isPerpendicularTo(z) //
            && z.isPerpendicularTo(x);
 }
-bool Matrix4x4::isAffine() const {
+bool Matrixd4x4::isAffine() const {
     return data[0][3] == 0 && data[1][3] == 0 && data[2][3] == 0 && data[3][3] == 1;
 }
-bool Matrix4x4::isIdentity() const {
+bool Matrixd4x4::isIdentity() const {
     return data[0][0] == 1 && data[0][1] == 0 && data[0][2] == 0 && data[0][3] == 0     // row0
            && data[1][0] == 0 && data[1][1] == 1 && data[1][2] == 0 && data[1][3] == 0  // row1
            && data[2][0] == 0 && data[2][1] == 0 && data[2][2] == 0 && data[2][3] == 0  // row2
            && data[3][0] == 0 && data[3][1] == 0 && data[3][2] == 0 && data[3][3] == 1; // row3
 }
-double Matrix4x4::operator()(int row, int col) const {
+double Matrixd4x4::operator()(int row, int col) const {
     return data[row][col];
 }
-double& Matrix4x4::operator()(int row, int col) {
+double& Matrixd4x4::operator()(int row, int col) {
     return data[row][col];
 }
-Matrix4x4 Matrix4x4::operator*(const Matrix4x4& right) const {
-    Matrix4x4 m;
+Matrixd4x4 Matrixd4x4::operator*(const Matrixd4x4& right) const {
+    Matrixd4x4 m;
     return m;
 }
-Matrix4x4& Matrix4x4::operator*=(const Matrix4x4& right) {
-    Matrix4x4 m;
-    return const_cast<Matrix4x4&>(*this);
+Matrixd4x4& Matrixd4x4::operator*=(const Matrixd4x4& right) {
+    Matrixd4x4 m;
+    return const_cast<Matrixd4x4&>(*this);
 }
 
-Matrix4x4 Matrix4x4::rotate(const Point3d& center, const Vector3d& axis, double angle) {
-    Matrix4x4 m;
+Matrixd4x4 Matrixd4x4::rotate(const Point3d& center, const Vector3d& axis, double angle) {
+    Matrixd4x4 m;
     m.makeRotation(center, axis, angle);
     return m;
 }
-Matrix4x4 Matrix4x4::translate(const Vector3d& offset) {
-    Matrix4x4 m;
+Matrixd4x4 Matrixd4x4::translate(const Vector3d& offset) {
+    Matrixd4x4 m;
     m.makeTranslation(offset);
     return m;
 }
-Matrix4x4 Matrix4x4::translate(double x, double y, double z) {
-    Matrix4x4 m;
+Matrixd4x4 Matrixd4x4::translate(double x, double y, double z) {
+    Matrixd4x4 m;
     m.makeTranslation(x, y, z);
     return m;
 }
-Matrix4x4 Matrix4x4::scale(const Vector3d& vec) {
-    Matrix4x4 m;
+Matrixd4x4 Matrixd4x4::scale(const Vector3d& vec) {
+    Matrixd4x4 m;
     m.makeScale(vec);
     return m;
 }
-Matrix4x4 Matrix4x4::scale(double x, double y, double z) {
-    Matrix4x4 m;
+Matrixd4x4 Matrixd4x4::scale(double x, double y, double z) {
+    Matrixd4x4 m;
     m.makeScale(x, y, z);
     return m;
 }
-Matrix4x4 Matrix4x4::scale(double factor) {
-    Matrix4x4 m;
+Matrixd4x4 Matrixd4x4::scale(double factor) {
+    Matrixd4x4 m;
     m.makeScale(factor);
     return m;
 }
-Matrix4x4 Matrix4x4::lookAt(const Point3d& eye, const Point3d& target, const Vector3d& up) {
-    Matrix4x4 m;
+Matrixd4x4 Matrixd4x4::lookAt(const Point3d& eye, const Point3d& target, const Vector3d& up) {
+    Matrixd4x4 m;
     m.makeLookAt(eye, target, up);
     return m;
+}
+
+Vector3d operator*(const Matrixd4x4& m, const Vector3d& v) {
+    return v;
+}
+Vector3f operator*(const Matrixd4x4& m, const Vector3f& v) {
+    return v;
+}
+Point3d operator*(const Matrixd4x4& m, const Point3d& p) {
+    return p;
+}
+Point3f operator*(const Matrixd4x4& m, const Point3f& p) {
+    return p;
 }
 VI_GE_NS_END

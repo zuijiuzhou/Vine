@@ -49,7 +49,7 @@ void Vector2d::get(double& xx, double& yy) const {
     xx = x;
     yy = y;
 }
-// void Vector2d::rotate(const Matrix4x4 &mat)
+// void Vector2d::rotate(const Matrixd4x4 &mat)
 // {
 // }
 double Vector2d::angleTo(const Vector2d& vec) const {
