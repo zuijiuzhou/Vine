@@ -197,6 +197,11 @@ double& Matrixd4x4::operator()(int row, int col) {
 }
 Matrixd4x4 Matrixd4x4::operator*(const Matrixd4x4& right) const {
     Matrixd4x4 m;
+
+    m.data[0][0] = data[0][0] * right.data[0][0] + data[0][1] * right.data[1][0] + data[0][2] * data[2][0] +
+                   data[0][3] * right.data[3][0];
+    m.data[0][1] = data[0][0] * right.data[0][1] + data[0][1] * right.data[1][1] + data[0][2] * data[2][1] +
+                   data[0][3] * right.data[3][1];
     return m;
 }
 Matrixd4x4& Matrixd4x4::operator*=(const Matrixd4x4& right) {
