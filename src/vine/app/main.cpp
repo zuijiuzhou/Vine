@@ -1,10 +1,10 @@
-#include <array>
+﻿#include <array>
 #include <ctime>
 #include <iostream>
 #include <vector>
 
-#include <vine/ge/Point3d.h>
-#include <vine/ge/Vector3d.h>
+#include <vine/ge/Point3.h>
+#include <vine/ge/Vector3.h>
 
 #include <vine/core/Ptr.h>
 #include <vine/core/stl++.h>

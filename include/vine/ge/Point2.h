@@ -1,31 +1,41 @@
-#pragma once
+﻿#pragma once
 
 #include "ge_global.h"
 
+#include <cstdint>
+
 VI_GE_NS_BEGIN
+
+template <typename T> class Vector2;
 template <typename T> class Point2 {
-  public:
-    using item_type = T;
+    // static_assert();
 
   public:
-    Point2();
-    Point2(item_type xx, item_type yy);
+    using ValueType = T;
 
   public:
-    const Vector2i& asVector() const;
-    Vector2i        toVector() const;
-    double          distanceTo(const Point2& pt) const;
+    Point2<T>();
+    Point2<T>(T xx, T yy);
 
   public:
-    bool     operator==(const Point2& right) const;
-    bool     operator!=(const Point2& right) const;
-    Vector2i operator-(const Point2& right) const;
-    Point2  operator+(const Vector2i& right) const;
-    Point2& operator+=(const Vector2i& right);
-    Point2& operator-=(const Vector2i& right);
+    const Vector2<T>& asVector() const;
+    Vector2<T>        toVector() const;
+    double            distanceTo(const Point2<T>& pt) const;
 
   public:
-    int x;
-    int y;
+    bool       operator==(const Point2<T>& right) const;
+    bool       operator!=(const Point2<T>& right) const;
+    Vector2<T> operator-(const Point2<T>& right) const;
+    Point2<T>  operator+(const Vector2<T>& right) const;
+    Point2<T>& operator+=(const Vector2<T>& right);
+    Point2<T>& operator-=(const Vector2<T>& right);
+
+  public:
+    T x, y;
 };
+
+using Point2i  = Point2<int32_t>;
+using Point2ui = Point2<uint32_t>;
+using Point2f  = Point2<float>;
+using Point2d  = Point2<double>;
 VI_GE_NS_END

@@ -1,12 +1,18 @@
-#include <vine/ge/Plane.h>
+﻿#include <vine/ge/Plane.h>
 
 VI_GE_NS_BEGIN
-Plane::Plane(const Point3d& origin, const Vector3d& normal)
-    : origin(origin), normal(normal)
-{
+
+#define TMPL_PREFIX template <typename T>
+
+TMPL_PREFIX Plane<T>::Plane(const Point3<T>& origin, const Vector3<T>& normal)
+  : origin(origin)
+  , normal(normal) {
 }
 
-bool Plane::intersectWith(const Line& line, Point3d& intersectionPt, double tol) const {
+TMPL_PREFIX bool Plane<T>::intersectWith(const Line<T>& line, Point3<T>& intersectionPt, T tol) const {
     return false;
 }
+
+template class VI_GE_API Plane<float>;
+template class VI_GE_API Plane<double>;
 VI_GE_NS_END

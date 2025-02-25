@@ -1,19 +1,21 @@
-#pragma once
+﻿#pragma once
 
 #include "ge_global.h"
 
+#include <cstdint>
+
 VI_GE_NS_BEGIN
 
-class VI_GE_API Quaternion {
-public:
+template <typename T> class Quaternion {
+  public:
     Quaternion();
-    Quaternion(double x, double y, double z, double w);
+    Quaternion(T x, T y, T z, T w);
 
-private:
-    double x;
-    double y;
-    double z;
-    double w;
+  private:
+    T x, y, z, w;
 };
+
+using Quatf = Quaternion<float>;
+using Quatd = Quaternion<double>;
 
 VI_GE_NS_END

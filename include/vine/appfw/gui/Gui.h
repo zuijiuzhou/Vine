@@ -1,9 +1,9 @@
-#pragma once
+﻿#pragma once
 
 #include <vine/core/core_defs.h>
-#include <vine/ge/Point2i.h>
-#include <vine/ge/Rect2i.h>
-#include <vine/ge/Vector2i.h>
+#include <vine/ge/Point2.h>
+#include <vine/ge/Rect2.h>
+#include <vine/ge/Vector2.h>
 
 #include "gui_global.h"
 
@@ -12,7 +12,7 @@ VI_APPFWGUI_NS_BEGIN
 
 using Rect  = ge::Rect2i;
 using Point = ge::Point2i;
-using Size  = ge::Vector2i;
+using Size  = ge::Vec2i;
 
 enum class DockAreas
 {

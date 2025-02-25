@@ -1,4 +1,4 @@
-#include <QWidget>
+﻿#include <QWidget>
 #include <vine/appfw/gui/Control.h>
 
 #include "Convert.h"
