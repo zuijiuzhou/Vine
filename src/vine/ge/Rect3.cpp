@@ -114,10 +114,6 @@ TMPL_PREFIX void Rect3<T>::expandBy(const Rect3<T>& rect) {
 TMPL_PREFIX Rect3<T> Rect3<T>::intersectWith(const Rect3<T>& rect) {
     return Rect3<T>();
 }
-TMPL_PREFIX bool Rect3<T>::equals(const Rect3<T>& other, T eps) const {
-    return ge::isEqual(x, other.x, eps) && ge::isEqual(y, other.y, eps) && ge::isEqual(z, other.z, eps) &&
-           ge::isEqual(l, other.l, eps) && ge::isEqual(w, other.w, eps) && ge::isEqual(h, other.h, eps);
-}
 TMPL_PREFIX bool Rect3<T>::operator==(const Rect3<T>& right) const {
     return x == right.x && y == right.y && w == right.w && h == right.h;
 }

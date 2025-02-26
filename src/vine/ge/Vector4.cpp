@@ -1,9 +1,12 @@
 ﻿#include <vine/ge/Vector4.h>
 
+#include <cassert>
 #include <stdexcept>
 
-#include <vine/ge/Ge.h>
+
 #include <vine/ge/Vector3.h>
+
+#include "Comm.h"
 
 VI_GE_NS_BEGIN
 
@@ -28,67 +31,43 @@ TMPL_PREFIX Vector4<T>::Vector4(T xx, T yy, T zz, T ww)
   , w(ww) {
 }
 
-TMPL_PREFIX void Vector4<T>::set(T xx, T yy, T zz, T ww) noexcept {
+TMPL_PREFIX void Vector4<T>::set(T xx, T yy, T zz, T ww) {
     x = xx;
     y = yy;
     z = zz;
     w = ww;
 }
-TMPL_PREFIX void Vector4<T>::get(T& xx, T& yy, T& zz, T& ww) const noexcept {
+TMPL_PREFIX void Vector4<T>::get(T& xx, T& yy, T& zz, T& ww) const {
     xx = x;
     yy = y;
     zz = z;
     ww = w;
 }
-TMPL_PREFIX bool Vector4<T>::isZero(T eps) const noexcept {
-    return ge::isZero(x, eps) && ge::isZero(y, eps) && ge::isZero(z, eps) && ge::isZero(w, eps);
-}
-TMPL_PREFIX bool Vector4<T>::equals(const Vector4<T>& other, T eps) const {
-    return ge::isEqual(x, other.x, eps) && ge::isEqual(y, other.y, eps) && ge::isEqual(z, other.z, eps);
-}
-TMPL_PREFIX const Vector3<T>& Vector4<T>::asVector3() const noexcept {
+TMPL_PREFIX const Vector3<T>& Vector4<T>::asVector3() const {
     return reinterpret_cast<const Vector3<T>&>(*this);
 }
-TMPL_PREFIX bool Vector4<T>::operator==(const Vector4<T>& right) const noexcept {
+TMPL_PREFIX bool Vector4<T>::isZero() const {
+    return x == T(0) && y == T(0) && z == T(0) && w == T(0);
+}
+TMPL_PREFIX bool Vector4<T>::operator==(const Vector4<T>& right) const {
     return x == right.x && y == right.y && z == right.z;
 }
-TMPL_PREFIX bool Vector4<T>::operator!=(const Vector4<T>& right) const noexcept {
+TMPL_PREFIX bool Vector4<T>::operator!=(const Vector4<T>& right) const {
     return !(*this == right);
 }
-TMPL_PREFIX Vector4<T> Vector4<T>::operator-(const Vector4<T>& right) const noexcept {
-    return Vector4<T>(x - right.x, y - right.y, z - right.z, w - right.w);
-}
-TMPL_PREFIX Vector4<T> Vector4<T>::operator+(const Vector4<T>& right) const noexcept {
+TMPL_PREFIX Vector4<T> Vector4<T>::operator+(const Vector4<T>& right) const {
     return Vector4<T>(x + right.x, y + right.y, z + right.z, w + right.w);
 }
-TMPL_PREFIX Vector4<T>& Vector4<T>::operator+=(const Vector4<T>& right) noexcept {
-    x += right.x;
-    y += right.y;
-    z += right.z;
-    w += right.w;
-    return *this;
+TMPL_PREFIX Vector4<T> Vector4<T>::operator-(const Vector4<T>& right) const {
+    return Vector4<T>(x - right.x, y - right.y, z - right.z, w - right.w);
 }
-TMPL_PREFIX Vector4<T>& Vector4<T>::operator-=(const Vector4<T>& right) noexcept {
-    x -= right.x;
-    y -= right.y;
-    z -= right.z;
-    z -= right.w;
-    return *this;
-}
-TMPL_PREFIX Vector4<T> Vector4<T>::operator*(T scale) const noexcept {
+TMPL_PREFIX Vector4<T> Vector4<T>::operator*(T scale) const {
     Vector4<T> v(*this);
     v.x *= scale;
     v.y *= scale;
     v.z *= scale;
     v.w *= scale;
     return v;
-}
-TMPL_PREFIX Vector4<T>& Vector4<T>::operator*=(T scale) noexcept {
-    x *= scale;
-    y *= scale;
-    z *= scale;
-    w *= scale;
-    return *this;
 }
 TMPL_PREFIX Vector4<T> Vector4<T>::operator/(T scale) const {
     Vector4<T> v(*this);
@@ -98,22 +77,47 @@ TMPL_PREFIX Vector4<T> Vector4<T>::operator/(T scale) const {
     v.w /= scale;
     return v;
 }
+TMPL_PREFIX Vector4<T>& Vector4<T>::operator+=(const Vector4<T>& right) {
+    _VI_ASSERT_DOES_NOT_SUPPORT_BOOL
+    x += right.x;
+    y += right.y;
+    z += right.z;
+    w += right.w;
+    return *this;
+}
+TMPL_PREFIX Vector4<T>& Vector4<T>::operator-=(const Vector4<T>& right) {
+    _VI_ASSERT_DOES_NOT_SUPPORT_BOOL
+    x -= right.x;
+    y -= right.y;
+    z -= right.z;
+    z -= right.w;
+    return *this;
+}
+TMPL_PREFIX Vector4<T>& Vector4<T>::operator*=(T scale) {
+    _VI_ASSERT_DOES_NOT_SUPPORT_BOOL
+    x *= scale;
+    y *= scale;
+    z *= scale;
+    w *= scale;
+    return *this;
+}
 TMPL_PREFIX Vector4<T>& Vector4<T>::operator/=(T scale) {
+    _VI_ASSERT_DOES_NOT_SUPPORT_BOOL
     x /= scale;
     y /= scale;
     z /= scale;
     w /= scale;
     return *this;
 }
-//TMPL_PREFIX Vector4<T>::ValueTypePromoted Vector4<T>::operator*(const Vector4<T>& vec) const noexcept {
-//    return x * vec.x + y * vec.y + z * vec.z + w * vec.w;
-//}
+// TMPL_PREFIX Vector4<T>::ValueTypePromoted Vector4<T>::operator*(const Vector4<T>& vec) const  {
+//     return x * vec.x + y * vec.y + z * vec.z + w * vec.w;
+// }
 TMPL_PREFIX T& Vector4<T>::operator[](size_t index) {
-    if (index > 3) throw std::out_of_range("Index out of range.");
+    assert(index < 4);
     return *(&x + index);
 }
 TMPL_PREFIX const T& Vector4<T>::operator[](size_t index) const {
-    if (index > 3) throw std::out_of_range("Index out of range.");
+    assert(index < 4);
     return *(&x + index);
 }
 

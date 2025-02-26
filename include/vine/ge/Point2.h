@@ -7,6 +7,10 @@
 VI_GE_NS_BEGIN
 
 template <typename T> class Vector2;
+/**
+ * @brief
+ * @tparam T Only accepts float double and integers
+ */
 template <typename T> class Point2 {
     // static_assert();
 
@@ -34,8 +38,17 @@ template <typename T> class Point2 {
     T x, y;
 };
 
-using Point2i  = Point2<int32_t>;
-using Point2ui = Point2<uint32_t>;
-using Point2f  = Point2<float>;
-using Point2d  = Point2<double>;
+using Point2b    = Point2<bool>;
+using Point2i8   = Point2<int8_t>;
+using Point2ui8  = Point2<uint8_t>;
+using Point2i16  = Point2<int16_t>;
+using Point2ui16 = Point2<uint16_t>;
+using Point2i32  = Point2<int32_t>;
+using Point2ui32 = Point2<uint32_t>;
+using Point2i64  = Point2<int64_t>;
+using Point2ui64 = Point2<uint64_t>;
+using Point2i    = Point2i32;
+using Point2ui   = Point2ui32;
+using Point2f    = Point2<float>;
+using Point2d    = Point2<double>;
 VI_GE_NS_END

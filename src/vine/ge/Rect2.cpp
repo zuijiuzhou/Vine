@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <cstdint>
 
-#include <vine/ge/Ge.h>
+
 
 VI_GE_NS_BEGIN
 
@@ -60,10 +60,6 @@ TMPL_PREFIX T Rect2<T>::height() const {
 }
 TMPL_PREFIX Vector2<T> Rect2<T>::size() const {
     return Vector2<T>(w < 0 ? -w : w, h < 0 ? -h : h);
-}
-TMPL_PREFIX bool Rect2<T>::equals(const Rect2<T>& other, T eps) const {
-    return ge::isEqual(x, other.x, eps) && ge::isEqual(y, other.y, eps) && ge::isEqual(w, other.w, eps) &&
-           ge::isEqual(h, other.h, eps);
 }
 TMPL_PREFIX bool Rect2<T>::contains(T x, T y) const {
     auto l = bottomLeft();

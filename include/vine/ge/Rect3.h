@@ -32,7 +32,6 @@ template <typename T> class Rect3 {
 
     Rect3<T> intersectWith(const Rect3<T>& rect);
 
-    bool equals(const Rect3<T>& other, T eps = T()) const;
 
     bool operator==(const Rect3<T>& right) const;
     bool operator!=(const Rect3<T>& right) const;

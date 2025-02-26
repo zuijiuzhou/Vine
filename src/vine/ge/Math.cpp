@@ -4,6 +4,42 @@
 
 VI_GE_NS_BEGIN
 
+template <FP T> bool isZero(T val, T eps) {
+    if (isnan(val)) return false;
+    if (isnan(eps)) return val == 0;
+    if (eps < 0) eps = -eps;
+    return val >= -eps && val <= eps;
+}
+template <FP T> bool isEqual(T a, T b, T eps) {
+    if (isnan(a) || isnan(b)) return false;
+    if (isnan(eps)) return a == b;
+    if (eps < 0) eps = -eps;
+    if (a > b) {
+        return b >= a - eps;
+    }
+    return a >= b - eps;
+}
+
+template <FP T> bool isZero(const Vector2<T>& vec2, T eps) {
+    return isZero(vec2.x, eps) && isZero(vec2.y, eps);
+}
+template <FP T> bool isZero(const Vector3<T>& vec3, T eps) {
+    return isZero(vec3.x, eps) && isZero(vec3.y, eps) && isZero(vec3.z, eps);
+}
+template <FP T> bool isZero(const Vector4<T>& vec4, T eps) {
+    return isZero(vec4.x, eps) && isZero(vec4.y, eps) && isZero(vec4.z, eps) && isZero(vec4.w, eps);
+}
+
+template <FP T> bool isEqual(const Vector2<T>& lhs, const Vector2<T>& rhs, T eps) {
+    return isEqual(lhs.x, rhs.x, eps) && isEqual(lhs.y, rhs.y, eps);
+}
+template <FP T> bool isEqual(const Vector3<T>& lhs, const Vector3<T>& rhs, T eps) {
+    return isEqual(lhs.x, rhs.x, eps) && isEqual(lhs.y, rhs.y, eps) && isEqual(lhs.z, rhs.z, eps);
+}
+template <FP T> bool isEqual(const Vector4<T>& lhs, const Vector4<T>& rhs, T eps) {
+    return isEqual(lhs.x, rhs.x, eps) && isEqual(lhs.y, rhs.y, eps) && isEqual(lhs.z, rhs.z, eps) && isEqual(lhs.w, rhs.w, eps);
+}
+
 template <FP T> T length(const Vector2<T>& vec2) {
     return sqrt(length2<T>(vec2));
 }
@@ -80,6 +116,74 @@ template <FP T> Vector3<T> operator^(const Vector3<T>& lhs, const Vector3<T>& rh
     return cross(lhs, rhs);
 }
 
+template <FP T> T angle(const Vector2<T>& lhs, const Vector2<T>& rhs) {
+    auto len1 = length(lhs);
+    if (len1 == 0. || isnan(len1)) return 0;
+
+    auto len2 = length(rhs);
+    if (len2 == 0. || isnan(len2)) return 0;
+
+    auto d = dot(lhs, rhs);
+    auto c = d / len1 * len2;
+    if (c < T(-1)) c = -1;
+    if (c > T(1)) c = 1;
+    return acos(c);
+}
+template <FP T> T angle(const Vector3<T>& lhs, const Vector3<T>& rhs) {
+    auto len1 = length(lhs);
+    if (len1 == 0 || isnan(len1)) return 0;
+
+    auto len2 = length(rhs);
+    if (len2 == 0 || isnan(len2)) return 0;
+
+    auto d = dot(lhs, rhs);
+    auto c = d / len1 * len2;
+    if (c < -1) c = -1;
+    if (c > -1) c = 1;
+    return acos(c);
+}
+template <FP T> T angle(const Vector4<T>& lhs, const Vector4<T>& rhs) {
+    auto len1 = length(lhs);
+    if (len1 == 0 || isnan(len1)) return 0;
+
+    auto len2 = length(rhs);
+    if (len2 == 0 || isnan(len2)) return 0;
+
+    auto d = dot(lhs, rhs);
+    auto c = d / len1 * len2;
+    if (c < -1) c = -1;
+    if (c > -1) c = 1;
+    return acos(c);
+}
+template <FP T> T angle(const Vector3<T>& lhs, const Vector3<T>& rhs, const Vector3<T>& ref) {
+    auto rad = angle(lhs, rhs);
+
+    if (dot(cross(lhs, rhs), ref) > 0) {
+        return rad;
+    }
+
+    return ge::PIPI - rad;
+}
+
+template VI_GE_API bool isZero(float, float);
+template VI_GE_API bool isZero(double, double);
+template VI_GE_API bool isEqual(float, float, float);
+template VI_GE_API bool isEqual(double, double, double);
+
+template VI_GE_API bool isZero(const Vector2<float>&, float);
+template VI_GE_API bool isZero(const Vector3<float>&, float);
+template VI_GE_API bool isZero(const Vector4<float>&, float);
+template VI_GE_API bool isZero(const Vector2<double>&, double);
+template VI_GE_API bool isZero(const Vector3<double>&, double);
+template VI_GE_API bool isZero(const Vector4<double>&, double);
+
+template VI_GE_API bool isEqual(const Vector2<float>&, const Vector2<float>&, float);
+template VI_GE_API bool isEqual(const Vector3<float>&, const Vector3<float>&, float);
+template VI_GE_API bool isEqual(const Vector4<float>&, const Vector4<float>&, float);
+template VI_GE_API bool isEqual(const Vector2<double>&, const Vector2<double>&, double);
+template VI_GE_API bool isEqual(const Vector3<double>&, const Vector3<double>&, double);
+template VI_GE_API bool isEqual(const Vector4<double>&, const Vector4<double>&, double);
+
 template VI_GE_API float  length(const Vector2<float>&);
 template VI_GE_API float  length(const Vector3<float>&);
 template VI_GE_API float  length(const Vector4<float>&);
@@ -124,5 +228,15 @@ template VI_GE_API float operator^(const Vector2<float>&, const Vector2<float>&)
 template VI_GE_API Vector3<float> operator^(const Vector3<float>&, const Vector3<float>&);
 template VI_GE_API double         operator^(const Vector2<double>&, const Vector2<double>&);
 template VI_GE_API Vector3<double> operator^(const Vector3<double>&, const Vector3<double>&);
+
+template VI_GE_API float  angle(const Vector2<float>&, const Vector2<float>&);
+template VI_GE_API float  angle(const Vector3<float>&, const Vector3<float>&);
+template VI_GE_API float  angle(const Vector4<float>&, const Vector4<float>&);
+template VI_GE_API double angle(const Vector2<double>&, const Vector2<double>&);
+template VI_GE_API double angle(const Vector3<double>&, const Vector3<double>&);
+template VI_GE_API double angle(const Vector4<double>&, const Vector4<double>&);
+
+template VI_GE_API float  angle(const Vector3<float>& lhs, const Vector3<float>& rhs, const Vector3<float>& ref);
+template VI_GE_API double angle(const Vector3<double>& lhs, const Vector3<double>& rhs, const Vector3<double>& ref);
 
 VI_GE_NS_END

@@ -32,8 +32,6 @@ template <typename T> class Rect2 {
 
     Vector2<T> size() const;
 
-    bool equals(const Rect2<T>& other, T eps = T()) const;
-
     bool contains(T x, T y) const;
     bool contains(const Point2<T>& pt) const;
 

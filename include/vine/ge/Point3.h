@@ -8,6 +8,10 @@ VI_GE_NS_BEGIN
 
 template <typename T> class Vector3;
 template <typename T> class Point2;
+/**
+ * @brief
+ * @tparam T Only accepts float double and integers
+ */
 template <typename T> class Point3 {
     // static_assert();
 
@@ -23,7 +27,6 @@ template <typename T> class Point3 {
     const Point2<T>&  asPoint2() const;
     const Vector3<T>& asVector() const;
     Vector3<T>        toVector() const;
-    bool              equals(const Point3<T>& other, T eps = T()) const;
 
   public:
     bool       operator==(const Point3<T>& right) const;
@@ -36,9 +39,17 @@ template <typename T> class Point3 {
   public:
     T x, y, z;
 };
-
-using Point3i  = Point3<int32_t>;
-using Point3ui = Point3<uint32_t>;
-using Point3f  = Point3<float>;
-using Point3d  = Point3<double>;
+using Point3b    = Point3<bool>;
+using Point3i8   = Point3<int8_t>;
+using Point3ui8  = Point3<uint8_t>;
+using Point3i16  = Point3<int16_t>;
+using Point3ui16 = Point3<uint16_t>;
+using Point3i32  = Point3<int32_t>;
+using Point3ui32 = Point3<uint32_t>;
+using Point3i64  = Point3<int64_t>;
+using Point3ui64 = Point3<uint64_t>;
+using Point3i    = Point3i32;
+using Point3ui   = Point3ui32;
+using Point3f    = Point3<float>;
+using Point3d    = Point3<double>;
 VI_GE_NS_END

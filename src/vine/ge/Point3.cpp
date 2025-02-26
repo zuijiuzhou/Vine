@@ -24,9 +24,7 @@ TMPL_PREFIX Point3<T>::Point3(T xx, T yy, T zz)
   , y(yy)
   , z(zz) {
 }
-TMPL_PREFIX bool Point3<T>::equals(const Point3<T>& other, T eps) const {
-    return ge::isEqual(x, other.x, eps) && ge::isEqual(y, other.y, eps) && ge::isEqual(z, other.z, eps);
-}
+
 TMPL_PREFIX Vector3<T> Point3<T>::toVector() const {
     return Vector3<T>(x, y, z);
 }
