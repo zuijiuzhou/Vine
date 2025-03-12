@@ -50,15 +50,15 @@ class VI_CORE_API Object {
 
     template <Objectifiable T> bool isKindOf() { return isKindOf(T::desc()); }
 
-    template <Objectifiable T> T* cast() {
-        if (isKindOf(T::desc())) return static_cast<T*>(this);
-        return nullptr;
-    }
+    //template <Objectifiable T> T* cast() {
+    //    if (isKindOf(T::desc())) return static_cast<T*>(this);
+    //    return nullptr;
+    //}
 
-    template <Objectifiable T> const T* cast() const {
-        if (isKindOf(T::desc())) return static_cast<const T*>(this);
-        return nullptr;
-    }
+    //template <Objectifiable T> const T* cast() const {
+    //    if (isKindOf(T::desc())) return static_cast<const T*>(this);
+    //    return nullptr;
+    //}
 
     void addRef();
 
@@ -77,36 +77,37 @@ class VI_CORE_API Object {
   public:
     static const Class* desc();
 
-    template <Objectifiable T> static T* cast(T* obj) {
-        if (obj && obj->isKindOf(T::desc())) {
-            return static_cast<T*>(obj);
-        }
-        return nullptr;
-    }
-
-    template <Objectifiable T> static const T* cast(const T* obj) {
-        if (obj && obj->isKindOf(T::desc())) {
-            return static_cast<T*>(obj);
-        }
-        return nullptr;
-    }
-
-    template <Objectifiable T> static T& cast(Object& obj) {
-        if (obj.getClass() == T::desc()) return static_cast<T&>(obj);
-        throw std::exception();
-    }
-
-    template <Objectifiable T> static const T& cast(const T& obj) {
-        if (obj.getClass() == T::desc()) return static_cast<const T&>(obj);
-        throw std::exception();
-    }
-
   private:
     struct Data;
     Data* d;
 };
 
 using ObjectPtr = RefPtr<Object>;
+
+template <Objectifiable T> T* obj_cast(Object* obj) {
+    if (obj && obj->isKindOf(T::desc())) {
+    return static_cast<T*>(obj);
+}
+return nullptr;
+}
+
+template <Objectifiable T> const T* obj_cast(const Object* obj) {
+    if (obj && obj->isKindOf(T::desc())) {
+        return static_cast<T*>(obj);
+    }
+    return nullptr;
+}
+
+template <Objectifiable T> T& obj_cast(Object& obj) {
+    if (obj.isKindOf(T::desc())) return static_cast<T&>(obj);
+    throw std::exception();
+}
+
+template <Objectifiable T> const T& obj_cast(const Object& obj) {
+    if (obj.isKindOf(T::desc())) return static_cast<const T&>(obj);
+    throw std::exception();
+}
+
 
 VI_CORE_NS_END
 
