@@ -12,5 +12,9 @@ void Addin::Unload() {
 
 }
 
+String Addin::getName() const {
+    return String();
+}
+
 VI_APPFW_NS_END
 

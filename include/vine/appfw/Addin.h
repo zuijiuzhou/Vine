@@ -7,14 +7,17 @@
 VI_APPFW_NS_BEGIN
 
 class AddinLoadContext;
-class VI_APPFW_API Addin : public Object
-{
+class VI_APPFW_API Addin : public Object {
     VI_OBJECT_META;
     VI_DISABLE_COPY_MOVE(Addin);
 
-public:
+  public:
     void Load(AddinLoadContext* context);
     void Unload();
+
+  public:
+    String getName() const;
+
 };
 using AddinPtr = RefPtr<Addin>;
 
