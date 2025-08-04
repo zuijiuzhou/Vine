@@ -14,13 +14,14 @@ function(vi_internal_add_library short_name out_target_name)
     set(LIB_ALIAS ${VI_SHARED_LIBRARY_PREFIX}::${short_name})
 
     message(--------AddLib:${LIB_ALIAS})
+
     # 创建目标
     add_library(${LIB_NAME} SHARED ${SDK_HEADER_FILE_LIST} ${HEADER_FILE_LIST} ${SRC_FILE_LIST} ${RC_FILE_LIST})
     # 设置目标别名
     add_library(${LIB_ALIAS} ALIAS ${LIB_NAME})
     # 设置输出文件名
     set_target_properties(${LIB_NAME} PROPERTIES OUTPUT_NAME ${LIB_FILE_NAME})
-
+    # 设置输出分组
     set_target_properties(${LIB_NAME} PROPERTIES FOLDER vi)
 
     set_target_properties(${LIB_NAME} PROPERTIES PREFIX "")
