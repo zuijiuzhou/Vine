@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <cstring>
+#include <utility>
 
 #include <vine/ge/Math.hpp>
 #include <vine/ge/Point3.hpp>

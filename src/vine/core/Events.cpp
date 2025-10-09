@@ -2,6 +2,8 @@
 
 VI_CORE_NS_BEGIN
 
+VI_OBJECT_META_IMPL(EventArgs, Object)
+
 VI_TMPL_OBJECT_META_IMPL(template <typename TVal>, PropertyChangedEventArgs<TVal>, EventArgs);
 
 template <typename TVal>
