@@ -32,7 +32,7 @@ void DockingPaneClient::setWidget(QWidget *widget)
 {
     delete this->layout();
     this->setLayout(new QGridLayout());
-    this->layout()->setMargin(0);
+    this->layout()->setContentsMargins(0, 0, 0, 0);
     this->layout()->setSpacing(0);
     this->layout()->addWidget(widget);
 }

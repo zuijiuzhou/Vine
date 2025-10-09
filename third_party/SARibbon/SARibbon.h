@@ -195,7 +195,7 @@ enum class SARibbonTheme
 #endif
 #else
 #ifndef SA_FONTMETRICS_WIDTH
-#define SA_FONTMETRICS_WIDTH(fm, str) fm.width(str)
+#define SA_FONTMETRICS_WIDTH(fm, str) fm.horizontalAdvance(str)
 #endif
 #endif
 

@@ -1,6 +1,6 @@
-#include <QApplication>
+#include <vine/appfw/gui/GuiApplication.hpp>
 
-#include <vine/appfw/gui/GuiApplication.h>
+#include <QApplication>
 
 VI_APPFWGUI_NS_BEGIN
 

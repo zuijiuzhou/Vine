@@ -1,11 +1,11 @@
-#include <vine/appfw/gui/RibbonBar.h>
+#include <vine/appfw/gui/RibbonBar.hpp>
 
 #include <SARibbon.h>
-#include <vine/appfw/gui/MainWindow.h>
-#include <vine/appfw/gui/RibbonDropDownItem.h>
-#include <vine/appfw/gui/RibbonTab.h>
-#include <vine/core/Exception.h>
-#include <vine/core/Ptr.h>
+#include <vine/appfw/gui/MainWindow.hpp>
+#include <vine/appfw/gui/RibbonDropDownItem.hpp>
+#include <vine/appfw/gui/RibbonTab.hpp>
+#include <vine/core/Exception.hpp>
+#include <vine/core/Ptr.hpp>
 
 VI_APPFWGUI_NS_BEGIN
 

@@ -1,7 +1,8 @@
-﻿#include <QWidget>
-#include <vine/appfw/gui/Control.h>
+﻿#include <vine/appfw/gui/Control.hpp>
 
-#include "Convert.h"
+#include <QWidget>
+
+#include "Convert.hpp"
 
 VI_APPFWGUI_NS_BEGIN
 

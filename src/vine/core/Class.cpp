@@ -1,16 +1,22 @@
-#include <vine/core/Class.h>
+#include <vine/core/Class.hpp>
 
 #include <mutex>
 #include <set>
 #include <typeinfo>
 #include <algorithm>
+#include <stdexcept>
 
-#include <vine/core/Exception.h>
+#ifdef __GCC__
+#include <cxxabi.h>
+#endif
+
+#include <vine/core/Exception.hpp>
 
 VI_CORE_NS_BEGIN
 
 namespace {
 
+#ifdef __MSVC__
 bool parse_type_info_vc(const std::type_info& ti, String& name, String& ns, String& full_name) {
     auto n    = ti.name();
     full_name = String::fromUtf8(n);
@@ -20,16 +26,32 @@ bool parse_type_info_vc(const std::type_info& ti, String& name, String& ns, Stri
     ns        = full_name.substr(0, idx - 1);
     return true;
 }
+#endif
 
+#ifdef __GCC__
 bool parse_type_info_gcc(const std::type_info& ti, String& name, String& ns, String& full_name) {
-    auto n    = ti.name();
-    full_name = String::fromUtf8(n);
-    full_name = full_name.substr(6);
-    auto idx  = full_name.lastIndexOf(U':');
-    name      = full_name.substr(idx + 1);
-    ns        = full_name.substr(0, idx - 1);
+    int status;
+    char* demangled = abi::__cxa_demangle(ti.name(), nullptr, nullptr, &status);
+
+    if(status != 0)
+    return false;
+
+    full_name = String::fromUtf8(demangled);
+    delete demangled;
+
+    size_t pos = full_name.lastIndexOf(U':');
+
+    if(pos == -1) {
+        name = full_name;
+    } else {
+        ns = full_name.substr(0, pos - 1);
+        name = full_name.substr(pos + 1);
+    }
+
     return true;
 }
+#endif
+
 } // namespace
 
 struct Class::Data {
@@ -50,11 +72,21 @@ Class::Class(const Class* parent, const std::type_info& ti)
     if (getClass(ti)) 
         throw Exception(Exception::ITEM_ALREADY_EXISTS);
     d->parent = parent;
-#if defined(_MSC_VER)
-    parse_type_info_vc(ti, d->name, d->ns, d->full_name);
+
+    auto is_ok = false;
+
+#if defined(__MSVC__)
+    is_ok = parse_type_info_vc(ti, d->name, d->ns, d->full_name);
+#elif defined(__GCC__)
+    is_ok = parse_type_info_gcc(ti, d->name, d->ns, d->full_name);
 #else
-    parse_type_info_gcc(ti, d->name, d->ns, d->full_name);
+    #error "Unsupported compiler"
 #endif
+
+    if(!is_ok){
+        throw std::runtime_error("Runtime error.");
+    }
+
     Data::classes.insert(this);
 }
 

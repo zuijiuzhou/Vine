@@ -1,12 +1,12 @@
 #include <QCoreApplication>
 
-#include <vine/core/Exception.h>
-#include <vine/core/Ptr.h>
+#include <vine/core/Exception.hpp>
+#include <vine/core/Ptr.hpp>
 
-#include <vine/appfw/AddinManager.h>
-#include <vine/appfw/Application.h>
-#include <vine/appfw/CommandManager.h>
-#include <vine/appfw/ServiceManager.h>
+#include <vine/appfw/AddinManager.hpp>
+#include <vine/appfw/Application.hpp>
+#include <vine/appfw/CommandManager.hpp>
+#include <vine/appfw/ServiceManager.hpp>
 
 VI_APPFW_NS_BEGIN
 

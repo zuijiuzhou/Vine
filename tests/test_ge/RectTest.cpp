@@ -1,8 +1,8 @@
 ﻿#include <gtest/gtest.h>
 
-#include <vine/ge/Math.h>
-#include <vine/ge/Rect3.h>
-#include <vine/ge/Point3.h>
+#include <vine/ge/Math.hpp>
+#include <vine/ge/Rect3.hpp>
+#include <vine/ge/Point3.hpp>
 
 using namespace vine::ge;
 

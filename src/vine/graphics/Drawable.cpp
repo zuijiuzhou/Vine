@@ -1,4 +1,4 @@
-#include <vine/graphics/Drawable.h>
+#include <vine/graphics/Drawable.hpp>
 
 VI_GRAPHICS_NS_BEGIN
 

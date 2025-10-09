@@ -70,7 +70,7 @@ class DockingPaneFlyoutWidget : public QWidget
         virtual void mousePressEvent(QMouseEvent* event) override;
         virtual bool eventFilter(QObject* obj, QEvent* event) override;
 
-        virtual void enterEvent(QEvent* event) override;
+        virtual void enterEvent(QEnterEvent* event) override;
         virtual void leaveEvent(QEvent* event) override;
 
     private Q_SLOTS:

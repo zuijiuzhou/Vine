@@ -106,7 +106,7 @@ QSize DockAutoHideButton::sizeHint() const
     QSize size;
     QFontMetrics fm(this->font());
 
-    size.setWidth(fm.width(this->text()));
+    size.setWidth(fm.horizontalAdvance(this->text()));
     size.setHeight(60);
 
     if (m_orientation == Qt::Vertical) {
@@ -116,7 +116,7 @@ QSize DockAutoHideButton::sizeHint() const
     return size;
 }
 
-void DockAutoHideButton::enterEvent(QEvent *event)
+void DockAutoHideButton::enterEvent(QEnterEvent *event)
 {
     m_hoverTimer->start();
 
@@ -155,7 +155,7 @@ void DockAutoHideButton::paintEvent(QPaintEvent*)
     QColor color, textColor;
 
     p.setRenderHint(QPainter::Antialiasing, true);
-    p.setRenderHint(QPainter::HighQualityAntialiasing, true);
+    p.setRenderHint(QPainter::Antialiasing, true);
 
     if (m_hovered) {
         color = textColor = QColor(0, 122, 204);

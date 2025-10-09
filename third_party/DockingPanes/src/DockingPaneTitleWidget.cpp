@@ -50,7 +50,7 @@ void DockingPaneTitleWidget::paintEvent(QPaintEvent*)
     rightMargin = 5;
 
     p.setRenderHint(QPainter::Antialiasing, true);
-    p.setRenderHint(QPainter::HighQualityAntialiasing, true);
+    p.setRenderHint(QPainter::Antialiasing, true);
 
     QFontMetrics fm(this->font());
 

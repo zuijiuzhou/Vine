@@ -85,7 +85,7 @@ DockingPaneContainer::DockingPaneContainer(QString title, QString id, QWidget *p
     hLayout->addWidget(m_closeButton);
     hLayout->addSpacerItem(new QSpacerItem(2,0, QSizePolicy::Fixed));
 
-    hLayout->setMargin(0);
+    hLayout->setContentsMargins(0, 0, 0, 0);
     hLayout->setSpacing(0);
 
     m_headerWidget->setLayout(hLayout);
@@ -96,7 +96,7 @@ DockingPaneContainer::DockingPaneContainer(QString title, QString id, QWidget *p
 
     m_clientLayout = new QGridLayout();
 
-    m_clientLayout->setMargin(0);
+    m_clientLayout->setContentsMargins(0, 0, 0, 0);
     m_clientLayout->setVerticalSpacing(0);
 
     m_clientLayout->addWidget(clientWidget);

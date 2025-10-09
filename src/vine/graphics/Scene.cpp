@@ -1,4 +1,4 @@
-#include <vine/graphics/Scene.h>
+#include <vine/graphics/Scene.hpp>
 
 VI_GRAPHICS_NS_BEGIN
 

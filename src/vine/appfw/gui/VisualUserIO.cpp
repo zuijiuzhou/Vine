@@ -1,4 +1,4 @@
-#include "VisualUserIO.h"
+#include "VisualUserIO.hpp"
 
 #include <QDockWidget>
 

@@ -1,4 +1,4 @@
-#include <vine/appfw/Addin.h>
+#include <vine/appfw/Addin.hpp>
 
 VI_APPFW_NS_BEGIN
 

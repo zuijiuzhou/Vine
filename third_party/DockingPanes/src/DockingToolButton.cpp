@@ -33,7 +33,7 @@ DockingToolButton::DockingToolButton(DockingToolButton::ButtonType type, QWidget
     m_highlight = false;
 }
 
-void DockingToolButton::enterEvent(QEvent* event)
+void DockingToolButton::enterEvent(QEnterEvent* event)
 {
     m_highlight = true;
 
@@ -56,7 +56,7 @@ void DockingToolButton::paintEvent(QPaintEvent*)
     int centreY = height()/2;
 
     p.setRenderHint(QPainter::Antialiasing, true);
-    p.setRenderHint(QPainter::HighQualityAntialiasing, true);
+    p.setRenderHint(QPainter::Antialiasing, true);
 
     switch(m_buttonType) {
         case closeButtonInactive: {

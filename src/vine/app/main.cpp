@@ -3,24 +3,24 @@
 #include <iostream>
 #include <vector>
 
-#include <vine/ge/Point3.h>
-#include <vine/ge/Vector3.h>
+#include <vine/ge/Point3.hpp>
+#include <vine/ge/Vector3.hpp>
 
-#include <vine/core/Ptr.h>
-#include <vine/core/stl++.h>
+#include <vine/core/Ptr.hpp>
+#include <vine/core/stl++.hpp>
 
-#include <vine/di/Container.h>
-#include <vine/di/Registration.h>
+#include <vine/di/Container.hpp>
+#include <vine/di/Registration.hpp>
 
-#include <vine/appfw/AddinManager.h>
-#include <vine/appfw/gui/GuiApplication.h>
-#include <vine/appfw/gui/MainWindow.h>
+#include <vine/appfw/AddinManager.hpp>
+#include <vine/appfw/gui/GuiApplication.hpp>
+#include <vine/appfw/gui/MainWindow.hpp>
 
-#include <vine/appfw/gui/DockPanel.h>
-#include <vine/appfw/gui/RibbonBar.h>
-#include <vine/appfw/gui/RibbonDropDownItem.h>
-#include <vine/appfw/gui/RibbonGroup.h>
-#include <vine/appfw/gui/RibbonTab.h>
+#include <vine/appfw/gui/DockPanel.hpp>
+#include <vine/appfw/gui/RibbonBar.hpp>
+#include <vine/appfw/gui/RibbonDropDownItem.hpp>
+#include <vine/appfw/gui/RibbonGroup.hpp>
+#include <vine/appfw/gui/RibbonTab.hpp>
 
 namespace fw    = vine::appfw;
 namespace guifw = fw::gui;

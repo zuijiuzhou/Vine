@@ -1,11 +1,11 @@
-﻿#include <vine/ge/Matrix4x4.h>
+﻿#include <vine/ge/Matrix4x4.hpp>
 
 #include <cmath>
-#include <memory>
+#include <cstring>
 
-#include <vine/ge/Math.h>
-#include <vine/ge/Point3.h>
-#include <vine/ge/Vector3.h>
+#include <vine/ge/Math.hpp>
+#include <vine/ge/Point3.hpp>
+#include <vine/ge/Vector3.hpp>
 
 VI_GE_NS_BEGIN
 

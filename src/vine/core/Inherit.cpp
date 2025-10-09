@@ -1,4 +1,4 @@
-#include <vine/core/Inherit.h>
+#include <vine/core/Inherit.hpp>
 
 VI_CORE_NS_BEGIN
 

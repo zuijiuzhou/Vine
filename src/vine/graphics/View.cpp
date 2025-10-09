@@ -1,6 +1,6 @@
-#include <vine/core/Ptr.h>
-#include <vine/graphics/Scene.h>
-#include <vine/graphics/View.h>
+#include <vine/core/Ptr.hpp>
+#include <vine/graphics/Scene.hpp>
+#include <vine/graphics/View.hpp>
 
 VI_GRAPHICS_NS_BEGIN
 

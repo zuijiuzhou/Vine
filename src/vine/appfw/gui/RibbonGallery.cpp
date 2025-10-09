@@ -1,4 +1,5 @@
-#include <vine/appfw/gui/RibbonGallery.h>
+#include <vine/appfw/gui/RibbonGallery.hpp>
+
 #include <SARibbon.h>
 
 VI_APPFWGUI_NS_BEGIN

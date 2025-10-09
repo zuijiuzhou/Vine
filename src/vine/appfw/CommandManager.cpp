@@ -1,4 +1,4 @@
-#include <vine/appfw/CommandManager.h>
+#include <vine/appfw/CommandManager.hpp>
 
 VI_APPFW_NS_BEGIN
 VI_OBJECT_META_IMPL(CommandManager, Object)

@@ -47,7 +47,7 @@ class DockingPaneGlowWidget : public QWidget
         virtual void mousePressEvent(QMouseEvent* event) override;
         virtual void mouseMoveEvent(QMouseEvent* event) override;
         virtual void mouseReleaseEvent(QMouseEvent* event) override;
-        virtual void enterEvent(QEvent* event) override;
+        virtual void enterEvent(QEnterEvent* event) override;
         virtual void leaveEvent(QEvent* event) override;
 
     private:

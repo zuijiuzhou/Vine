@@ -29,7 +29,7 @@ DockingPaneTabWidget::DockingPaneTabWidget(QWidget *parent) :
     QGridLayout *layout = new QGridLayout();
     layout->addWidget(m_stackedWidget);
     layout->setSpacing(0);
-    layout->setMargin(0);
+    layout->setContentsMargins(0, 0, 0, 0);
     this->setLayout(layout);
 }
 

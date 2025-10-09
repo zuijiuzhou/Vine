@@ -1,5 +1,6 @@
+#include <vine/appfw/gui/RibbonDropDownItem.hpp>
+
 #include <QAction>
-#include <vine/appfw/gui/RibbonDropDownItem.h>
 
 VI_APPFWGUI_NS_BEGIN
 

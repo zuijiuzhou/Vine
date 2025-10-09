@@ -96,7 +96,7 @@ DockingPaneManager::DockingPaneManager() :
 
     d->m_thisWidget->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 
-    d->m_thisWidget->layout()->setMargin(5);
+    d->m_thisWidget->layout()->setContentsMargins(5, 5, 5, 5);
     d->m_thisWidget->layout()->setSpacing(0);
 
     setWidget(d->m_rootPane);
@@ -546,7 +546,7 @@ QWidget *DockingPaneManager::widget(void)
     d->m_autoHideLayout->addWidget(d->m_rightAutoHidePane, 1, 2);
     d->m_autoHideLayout->addWidget(d->m_bottomAutoHidePane, 2, 1);
 
-    d->m_autoHideLayout->setMargin(0);
+    d->m_autoHideLayout->setContentsMargins(0, 0, 0, 0);
     d->m_autoHideLayout->setSpacing(0);
 
     d->m_dockingWidget->setLayout(d->m_autoHideLayout);

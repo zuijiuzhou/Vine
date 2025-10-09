@@ -1,4 +1,4 @@
-#include <vine/appfw/gui/UIElement.h>
+#include <vine/appfw/gui/UIElement.hpp>
 
 #include <QAction>
 

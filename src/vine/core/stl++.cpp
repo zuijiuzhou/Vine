@@ -1,5 +1,5 @@
-#include <vine/core/String.h>
-#include <vine/core/stl++.h>
+#include <vine/core/String.hpp>
+#include <vine/core/stl++.hpp>
 #include <iostream>
 
 VI_CORE_NS_BEGIN

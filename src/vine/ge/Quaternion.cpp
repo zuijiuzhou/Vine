@@ -1,4 +1,4 @@
-﻿#include <vine/ge/Quaternion.h>
+﻿#include <vine/ge/Quaternion.hpp>
 
 VI_GE_NS_BEGIN
 

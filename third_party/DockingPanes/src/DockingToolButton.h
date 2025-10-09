@@ -43,7 +43,7 @@ class DockingToolButton : public QPushButton
 
     protected:
         virtual void paintEvent(QPaintEvent* event) override;
-        virtual void enterEvent(QEvent* event) override;
+        virtual void enterEvent(QEnterEvent* event) override;
         virtual void leaveEvent(QEvent* event) override;
 
     private:

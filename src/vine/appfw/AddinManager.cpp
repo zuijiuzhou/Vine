@@ -1,4 +1,4 @@
-#include <vine/appfw/AddinManager.h>
+#include <vine/appfw/AddinManager.hpp>
 
 #include <vector>
 

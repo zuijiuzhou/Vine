@@ -131,7 +131,7 @@ void DockingPaneGlowWidget::updateCursor()
     }
 }
 
-void DockingPaneGlowWidget::enterEvent(QEvent*)
+void DockingPaneGlowWidget::enterEvent(QEnterEvent*)
 {
     updateCursor();
 }

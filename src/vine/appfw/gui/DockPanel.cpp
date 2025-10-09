@@ -1,11 +1,11 @@
+#include <vine/appfw/gui/DockPanel.hpp>
+
 #include <QDockWidget>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QEvent>
 
-#include <vine/appfw/gui/DockPanel.h>
-
-#include "Convert.h"
+#include "Convert.hpp"
 
 VI_APPFWGUI_NS_BEGIN
 VI_OBJECT_META_IMPL(DockPanel, Control)

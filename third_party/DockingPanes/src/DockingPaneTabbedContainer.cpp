@@ -17,6 +17,7 @@
  * along with DockingPanes.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <algorithm>
 #include <math.h>
 #include <QApplication>
 #include <QColor>
@@ -84,7 +85,7 @@ DockingPaneTabbedContainer::DockingPaneTabbedContainer(QWidget *parent) :
     hLayout->addWidget(m_closeButton);
     hLayout->addSpacerItem(new QSpacerItem(2,0, QSizePolicy::Fixed));
 
-    hLayout->setMargin(0);
+    hLayout->setContentsMargins(0, 0, 0, 0);
     hLayout->setSpacing(0);
 
     m_headerWidget->setLayout(hLayout);
@@ -94,7 +95,7 @@ DockingPaneTabbedContainer::DockingPaneTabbedContainer(QWidget *parent) :
 
     m_clientLayout = new QGridLayout();
 
-    m_clientLayout->setMargin(0);
+    m_clientLayout->setContentsMargins(0, 0, 0, 0);
     m_clientLayout->setVerticalSpacing(0);
 
     m_stackedWidget = new QStackedWidget();
@@ -240,7 +241,7 @@ void DockingPaneTabbedContainer::paintEvent(QPaintEvent*)
     QRect tr = rc;
 
     for(i=0;i<m_tabWidths.count();i++) {
-        p.setRenderHint(QPainter::HighQualityAntialiasing, true);
+        p.setRenderHint(QPainter::Antialiasing, true);
 
         tr.setLeft(x);
         tr.setTop(rc.bottom());
@@ -282,12 +283,12 @@ void DockingPaneTabbedContainer::calculateButtonsRectangles(void)
     currentIndex = m_stackedWidget->currentIndex();
 
     if (currentIndex==0) {
-        int selectedWidth = (fm.width(m_paneList.at(currentIndex)->name())+(tabGap*2));
+        int selectedWidth = (fm.horizontalAdvance(m_paneList.at(currentIndex)->name())+(tabGap*2));
         int spaceAfter = availableWidth-selectedWidth;
         int requiredSpace = 0;
 
         for (i=1;i<m_paneList.count();i++) {
-            requiredSpace += fm.width(m_paneList.at(i)->name())+(tabGap*2);
+            requiredSpace += fm.horizontalAdvance(m_paneList.at(i)->name())+(tabGap*2);
         }
 
         m_tabWidths.append(selectedWidth);
@@ -304,7 +305,7 @@ void DockingPaneTabbedContainer::calculateButtonsRectangles(void)
             }
         } else {
             for(i=1;i<m_paneList.count();i++) {
-                m_tabWidths.append(fm.width(m_paneList.at(i)->name())+(tabGap*2));
+                m_tabWidths.append(fm.horizontalAdvance(m_paneList.at(i)->name())+(tabGap*2));
             }
         }
 
@@ -312,12 +313,12 @@ void DockingPaneTabbedContainer::calculateButtonsRectangles(void)
     }
 
     if (m_stackedWidget->currentIndex()==m_stackedWidget->count()-1) {
-        int selectedWidth = (fm.width(m_paneList.at(currentIndex)->name())+(tabGap*2));
+        int selectedWidth = (fm.horizontalAdvance(m_paneList.at(currentIndex)->name())+(tabGap*2));
         int spaceBefore = availableWidth-selectedWidth;
         int requiredSpace = 0;
 
         for (i=0;i<m_paneList.count()-1;i++) {
-            requiredSpace += fm.width(m_paneList.at(i)->name())+(tabGap*2);
+            requiredSpace += fm.horizontalAdvance(m_paneList.at(i)->name())+(tabGap*2);
         }
 
         if (requiredSpace>spaceBefore) {
@@ -330,7 +331,7 @@ void DockingPaneTabbedContainer::calculateButtonsRectangles(void)
             }
         } else {
             for(i=0;i<m_paneList.count()-1;i++) {
-                m_tabWidths.append(fm.width(m_paneList.at(i)->name())+(tabGap*2));
+                m_tabWidths.append(fm.horizontalAdvance(m_paneList.at(i)->name())+(tabGap*2));
             }
         }
 
@@ -339,13 +340,13 @@ void DockingPaneTabbedContainer::calculateButtonsRectangles(void)
         return;
     }
 
-    int selectedWidth = (fm.width(m_paneList.at(currentIndex)->name())+(tabGap*2));
+    int selectedWidth = (fm.horizontalAdvance(m_paneList.at(currentIndex)->name())+(tabGap*2));
     int spaceBeforeAfter = availableWidth-selectedWidth;
     int requiredSpace = 0;
 
     for (i=0;i<m_paneList.count();i++) {
         if (i!=currentIndex) {
-            requiredSpace += fm.width(m_paneList.at(i)->name())+(tabGap*2);
+            requiredSpace += fm.horizontalAdvance(m_paneList.at(i)->name())+(tabGap*2);
         }
     }
 
@@ -367,7 +368,7 @@ void DockingPaneTabbedContainer::calculateButtonsRectangles(void)
             if (i==currentIndex) {
                 m_tabWidths.append(selectedWidth);
             } else {
-                m_tabWidths.append(fm.width(m_paneList.at(i)->name())+(tabGap*2));
+                m_tabWidths.append(fm.horizontalAdvance(m_paneList.at(i)->name())+(tabGap*2));
             }
         }
     }
@@ -558,7 +559,8 @@ void DockingPaneTabbedContainer::mouseMoveEvent(QMouseEvent *e)
 
                             oldIndex = m_stackedWidget->currentIndex();
 
-                            m_paneList.swap(m_stackedWidget->currentIndex(), i);
+                            std::swap(m_paneList[m_stackedWidget->currentIndex()], m_paneList[i]);
+                            // m_paneList.swap(m_stackedWidget->currentIndex(), i);
                             m_stackedWidget->insertWidget(i, m_stackedWidget->currentWidget());
                             m_stackedWidget->setCurrentIndex(i);
 

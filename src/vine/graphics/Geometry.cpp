@@ -1,4 +1,4 @@
-#include <vine/graphics/Geometry.h>
+#include <vine/graphics/Geometry.hpp>
 
 VI_GRAPHICS_NS_BEGIN
 

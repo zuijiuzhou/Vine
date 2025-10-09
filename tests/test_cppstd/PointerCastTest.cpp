@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include <vine/core/String.h>
+#include <vine/core/String.hpp>
 
 namespace {
 class Base1 {

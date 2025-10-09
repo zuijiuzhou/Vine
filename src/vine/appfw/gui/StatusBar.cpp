@@ -1,9 +1,9 @@
-#include <vine/appfw/gui/StatusBar.h>
+#include <vine/appfw/gui/StatusBar.hpp>
 
 #include <QStatusBar>
 
-#include <vine/appfw/gui/MainWindow.h>
-#include <vine/core/Ptr.h>
+#include <vine/appfw/gui/MainWindow.hpp>
+#include <vine/core/Ptr.hpp>
 
 VI_APPFWGUI_NS_BEGIN
 

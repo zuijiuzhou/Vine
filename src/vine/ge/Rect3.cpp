@@ -1,10 +1,10 @@
-﻿#include <vine/ge/Rect3.h>
+﻿#include <vine/ge/Rect3.hpp>
 
 #include <algorithm>
 #include <cstdint>
 
-#include <vine/ge/Point3.h>
-#include <vine/ge/Vector3.h>
+#include <vine/ge/Point3.hpp>
+#include <vine/ge/Vector3.hpp>
 
 VI_GE_NS_BEGIN
 

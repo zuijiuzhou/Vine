@@ -1,11 +1,11 @@
-#include <vine/core/String.h>
+#include <vine/core/String.hpp>
 
 #include <vector>
 #include <locale>
 #include <ctype.h>
 #include <cstring>
 
-#include <vine/core/Exception.h>
+#include <vine/core/Exception.hpp>
 
 VI_CORE_NS_BEGIN
 

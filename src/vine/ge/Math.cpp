@@ -1,18 +1,18 @@
-﻿#include <vine/ge/Math.h>
+﻿#include <vine/ge/Math.hpp>
 
 #include <cmath>
 
 VI_GE_NS_BEGIN
 
 template <FP T> bool isZero(T val, T eps) {
-    if (isnan(val)) return false;
-    if (isnan(eps)) return val == 0;
+    if (std::isnan(val)) return false;
+    if (std::isnan(eps)) return val == 0;
     if (eps < 0) eps = -eps;
     return val >= -eps && val <= eps;
 }
 template <FP T> bool isEqual(T a, T b, T eps) {
-    if (isnan(a) || isnan(b)) return false;
-    if (isnan(eps)) return a == b;
+    if (std::isnan(a) || std::isnan(b)) return false;
+    if (std::isnan(eps)) return a == b;
     if (eps < 0) eps = -eps;
     if (a > b) {
         return b >= a - eps;
@@ -118,10 +118,10 @@ template <FP T> Vector3<T> operator^(const Vector3<T>& lhs, const Vector3<T>& rh
 
 template <FP T> T angle(const Vector2<T>& lhs, const Vector2<T>& rhs) {
     auto len1 = length(lhs);
-    if (len1 == 0. || isnan(len1)) return 0;
+    if (len1 == 0. || std::isnan(len1)) return 0;
 
     auto len2 = length(rhs);
-    if (len2 == 0. || isnan(len2)) return 0;
+    if (len2 == 0. || std::isnan(len2)) return 0;
 
     auto d = dot(lhs, rhs);
     auto c = d / len1 * len2;
@@ -131,10 +131,10 @@ template <FP T> T angle(const Vector2<T>& lhs, const Vector2<T>& rhs) {
 }
 template <FP T> T angle(const Vector3<T>& lhs, const Vector3<T>& rhs) {
     auto len1 = length(lhs);
-    if (len1 == 0 || isnan(len1)) return 0;
+    if (len1 == 0 || std::isnan(len1)) return 0;
 
     auto len2 = length(rhs);
-    if (len2 == 0 || isnan(len2)) return 0;
+    if (len2 == 0 || std::isnan(len2)) return 0;
 
     auto d = dot(lhs, rhs);
     auto c = d / len1 * len2;
@@ -144,10 +144,10 @@ template <FP T> T angle(const Vector3<T>& lhs, const Vector3<T>& rhs) {
 }
 template <FP T> T angle(const Vector4<T>& lhs, const Vector4<T>& rhs) {
     auto len1 = length(lhs);
-    if (len1 == 0 || isnan(len1)) return 0;
+    if (len1 == 0 || std::isnan(len1)) return 0;
 
     auto len2 = length(rhs);
-    if (len2 == 0 || isnan(len2)) return 0;
+    if (len2 == 0 || std::isnan(len2)) return 0;
 
     auto d = dot(lhs, rhs);
     auto c = d / len1 * len2;

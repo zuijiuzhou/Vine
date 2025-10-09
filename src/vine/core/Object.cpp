@@ -1,11 +1,11 @@
 
-#include <vine/core/Object.h>
+#include <vine/core/Object.hpp>
 
 #include <atomic>
-#include <stddef.h>
+#include <cstddef>
 
-#include <vine/core/Class.h>
-#include <vine/core/String.h>
+#include <vine/core/Class.hpp>
+#include <vine/core/String.hpp>
 
 VI_CORE_NS_BEGIN
 

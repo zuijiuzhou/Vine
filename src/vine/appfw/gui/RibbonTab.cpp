@@ -1,10 +1,10 @@
-#include <vine/appfw/gui/RibbonTab.h>
+#include <vine/appfw/gui/RibbonTab.hpp>
 
 #include <SARibbon.h>
 
-#include <vine/appfw/gui/RibbonGroup.h>
-#include <vine/core/Exception.h>
-#include <vine/core/Ptr.h>
+#include <vine/appfw/gui/RibbonGroup.hpp>
+#include <vine/core/Exception.hpp>
+#include <vine/core/Ptr.hpp>
 
 VI_APPFWGUI_NS_BEGIN
 

@@ -1,6 +1,6 @@
-#include <vine/appfw/ServiceManager.h>
+#include <vine/appfw/ServiceManager.hpp>
 
-#include <vine/di/Container.h>
+#include <vine/di/Container.hpp>
 
 VI_APPFW_NS_BEGIN
 VI_OBJECT_META_IMPL(ServiceManager, Object)

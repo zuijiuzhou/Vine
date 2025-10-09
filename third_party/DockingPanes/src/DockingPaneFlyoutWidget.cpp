@@ -77,7 +77,7 @@ DockingPaneFlyoutWidget::DockingPaneFlyoutWidget(bool hasFocus, DockingPaneConta
     hLayout->addWidget(m_closeButton);
 
     hLayout->addSpacerItem(new QSpacerItem(2,0, QSizePolicy::Fixed));
-    hLayout->setMargin(0);
+    hLayout->setContentsMargins(0, 0, 0, 0);
     hLayout->setSpacing(0);
 
     m_headerWidget->setLayout(hLayout);
@@ -86,7 +86,7 @@ DockingPaneFlyoutWidget::DockingPaneFlyoutWidget(bool hasFocus, DockingPaneConta
     vLayout->addWidget(m_headerWidget);
 
     m_clientLayout = new QGridLayout();
-    m_clientLayout->setMargin(0);
+    m_clientLayout->setContentsMargins(0, 0, 0, 0);
     m_clientLayout->setVerticalSpacing(0);
     m_clientLayout->addWidget(widget);
 
@@ -147,7 +147,7 @@ void DockingPaneFlyoutWidget::resizeEvent(QResizeEvent*)
     m_headerWidget->setMaximumHeight(6+m_headerWidget->fontMetrics().height());
 }
 
-void DockingPaneFlyoutWidget::enterEvent(QEvent*)
+void DockingPaneFlyoutWidget::enterEvent(QEnterEvent*)
 {
     updateCursor();
 }

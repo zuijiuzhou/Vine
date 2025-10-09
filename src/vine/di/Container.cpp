@@ -1,10 +1,10 @@
 #include <map>
 
-#include <vine/core/Exception.h>
-#include <vine/di/Container.h>
-#include <vine/di/Registration.h>
+#include <vine/core/Exception.hpp>
+#include <vine/di/Container.hpp>
+#include <vine/di/Registration.hpp>
 
-#include "Registration_p.h"
+#include "Registration_p.hpp"
 
 VI_DI_NS_BEGIN
 

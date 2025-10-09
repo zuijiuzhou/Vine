@@ -1,6 +1,8 @@
+#include <vine/appfw/gui/RibbonGroup.hpp>
+
 #include <SARibbon.h>
-#include <vine/appfw/gui/RibbonGroup.h>
-#include <vine/core/Exception.h>
+
+#include <vine/core/Exception.hpp>
 
 VI_APPFWGUI_NS_BEGIN
 

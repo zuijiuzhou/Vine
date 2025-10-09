@@ -1,16 +1,16 @@
+#include <vine/appfw/gui/MainWindow.hpp>
+
 #include <QDockWidget>
 #include <QTabWidget>
-
 #include <SARibbon.h>
 
-#include <vine/appfw/gui/MainWindow.h>
-#include <vine/appfw/gui/RibbonBar.h>
-#include <vine/appfw/gui/StatusBar.h>
-#include <vine/appfw/gui/Gui.h>
-#include <vine/appfw/gui/DockPanel.h>
-#include <vine/core/Ptr.h>
+#include <vine/appfw/gui/RibbonBar.hpp>
+#include <vine/appfw/gui/StatusBar.hpp>
+#include <vine/appfw/gui/Gui.hpp>
+#include <vine/appfw/gui/DockPanel.hpp>
+#include <vine/core/Ptr.hpp>
 
-#include "Convert.h"
+#include "Convert.hpp"
 
 VI_APPFWGUI_NS_BEGIN
 

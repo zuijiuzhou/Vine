@@ -1,6 +1,6 @@
 ﻿#include <gtest/gtest.h>
 
-#include <vine/ge/Math.h>
+#include <vine/ge/Math.hpp>
 
 using namespace vine::ge;
 
