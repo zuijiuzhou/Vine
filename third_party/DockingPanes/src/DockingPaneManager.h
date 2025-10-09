@@ -20,7 +20,6 @@
 #ifndef DOCKINGPANEMANAGER_H
 #define DOCKINGPANEMANAGER_H
 
-#include "DockingPanes_global.h"
 #include <QWidget>
 
 class QBoxLayout;
@@ -35,7 +34,7 @@ class DockingPaneTitleWidget;
 class DockingPaneFlyoutWidget;
 class DockAutoHideButton;
 
-class DOCKINGPANESSHARED_EXPORT DockingPaneManager : QObject
+class DockingPaneManager : QObject
 {
     Q_OBJECT
 
