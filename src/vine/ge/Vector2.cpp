@@ -1,6 +1,7 @@
 
 #include <vine/ge/Vector2.hpp>
 
+#include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <type_traits>
@@ -66,15 +67,28 @@ TMPL_PREFIX T Vector2<T>::normalize()
     return len;
 }
 
-TMPL_PREFIX T Vector2<T>::dot(const Vector2<T>& other)
+TMPL_PREFIX T Vector2<T>::dot(const Vector2<T>& other) const
     requires(FP<T>)
 {
     return x * other.x + y * other.y;
 }
-TMPL_PREFIX T Vector2<T>::cross(const Vector2<T>& other)
+TMPL_PREFIX T Vector2<T>::cross(const Vector2<T>& other) const
     requires(FP<T>)
 {
     return x * other.y - y * other.x;
+}
+
+TMPL_PREFIX T Vector2<T>::angleTo(const Vector2<T>& other) const
+    requires(FP<T>)
+{
+    auto llen = length();
+    auto rlen = other.length();
+
+    if (llen == 0. || std::isnan(llen)) return T(0);
+
+    if (rlen == 0. || std::isnan(rlen)) return T(0);
+
+    return std::acos(std::clamp<T>(dot(other) / (llen * rlen), T(-1), T(1)));
 }
 
 TMPL_PREFIX bool Vector2<T>::isZero() const {
@@ -106,49 +120,115 @@ TMPL_PREFIX bool Vector2<T>::operator!=(const Vector2<T>& right) const {
 }
 
 TMPL_PREFIX Vector2<T> Vector2<T>::operator+(const Vector2<T>& right) const {
-    return Vector2<T>(x + right.x, y + right.y);
+    if constexpr (std::is_same_v<T, bool>) {
+        return Vector2<T>(x || right.x, y || right.y);
+    }
+    else {
+        return Vector2<T>(x + right.x, y + right.y);
+    }
 }
 
 TMPL_PREFIX Vector2<T> Vector2<T>::operator-(const Vector2<T>& right) const {
-    return Vector2<T>(x - right.x, y - right.y);
+    if constexpr (std::is_same_v<T, bool>) {
+        return Vector2<T>(x && !right.x, y && !right.y);
+    }
+    else {
+        return Vector2<T>(x - right.x, y - right.y);
+    }
 }
 
 TMPL_PREFIX Vector2<T> Vector2<T>::operator*(T scale) const {
     Vector2<T> v(x, y);
-    v.x *= scale;
-    v.y *= scale;
+
+    if constexpr (std::is_same_v<T, bool>) {
+        v.x = v.x && scale;
+        v.y = v.y && scale;
+    }
+    else {
+        v.x *= scale;
+        v.y *= scale;
+    }
+
     return v;
 }
 
 TMPL_PREFIX Vector2<T> Vector2<T>::operator/(T scale) const {
     Vector2<T> v(x, y);
-    v.x /= scale;
-    v.y /= scale;
+
+    if constexpr (std::is_same_v<T, bool>) {
+        v.x = v.x && scale;
+        v.y = v.y && scale;
+    }
+    else {
+        v.x /= scale;
+        v.y /= scale;
+    }
+
     return v;
 }
 
 TMPL_PREFIX Vector2<T>& Vector2<T>::operator+=(const Vector2<T>& right) {
-    x += right.x;
-    y += right.y;
+    if constexpr (std::is_same_v<T, bool>) {
+        x = x || right.x;
+        y = y || right.y;
+    }
+    else {
+        x += right.x;
+        y += right.y;
+    }
+
     return *this;
 }
 
 TMPL_PREFIX Vector2<T>& Vector2<T>::operator-=(const Vector2<T>& right) {
-    x -= right.x;
-    y -= right.y;
+    if constexpr (std::is_same_v<T, bool>) {
+        x = x && !right.x;
+        y = y && !right.y;
+    }
+    else {
+        x -= right.x;
+        y -= right.y;
+    }
+
     return *this;
 }
 
 TMPL_PREFIX Vector2<T>& Vector2<T>::operator*=(T scale) {
-    x *= scale;
-    y *= scale;
+    if constexpr (std::is_same_v<T, bool>) {
+        x = x && scale;
+        y = y && scale;
+    }
+    else {
+        x *= scale;
+        y *= scale;
+    }
+
     return *this;
 }
 
 TMPL_PREFIX Vector2<T>& Vector2<T>::operator/=(T scale) {
-    x /= scale;
-    y /= scale;
+    if constexpr (std::is_same_v<T, bool>) {
+        x = x && scale;
+        y = y && scale;
+    }
+    else {
+        x /= scale;
+        y /= scale;
+    }
+
     return *this;
+}
+
+TMPL_PREFIX T Vector2<T>::operator*(const Vector2<T>& other) const
+    requires(FP<T>)
+{
+    return dot(other);
+}
+
+TMPL_PREFIX T Vector2<T>::operator^(const Vector2<T>& other) const
+    requires(FP<T>)
+{
+    return cross(other);
 }
 
 TMPL_PREFIX T& Vector2<T>::operator[](size_t index) {

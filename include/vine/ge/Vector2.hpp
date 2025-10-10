@@ -37,9 +37,12 @@ template <typename T> class Vector2 {
     T normalize()
         requires(FP<T>);
 
-    T dot(const Vector2<T>& other)
+    T dot(const Vector2<T>& other) const
         requires(FP<T>);
-    T cross(const Vector2<T>& other)
+    T cross(const Vector2<T>& other) const
+        requires(FP<T>);
+
+    T angleTo(const Vector2<T>& other) const
         requires(FP<T>);
 
     bool isZero() const;
@@ -62,6 +65,11 @@ template <typename T> class Vector2 {
     Vector2<T>& operator-=(const Vector2<T>& right);
     Vector2<T>& operator*=(T scale);
     Vector2<T>& operator/=(T scale);
+
+    T operator*(const Vector2<T>& other) const
+        requires(FP<T>);
+    T operator^(const Vector2<T>& other) const
+        requires(FP<T>);
 
     T&       operator[](size_t index);
     const T& operator[](size_t index) const;
