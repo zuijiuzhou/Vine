@@ -6,10 +6,17 @@ VI_GE_NS_BEGIN
 
 TMPL_PREFIX Plane<T>::Plane(const Point3<T>& origin, const Vector3<T>& normal)
   : origin(origin)
-  , normal(normal) {
+  , normal(normal)
+{}
+
+TMPL_PREFIX bool Plane<T>::intersectWith(const Line<T>& line, Point3<T>& intersectionPt, T tol) const
+{
+    return false;
 }
 
-TMPL_PREFIX bool Plane<T>::intersectWith(const Line<T>& line, Point3<T>& intersectionPt, T tol) const {
+TMPL_PREFIX
+bool Plane<T>::intersectWith(const Plane<T>& plane, Line<T>& intersectionLine, T tol) const
+{
     return false;
 }
 

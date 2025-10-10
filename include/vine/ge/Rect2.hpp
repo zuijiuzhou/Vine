@@ -8,7 +8,13 @@
 #include "Vector2.hpp"
 
 VI_GE_NS_BEGIN
-template <typename T> class Rect2 {
+
+/**
+ * @brief 
+ * @tparam T 
+ */
+template <typename T>
+class Rect2 {
   public:
     Rect2();
     Rect2(const Point2<T>& top_left, const Vector2<T>& size);

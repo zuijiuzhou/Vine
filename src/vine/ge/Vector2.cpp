@@ -128,108 +128,62 @@ TMPL_PREFIX bool Vector2<T>::operator!=(const Vector2<T>& right) const
 
 TMPL_PREFIX Vector2<T> Vector2<T>::operator+(const Vector2<T>& right) const
 {
-    if constexpr (std::is_same_v<T, bool>) {
-        return Vector2<T>(x || right.x, y || right.y);
-    }
-    else {
-        return Vector2<T>(x + right.x, y + right.y);
-    }
+    return Vector2<T>(advance_add(x, right.x), advance_add(y, right.y));
 }
 
 TMPL_PREFIX Vector2<T> Vector2<T>::operator-(const Vector2<T>& right) const
 {
-    if constexpr (std::is_same_v<T, bool>) {
-        return Vector2<T>(x && !right.x, y && !right.y);
-    }
-    else {
-        return Vector2<T>(x - right.x, y - right.y);
-    }
+    return Vector2<T>(advance_sub(x, right.x), advance_sub(y, right.y));
 }
 
 TMPL_PREFIX Vector2<T> Vector2<T>::operator*(T scale) const
 {
-    Vector2<T> v(x, y);
+    Vector2<T> v;
 
-    if constexpr (std::is_same_v<T, bool>) {
-        v.x = v.x && scale;
-        v.y = v.y && scale;
-    }
-    else {
-        v.x *= scale;
-        v.y *= scale;
-    }
+    v.x = advance_multiply(x, scale);
+    v.y = advance_multiply(y, scale);
 
     return v;
 }
 
 TMPL_PREFIX Vector2<T> Vector2<T>::operator/(T scale) const
 {
-    Vector2<T> v(x, y);
+    Vector2<T> v;
 
-    if constexpr (std::is_same_v<T, bool>) {
-        v.x = v.x && scale;
-        v.y = v.y && scale;
-    }
-    else {
-        v.x /= scale;
-        v.y /= scale;
-    }
+    v.x = advance_division(x, scale);
+    v.y = advance_division(y, scale);
 
     return v;
 }
 
 TMPL_PREFIX Vector2<T>& Vector2<T>::operator+=(const Vector2<T>& right)
 {
-    if constexpr (std::is_same_v<T, bool>) {
-        x = x || right.x;
-        y = y || right.y;
-    }
-    else {
-        x += right.x;
-        y += right.y;
-    }
+    x = advance_add(x, right.x);
+    y = advance_add(y, right.y);
 
     return *this;
 }
 
 TMPL_PREFIX Vector2<T>& Vector2<T>::operator-=(const Vector2<T>& right)
 {
-    if constexpr (std::is_same_v<T, bool>) {
-        x = x && !right.x;
-        y = y && !right.y;
-    }
-    else {
-        x -= right.x;
-        y -= right.y;
-    }
+    x = advance_sub(x, right.x);
+    y = advance_sub(y, right.y);
 
     return *this;
 }
 
 TMPL_PREFIX Vector2<T>& Vector2<T>::operator*=(T scale)
 {
-    if constexpr (std::is_same_v<T, bool>) {
-        x = x && scale;
-        y = y && scale;
-    }
-    else {
-        x *= scale;
-        y *= scale;
-    }
+    x = advance_multiply(x, scale);
+    y = advance_multiply(y, scale);
 
     return *this;
 }
 
 TMPL_PREFIX Vector2<T>& Vector2<T>::operator/=(T scale)
 {
-    if constexpr (std::is_same_v<T, bool>) {
-        x = x && scale;
-        y = y && scale;
-    }
-    else {
-        x /= scale;
-        y /= scale;
-    }
+    x = advance_division(x, scale);
+    y = advance_division(y, scale);
 
     return *this;
 }

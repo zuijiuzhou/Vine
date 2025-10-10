@@ -39,6 +39,12 @@ template <typename T>
 concept Real = FP<T> || Integer<T>;
 
 /**
+ * @brief Arithmetic concept, includes all floating point and integer types (include boolean)
+ */
+template <typename T>
+concept Arithmetic = FP<T> || Integral<T>;
+
+/**
  * @brief double for integer types, and T itself for floating point types
  */
 template <typename T> using LengthType = std::conditional_t<std::is_integral_v<T>, double, T>;

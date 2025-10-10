@@ -5,9 +5,17 @@
 #include <cstdint>
 
 VI_GE_NS_BEGIN
-template <typename T> class Point3;
-template <typename T> class Vector3;
-template <typename T> class Rect3 {
+template <typename T>
+class Point3;
+template <typename T>
+class Vector3;
+
+/**
+ * @brief 
+ * @tparam T 
+ */
+template <typename T>
+class Rect3 {
   public:
     Rect3();
     Rect3(const Point3<T>& top_left, const Vector3<T>& size);
@@ -31,7 +39,6 @@ template <typename T> class Rect3 {
     void expandBy(const Rect3<T>& rect);
 
     Rect3<T> intersectWith(const Rect3<T>& rect);
-
 
     bool operator==(const Rect3<T>& right) const;
     bool operator!=(const Rect3<T>& right) const;

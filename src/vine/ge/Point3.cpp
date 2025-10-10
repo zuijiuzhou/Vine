@@ -6,6 +6,8 @@
 #include <vine/ge/Point2.hpp>
 #include <vine/ge/Vector3.hpp>
 
+#include "Comm.hpp"
+
 VI_GE_NS_BEGIN
 
 #define TMPL_PREFIX template <typename T>
@@ -73,29 +75,31 @@ TMPL_PREFIX bool Point3<T>::operator!=(const Point3<T>& right) const
     return !(*this == right);
 }
 
-TMPL_PREFIX Vector3<T> Point3<T>::operator-(const Point3<T>& right) const
-{
-    return Vector3<T>(x - right.x, y - right.y, z - right.z);
-}
-
 TMPL_PREFIX Point3<T> Point3<T>::operator+(const Vector3<T>& right) const
 {
-    return Point3<T>(x + right.x, y + right.y, z + right.z);
+    return Point3<T>(advance_add(x, right.x), advance_add(y, right.y), advance_add(z, right.z));
+}
+
+TMPL_PREFIX Vector3<T> Point3<T>::operator-(const Point3<T>& right) const
+{
+    return Vector3<T>(advance_sub(x, right.x), advance_sub(y, right.y), advance_sub(z, right.z));
 }
 
 TMPL_PREFIX Point3<T>& Point3<T>::operator+=(const Vector3<T>& right)
 {
-    x += right.x;
-    y += right.y;
-    z += right.z;
+    x = advance_add(x, right.x);
+    y = advance_add(y, right.y);
+    z = advance_add(z, right.z);
+
     return *this;
 }
 
 TMPL_PREFIX Point3<T>& Point3<T>::operator-=(const Vector3<T>& right)
 {
-    x -= right.x;
-    y -= right.y;
-    z -= right.z;
+    x = advance_sub(x, right.x);
+    y = advance_sub(y, right.y);
+    z = advance_sub(z, right.z);
+
     return *this;
 }
 

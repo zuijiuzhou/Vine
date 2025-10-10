@@ -4,11 +4,13 @@
 #include "Vector3.hpp"
 
 VI_GE_NS_BEGIN
+
 /**
- * @brief 
+ * @brief
  * @tparam T Only accepts float and double.
  */
-template <typename T> class Line {
+template <typename T>
+class Line {
   public:
     Line(const Point3<T>& origin, const Vector3<T>& direction);
 

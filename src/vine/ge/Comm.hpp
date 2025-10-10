@@ -46,4 +46,48 @@ inline LengthType<T> multiply_safe(T first, T second)
     }
 }
 
+template <Arithmetic T>
+inline T advance_add(T left, T right)
+{
+    if constexpr (std::is_same_v<T, bool>) {
+        return left || right;
+    }
+    else {
+        return left + right;
+    }
+}
+
+template <Arithmetic T>
+inline T advance_sub(T left, T right)
+{
+    if constexpr (std::is_same_v<T, bool>) {
+        return left && !right;
+    }
+    else {
+        return left - right;
+    }
+}
+
+template <Arithmetic T>
+inline T advance_multiply(T left, T right)
+{
+    if constexpr (std::is_same_v<T, bool>) {
+        return left && right;
+    }
+    else {
+        return left * right;
+    }
+}
+
+template <Arithmetic T>
+inline T advance_division(T left, T right)
+{
+    if constexpr (std::is_same_v<T, bool>) {
+        return left && right;
+    }
+    else {
+        return left / right;
+    }
+}
+
 VI_GE_NS_END

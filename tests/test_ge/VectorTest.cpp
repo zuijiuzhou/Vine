@@ -1,13 +1,12 @@
 ﻿#include <gtest/gtest.h>
 
 #include <vine/ge/Math.hpp>
-#include <vine/ge/Vector2.hpp>
+#include <vine/ge/Vector4.hpp>
 
 using namespace vine::ge;
 
-
-
-TEST(Vector, cross) {
+TEST(Vector, cross)
+{
     // Vec3f v1(1, 9, 10);
     // Vec3f v2(-1, 1, 0);
     // Vec3f v3(-1, -1, 0);
@@ -16,6 +15,19 @@ TEST(Vector, cross) {
 
     // Vector2<bool> vb1;
 
-    Vector2<float> v1(1, 0);
-    Vector2<int> v2(0, 1);
+    Vec4i v1(1, 2, 3, 4);
+    Vec4i v2(10, 11, 12, 13);
+
+    auto v3 = v1 + v2;
+    auto v4 = v1 - v2;
+    auto v6 = v1 * 10;
+
+    Vec4b b1(true, false, true, false);
+    Vec4b b2(false, false, true, true);
+
+    auto b3 = b2 / true;
+    auto b4 = b1 * true;
+    auto b5 = b1 + b2;
+    auto b6 = b1 - b2;
+
 }

@@ -6,8 +6,10 @@
 
 VI_GE_NS_BEGIN
 
-template <typename T> class Point3;
-template <typename T> class Vector3;
+template <typename T>
+class Point3;
+template <typename T>
+class Vector3;
 
 /*
 COLUMN MAJOR MATRIX
@@ -16,7 +18,8 @@ M01 M11 M21 M31
 M02 M12 M22 M32
 M03 M13 M23 M33
  */
-template <typename T> class Matrix4x4 {
+template <typename T>
+class Matrix4x4 {
   public:
     using ValueType = T;
     using ThisType  = Matrix4x4<T>;
@@ -66,8 +69,10 @@ template <typename T> class Matrix4x4 {
     Vector4<T> cols[4];
 };
 
-template <typename T> Vector3<T> operator*(const Matrix4x4<T>& m, const Vector3<T>& v);
-template <typename T> Point3<T>  operator*(const Matrix4x4<T>& m, const Point3<T>& p);
+template <typename T>
+Vector3<T> operator*(const Matrix4x4<T>& m, const Vector3<T>& v);
+template <typename T>
+Point3<T> operator*(const Matrix4x4<T>& m, const Point3<T>& p);
 
 using Mat4f = Matrix4x4<float>;
 using Mat4d = Matrix4x4<double>;

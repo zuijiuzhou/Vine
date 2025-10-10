@@ -265,7 +265,7 @@ BinPackArguments: false
 #        int ccccccccccccccccccccccccccccccccccccccccccc);
 # -- OnePerLine - Put all parameters on the current line if they fit. Otherwise, put each one on its own line.
 # void f(int a, int b, int c);
-;
+#
 # void f(int a,
 #        int b,
 #        int ccccccccccccccccccccccccccccccccccccc);

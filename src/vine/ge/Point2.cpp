@@ -7,6 +7,8 @@
 #include <vine/ge/Math.hpp>
 #include <vine/ge/Vector2.hpp>
 
+#include "Comm.hpp"
+
 VI_GE_NS_BEGIN
 
 #define TMPL_PREFIX template <typename T>
@@ -66,27 +68,29 @@ TMPL_PREFIX bool Point2<T>::operator!=(const Point2<T>& right) const
     return !(*this == right);
 }
 
-TMPL_PREFIX Vector2<T> Point2<T>::operator-(const Point2<T>& right) const
-{
-    return Vector2<T>(x - right.x, y - right.y);
-}
-
 TMPL_PREFIX Point2<T> Point2<T>::operator+(const Vector2<T>& right) const
 {
-    return Point2<T>(x + right.x, y + right.y);
+    return Point2<T>(advance_add(x, right.x), advance_add(y, right.y));
+}
+
+TMPL_PREFIX Vector2<T> Point2<T>::operator-(const Point2<T>& right) const
+{
+    return Vector2<T>(advance_sub(x, right.x), advance_sub(y, right.y));
 }
 
 TMPL_PREFIX Point2<T>& Point2<T>::operator+=(const Vector2<T>& right)
 {
-    x += right.x;
-    y += right.y;
+    x = advance_add(x, right.x);
+    y = advance_add(y, right.y);
+
     return *this;
 }
 
 TMPL_PREFIX Point2<T>& Point2<T>::operator-=(const Vector2<T>& right)
 {
-    x -= right.x;
-    y -= right.y;
+    x = advance_sub(x, right.x);
+    y = advance_sub(y, right.y);
+
     return *this;
 }
 
