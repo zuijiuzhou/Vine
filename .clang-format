@@ -24,7 +24,6 @@ TabWidth: 4
 # -- 0 - NoLimit
 ColumnLimit: 120
 
-
 #####################################################################################
 #####################################################################################
 
@@ -100,15 +99,92 @@ PointerAlignment: Left
 # -- Right - Align array column and right justify the columns.
 AlignArrayOfStructures: Left
 
+# If a function call or braced initializer list doesn’t fit on a line, allow putting all arguments onto the next line
+# 注意：为true时不会控制参数是否每个一行
+# true:
+# callFunction(
+#     a, b, c, d);
+#
+# false:
+# callFunction(a,
+#              b,
+#              c,
+#              d);
+AllowAllArgumentsOnNextLine: false
+
 # 函数声明的所有参数在放在下一行
 # If the function declaration doesn’t fit on a line, allow putting all parameters of a function declaration onto the next line even if BinPackParameters is false.
+# true:
+# void myFunction(
+#     int a, int b, int c, int d, int e);
+#
+# false:
+# void myFunction(int a,
+#                 int b,
+#                 int c,
+#                 int d,
+#                 int e);
 AllowAllParametersOfDeclarationOnNextLine: false
 
+# Controls if there could be a line break before a noexcept specifier.
+# -- Never - No line break allowed.
+# -- OnlyWithParen - For a simple noexcept there is no line break allowed, but when we have a condition it is.
+# -- Always - Line breaks are allowed. But note that because of the associated penalties clang-format often prefers not to break before the noexcept.
+AllowBreakBeforeNoexceptSpecifier: Never
+
 # 是否允许短的代码块放在同一行
-AllowShortBlocksOnASingleLine: false
+# -- Never - Never merge blocks into a single line.
+# -- Empty - Only merge empty blocks.
+# -- Always - Always merge short blocks into a single line.
+AllowShortBlocksOnASingleLine: Always
+
+# Whether to merge a short switch labeled rule into a single line.
+# true:                               false:
+# switch (a) {           vs.          switch (a) {
+# case 1 -> 1;                        case 1 ->
+# default -> 0;                         1;
+# }#                                  default ->
+#                                       0;
+#                                     };
+AllowShortCaseExpressionOnASingleLine: true
 
 # 短的case标签和语句放在同一行
+# true:                                   false:
+# switch (a) {                    vs.     switch (a) {
+# case 1: x = 1# break#                   case 1:
+# case 2: return#                           x = 1;
+# }                                         break;
+#                                         case 2:
+#                                           return;
+#                                         }
 AllowShortCaseLabelsOnASingleLine: true
+
+# If a function declaration or definition doesn’t fit on a line, allow putting all parameters onto the next line
+# true:
+# template <typename T>
+# concept c = requires(T x) {
+#   { x + 1 } -> std::same_as<int>;
+# };
+#
+# false:
+# template <typename T>
+# concept c = requires(T x) {
+#   {
+#     x + 1
+#   } -> std::same_as<int>;
+# };
+AllowShortCompoundRequirementOnASingleLine: true
+
+# Allow short enums on a single line.
+# true:
+# enum { A, B } myEnum;
+#
+# false:
+# enum {
+#   A,
+#   B
+# } myEnum;
+AllowShortEnumsOnASingleLine: false
 
 # 短的函数放在同一行
 # -- None - 不把短的函数放在同一行
@@ -116,17 +192,27 @@ AllowShortCaseLabelsOnASingleLine: true
 # -- Empty - 只把空的函数放在同一行
 # -- Inline - 把类内的内联函数放在同一行，全局的空函数不放在同一行
 # -- All - 都允许放在同一行
-AllowShortFunctionsOnASingleLine: InlineOnly
+AllowShortFunctionsOnASingleLine: None
 
 # 短的if语句保持在同一行
-AllowShortIfStatementsOnASingleLine: true
+# -- Never - Never put short ifs on the same line.
+# -- WithoutElse -  Put short ifs on the same line only if there is no else statement.
+# -- OnlyFirstIf -  Put short ifs, but not else ifs nor else statements, on the same line.
+# -- AllIfsAndElse - Always put short ifs, else ifs and else statements on the same line.
+AllowShortIfStatementsOnASingleLine: Never
+
+# Dependent on the value, auto lambda []() { return 0# } can be put on a single line.
+# -- None - Never merge lambdas into a single line.
+# -- Empty - Only merge empty lambdas.
+# -- Inline - Merge lambda into a single line if the lambda is argument of a function.
+# -- All - Merge all lambdas fitting on a single line.
+AllowShortLambdasOnASingleLine: All
 
 # 短的循环保持在同一行
 AllowShortLoopsOnASingleLine: true
 
-# If a function call or braced initializer list doesn’t fit on a line, allow putting all arguments onto the next line
-# 注意：为true时不会控制参数是否每个一行
-AllowAllArgumentsOnNextLine: false
+# If true, namespace a { class b# } can be put on a single line.
+AllowShortNamespacesOnASingleLine: false
 
 # [deprecated]
 # PackConstructorInitializers
@@ -158,15 +244,43 @@ PackConstructorInitializers: Never
 
 # 函数调用时，参数的放置规则
 # -- false - 参数要么放在同一行，要么每个参数占用一行
+# false:
+# void f() {
+#   f(aaaaaaaaaaaaaaaaaaaa,
+#     aaaaaaaaaaaaaaaaaaaa,
+#     aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa);
+# }
 # -- true - 不做强制要求
+# void f() {
+#   f(aaaaaaaaaaaaaaaaaaaa, aaaaaaaaaaaaaaaaaaaa,
+#     aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa);
+# }
 BinPackArguments: false
 
 # 函数声明、定义时，参数的放置规则
 # -- false - 参数要么放在同一行，要么每个参数占用一行
 # -- true - 不做强制要求
+# -- BinPack -  Bin-pack parameters.
+# void f(int a, int bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb,
+#        int ccccccccccccccccccccccccccccccccccccccccccc);
+# -- OnePerLine - Put all parameters on the current line if they fit. Otherwise, put each one on its own line.
+# void f(int a, int b, int c);
+;
+# void f(int a,
+#        int b,
+#        int ccccccccccccccccccccccccccccccccccccc);
+# -- AlwaysOnePerLine - Always put each parameter on its own line.
+# void f(int a,
+#        int b,
+#        int c);
 BinPackParameters: false
 
-#BreakTemplateDeclarations: Yes
+# The template declaration breaking style to use.
+# -- Leave - Do not change the line breaking before the declaration.
+# -- No - Do not force break before declaration. PenaltyBreakTemplateDeclaration is taken into account.
+# -- MultiLine -  Force break after template declaration only when the following declaration spans multiple lines.
+# -- Yes -  Always break after template declaration.
+BreakTemplateDeclarations: Yes
 
 BreakBeforeConceptDeclarations: Always
 
@@ -188,16 +302,76 @@ BraceWrapping:
   AfterEnum: true
   AfterStruct: false
   AfterClass: false
-  AfterControlStatement: false
+  # -- Never - Never wrap braces after a control statement.
+  # -- MultiLine - Only wrap braces after a multi-line control statement.
+  # -- Always - Always wrap braces after a control statement.
+  AfterControlStatement: MultiLine
   AfterCaseLabel: true
+  AfterFunction: true
+  AfterNamespace: true
+  AfterUnion: true
+  AfterExternBlock: true
   BeforeElse: true
   BeforeCatch: true
+  BeforeLambdaBody: false
+  BeforeWhile: true
+  # false:          true:
+  # int f()   vs.   int f()
+  # {}              {
+  #                 }
+  SplitEmptyFunction: false
+  # false:           true:
+  # class Foo   vs.  class Foo
+  # {}               {
+  #                  }
+  SplitEmptyRecord: false
+  # false:               true:
+  # namespace Foo   vs.  namespace Foo
+  # {}                   {
+  #                      }
+  SplitEmptyNamespace: false
 
 # 在三元运算符前换行
 # 当三元表达式不能放在同一行时，是否在三元操作符前方换行
 # -- true - 操作符位于新行的首部
 # -- false - 操作符位于上一行的尾部
 BreakBeforeTernaryOperators: true
+
+# The number of columns to use to indent the contents of braced init lists. If unset, ContinuationIndentWidth is used.
+# void f() {
+#   SomeClass c{
+#     "foo",
+#     "bar",
+#     "baz",
+#   };
+#   auto s = SomeStruct{
+#     .foo = "foo",
+#     .bar = "bar",
+#     .baz = "baz",
+#   };
+#   SomeArrayT a[3] = {
+#     {
+#       foo,
+#       bar,
+#     },
+#     {
+#       foo,
+#       bar,
+#     },
+#     SomeArrayT{},
+#   };
+# }
+BracedInitializerIndentWidth: 2
+
+# Break between adjacent string literals.
+# true:
+# return "Code"
+#        "\0\52\26\55\55\0"
+#        "x013"
+#        "\02\xBA";
+# false:
+# return "Code" "\0\52\26\55\55\0" "x013" "\02\xBA";
+BreakAdjacentStringLiterals: true
 
 # 是否自动修正命名空间的结束注释
 # -- true - 在短的命名空间尾部，自动添加或修改错误的命名空间结束注释
@@ -219,8 +393,40 @@ ForEachMacros:
   - Q_FOREACH
   - BOOST_FOREACH
 
+# The indentation used for requires expression bodies.
+# -- OuterScope -  Align requires expression body relative to the indentation level of the outer scope the requires expression resides in. This is the default.
+# -- Keyword -  Align requires expression body relative to the requires keyword.
+RequiresExpressionIndentation: OuterScope
+
+# Remove empty lines within unwrapped lines.
+# false:                            true:
+#
+# int c                  vs.        int c = a + b;
+#
+#     = a + b;
+#
+# enum : unsigned        vs.        enum : unsigned {
+#                                     AA = 0,
+# {                                   BB
+#   AA = 0,                         } myEnum;
+#   BB
+# } myEnum;
+#
+# while (                vs.        while (true) {
+#                                   }
+#     true) {
+# }
+RemoveEmptyLinesInUnwrappedLines: true
+
 # 如果为真（true）, clang-format 将会分类#includes.
+# Controls if and how clang-format will sort #includes.
+# -- Never - Includes are never sorted.
+# -- CaseSensitive - Includes are sorted in an ASCIIbetical or case sensitive fashion.
+# -- CaseInsensitive - Includes are sorted in an alphabetical or case insensitive fashion.
 SortIncludes: true
+
+# Specifies the use of empty lines to separate definition blocks, including classes, structs, enums, and functions.
+SeparateDefinitionBlocks: Always
 
 # 多个 include 块（有空行分隔的include）排序时的分组规则
 # -- Preserve - 保留原有的块分隔，各自排序
@@ -233,3 +439,36 @@ IncludeBlocks: Preserve
 # -- AfterHash - 在前导'#'后缩进，'#'放在最左侧，之后的语句参与缩进
 # -- BeforeHash - 在前导'#'前进行缩进
 IndentPPDirectives: AfterHash
+
+# Indent the requires clause in a template. This only applies when RequiresClausePosition is OwnLine, OwnLineWithBrace, or WithFollowing.
+# true:
+# template <typename It>
+#   requires Iterator<It>
+# void sort(It begin, It end) {
+#   //....
+# }
+#
+# false:
+# template <typename It>
+# requires Iterator<It>
+# void sort(It begin, It end) {
+#   //....
+# }
+IndentRequiresClause: true
+
+# The position of the requires clause.
+# -- OwnLine - Always put the requires clause on its own line (possibly followed by a semicolon).
+# -- OwnLineWithBrace - As with OwnLine, except, unless otherwise prohibited, place a following open brace (of a function definition) to follow on the same line.
+# -- WithPreceding - Try to put the clause together with the preceding part of a declaration. For class templates: stick to the template declaration. For function templates: stick to the template declaration. For function declaration followed by a requires clause: stick to the parameter list.
+# -- WithFollowing -  Try to put the requires clause together with the class or function declaration.
+# -- SingleLine - Try to put everything in the same line if possible. Otherwise normal line breaking rules take over.
+RequiresClausePosition: WithPreceding
+
+# Wrap namespace body with empty lines.
+# -- Never - Remove all empty lines at the beginning and the end of namespace body.
+# -- Always - Always have at least one empty line at the beginning and the end of namespace body except that the number of empty lines between consecutive nested namespace definitions is not increased.
+# -- Leave -  Keep existing newlines at the beginning and the end of namespace body. MaxEmptyLinesToKeep still applies.
+WrapNamespaceBodyWithEmptyLines: Always
+
+# A vector of macros that should be interpreted as type declarations instead of as function calls.
+TypenameMacros: []
