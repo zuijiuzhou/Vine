@@ -94,14 +94,14 @@ TMPL_PREFIX void Matrix4x4<T>::makeScale(T factor) {
     cols[2][2] = factor;
 }
 TMPL_PREFIX void Matrix4x4<T>::makeLookAt(const Point3<T>& eye, const Point3<T>& target, const Vector3<T>& up) {
-    auto f = eye - target;
-    auto s = cross(up, f);
-    auto u = cross(f, s);
-    normalize(f);
-    normalize(s);
-    normalize(u);
-    setCoordSystem(eye, s, u, f);
-    invert();
+    // auto f = eye - target;
+    // auto s = cross(up, f);
+    // auto u = cross(f, s);
+    // normalize(f);
+    // normalize(s);
+    // normalize(u);
+    // setCoordSystem(eye, s, u, f);
+    // invert();
 }
 TMPL_PREFIX void Matrix4x4<T>::setCoordSystem(const Point3<T>&  origin,
                                               const Vector3<T>& xAxis,

@@ -4,6 +4,8 @@
 #include <cstdint>
 #include <cstddef>
 
+#include "Types.hpp"
+
 VI_GE_NS_BEGIN
 
 template <typename T> class Point3;
@@ -30,6 +32,11 @@ template <typename T> class Vector3 {
     const Vector2<T>& asVector2() const;
 
     bool isZero() const;
+    bool isZero(T eps) const
+        requires(FP<T>);
+    bool isEqual(const Vector3<T>& other) const;
+    bool isEqual(const Vector3<T>& other, T eps) const
+        requires(FP<T>);
 
   public:
     bool operator==(const Vector3<T>& right) const;

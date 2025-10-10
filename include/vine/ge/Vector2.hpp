@@ -3,8 +3,10 @@
 #include "ge_global.hpp"
 
 #include <concepts>
-#include <cstdint>
 #include <cstddef>
+#include <cstdint>
+
+#include "Types.hpp"
 
 VI_GE_NS_BEGIN
 template <typename T> class Point2;
@@ -28,7 +30,24 @@ template <typename T> class Vector2 {
     Point2<T>        toPoint() const;
     const Point2<T>& asPoint() const;
 
+    T length() const
+        requires(FP<T>);
+    T length2() const
+        requires(FP<T>);
+    T normalize()
+        requires(FP<T>);
+
+    T dot(const Vector2<T>& other)
+        requires(FP<T>);
+    T cross(const Vector2<T>& other)
+        requires(FP<T>);
+
     bool isZero() const;
+    bool isZero(T eps) const
+        requires(FP<T>);
+    bool isEqual(const Vector2<T>& other) const;
+    bool isEqual(const Vector2<T>& other, T eps) const
+        requires(FP<T>);
 
   public:
     bool operator==(const Vector2<T>& right) const;

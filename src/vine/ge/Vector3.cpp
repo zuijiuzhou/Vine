@@ -4,6 +4,7 @@
 #include <stdexcept>
 
 
+#include <vine/ge/Math.hpp>
 #include <vine/ge/Point3.hpp>
 #include <vine/ge/Vector2.hpp>
 
@@ -18,11 +19,13 @@ TMPL_PREFIX Vector3<T>::Vector3()
   , y(0)
   , z(0) {
 }
+
 TMPL_PREFIX Vector3<T>::Vector3(const Vector2<T>& v, T zz)
   : x(v.x)
   , y(v.y)
   , z(zz) {
 }
+
 TMPL_PREFIX Vector3<T>::Vector3(T xx, T yy, T zz)
   : x(xx)
   , y(yy)
@@ -34,6 +37,7 @@ TMPL_PREFIX void Vector3<T>::set(T xx, T yy, T zz) {
     y = yy;
     z = zz;
 }
+
 TMPL_PREFIX void Vector3<T>::get(T& xx, T& yy, T& zz) const {
     xx = x;
     yy = y;
@@ -43,27 +47,51 @@ TMPL_PREFIX void Vector3<T>::get(T& xx, T& yy, T& zz) const {
 TMPL_PREFIX Point3<T> Vector3<T>::toPoint() const {
     return Point3<T>(x, y, z);
 }
+
 TMPL_PREFIX const Point3<T>& Vector3<T>::asPoint() const {
     return reinterpret_cast<const Point3<T>&>(*this);
 }
+
 TMPL_PREFIX const Vector2<T>& Vector3<T>::asVector2() const {
     return reinterpret_cast<const Vector2<T>&>(*this);
 }
+
 TMPL_PREFIX bool Vector3<T>::isZero() const {
-    return x == T(0) && y == T(0) && z == T(0);
+    return x == T() && y == T() && z == T();
 }
+
+TMPL_PREFIX bool Vector3<T>::isZero(T eps) const
+    requires(FP<T>)
+{
+    return ge::isZero<T>(x, eps) && ge::isZero<T>(y, eps) && ge::isZero<T>(z, eps);
+}
+
+TMPL_PREFIX bool Vector3<T>::isEqual(const Vector3<T>& other) const {
+    return *this == other;
+}
+
+TMPL_PREFIX bool Vector3<T>::isEqual(const Vector3<T>& other, T eps) const
+    requires(FP<T>)
+{
+    return ge::isEqual<T>(x, other.x, eps) && ge::isEqual<T>(y, other.y, eps) && ge::isEqual<T>(z, other.z, eps);
+}
+
 TMPL_PREFIX bool Vector3<T>::operator==(const Vector3<T>& right) const {
     return x == right.x && y == right.y && z == right.z;
 }
+
 TMPL_PREFIX bool Vector3<T>::operator!=(const Vector3<T>& right) const {
     return !(*this == right);
 }
+
 TMPL_PREFIX Vector3<T> Vector3<T>::operator+(const Vector3<T>& right) const {
     return Vector3<T>(x + right.x, y + right.y, z + right.z);
 }
+
 TMPL_PREFIX Vector3<T> Vector3<T>::operator-(const Vector3<T>& right) const {
     return Vector3<T>(x - right.x, y - right.y, z - right.z);
 }
+
 TMPL_PREFIX Vector3<T> Vector3<T>::operator*(T scale) const {
     Vector3<T> v(*this);
     v.x *= scale;
@@ -71,6 +99,7 @@ TMPL_PREFIX Vector3<T> Vector3<T>::operator*(T scale) const {
     v.z *= scale;
     return v;
 }
+
 TMPL_PREFIX Vector3<T> Vector3<T>::operator/(T scale) const {
     Vector3<T> v(*this);
     v.x /= scale;
@@ -78,34 +107,40 @@ TMPL_PREFIX Vector3<T> Vector3<T>::operator/(T scale) const {
     v.z /= scale;
     return v;
 }
+
 TMPL_PREFIX Vector3<T>& Vector3<T>::operator+=(const Vector3<T>& right) {
     x += right.x;
     y += right.y;
     z += right.z;
     return *this;
 }
+
 TMPL_PREFIX Vector3<T>& Vector3<T>::operator-=(const Vector3<T>& right) {
     x -= right.x;
     y -= right.y;
     z -= right.z;
     return *this;
 }
+
 TMPL_PREFIX Vector3<T>& Vector3<T>::operator*=(T scale) {
     x *= scale;
     y *= scale;
     z *= scale;
     return *this;
 }
+
 TMPL_PREFIX Vector3<T>& Vector3<T>::operator/=(T scale) {
     x /= scale;
     y /= scale;
     z /= scale;
     return *this;
 }
+
 TMPL_PREFIX T& Vector3<T>::operator[](size_t index) {
     assert(index < 3);
     return data[index];
 }
+
 TMPL_PREFIX const T& Vector3<T>::operator[](size_t index) const {
     assert(index < 3);
     return data[index];

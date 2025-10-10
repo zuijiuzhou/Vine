@@ -2,8 +2,10 @@
 
 #include "ge_global.hpp"
 
-#include <cstdint>
 #include <cstddef>
+#include <cstdint>
+
+#include "Types.hpp"
 
 VI_GE_NS_BEGIN
 
@@ -26,6 +28,13 @@ template <typename T> class Point2 {
     const Vector2<T>& asVector() const;
     Vector2<T>        toVector() const;
     double            distanceTo(const Point2<T>& pt) const;
+
+    bool isZero() const;
+    bool isZero(T eps) const
+        requires(FP<T>);
+    bool isEqual(const Point2<T>& other) const;
+    bool isEqual(const Point2<T>& other, T eps) const
+        requires(FP<T>);
 
   public:
     bool       operator==(const Point2<T>& right) const;

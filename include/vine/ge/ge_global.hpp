@@ -1,7 +1,7 @@
 #pragma once
 
-#include <vine/pltdef.hpp>
-#include <vine/videf.hpp>
+#include "../pltdef.hpp"
+#include "../videf.hpp"
 
 #ifdef VI_GE_LIB
 #define VI_GE_API __API_EXPORT__
