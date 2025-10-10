@@ -56,7 +56,7 @@ TMPL_PREFIX bool Vector4<T>::isZero() const {
 }
 
 TMPL_PREFIX bool Vector4<T>::isZero(T eps) const
-    requires(FP<T>)
+    requires(Real<T>)
 {
     return ge::isZero<T>(x, eps) && ge::isZero<T>(y, eps) && ge::isZero<T>(z, eps) && ge::isZero<T>(w, eps);
 }
@@ -66,7 +66,7 @@ TMPL_PREFIX bool Vector4<T>::isEqual(const Vector4<T>& other) const {
 }
 
 TMPL_PREFIX bool Vector4<T>::isEqual(const Vector4<T>& other, T eps) const
-    requires(FP<T>)
+    requires(Real<T>)
 {
     return ge::isEqual<T>(x, other.x, eps) && ge::isEqual<T>(y, other.y, eps) && ge::isEqual<T>(z, other.z, eps) &&
            ge::isEqual<T>(w, other.w, eps);

@@ -10,6 +10,7 @@
 
 VI_GE_NS_BEGIN
 template <typename T> class Point2;
+
 /**
  * @brief
  * @tparam T Only accepts float double and integers
@@ -30,27 +31,18 @@ template <typename T> class Vector2 {
     Point2<T>        toPoint() const;
     const Point2<T>& asPoint() const;
 
-    T length() const
-        requires(FP<T>);
-    T length2() const
-        requires(FP<T>);
-    T normalize()
-        requires(FP<T>);
+    LengthType<T> length() const requires(Real<T>);
+    LengthType<T> length2() const requires(Real<T>);
+    LengthType<T> angleTo(const Vector2<T>& other) const requires(Real<T>);
+    LengthType<T> dot(const Vector2<T>& other) const requires(Real<T>);
+    LengthType<T> cross(const Vector2<T>& other) const requires(Real<T>);
 
-    T dot(const Vector2<T>& other) const
-        requires(FP<T>);
-    T cross(const Vector2<T>& other) const
-        requires(FP<T>);
-
-    T angleTo(const Vector2<T>& other) const
-        requires(FP<T>);
+    T normalize() requires(FP<T>);
 
     bool isZero() const;
-    bool isZero(T eps) const
-        requires(FP<T>);
+    bool isZero(T eps) const requires(Real<T>);
     bool isEqual(const Vector2<T>& other) const;
-    bool isEqual(const Vector2<T>& other, T eps) const
-        requires(FP<T>);
+    bool isEqual(const Vector2<T>& other, T eps) const requires(Real<T>);
 
   public:
     bool operator==(const Vector2<T>& right) const;
@@ -66,19 +58,19 @@ template <typename T> class Vector2 {
     Vector2<T>& operator*=(T scale);
     Vector2<T>& operator/=(T scale);
 
-    T operator*(const Vector2<T>& other) const
-        requires(FP<T>);
-    T operator^(const Vector2<T>& other) const
-        requires(FP<T>);
+    T operator*(const Vector2<T>& other) const requires(Real<T>);
+    T operator^(const Vector2<T>& other) const requires(Real<T>);
 
     T&       operator[](size_t index);
     const T& operator[](size_t index) const;
 
   public:
-    union {
+    union
+    {
         struct {
             T x, y;
         };
+
         T data[2];
     };
 };

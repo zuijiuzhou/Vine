@@ -20,8 +20,8 @@ constexpr double LN10   = 2.30258509299404568402;  // ln(10)
 constexpr float  EPSF = 1e-6f;
 constexpr double EPSD = 1e-8;
 
-template <FP T> bool isZero(T val, T eps);
-template <FP T> bool isEqual(T a, T b, T eps);
+template <Real T> bool isZero(T val, T eps);
+template <Real T> bool isEqual(T a, T b, T eps);
 
 // template <FP T> bool isZero(const Vector2<T>& vec2, T eps);
 // template <FP T> bool isZero(const Vector3<T>& vec3, T eps);

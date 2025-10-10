@@ -11,6 +11,7 @@ VI_GE_NS_BEGIN
 
 template <typename T> class Vector3;
 template <typename T> class Point2;
+
 /**
  * @brief
  * @tparam T Only accepts float double and integers
@@ -32,11 +33,9 @@ template <typename T> class Point3 {
     Vector3<T>        toVector() const;
 
     bool isZero() const;
-    bool isZero(T eps) const
-        requires(FP<T>);
+    bool isZero(T eps) const requires(Real<T>);
     bool isEqual(const Point3<T>& other) const;
-    bool isEqual(const Point3<T>& other, T eps) const
-        requires(FP<T>);
+    bool isEqual(const Point3<T>& other, T eps) const requires(Real<T>);
 
   public:
     bool       operator==(const Point3<T>& right) const;
@@ -50,13 +49,16 @@ template <typename T> class Point3 {
     const T& operator[](size_t index) const;
 
   public:
-    union {
+    union
+    {
         struct {
             T x, y, z;
         };
+
         T data[3];
     };
 };
+
 using Point3b    = Point3<bool>;
 using Point3i8   = Point3<int8_t>;
 using Point3ui8  = Point3<uint8_t>;

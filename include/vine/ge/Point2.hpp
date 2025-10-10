@@ -10,6 +10,7 @@
 VI_GE_NS_BEGIN
 
 template <typename T> class Vector2;
+
 /**
  * @brief
  * @tparam T Only accepts float double and integers
@@ -30,11 +31,9 @@ template <typename T> class Point2 {
     double            distanceTo(const Point2<T>& pt) const;
 
     bool isZero() const;
-    bool isZero(T eps) const
-        requires(FP<T>);
+    bool isZero(T eps) const requires(Real<T>);
     bool isEqual(const Point2<T>& other) const;
-    bool isEqual(const Point2<T>& other, T eps) const
-        requires(FP<T>);
+    bool isEqual(const Point2<T>& other, T eps) const requires(Real<T>);
 
   public:
     bool       operator==(const Point2<T>& right) const;
@@ -48,13 +47,13 @@ template <typename T> class Point2 {
     const T& operator[](size_t index) const;
 
   public:
-    union {
-        union {
-            struct {
-                T x, y;
-            };
-            T data[2];
+    union
+    {
+        struct {
+            T x, y;
         };
+
+        T data[2];
     };
 };
 

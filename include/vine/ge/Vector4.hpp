@@ -30,10 +30,10 @@ template <typename T> class Vector4 {
 
     bool isZero() const;
     bool isZero(T eps) const
-        requires(FP<T>);
+        requires(Real<T>);
     bool isEqual(const Vector4<T>& other) const;
     bool isEqual(const Vector4<T>& other, T eps) const
-        requires(FP<T>);
+        requires(Real<T>);
 
   public:
     bool operator==(const Vector4<T>& right) const;
