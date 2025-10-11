@@ -8,8 +8,12 @@
 
 VI_GE_NS_BEGIN
 
+/**
+ * @brief safe calculation of vector length squared, for floating point types, it is just normal calculation,
+ *        for integer types, it is promoted to double first, then calculated
+ */
 template <Real T, typename... Rest>
-inline LengthType<T> calc_vec_len2_safe(T first, Rest... rest)
+inline TypeF<T> calc_vec_len2_safe(T first, Rest... rest)
 {
     // static_assert((std::is_same_v<T, Rest> && ...), "All parameters must have type T");
 
@@ -17,7 +21,7 @@ inline LengthType<T> calc_vec_len2_safe(T first, Rest... rest)
         return first * first + (... + (rest * rest));
     }
     else {
-        using LT = LengthType<T>;
+        using LT = TypeF<T>;
 
         auto sum = static_cast<LT>(first) * static_cast<LT>(first);
 
@@ -27,25 +31,37 @@ inline LengthType<T> calc_vec_len2_safe(T first, Rest... rest)
     }
 }
 
+/**
+ * @brief safe calculation of vector length, for floating point types, it is just normal calculation,
+ *        for integer types, it is promoted to double first, then calculated
+ */
 template <Real T, typename... Rest>
-inline LengthType<T> calc_vec_len_safe(T first, Rest... rest)
+inline TypeF<T> calc_vec_len_safe(T first, Rest... rest)
 {
     return std::sqrt(calc_vec_len2_safe(first, rest...));
 }
 
+/**
+ * @brief safe multiplication, for floating point types, it is just normal multiplication,
+ *        for integer types, it is promoted to double first, then multiplied
+ */
 template <Real T>
-inline LengthType<T> multiply_safe(T first, T second)
+inline TypeF<T> multiply_safe(T first, T second)
 {
     if constexpr (FP<T>) {
         return first * second;
     }
     else {
-        using LT = LengthType<T>;
+        using LT = TypeF<T>;
 
         return static_cast<LT>(first) * static_cast<LT>(first);
     }
 }
 
+/**
+ * for boolean type, + is treated as logical OR
+ * for other types, it is normal addition
+ */
 template <Arithmetic T>
 inline T advance_add(T left, T right)
 {
@@ -57,6 +73,10 @@ inline T advance_add(T left, T right)
     }
 }
 
+/**
+ * for boolean type, - is treated as left AND (NOT right)
+ * for other types, it is normal subtraction
+ */
 template <Arithmetic T>
 inline T advance_sub(T left, T right)
 {
@@ -68,6 +88,10 @@ inline T advance_sub(T left, T right)
     }
 }
 
+/**
+ * for boolean type, * is treated as logical AND
+ * for other types, it is normal multiplication
+ */
 template <Arithmetic T>
 inline T advance_multiply(T left, T right)
 {
@@ -79,6 +103,10 @@ inline T advance_multiply(T left, T right)
     }
 }
 
+/**
+ * for boolean type, / is treated as logical AND
+ * for other types, it is normal division
+ */
 template <Arithmetic T>
 inline T advance_division(T left, T right)
 {

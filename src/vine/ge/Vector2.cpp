@@ -47,17 +47,17 @@ TMPL_PREFIX const Point2<T>& Vector2<T>::asPoint() const
     return reinterpret_cast<const Point2<T>&>(*this);
 }
 
-TMPL_PREFIX LengthType<T> Vector2<T>::length() const requires(Real<T>)
+TMPL_PREFIX TypeF<T> Vector2<T>::length() const requires(Real<T>)
 {
     return calc_vec_len_safe(x, y);
 }
 
-TMPL_PREFIX LengthType<T> Vector2<T>::length2() const requires(Real<T>)
+TMPL_PREFIX TypeF<T> Vector2<T>::length2() const requires(Real<T>)
 {
     return calc_vec_len2_safe(x, y);
 }
 
-TMPL_PREFIX LengthType<T> Vector2<T>::angleTo(const Vector2<T>& other) const requires(Real<T>)
+TMPL_PREFIX TypeF<T> Vector2<T>::angleTo(const Vector2<T>& other) const requires(Real<T>)
 {
     auto llen = length();
     auto rlen = other.length();
@@ -71,14 +71,16 @@ TMPL_PREFIX LengthType<T> Vector2<T>::angleTo(const Vector2<T>& other) const req
     return std::acos(std::clamp<T>(dot(other) / (llen * rlen), T(-1), T(1)));
 }
 
-TMPL_PREFIX LengthType<T> Vector2<T>::dot(const Vector2<T>& other) const requires(Real<T>)
+TMPL_PREFIX T Vector2<T>::dot(const Vector2<T>& other) const requires(Real<T>)
 {
-    return multiply_safe(x, other.x) + multiply_safe(y, other.y);
+    // return multiply_safe(x, other.x) + multiply_safe(y, other.y);
+    return x * other.x + y * other.y;
 }
 
-TMPL_PREFIX LengthType<T> Vector2<T>::cross(const Vector2<T>& other) const requires(Real<T>)
+TMPL_PREFIX T Vector2<T>::cross(const Vector2<T>& other) const requires(Real<T>)
 {
-    return multiply_safe(x, other.y) - multiply_safe(y, other.x);
+    // return multiply_safe(x, other.y) - multiply_safe(y, other.x);
+    return x * other.y - y * other.x;
 }
 
 TMPL_PREFIX T Vector2<T>::normalize() requires(FP<T>)

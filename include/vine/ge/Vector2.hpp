@@ -9,13 +9,15 @@
 #include "Types.hpp"
 
 VI_GE_NS_BEGIN
-template <typename T> class Point2;
+template <typename T>
+class Point2;
 
 /**
  * @brief
  * @tparam T Only accepts float double and integers
  */
-template <typename T> class Vector2 {
+template <typename T>
+class Vector2 {
 
   public:
     using ValueType = T;
@@ -31,13 +33,31 @@ template <typename T> class Vector2 {
     Point2<T>        toPoint() const;
     const Point2<T>& asPoint() const;
 
-    LengthType<T> length() const requires(Real<T>);
-    LengthType<T> length2() const requires(Real<T>);
-    LengthType<T> angleTo(const Vector2<T>& other) const requires(Real<T>);
-    LengthType<T> dot(const Vector2<T>& other) const requires(Real<T>);
-    LengthType<T> cross(const Vector2<T>& other) const requires(Real<T>);
+    /**
+     * @brief length of the vector
+     *        only for real types (floating point and integers) not boolean.
+     */
+    TypeF<T> length() const requires(Real<T>);
+    TypeF<T> length2() const requires(Real<T>);
+    TypeF<T> angleTo(const Vector2<T>& other) const requires(Real<T>);
 
+    /**
+     * @brief normalize the vector to unit length.
+     *        only for floating point types.
+     */
     T normalize() requires(FP<T>);
+    /**
+     * @brief dot product
+     *        only for real types (floating point and integers) not boolean.
+     *        for integer types, overflow is possible.
+     */
+    T dot(const Vector2<T>& other) const requires(Real<T>);
+    /**
+     * @brief cross product (in 2D, it is a scalar)
+     *        only for real types (floating point and integers) not boolean.
+     *        for integer types, overflow is possible.
+     */
+    T cross(const Vector2<T>& other) const requires(Real<T>);
 
     bool isZero() const;
     bool isZero(T eps) const requires(Real<T>);

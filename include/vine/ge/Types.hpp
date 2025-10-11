@@ -18,7 +18,7 @@ template <typename T>
 concept FP = std::is_floating_point<T>::value;
 
 /**
- * @brief Integral concept, includes all integer types (signed and unsigned and boolean)
+ * @brief Integral concept, includes all integral types (signed and unsigned and boolean)
  */
 template <typename T>
 concept Integral = std::integral<T>;
@@ -39,14 +39,21 @@ template <typename T>
 concept Real = FP<T> || Integer<T>;
 
 /**
- * @brief Arithmetic concept, includes all floating point and integer types (include boolean)
+ * @brief Arithmetic concept, includes all floating point and integral types (include boolean)
  */
 template <typename T>
 concept Arithmetic = FP<T> || Integral<T>;
 
 /**
- * @brief double for integer types, and T itself for floating point types
+ * @brief evaluation type for arithmetic operations, following the c++ integral promotion rules
  */
-template <typename T> using LengthType = std::conditional_t<std::is_integral_v<T>, double, T>;
+template <Arithmetic T>
+using TypeI = std::conditional_t<std::is_integral_v<T>, decltype(T() + T()), T>;
+
+/**
+ * @brief double for integral types, and T itself for floating point types
+ */
+template <Arithmetic T>
+using TypeF = std::conditional_t<std::is_integral_v<T>, double, T>;
 
 VI_GE_NS_END
