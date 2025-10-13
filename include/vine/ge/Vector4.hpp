@@ -2,18 +2,21 @@
 
 #include "ge_global.hpp"
 
-#include <cstdint>
 #include <cstddef>
+#include <cstdint>
 
 #include "Types.hpp"
 
 VI_GE_NS_BEGIN
-template <typename T> class Vector3;
+template <typename T>
+class Vector3;
+
 /**
  * @brief
  * @tparam T Only accepts float double and integers
  */
-template <typename T> class Vector4 {
+template <typename T>
+class Vector4 {
   public:
     using ValueType = T;
 
@@ -23,17 +26,38 @@ template <typename T> class Vector4 {
     Vector4(T xx, T yy, T zz, T ww);
 
   public:
+    void set(const Vector3<T>& vec3);
+    void set(const Vector3<T>& vec3, T ww);
     void set(T xx, T yy, T zz, T ww);
     void get(T& xx, T& yy, T& zz, T& ww) const;
 
     const Vector3<T>& asVector3() const;
 
+    /**
+     * @brief length of the vector
+     *        only for real types (floating point and integers) not boolean.
+     */
+    TypeF<T> length() const requires(Real<T>);
+    TypeF<T> length2() const requires(Real<T>);
+    TypeF<T> angleTo(const Vector4<T>& other) const requires(Real<T>);
+
+    /**
+     * @brief normalize the vector to unit length.
+     *        only for floating point types.
+     */
+    T normalize() requires(FP<T>);
+
+    /**
+     * @brief dot product
+     *        only for real types (floating point and integers) not boolean.
+     *        for integer types, overflow is possible.
+     */
+    T dot(const Vector4<T>& other) const requires(Real<T>);
+
     bool isZero() const;
-    bool isZero(T eps) const
-        requires(Real<T>);
+    bool isZero(T eps) const requires(Real<T>);
     bool isEqual(const Vector4<T>& other) const;
-    bool isEqual(const Vector4<T>& other, T eps) const
-        requires(Real<T>);
+    bool isEqual(const Vector4<T>& other, T eps) const requires(Real<T>);
 
   public:
     bool operator==(const Vector4<T>& right) const;
@@ -49,14 +73,21 @@ template <typename T> class Vector4 {
     Vector4<T>& operator*=(T scale);
     Vector4<T>& operator/=(T scale);
 
+    /**
+     * @brief dot product
+     */
+    T operator*(const Vector4<T>& other) const requires(Real<T>);
+
     T&       operator[](size_t index);
     const T& operator[](size_t index) const;
 
   public:
-    union {
+    union
+    {
         struct {
             T x, y, z, w;
         };
+
         T data[4];
     };
 };

@@ -1,9 +1,9 @@
 #include <vine/ge/Vector3.hpp>
 
+#include <algorithm>
 #include <cassert>
 #include <cmath>
-#include <stdexcept>
-
+#include <type_traits>
 
 #include <vine/ge/Math.hpp>
 #include <vine/ge/Point3.hpp>
@@ -33,6 +33,19 @@ TMPL_PREFIX Vector3<T>::Vector3(T xx, T yy, T zz)
   , z(zz)
 {}
 
+TMPL_PREFIX void Vector3<T>::set(const Vector2<T>& vec2)
+{
+    x = vec2.x;
+    y = vec2.y;
+}
+
+TMPL_PREFIX void Vector3<T>::set(const Vector2<T>& vec2, T zz)
+{
+    x = vec2.x;
+    y = vec2.y;
+    z = zz;
+}
+
 TMPL_PREFIX void Vector3<T>::set(T xx, T yy, T zz)
 {
     x = xx;
@@ -60,6 +73,57 @@ TMPL_PREFIX const Point3<T>& Vector3<T>::asPoint() const
 TMPL_PREFIX const Vector2<T>& Vector3<T>::asVector2() const
 {
     return reinterpret_cast<const Vector2<T>&>(*this);
+}
+
+TMPL_PREFIX TypeF<T> Vector3<T>::length() const requires(Real<T>)
+{
+    return calc_vec_len_safe(x, y, z);
+}
+
+TMPL_PREFIX TypeF<T> Vector3<T>::length2() const requires(Real<T>)
+{
+    return calc_vec_len2_safe(x, y, z);
+}
+
+TMPL_PREFIX TypeF<T> Vector3<T>::angleTo(const Vector3<T>& other) const requires(Real<T>)
+{
+    auto llen = length();
+    auto rlen = other.length();
+
+    if (llen == 0. || std::isnan(llen) || std::isinf(llen))
+        return T(0);
+
+    if (rlen == 0. || std::isnan(rlen) || std::isinf(rlen))
+        return T(0);
+
+    return std::acos(std::clamp<T>(dot(other) / (llen * rlen), T(-1), T(1)));
+}
+
+TMPL_PREFIX T Vector3<T>::dot(const Vector3<T>& other) const requires(Real<T>)
+{
+    return x * other.x + y * other.y + z * other.z;
+}
+
+TMPL_PREFIX Vector3<T> Vector3<T>::cross(const Vector3<T>& other) const requires(Real<T>)
+{
+    return Vector3<T>(y * other.z - z * other.y, z * other.x - x * other.z, x * other.y - y * other.x);
+}
+
+TMPL_PREFIX T Vector3<T>::normalize() requires(FP<T>)
+{
+    auto len = length();
+
+    if (len > T(0)) {
+        x /= len;
+        y /= len;
+        z /= len;
+    }
+    else {
+        x = T(0);
+        y = T(0);
+        z = T(0);
+    }
+    return len;
 }
 
 TMPL_PREFIX bool Vector3<T>::isZero() const
@@ -158,6 +222,16 @@ TMPL_PREFIX Vector3<T>& Vector3<T>::operator/=(T scale)
     z = advance_division(z, scale);
 
     return *this;
+}
+
+TMPL_PREFIX T Vector3<T>::operator*(const Vector3<T>& other) const requires(Real<T>)
+{
+    return dot(other);
+}
+
+TMPL_PREFIX Vector3<T> Vector3<T>::operator^(const Vector3<T>& other) const requires(Real<T>)
+{
+    return cross(other);
 }
 
 TMPL_PREFIX T& Vector3<T>::operator[](size_t index)

@@ -118,4 +118,12 @@ inline T advance_division(T left, T right)
     }
 }
 
+// /**
+//  * 
+//  */
+// template<Real T>
+// inline T dot_4(){
+
+// }
+
 VI_GE_NS_END

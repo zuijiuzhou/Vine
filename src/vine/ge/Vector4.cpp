@@ -1,7 +1,9 @@
 #include <vine/ge/Vector4.hpp>
 
+#include <algorithm>
 #include <cassert>
-#include <stdexcept>
+#include <cmath>
+#include <type_traits>
 
 #include <vine/ge/Math.hpp>
 #include <vine/ge/Vector3.hpp>
@@ -33,6 +35,21 @@ TMPL_PREFIX Vector4<T>::Vector4(T xx, T yy, T zz, T ww)
   , w(ww)
 {}
 
+TMPL_PREFIX void Vector4<T>::set(const Vector3<T>& vec3)
+{
+    x = vec3.x;
+    y = vec3.y;
+    z = vec3.z;
+}
+
+TMPL_PREFIX void Vector4<T>::set(const Vector3<T>& vec3, T ww)
+{
+    x = vec3.x;
+    y = vec3.y;
+    z = vec3.z;
+    w = ww;
+}
+
 TMPL_PREFIX void Vector4<T>::set(T xx, T yy, T zz, T ww)
 {
     x = xx;
@@ -52,6 +69,35 @@ TMPL_PREFIX void Vector4<T>::get(T& xx, T& yy, T& zz, T& ww) const
 TMPL_PREFIX const Vector3<T>& Vector4<T>::asVector3() const
 {
     return reinterpret_cast<const Vector3<T>&>(*this);
+}
+
+TMPL_PREFIX TypeF<T> Vector4<T>::length() const requires(Real<T>)
+{
+    return calc_vec_len_safe(x, y, w);
+}
+
+TMPL_PREFIX TypeF<T> Vector4<T>::length2() const requires(Real<T>)
+{
+    return calc_vec_len2_safe(x, y, z, w);
+}
+
+TMPL_PREFIX TypeF<T> Vector4<T>::angleTo(const Vector4<T>& other) const requires(Real<T>)
+{
+    auto llen = length();
+    auto rlen = other.length();
+
+    if (llen == 0. || std::isnan(llen) || std::isinf(llen))
+        return T(0);
+
+    if (rlen == 0. || std::isnan(rlen) || std::isinf(rlen))
+        return T(0);
+
+    return std::acos(std::clamp<T>(dot(other) / (llen * rlen), T(-1), T(1)));
+}
+
+TMPL_PREFIX T Vector4<T>::dot(const Vector4<T>& other) const requires(Real<T>)
+{
+    return x * other.x + y * other.y + z * other.z + w * other.w;
 }
 
 TMPL_PREFIX bool Vector4<T>::isZero() const
@@ -165,9 +211,11 @@ TMPL_PREFIX Vector4<T>& Vector4<T>::operator/=(T scale)
     return *this;
 }
 
-// TMPL_PREFIX Vector4<T>::ValueTypePromoted Vector4<T>::operator*(const Vector4<T>& vec) const  {
-//     return x * vec.x + y * vec.y + z * vec.z + w * vec.w;
-// }
+TMPL_PREFIX T Vector4<T>::operator*(const Vector4<T>& other) const requires(Real<T>)
+{
+    return dot(other);
+}
+
 TMPL_PREFIX T& Vector4<T>::operator[](size_t index)
 {
     assert(index < 4);

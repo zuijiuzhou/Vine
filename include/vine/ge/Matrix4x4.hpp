@@ -38,16 +38,50 @@ class Matrix4x4 {
     void makeScale(T x, T y, T z);
     void makeScale(T factor);
     void makeLookAt(const Point3<T>& eye, const Point3<T>& target, const Vector3<T>& up);
+    /**
+     * @brief set the coordinate system represented by this matrix
+     * @param origin the origin point of the coordinate system
+     * @param xAxis the x axis direction of the coordinate system
+     * @param yAxis the y axis direction of the coordinate system
+     * @param zAxis the z axis direction of the coordinate system
+     */
     void
     setCoordSystem(const Point3<T>& origin, const Vector3<T>& xAxis, const Vector3<T>& yAxis, const Vector3<T>& zAxis);
+    /**
+     * @brief get the coordinate system represented by this matrix
+     */
     void getCoordSystem(Point3<T>& o_origin, Vector3<T>& o_xAxis, Vector3<T>& o_yAxis, Vector3<T>& o_zAxis) const;
+    /**
+     * @brief transpose the matrix
+     */
     void transpose();
+    /**
+     * @brief return the transposed matrix without modifying the original one
+     */
     Matrix4x4<T> transposed() const;
-    void         invert();
+    /**
+     * @brief invert the matrix
+     */
+    void invert();
+
+    /**
+     * @brief return the inverted matrix without modifying the original one
+     */
     Matrix4x4<T> inverted() const;
 
+    /**
+     * @brief is this matrix a rigid transformation matrix (only rotation and translation)
+     */
     bool isRigid() const;
+    /**
+     * @brief is this matrix an affine transformation matrix (last row is [0 0 0 1]).
+     *        affine matrix that preserve the parallelism of straight lines, such as translation, scaling, rotation,
+     * shearing, and reflection. non-affine matrix includes projection matrix.
+     */
     bool isAffine() const;
+    /*
+     * @brief is this matrix an identity matrix
+     */
     bool isIdentity() const;
 
   public:
@@ -66,7 +100,17 @@ class Matrix4x4 {
     static Matrix4x4<T> lookAt(const Point3<T>& eye, const Point3<T>& target, const Vector3<T>& up);
 
   public:
-    Vector4<T> cols[4];
+    union
+    {
+        struct {
+            T m00, m01, m02, m03;
+            T m10, m11, m12, m13;
+            T m20, m21, m22, m23;
+            T m30, m31, m32, m33;
+        };
+
+        Vector4<T> cols[4];
+    };
 };
 
 template <typename T>

@@ -46,12 +46,14 @@ class Vector2 {
      *        only for floating point types.
      */
     T normalize() requires(FP<T>);
+
     /**
      * @brief dot product
      *        only for real types (floating point and integers) not boolean.
      *        for integer types, overflow is possible.
      */
     T dot(const Vector2<T>& other) const requires(Real<T>);
+
     /**
      * @brief cross product (in 2D, it is a scalar)
      *        only for real types (floating point and integers) not boolean.
@@ -78,7 +80,14 @@ class Vector2 {
     Vector2<T>& operator*=(T scale);
     Vector2<T>& operator/=(T scale);
 
+    /**
+     * @brief dot product
+     */
     T operator*(const Vector2<T>& other) const requires(Real<T>);
+
+    /**
+     * @brief cross product
+     */
     T operator^(const Vector2<T>& other) const requires(Real<T>);
 
     T&       operator[](size_t index);
