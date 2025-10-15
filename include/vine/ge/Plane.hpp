@@ -11,6 +11,9 @@ VI_GE_NS_BEGIN
 template <typename T>
 class Plane {
   public:
+    using value_type = T;
+
+  public:
     Plane(const Point3<T>& origin, const Vector3<T>& normal);
 
   public:

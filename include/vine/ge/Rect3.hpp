@@ -11,22 +11,24 @@ template <typename T>
 class Vector3;
 
 /**
- * @brief 
- * @tparam T 
+ * @brief
+ * @tparam T
  */
 template <typename T>
 class Rect3 {
   public:
+    using value_type = T;
+
+  public:
     Rect3();
-    Rect3(const Point3<T>& top_left, const Vector3<T>& size);
+    Rect3(const Point3<T>& conner, const Vector3<T>& size);
     Rect3(T xx, T yy, T zz, T ll, T ww, T hh);
 
   public:
     Point3<T> lowerBound() const;
     Point3<T> upperBound() const;
 
-
-    T lenght() const;
+    T length() const;
     T width() const;
     T height() const;
 
@@ -40,11 +42,21 @@ class Rect3 {
 
     Rect3<T> intersectWith(const Rect3<T>& rect);
 
+    bool isZero() const;
+    bool isZero(T eps) const;
+
     bool operator==(const Rect3<T>& right) const;
     bool operator!=(const Rect3<T>& right) const;
 
   public:
-    T x, y, z, l, w, h;
+    union
+    {
+        struct {
+            T x, y, z, l, w, h;
+        };
+
+        T data[6];
+    };
 };
 
 using Rect3i = Rect3<int32_t>;

@@ -103,6 +103,11 @@ TMPL_PREFIX Point3<T>& Point3<T>::operator-=(const Vector3<T>& right)
     return *this;
 }
 
+TMPL_PREFIX Point3<T> Point3<T>::operator-() const
+{
+    return Point3<T>(-x, -y, -z);
+}
+
 TMPL_PREFIX T& Point3<T>::operator[](size_t index)
 {
     assert(index < 3);

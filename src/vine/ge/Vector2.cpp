@@ -190,6 +190,11 @@ TMPL_PREFIX Vector2<T>& Vector2<T>::operator/=(T scale)
     return *this;
 }
 
+TMPL_PREFIX Vector2<T> Vector2<T>::operator-() const
+{
+    return Vector2<T>(-x, -y);
+}
+
 TMPL_PREFIX T Vector2<T>::operator*(const Vector2<T>& other) const requires(Real<T>)
 {
     return dot(other);

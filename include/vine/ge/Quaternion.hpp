@@ -4,10 +4,17 @@
 
 #include <cstddef>
 
+#include "Types.hpp"
+#include "Vector3.hpp"
+#include "Vector4.hpp"
+
 VI_GE_NS_BEGIN
 
 template <typename T>
 class Quaternion {
+  public:
+    using value_type = T;
+
   public:
     Quaternion();
     Quaternion(T x, T y, T z, T w);
@@ -18,6 +25,15 @@ class Quaternion {
 
     Quaternion<T> conj() const;
     Quaternion<T> inverse() const;
+
+    void makeRotate(T angle, const Vector3<T>& axis);
+    void makeRotate(const Vector3<T>& from, const Vector3<T>& to);
+
+    Vector4<T>        toVector() const;
+    const Vector4<T>& asVector() const;
+
+    // Vector3<T> toEuler() const;
+    // void       fromEuler(const Vector3<T>& euler);
 
   public:
     bool operator==(const Quaternion& right) const;
@@ -41,7 +57,7 @@ class Quaternion {
     Quaternion<T>  operator/(const Quaternion& right) const;
     Quaternion<T>& operator/=(const Quaternion& right);
 
-
+    Quaternion<T> operator-() const;
 
     T& operator[](size_t i);
     T  operator[](size_t i) const;

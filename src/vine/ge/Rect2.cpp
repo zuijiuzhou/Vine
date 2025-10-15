@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <cstdint>
 
-
+#include <vine/ge/Math.hpp>
 
 VI_GE_NS_BEGIN
 
@@ -13,65 +13,94 @@ TMPL_PREFIX Rect2<T>::Rect2()
   : x(T())
   , y(T())
   , w(T())
-  , h(T()) {
-}
+  , h(T())
+{}
+
 TMPL_PREFIX Rect2<T>::Rect2(const Point2<T>& top_left, const Vector2<T>& size)
   : x(top_left.x)
   , y(top_left.y)
   , w(size.x)
-  , h(size.y) {
-}
+  , h(size.y)
+{}
+
 TMPL_PREFIX Rect2<T>::Rect2(T xx, T yy, T ww, T hh)
   : x(xx)
   , y(yy)
   , w(ww)
-  , h(hh) {
-}
+  , h(hh)
+{}
 
-TMPL_PREFIX T Rect2<T>::top() const {
+TMPL_PREFIX T Rect2<T>::top() const
+{
     return std::max<T>(y, y + h);
 }
-TMPL_PREFIX T Rect2<T>::bottom() const {
+
+TMPL_PREFIX T Rect2<T>::bottom() const
+{
     return std::min<T>(y, y + h);
 }
-TMPL_PREFIX T Rect2<T>::left() const {
+
+TMPL_PREFIX T Rect2<T>::left() const
+{
     return std::min<T>(x, x + w);
 }
-TMPL_PREFIX T Rect2<T>::right() const {
+
+TMPL_PREFIX T Rect2<T>::right() const
+{
     return std::max<T>(x, x + w);
 }
-TMPL_PREFIX Point2<T> Rect2<T>::bottomLeft() const {
+
+TMPL_PREFIX Point2<T> Rect2<T>::bottomLeft() const
+{
     return Point2<T>(std::min<T>(x, x + w), std::min<T>(y, y + h));
 }
-TMPL_PREFIX Point2<T> Rect2<T>::bottomRight() const {
+
+TMPL_PREFIX Point2<T> Rect2<T>::bottomRight() const
+{
     return Point2<T>(std::max<T>(x, x + w), std::min<T>(y, y + h));
 }
-TMPL_PREFIX Point2<T> Rect2<T>::topLeft() const {
+
+TMPL_PREFIX Point2<T> Rect2<T>::topLeft() const
+{
     return Point2<T>(std::min<T>(x, x + w), std::max<T>(y, y + h));
 }
-TMPL_PREFIX Point2<T> Rect2<T>::topRight() const {
+
+TMPL_PREFIX Point2<T> Rect2<T>::topRight() const
+{
     return Point2<T>(std::max<T>(x, x + w), std::max<T>(y, y + h));
 }
-TMPL_PREFIX T Rect2<T>::width() const {
+
+TMPL_PREFIX T Rect2<T>::width() const
+{
     return w < 0 ? -w : w;
 }
-TMPL_PREFIX T Rect2<T>::height() const {
+
+TMPL_PREFIX T Rect2<T>::height() const
+{
     return h < 0 ? -h : h;
 }
-TMPL_PREFIX Vector2<T> Rect2<T>::size() const {
+
+TMPL_PREFIX Vector2<T> Rect2<T>::size() const
+{
     return Vector2<T>(w < 0 ? -w : w, h < 0 ? -h : h);
 }
-TMPL_PREFIX bool Rect2<T>::contains(T x, T y) const {
+
+TMPL_PREFIX bool Rect2<T>::contains(T x, T y) const
+{
     auto l = bottomLeft();
     auto u = topRight();
     return x >= l.x && x <= u.x && y >= l.y && y <= u.y;
 }
-TMPL_PREFIX bool Rect2<T>::contains(const Point2<T>& pt) const {
+
+TMPL_PREFIX bool Rect2<T>::contains(const Point2<T>& pt) const
+{
     auto l = bottomLeft();
     auto u = topRight();
     return pt.x >= l.x && pt.x <= u.x && pt.y >= l.y && pt.y <= u.y;
 }
-TMPL_PREFIX void Rect2<T>::expandBy(const Vector2<T>& pt) {
+
+TMPL_PREFIX void Rect2<T>::expandBy(const Vector2<T>& pt)
+{
     auto l = bottomLeft();
     auto u = topRight();
     l.x    = std::min<T>(l.x, pt.x);
@@ -83,7 +112,9 @@ TMPL_PREFIX void Rect2<T>::expandBy(const Vector2<T>& pt) {
     w      = u.x - l.x;
     h      = u.y - l.y;
 }
-TMPL_PREFIX void Rect2<T>::expandBy(const Rect2<T>& rect) {
+
+TMPL_PREFIX void Rect2<T>::expandBy(const Rect2<T>& rect)
+{
     auto lb1 = bottomLeft();
     auto ub1 = topRight();
     auto lb2 = rect.bottomLeft();
@@ -100,10 +131,24 @@ TMPL_PREFIX void Rect2<T>::expandBy(const Rect2<T>& rect) {
     w = ub1.x - lb1.x;
     h = ub1.y - lb1.y;
 }
-TMPL_PREFIX bool Rect2<T>::operator==(const Rect2<T>& right) const {
+
+TMPL_PREFIX bool Rect2<T>::isZero() const
+{
+    return x == T(0) && y == T(0) && w == T(0) && h == T(0);
+}
+
+TMPL_PREFIX bool Rect2<T>::isZero(T eps) const
+{
+    return ge::isZero(x, eps) && ge::isZero(y, eps) && ge::isZero(w, eps) && ge::isZero(h, eps);
+}
+
+TMPL_PREFIX bool Rect2<T>::operator==(const Rect2<T>& right) const
+{
     return x == right.x && y == right.y && w == right.w && h == right.h;
 }
-TMPL_PREFIX bool Rect2<T>::operator!=(const Rect2<T>& right) const {
+
+TMPL_PREFIX bool Rect2<T>::operator!=(const Rect2<T>& right) const
+{
     return !(*this == right);
 }
 

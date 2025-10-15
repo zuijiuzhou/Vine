@@ -94,6 +94,11 @@ TMPL_PREFIX Point2<T>& Point2<T>::operator-=(const Vector2<T>& right)
     return *this;
 }
 
+TMPL_PREFIX Point2<T> Point2<T>::operator-() const
+{
+    return Point2<T>(-x, -y);
+}
+
 TMPL_PREFIX T& Point2<T>::operator[](size_t index)
 {
     assert(index < 2);

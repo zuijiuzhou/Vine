@@ -211,6 +211,11 @@ TMPL_PREFIX Vector4<T>& Vector4<T>::operator/=(T scale)
     return *this;
 }
 
+TMPL_PREFIX Vector4<T> Vector4<T>::operator-() const
+{
+    return Vector4<T>(-x, -y, -z, -w);
+}
+
 TMPL_PREFIX T Vector4<T>::operator*(const Vector4<T>& other) const requires(Real<T>)
 {
     return dot(other);

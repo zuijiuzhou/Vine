@@ -20,6 +20,16 @@ TMPL_PREFIX Quaternion<T>::Quaternion(T x, T y, T z, T w)
   , w(w)
 {}
 
+TMPL_PREFIX Vector4<T> Quaternion<T>::toVector() const
+{
+    return Vector4<T>(x, y, z, w);
+}
+
+TMPL_PREFIX const Vector4<T>& Quaternion<T>::asVector() const
+{
+    return reinterpret_cast<const Vector4<T>&>(*this);
+}
+
 TMPL_PREFIX T Quaternion<T>::lenght() const
 {
     return calc_vec_len_safe(x, y, z, w);
@@ -39,6 +49,12 @@ TMPL_PREFIX Quaternion<T> Quaternion<T>::inverse() const
 {
     return conj() / lenght2();
 }
+
+TMPL_PREFIX void Quaternion<T>::makeRotate(T angle, const Vector3<T>& axis)
+{}
+
+TMPL_PREFIX void Quaternion<T>::makeRotate(const Vector3<T>& from, const Vector3<T>& to)
+{}
 
 TMPL_PREFIX Quaternion<T> Quaternion<T>::operator*(T right) const
 {
@@ -142,6 +158,11 @@ TMPL_PREFIX Quaternion<T> Quaternion<T>::operator/(const Quaternion& right) cons
 TMPL_PREFIX Quaternion<T>& Quaternion<T>::operator/=(const Quaternion& right)
 {
     return *this;
+}
+
+TMPL_PREFIX Quaternion<T> Quaternion<T>::operator-() const
+{
+    return Quaternion<T>(-x, -y, -z, -w);
 }
 
 TMPL_PREFIX T& Quaternion<T>::operator[](size_t i)

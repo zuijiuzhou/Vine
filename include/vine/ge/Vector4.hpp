@@ -18,7 +18,7 @@ class Vector3;
 template <typename T>
 class Vector4 {
   public:
-    using ValueType = T;
+    using value_type = T;
 
   public:
     Vector4();
@@ -72,6 +72,8 @@ class Vector4 {
     Vector4<T>& operator-=(const Vector4<T>& right);
     Vector4<T>& operator*=(T scale);
     Vector4<T>& operator/=(T scale);
+
+    Vector4<T> operator-() const;
 
     /**
      * @brief dot product

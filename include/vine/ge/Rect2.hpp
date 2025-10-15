@@ -10,11 +10,14 @@
 VI_GE_NS_BEGIN
 
 /**
- * @brief 
- * @tparam T 
+ * @brief
+ * @tparam T
  */
 template <typename T>
 class Rect2 {
+  public:
+    using value_type = T;
+
   public:
     Rect2();
     Rect2(const Point2<T>& top_left, const Vector2<T>& size);
@@ -44,11 +47,21 @@ class Rect2 {
     void expandBy(const Vector2<T>& pt);
     void expandBy(const Rect2<T>& rect);
 
+    bool isZero() const;
+    bool isZero(T eps) const;
+
     bool operator==(const Rect2<T>& right) const;
     bool operator!=(const Rect2<T>& right) const;
 
   public:
-    T x, y, w, h;
+    union
+    {
+        struct {
+            T x, y, w, h;
+        };
+
+        T data[4];
+    };
 };
 
 using Rect2i = Rect2<int32_t>;

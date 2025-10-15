@@ -21,8 +21,7 @@ M03 M13 M23 M33
 template <typename T>
 class Matrix4x4 {
   public:
-    using ValueType = T;
-    using ThisType  = Matrix4x4<T>;
+    using value_type = T;
 
   public:
     Matrix4x4();

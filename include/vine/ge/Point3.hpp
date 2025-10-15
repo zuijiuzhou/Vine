@@ -9,18 +9,19 @@
 
 VI_GE_NS_BEGIN
 
-template <typename T> class Vector3;
-template <typename T> class Point2;
+template <typename T>
+class Vector3;
+template <typename T>
+class Point2;
 
 /**
  * @brief
  * @tparam T Only accepts float double and integers
  */
-template <typename T> class Point3 {
-    // static_assert();
-
+template <typename T>
+class Point3 {
   public:
-    using ValueType = T;
+    using value_type = T;
 
   public:
     Point3();
@@ -44,6 +45,7 @@ template <typename T> class Point3 {
     Point3<T>  operator+(const Vector3<T>& right) const;
     Point3<T>& operator+=(const Vector3<T>& right);
     Point3<T>& operator-=(const Vector3<T>& right);
+    Point3<T>  operator-() const;
 
     T&       operator[](size_t index);
     const T& operator[](size_t index) const;
