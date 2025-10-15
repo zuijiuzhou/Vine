@@ -12,7 +12,7 @@ VI_GE_NS_BEGIN
  * @brief safe calculation of vector length squared, for floating point types, it is just normal calculation,
  *        for integer types, it is promoted to double first, then calculated
  */
-template <Real T, typename... Rest>
+template <Real T, Real... Rest>
 inline TypeF<T> calc_vec_len2_safe(T first, Rest... rest)
 {
     // static_assert((std::is_same_v<T, Rest> && ...), "All parameters must have type T");
@@ -35,7 +35,7 @@ inline TypeF<T> calc_vec_len2_safe(T first, Rest... rest)
  * @brief safe calculation of vector length, for floating point types, it is just normal calculation,
  *        for integer types, it is promoted to double first, then calculated
  */
-template <Real T, typename... Rest>
+template <Real T, Real... Rest>
 inline TypeF<T> calc_vec_len_safe(T first, Rest... rest)
 {
     return std::sqrt(calc_vec_len2_safe(first, rest...));
@@ -119,7 +119,7 @@ inline T advance_division(T left, T right)
 }
 
 // /**
-//  * 
+//  *
 //  */
 // template<Real T>
 // inline T dot_4(){

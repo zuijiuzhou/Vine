@@ -45,16 +45,18 @@ TMPL_PREFIX void Matrix4x4<T>::makeRotation(const Vector3<T>& axis, T angle)
     |xz(1-c)-ys  yz(1-c)+xs   zz(1-c) + c|
     列矩阵
     */
-
-    if (angle == T(0))
+    if (angle == T(0) || axis.isZero())
         return;
 
-    auto c  = std::cos(angle);
-    auto ic = 1.0 - c;
-    auto s  = std::sin(angle);
-    auto x  = axis.x;
-    auto y  = axis.y;
-    auto z  = axis.z;
+    auto axis_norm = axis;
+    axis_norm.normalize();
+
+    const auto c  = std::cos(angle);
+    const auto ic = 1.0 - c;
+    const auto s  = std::sin(angle);
+    const auto x  = axis_norm.x;
+    const auto y  = axis_norm.y;
+    const auto z  = axis_norm.z;
 
     cols[0][0] = x * x * ic + c;
     cols[0][1] = x * y * ic + z * s;
@@ -74,7 +76,7 @@ TMPL_PREFIX void Matrix4x4<T>::makeRotation(const Vector3<T>& axis, T angle)
     cols[3][0] = T(0);
     cols[3][1] = T(0);
     cols[3][2] = T(0);
-    cols[3][3] = 1;
+    cols[3][3] = T(1);
 }
 
 TMPL_PREFIX void Matrix4x4<T>::makeRotation(const Point3<T>& center, const Vector3<T>& axis, T angle)
@@ -224,14 +226,16 @@ TMPL_PREFIX Matrix4x4<T> Matrix4x4<T>::operator*(const Matrix4x4<T>& right) cons
 {
     Matrix4x4<T> m;
 
-    for (int col = 0; col < 4; ++col) {
-        for (int row = 0; row < 4; ++row) {
-            m.cols[col][row] = 0;
-            for (int k = 0; k < 4; ++k) {
-                m.cols[col][row] += cols[k][row] * right.cols[col][k];
-            }
-        }
-    }
+    // for (int col = 0; col < 4; ++col) {
+    //     for (int row = 0; row < 4; ++row) {
+    //         m.cols[col][row] = 0;
+    //         for (int k = 0; k < 4; ++k) {
+    //             m.cols[col][row] += cols[k][row] * right.cols[col][k];
+    //         }
+    //     }
+    // }
+
+    // m1 * m2 * m3 = m3T * m2T * m1T
 
     m.cols[0][0] = cols[0][0] * right.cols[0][0] + cols[1][0] * right.cols[0][1] + cols[2][0] * right.cols[0][2] +
                    cols[3][0] * right.cols[0][3];
