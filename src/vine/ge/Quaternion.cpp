@@ -1,5 +1,7 @@
 ﻿#include <vine/ge/Quaternion.hpp>
 
+#include "Comm.hpp"
+
 VI_GE_NS_BEGIN
 
 #define TMPL_PREFIX template <typename T>
@@ -17,6 +19,64 @@ TMPL_PREFIX Quaternion<T>::Quaternion(T x, T y, T z, T w)
   , z(z)
   , w(w)
 {}
+
+TMPL_PREFIX T Quaternion<T>::lenght() const
+{
+    return calc_vec_len_safe(x, y, z, w);
+}
+
+TMPL_PREFIX T Quaternion<T>::lenght2() const
+{
+    return calc_vec_len2_safe(x, y, z, w);
+}
+
+TMPL_PREFIX Quaternion<T> Quaternion<T>::conj() const
+{
+    return Quaternion<T>(-x, -y, -z, w);
+}
+
+TMPL_PREFIX Quaternion<T> Quaternion<T>::inverse() const
+{
+    return conj() / lenght2();
+}
+
+TMPL_PREFIX Quaternion<T> Quaternion<T>::operator*(T right) const
+{
+    Quaternion<T> q;
+    q.x = x * right;
+    q.y = y * right;
+    q.z = z * right;
+    q.w = w * right;
+    return q;
+}
+
+TMPL_PREFIX Quaternion<T>& Quaternion<T>::operator*=(T right)
+{
+    x *= right;
+    y *= right;
+    z *= right;
+    w *= right;
+    return *this;
+}
+
+TMPL_PREFIX Quaternion<T> Quaternion<T>::operator/(T right) const
+{
+    Quaternion<T> q;
+    q.x = x / right;
+    q.y = y / right;
+    q.z = z / right;
+    q.w = w / right;
+    return q;
+}
+
+TMPL_PREFIX Quaternion<T>& Quaternion<T>::operator/=(T right)
+{
+    x /= right;
+    y /= right;
+    z /= right;
+    w /= right;
+    return *this;
+}
 
 TMPL_PREFIX bool Quaternion<T>::operator==(const Quaternion& right) const
 {
@@ -58,39 +118,41 @@ TMPL_PREFIX Quaternion<T> Quaternion<T>::operator-(const Quaternion& right) cons
 }
 
 TMPL_PREFIX Quaternion<T>& Quaternion<T>::operator-=(const Quaternion& right)
-{}
+{
+    return *this;
+}
 
 TMPL_PREFIX Quaternion<T> Quaternion<T>::operator*(const Quaternion& right) const
 {
     Quaternion<T> q;
-    q.x = x + right.x;
-    q.y = y + right.y;
-    q.z = z + right.z;
-    q.w = w + right.w;
     return q;
 }
 
 TMPL_PREFIX Quaternion<T>& Quaternion<T>::operator*=(const Quaternion& right)
-{}
+{
+    return *this;
+}
 
 TMPL_PREFIX Quaternion<T> Quaternion<T>::operator/(const Quaternion& right) const
 {
     Quaternion<T> q;
-    q.x = x / right.x;
-    q.y = y / right.y;
-    q.z = z / right.z;
-    q.w = w / right.w;
     return q;
 }
 
 TMPL_PREFIX Quaternion<T>& Quaternion<T>::operator/=(const Quaternion& right)
-{}
+{
+    return *this;
+}
 
 TMPL_PREFIX T& Quaternion<T>::operator[](size_t i)
-{}
+{
+    return data[i];
+}
 
 TMPL_PREFIX T Quaternion<T>::operator[](size_t i) const
-{}
+{
+    return data[i];
+}
 
 #undef TMPL_PREFIX
 

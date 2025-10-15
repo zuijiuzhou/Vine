@@ -13,8 +13,21 @@ class Quaternion {
     Quaternion(T x, T y, T z, T w);
 
   public:
+    T lenght() const;
+    T lenght2() const;
+
+    Quaternion<T> conj() const;
+    Quaternion<T> inverse() const;
+
+  public:
     bool operator==(const Quaternion& right) const;
     bool operator!=(const Quaternion& right) const;
+
+    Quaternion<T>  operator*(T right) const;
+    Quaternion<T>& operator*=(T right);
+
+    Quaternion<T>  operator/(T right) const;
+    Quaternion<T>& operator/=(T right);
 
     Quaternion<T>  operator+(const Quaternion& right) const;
     Quaternion<T>& operator+=(const Quaternion& right);
@@ -27,6 +40,8 @@ class Quaternion {
 
     Quaternion<T>  operator/(const Quaternion& right) const;
     Quaternion<T>& operator/=(const Quaternion& right);
+
+
 
     T& operator[](size_t i);
     T  operator[](size_t i) const;
