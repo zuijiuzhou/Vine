@@ -24,10 +24,13 @@ class Quaternion {
     T lenght2() const;
 
     Quaternion<T> conj() const;
-    Quaternion<T> inverse() const;
+    void          invert();
+    Quaternion<T> inverted() const;
 
     void makeRotate(T angle, const Vector3<T>& axis);
     void makeRotate(const Vector3<T>& from, const Vector3<T>& to);
+
+    void getRotate(T& o_angle, Vector3<T>& o_axis) const;
 
     Vector4<T>        toVector() const;
     const Vector4<T>& asVector() const;
@@ -75,5 +78,8 @@ class Quaternion {
 
 using Quatf = Quaternion<float>;
 using Quatd = Quaternion<double>;
+
+template<typename T>
+Vector3<T> operator * (const Quaternion<T>& left, const Vector3<T>& right);
 
 VI_GE_NS_END
