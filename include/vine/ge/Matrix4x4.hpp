@@ -11,15 +11,16 @@ VI_GE_NS_BEGIN
 
 /*
 COLUMN MAJOR MATRIX
-M00 M10 M20 M30
-M01 M11 M21 M31
-M02 M12 M22 M32
-M03 M13 M23 M33
+M00 M01 M02 M03
+M10 M11 M12 M13
+M20 M21 M22 M23
+M30 M31 M32 M33
  */
 template <typename T>
 class Matrix4x4 {
   public:
-    using value_type = T;
+    using value_type  = T;
+    using column_type = Vector4<T>;
 
   public:
     Matrix4x4();
@@ -36,6 +37,24 @@ class Matrix4x4 {
     void makeScale(T x, T y, T z);
     void makeScale(T factor);
     void makeLookAt(const Point3<T>& eye, const Point3<T>& target, const Vector3<T>& up);
+    /**
+     * @brief make an orthographic projection matrix
+     * @param left the left clipping plane
+     * @param right the right clipping plane
+     * @param bottom the bottom clipping plane
+     * @param top the top clipping plane
+     * @param z_near the near clipping plane
+     * @param z_far the far clipping plane
+     */
+    void makeOrtho(double left, double right, double bottom, double top, double z_near, double z_far);
+    /**
+     * @brief make a perspective matrix
+     * @param fovy the field of view angle in the y direction
+     * @param aspect_ratio the aspect ratio of the viewport
+     * @param z_near the near clipping plane
+     * @param z_far the far clipping plane
+     */
+    void makePerspective(double fovy, double aspect_ratio, double z_near, double z_far);
     /**
      * @brief set the coordinate system represented by this matrix
      * @param origin the origin point of the coordinate system
@@ -100,14 +119,23 @@ class Matrix4x4 {
   public:
     union
     {
+        // struct {
+        //     T m00, m01, m02, m03;
+        //     T m10, m11, m12, m13;
+        //     T m20, m21, m22, m23;
+        //     T m30, m31, m32, m33;
+        // };
+
         struct {
-            T m00, m01, m02, m03;
-            T m10, m11, m12, m13;
-            T m20, m21, m22, m23;
-            T m30, m31, m32, m33;
+            Vector4<T> vec0;
+            Vector4<T> vec1;
+            Vector4<T> vec2;
+            Vector4<T> vec3;
         };
 
-        Vector4<T> cols[4];
+        Vector4<T> vecs[4];
+
+        T data[16];
     };
 };
 

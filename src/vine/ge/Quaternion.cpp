@@ -20,6 +20,16 @@ TMPL_PREFIX Quaternion<T>::Quaternion(T x, T y, T z, T w)
   , w(w)
 {}
 
+TMPL_PREFIX Quaternion<T>::Quaternion(T angle, const Vector3<T>& axis)
+{
+    makeRotate(angle, axis);
+}
+
+TMPL_PREFIX Quaternion<T>::Quaternion(const Vector3<T>& from, const Vector3<T>& to)
+{
+    makeRotate(from, to);
+}
+
 TMPL_PREFIX Vector4<T> Quaternion<T>::toVector() const
 {
     return Vector4<T>(x, y, z, w);

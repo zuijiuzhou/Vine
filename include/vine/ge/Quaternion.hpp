@@ -18,6 +18,8 @@ class Quaternion {
   public:
     Quaternion();
     Quaternion(T x, T y, T z, T w);
+    Quaternion(T angle, const Vector3<T>& axis);
+    Quaternion(const Vector3<T>& from, const Vector3<T>& to);
 
   public:
     T lenght() const;
