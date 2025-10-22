@@ -2,14 +2,12 @@
 
 #include "ge_global.hpp"
 
+#include "Point3.hpp"
+#include "Quaternion.hpp"
+#include "Vector3.hpp"
 #include "Vector4.hpp"
 
 VI_GE_NS_BEGIN
-
-template <typename T>
-class Point3;
-template <typename T>
-class Vector3;
 
 /*
 COLUMN MAJOR MATRIX
@@ -25,6 +23,7 @@ class Matrix4x4 {
 
   public:
     Matrix4x4();
+    Matrix4x4(const Quaternion<T>& quat);
 
   public:
     void makeIdentity();

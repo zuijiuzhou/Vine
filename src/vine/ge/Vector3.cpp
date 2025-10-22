@@ -158,21 +158,21 @@ TMPL_PREFIX bool Vector3<T>::operator!=(const Vector3<T>& right) const
 
 TMPL_PREFIX Vector3<T> Vector3<T>::operator+(const Vector3<T>& right) const
 {
-    return Vector3<T>(advance_add(x, right.x), advance_add(y, right.y), advance_add(z, right.z));
+    return Vector3<T>(arithmetic_add(x, right.x), arithmetic_add(y, right.y), arithmetic_add(z, right.z));
 }
 
 TMPL_PREFIX Vector3<T> Vector3<T>::operator-(const Vector3<T>& right) const
 {
-    return Vector3<T>(advance_sub(x, right.x), advance_sub(y, right.y), advance_sub(z, right.z));
+    return Vector3<T>(arithmetic_sub(x, right.x), arithmetic_sub(y, right.y), arithmetic_sub(z, right.z));
 }
 
 TMPL_PREFIX Vector3<T> Vector3<T>::operator*(T scale) const
 {
     Vector3<T> v(*this);
 
-    v.x = advance_multiply(x, scale);
-    v.y = advance_multiply(y, scale);
-    v.z = advance_multiply(z, scale);
+    v.x = arithmetic_multiply(x, scale);
+    v.y = arithmetic_multiply(y, scale);
+    v.z = arithmetic_multiply(z, scale);
 
     return v;
 }
@@ -181,45 +181,45 @@ TMPL_PREFIX Vector3<T> Vector3<T>::operator/(T scale) const
 {
     Vector3<T> v(*this);
 
-    v.x = advance_division(x, scale);
-    v.y = advance_division(y, scale);
-    v.z = advance_division(z, scale);
+    v.x = arithmetic_division(x, scale);
+    v.y = arithmetic_division(y, scale);
+    v.z = arithmetic_division(z, scale);
 
     return v;
 }
 
 TMPL_PREFIX Vector3<T>& Vector3<T>::operator+=(const Vector3<T>& right)
 {
-    x = advance_add(x, right.x);
-    y = advance_add(y, right.y);
-    z = advance_add(z, right.z);
+    x = arithmetic_add(x, right.x);
+    y = arithmetic_add(y, right.y);
+    z = arithmetic_add(z, right.z);
 
     return *this;
 }
 
 TMPL_PREFIX Vector3<T>& Vector3<T>::operator-=(const Vector3<T>& right)
 {
-    x = advance_sub(x, right.x);
-    y = advance_sub(y, right.y);
-    z = advance_sub(z, right.z);
+    x = arithmetic_sub(x, right.x);
+    y = arithmetic_sub(y, right.y);
+    z = arithmetic_sub(z, right.z);
 
     return *this;
 }
 
 TMPL_PREFIX Vector3<T>& Vector3<T>::operator*=(T scale)
 {
-    x = advance_multiply(x, scale);
-    y = advance_multiply(y, scale);
-    z = advance_multiply(z, scale);
+    x = arithmetic_multiply(x, scale);
+    y = arithmetic_multiply(y, scale);
+    z = arithmetic_multiply(z, scale);
 
     return *this;
 }
 
 TMPL_PREFIX Vector3<T>& Vector3<T>::operator/=(T scale)
 {
-    x = advance_division(x, scale);
-    y = advance_division(y, scale);
-    z = advance_division(z, scale);
+    x = arithmetic_division(x, scale);
+    y = arithmetic_division(y, scale);
+    z = arithmetic_division(z, scale);
 
     return *this;
 }

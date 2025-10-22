@@ -38,6 +38,8 @@ class Quaternion {
     // Vector3<T> toEuler() const;
     // void       fromEuler(const Vector3<T>& euler);
 
+    static Quaternion<T> slerp(const Quaternion<T>& from, const Quaternion<T>& to, T t);
+
   public:
     bool operator==(const Quaternion& right) const;
     bool operator!=(const Quaternion& right) const;
@@ -79,7 +81,7 @@ class Quaternion {
 using Quatf = Quaternion<float>;
 using Quatd = Quaternion<double>;
 
-template<typename T>
-Vector3<T> operator * (const Quaternion<T>& left, const Vector3<T>& right);
+template <typename T>
+Vector3<T> operator*(const Quaternion<T>& left, const Vector3<T>& right);
 
 VI_GE_NS_END

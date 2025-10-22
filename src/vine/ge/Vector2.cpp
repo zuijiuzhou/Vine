@@ -130,20 +130,20 @@ TMPL_PREFIX bool Vector2<T>::operator!=(const Vector2<T>& right) const
 
 TMPL_PREFIX Vector2<T> Vector2<T>::operator+(const Vector2<T>& right) const
 {
-    return Vector2<T>(advance_add(x, right.x), advance_add(y, right.y));
+    return Vector2<T>(arithmetic_add(x, right.x), arithmetic_add(y, right.y));
 }
 
 TMPL_PREFIX Vector2<T> Vector2<T>::operator-(const Vector2<T>& right) const
 {
-    return Vector2<T>(advance_sub(x, right.x), advance_sub(y, right.y));
+    return Vector2<T>(arithmetic_sub(x, right.x), arithmetic_sub(y, right.y));
 }
 
 TMPL_PREFIX Vector2<T> Vector2<T>::operator*(T scale) const
 {
     Vector2<T> v;
 
-    v.x = advance_multiply(x, scale);
-    v.y = advance_multiply(y, scale);
+    v.x = arithmetic_multiply(x, scale);
+    v.y = arithmetic_multiply(y, scale);
 
     return v;
 }
@@ -152,40 +152,40 @@ TMPL_PREFIX Vector2<T> Vector2<T>::operator/(T scale) const
 {
     Vector2<T> v;
 
-    v.x = advance_division(x, scale);
-    v.y = advance_division(y, scale);
+    v.x = arithmetic_division(x, scale);
+    v.y = arithmetic_division(y, scale);
 
     return v;
 }
 
 TMPL_PREFIX Vector2<T>& Vector2<T>::operator+=(const Vector2<T>& right)
 {
-    x = advance_add(x, right.x);
-    y = advance_add(y, right.y);
+    x = arithmetic_add(x, right.x);
+    y = arithmetic_add(y, right.y);
 
     return *this;
 }
 
 TMPL_PREFIX Vector2<T>& Vector2<T>::operator-=(const Vector2<T>& right)
 {
-    x = advance_sub(x, right.x);
-    y = advance_sub(y, right.y);
+    x = arithmetic_sub(x, right.x);
+    y = arithmetic_sub(y, right.y);
 
     return *this;
 }
 
 TMPL_PREFIX Vector2<T>& Vector2<T>::operator*=(T scale)
 {
-    x = advance_multiply(x, scale);
-    y = advance_multiply(y, scale);
+    x = arithmetic_multiply(x, scale);
+    y = arithmetic_multiply(y, scale);
 
     return *this;
 }
 
 TMPL_PREFIX Vector2<T>& Vector2<T>::operator/=(T scale)
 {
-    x = advance_division(x, scale);
-    y = advance_division(y, scale);
+    x = arithmetic_division(x, scale);
+    y = arithmetic_division(y, scale);
 
     return *this;
 }

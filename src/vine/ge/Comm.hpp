@@ -63,7 +63,7 @@ inline TypeF<T> multiply_safe(T first, T second)
  * for other types, it is normal addition
  */
 template <Arithmetic T>
-inline T advance_add(T left, T right)
+inline T arithmetic_add(T left, T right)
 {
     if constexpr (std::is_same_v<T, bool>) {
         return left || right;
@@ -78,7 +78,7 @@ inline T advance_add(T left, T right)
  * for other types, it is normal subtraction
  */
 template <Arithmetic T>
-inline T advance_sub(T left, T right)
+inline T arithmetic_sub(T left, T right)
 {
     if constexpr (std::is_same_v<T, bool>) {
         return left && !right;
@@ -93,7 +93,7 @@ inline T advance_sub(T left, T right)
  * for other types, it is normal multiplication
  */
 template <Arithmetic T>
-inline T advance_multiply(T left, T right)
+inline T arithmetic_multiply(T left, T right)
 {
     if constexpr (std::is_same_v<T, bool>) {
         return left && right;
@@ -108,7 +108,7 @@ inline T advance_multiply(T left, T right)
  * for other types, it is normal division
  */
 template <Arithmetic T>
-inline T advance_division(T left, T right)
+inline T arithmetic_division(T left, T right)
 {
     if constexpr (std::is_same_v<T, bool>) {
         return left && right;
@@ -118,12 +118,7 @@ inline T advance_division(T left, T right)
     }
 }
 
-// /**
-//  *
-//  */
-// template<Real T>
-// inline T dot_4(){
-
-// }
+// template <Real T>
+// inline T fast_dot();
 
 VI_GE_NS_END

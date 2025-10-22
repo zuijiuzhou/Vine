@@ -70,26 +70,26 @@ TMPL_PREFIX bool Point2<T>::operator!=(const Point2<T>& right) const
 
 TMPL_PREFIX Point2<T> Point2<T>::operator+(const Vector2<T>& right) const
 {
-    return Point2<T>(advance_add(x, right.x), advance_add(y, right.y));
+    return Point2<T>(arithmetic_add(x, right.x), arithmetic_add(y, right.y));
 }
 
 TMPL_PREFIX Vector2<T> Point2<T>::operator-(const Point2<T>& right) const
 {
-    return Vector2<T>(advance_sub(x, right.x), advance_sub(y, right.y));
+    return Vector2<T>(arithmetic_sub(x, right.x), arithmetic_sub(y, right.y));
 }
 
 TMPL_PREFIX Point2<T>& Point2<T>::operator+=(const Vector2<T>& right)
 {
-    x = advance_add(x, right.x);
-    y = advance_add(y, right.y);
+    x = arithmetic_add(x, right.x);
+    y = arithmetic_add(y, right.y);
 
     return *this;
 }
 
 TMPL_PREFIX Point2<T>& Point2<T>::operator-=(const Vector2<T>& right)
 {
-    x = advance_sub(x, right.x);
-    y = advance_sub(y, right.y);
+    x = arithmetic_sub(x, right.x);
+    y = arithmetic_sub(y, right.y);
 
     return *this;
 }

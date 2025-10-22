@@ -21,6 +21,14 @@ TMPL_PREFIX Matrix4x4<T>::Matrix4x4()
 }
 {}
 
+TMPL_PREFIX Matrix4x4<T>::Matrix4x4(const Quaternion<T>& quat)
+{
+    // quta 必须归一化
+    // R = | 1 - 2*(y*y + z*z)      2*(x*y - z*w)        2*(x*z + y*w)     |
+    //     | 2*(x*y + z*w)          1 - 2*(x*x + z*z)    2*(y*z - x*w)     |
+    //     | 2*(x*z - y*w)          2*(y*z + x*w)        1 - 2*(x*x + y*y) |
+}
+
 TMPL_PREFIX void Matrix4x4<T>::makeIdentity()
 {
     // std::fill((T*)cols, ((T*)cols)+16, 0.0);
@@ -40,9 +48,9 @@ TMPL_PREFIX void Matrix4x4<T>::makeRotation(const Vector3<T>& axis, T angle)
     // y=axis.y
     // z=axis.z
     /*
-    |xx(1-c)+c   xy(1-c)-zs   xz(1-c)+ys |
-    |xy(1-c)+zs  yy(1-c)+c    yz(1-c)-xs |
-    |xz(1-c)-ys  yz(1-c)+xs   zz(1-c) + c|
+    |xx(1-c)+c   xy(1-c)-zs   xz(1-c)+ys|
+    |xy(1-c)+zs  yy(1-c)+c    yz(1-c)-xs|
+    |xz(1-c)-ys  yz(1-c)+xs   zz(1-c)+c |
     列矩阵
     */
     if (angle == T(0) || axis.isZero())

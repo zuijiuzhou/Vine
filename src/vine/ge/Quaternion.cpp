@@ -88,9 +88,7 @@ TMPL_PREFIX void Quaternion<T>::makeRotate(T angle, const Vector3<T>& axis)
 }
 
 TMPL_PREFIX void Quaternion<T>::makeRotate(const Vector3<T>& from, const Vector3<T>& to)
-{
-    
-}
+{}
 
 TMPL_PREFIX void Quaternion<T>::getRotate(T& o_angle, Vector3<T>& o_axis) const
 {
@@ -103,8 +101,8 @@ TMPL_PREFIX void Quaternion<T>::getRotate(T& o_angle, Vector3<T>& o_axis) const
     // 2 * atan2(sin(θ/2), w)更稳定
 
     // sin(θ/2)
-    auto s = sqrt(x * x + y * y + z * z);
-    auto a = atan2(s, w);
+    auto s  = sqrt(x * x + y * y + z * z);
+    o_angle = T(2) * atan2(s, w);
 
     if (s) {
         o_axis.x = x;
@@ -117,6 +115,13 @@ TMPL_PREFIX void Quaternion<T>::getRotate(T& o_angle, Vector3<T>& o_axis) const
         o_axis.y = T(0);
         o_axis.z = T(0);
     }
+}
+
+TMPL_PREFIX Quaternion<T> Quaternion<T>::slerp(const Quaternion<T>& from, const Quaternion<T>& to, T t)
+{
+    Quaternion<T> q;
+
+    return q;
 }
 
 TMPL_PREFIX Quaternion<T> Quaternion<T>::operator*(T right) const
@@ -233,7 +238,7 @@ TMPL_PREFIX Quaternion<T>& Quaternion<T>::operator*=(const Quaternion& right)
 
 TMPL_PREFIX Quaternion<T> Quaternion<T>::operator/(const Quaternion& right) const
 {
-    Quaternion<T> q = (*this * right.inverted());
+    auto q = (*this * right.inverted());
     return q;
 }
 
