@@ -25,7 +25,7 @@ class RefPtr {
       : ptr_(ptr)
     {
         if (ptr_) {
-            ptr_->addRef();
+            ptr_->ref();
         }
     }
 
@@ -33,7 +33,7 @@ class RefPtr {
       : ptr_(other.ptr_)
     {
         if (ptr_) {
-            ptr_->addRef();
+            ptr_->ref();
         }
     }
 
@@ -43,14 +43,14 @@ class RefPtr {
       : ptr_(other.ptr_)
     {
         if (ptr_) {
-            ptr_->addRef();
+            ptr_->ref();
         }
     }
 
     ~RefPtr()
     {
         if (ptr_) {
-            ptr_->removeRef();
+            ptr_->unref();
         }
     }
 
@@ -65,17 +65,17 @@ class RefPtr {
         if (ptr == ptr_)
             return;
         if (ptr_)
-            ptr_->removeRef();
+            ptr_->unref();
         ptr_ = ptr;
         if (ptr_)
-            ptr_->addRef();
+            ptr_->ref();
     }
 
     T* release()
     {
         auto temp = ptr_;
         if (ptr_)
-            ptr_->removeRef(false);
+            ptr_->unref(false);
         ptr_ = nullptr;
         return temp;
     }

@@ -1,15 +1,13 @@
 
 #include <vine/core/RefObject.hpp>
 
-#include <atomic>
-#include <cstddef>
-
 VI_CORE_NS_BEGIN
 
 VI_OBJECT_META_IMPL(RefObject, Object)
 
 struct RefObject::Data {
-    std::atomic<int32_t> num_refs = 0;
+    std::atomic<unsigned int> strong_refs;
+    std::atomic<unsigned int> weak_refs;
 };
 
 RefObject::RefObject() noexcept
@@ -17,7 +15,7 @@ RefObject::RefObject() noexcept
 {}
 
 RefObject::RefObject(const RefObject& other) noexcept
-  : d(new Data())
+  : d(other.d)
 {}
 
 RefObject::RefObject(RefObject&& other) noexcept
@@ -26,24 +24,25 @@ RefObject::RefObject(RefObject&& other) noexcept
 
 RefObject::~RefObject() noexcept
 {
-    delete d;
+    if (d->weak_refs.load() == 0)
+        delete d;
 }
 
-void RefObject::addRef()
+void RefObject::ref()
 {
-    d->num_refs.fetch_add(1, std::memory_order_relaxed);
+    d->strong_refs.fetch_add(1, std::memory_order_relaxed);
 }
 
-void RefObject::removeRef(bool del)
+void RefObject::unref(bool del)
 {
-    d->num_refs.fetch_sub(1, std::memory_order_seq_cst);
-    if (!d->num_refs && del)
+    d->strong_refs.fetch_sub(1, std::memory_order_seq_cst);
+    if (!d->strong_refs && del)
         delete this;
 }
 
-size_t RefObject::getRefs() const noexcept
+unsigned int RefObject::nbRefs() const noexcept
 {
-    return d->num_refs.load();
+    return d->strong_refs.load();
 }
 
 VI_CORE_NS_END

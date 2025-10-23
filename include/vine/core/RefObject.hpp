@@ -2,7 +2,6 @@
 #include "core_global.hpp"
 
 #include <atomic>
-#include <cstddef>
 
 #include "Object.hpp"
 #include "Ptr.hpp"
@@ -19,15 +18,15 @@ class VI_CORE_API RefObject : public Object {
     virtual ~RefObject() noexcept;
 
   public:
-    void addRef();
+    void ref();
 
-    void removeRef(bool del = true);
+    void unref(bool del = true);
 
-    size_t getRefs() const noexcept;
+    unsigned int nbRefs() const noexcept;
 
   private:
     struct Data;
-    Data* d;
+    Data* const d;
 };
 
 using RefObjectPtr = RefPtr<RefObject>;
