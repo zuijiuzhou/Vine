@@ -1,11 +1,11 @@
 #include "graphics_global.hpp"
 
-#include <vine/core/Object.hpp>
+#include <vine/core/RefObject.hpp>
 
 VI_GRAPHICS_NS_BEGIN
 
 class Scene;
-class VI_GRAPHICS_API View : public Object {
+class VI_GRAPHICS_API View : public RefObject {
   VI_OBJECT_META;
   VI_DISABLE_MOVE(View);
 

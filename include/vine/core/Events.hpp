@@ -1,10 +1,10 @@
 #pragma once
 #include "Signal.hpp"
-#include "Object.hpp"
+#include "RefObject.hpp"
 
 VI_CORE_NS_BEGIN
 
-class VI_CORE_API EventArgs : public Object {
+class VI_CORE_API EventArgs : public RefObject {
     VI_OBJECT_META
   public:
 };

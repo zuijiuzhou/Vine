@@ -4,7 +4,7 @@
 
 VI_APPFWGUI_NS_BEGIN
 
-VI_OBJECT_META_IMPL(UIElement, Object)
+VI_OBJECT_META_IMPL(UIElement, RefObject)
 
 struct UIElement::Data {
     String                  name;

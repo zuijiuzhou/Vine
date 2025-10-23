@@ -4,7 +4,7 @@
 
 VI_GRAPHICS_NS_BEGIN
 
-VI_OBJECT_META_IMPL(View, Object)
+VI_OBJECT_META_IMPL(View, RefObject)
 
 struct View::Data {
     RefPtr<Scene> scene;

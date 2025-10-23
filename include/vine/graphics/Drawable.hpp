@@ -1,10 +1,10 @@
 #pragma once
-#include <vine/core/Object.hpp>
+#include <vine/core/RefObject.hpp>
 #include "graphics_global.hpp"
 
 VI_GRAPHICS_NS_BEGIN
 
-class VI_GRAPHICS_API Drawable : public Object {
+class VI_GRAPHICS_API Drawable : public RefObject {
   VI_OBJECT_META;
   VI_DISABLE_COPY_MOVE(Drawable);
 

@@ -1,12 +1,12 @@
 #pragma once
 #include "Class.hpp"
-#include "Object.hpp"
+#include "RefObject.hpp"
 #include "String.hpp"
 
 VI_CORE_NS_BEGIN
 
 template <typename TParent, typename TSub>
-// requires std::is_base_of<Object, TParent>::value
+// requires std::is_base_of<RefObject, TParent>::value
     requires Objectifiable<TParent>
 class Inherit : public TParent {
   public:

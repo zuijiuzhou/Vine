@@ -2,7 +2,7 @@
 
 VI_GRAPHICS_NS_BEGIN
 
-VI_OBJECT_META_IMPL(Scene, Object);
+VI_OBJECT_META_IMPL(Scene, RefObject);
 
 struct Scene::Data {
 

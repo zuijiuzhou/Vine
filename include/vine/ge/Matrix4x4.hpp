@@ -20,7 +20,6 @@ template <typename T>
 class Matrix4x4 {
   public:
     using value_type  = T;
-    using column_type = Vector4<T>;
 
   public:
     Matrix4x4();
@@ -30,7 +29,6 @@ class Matrix4x4 {
     void makeIdentity();
     void makeRotation(const Vector3<T>& start, const Vector3<T>& end);
     void makeRotation(const Vector3<T>& axis, T angle);
-    void makeRotation(const Point3<T>& center, const Vector3<T>& axis, T angle);
     void makeTranslation(const Vector3<T>& offset);
     void makeTranslation(T x, T y, T z);
     void makeScale(const Vector3<T>& vec);
@@ -63,11 +61,11 @@ class Matrix4x4 {
      * @param zAxis the z axis direction of the coordinate system
      */
     void
-    setCoordSystem(const Point3<T>& origin, const Vector3<T>& xAxis, const Vector3<T>& yAxis, const Vector3<T>& zAxis);
+    setCoordSystem(const Point3<T>& origin, const Vector3<T>& x_axis, const Vector3<T>& y_axis, const Vector3<T>& z_axis);
     /**
      * @brief get the coordinate system represented by this matrix
      */
-    void getCoordSystem(Point3<T>& o_origin, Vector3<T>& o_xAxis, Vector3<T>& o_yAxis, Vector3<T>& o_zAxis) const;
+    void getCoordSystem(Point3<T>& o_origin, Vector3<T>& o_x_axis, Vector3<T>& o_y_axis, Vector3<T>& o_z_axis) const;
     /**
      * @brief transpose the matrix
      */
@@ -108,7 +106,8 @@ class Matrix4x4 {
     Matrix4x4<T>& operator*=(const Matrix4x4<T>& right);
 
   public:
-    static Matrix4x4<T> rotate(const Point3<T>& center, const Vector3<T>& axis, T angle);
+    static Matrix4x4<T> rotate(const Vector3<T>& start, const Vector3<T>& end);
+    static Matrix4x4<T> rotate(const Vector3<T>& axis, T angle);
     static Matrix4x4<T> translate(const Vector3<T>& offset);
     static Matrix4x4<T> translate(T x, T y, T z);
     static Matrix4x4<T> scale(const Vector3<T>& vec);

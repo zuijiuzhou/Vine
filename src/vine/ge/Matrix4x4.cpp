@@ -33,7 +33,7 @@ TMPL_PREFIX void Matrix4x4<T>::makeIdentity()
 {
     // std::fill((T*)vecs, ((T*)vecs)+16, 0.0);
     memset(data, 0, sizeof(data));
-    vecs[0][0] = vecs[1][1] = vecs[2][2] = vecs[3][3] = T(0);
+    vec0.x = vec1.y = vec2.z = vec3.w = T(0);
 }
 
 TMPL_PREFIX void Matrix4x4<T>::makeRotation(const Vector3<T>& start, const Vector3<T>& end)
@@ -86,9 +86,6 @@ TMPL_PREFIX void Matrix4x4<T>::makeRotation(const Vector3<T>& axis, T angle)
     vecs[3][2] = T(0);
     vecs[3][3] = T(1);
 }
-
-TMPL_PREFIX void Matrix4x4<T>::makeRotation(const Point3<T>& center, const Vector3<T>& axis, T angle)
-{}
 
 TMPL_PREFIX void Matrix4x4<T>::makeTranslation(const Vector3<T>& offset)
 {
@@ -149,38 +146,39 @@ Matrix4x4<T>::makeOrtho(double left, double right, double bottom, double top, do
     auto ty = -(top + bottom) / (top - bottom);
     auto tz = -(z_far + z_near) / (z_far - z_near);
 
-    vec0 = column_type(T(2) / (right - left), T(0), T(0), T(0));
-    vec1 = column_type(T(0), T(2) / (top - bottom), T(0), T(0));
-    vec2 = column_type(T(0), T(0), T(-2) / (z_far - z_near), T(0));
-    vec3 = column_type(tx, ty, tz, T(1));
+    vec0 = Vector4<T>(T(2) / (right - left), T(0), T(0), T(0));
+    vec1 = Vector4<T>(T(0), T(2) / (top - bottom), T(0), T(0));
+    vec2 = Vector4<T>(T(0), T(0), T(-2) / (z_far - z_near), T(0));
+    vec3 = Vector4<T>(tx, ty, tz, T(1));
 }
 
 TMPL_PREFIX void Matrix4x4<T>::makePerspective(double fovy, double aspect_ratio, double z_near, double z_far)
 {}
 
 TMPL_PREFIX void Matrix4x4<T>::setCoordSystem(const Point3<T>&  origin,
-                                              const Vector3<T>& xAxis,
-                                              const Vector3<T>& yAxis,
-                                              const Vector3<T>& zAxis)
+                                              const Vector3<T>& x_axis,
+                                              const Vector3<T>& y_axis,
+                                              const Vector3<T>& z_axis)
 {
     // col0
-    vecs[0].set(xAxis, T(0));
+    vecs[0].set(x_axis, T(0));
     // col1
-    vecs[0].set(yAxis, T(0));
+    vecs[0].set(y_axis, T(0));
     // col2
-    vecs[0].set(zAxis, T(0));
+    vecs[0].set(z_axis, T(0));
     // col3
     vecs[0].set(origin.x, origin.y, origin.z, T(1));
 }
 
-TMPL_PREFIX void
-Matrix4x4<T>::getCoordSystem(Point3<T>& o_origin, Vector3<T>& o_xAxis, Vector3<T>& o_yAxis, Vector3<T>& o_zAxis) const
+TMPL_PREFIX void Matrix4x4<T>::getCoordSystem(Point3<T>&  o_origin,
+                                              Vector3<T>& o_x_axis,
+                                              Vector3<T>& o_y_axis,
+                                              Vector3<T>& o_z_axis) const
 {
-    // col0
     o_origin = vecs[3].asVector3().asPoint();
-    o_xAxis  = vecs[0].asVector3();
-    o_yAxis  = vecs[1].asVector3();
-    o_zAxis  = vecs[2].asVector3();
+    o_x_axis = vecs[0].asVector3();
+    o_y_axis = vecs[1].asVector3();
+    o_z_axis = vecs[2].asVector3();
 }
 
 TMPL_PREFIX void Matrix4x4<T>::transpose()
@@ -307,10 +305,15 @@ TMPL_PREFIX Matrix4x4<T>& Matrix4x4<T>::operator*=(const Matrix4x4<T>& right)
     return *this;
 }
 
-TMPL_PREFIX Matrix4x4<T> Matrix4x4<T>::rotate(const Point3<T>& center, const Vector3<T>& axis, T angle)
+TMPL_PREFIX Matrix4x4<T> Matrix4x4<T>::rotate(const Vector3<T>& start, const Vector3<T>& end)
+{
+    return rotate(start, end);
+}
+
+TMPL_PREFIX Matrix4x4<T> Matrix4x4<T>::rotate(const Vector3<T>& axis, T angle)
 {
     Matrix4x4<T> m;
-    m.makeRotation(center, axis, angle);
+    m.makeRotation(axis, angle);
     return m;
 }
 

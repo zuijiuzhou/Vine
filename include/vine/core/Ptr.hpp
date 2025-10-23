@@ -6,61 +6,61 @@
 
 VI_CORE_NS_BEGIN
 
-class Object;
+class RefObject;
 
 template <typename T>
-    requires std::is_base_of<Object, T>::value
-class RefPtr
-{
-private:
+requires std::is_base_of<RefObject, T>::value
+class RefPtr {
+  private:
     template <typename TOther>
-        requires std::is_base_of<Object, TOther>::value
+    requires std::is_base_of<RefObject, TOther>::value
     friend class RefPtr;
 
-public:
-    RefPtr() : ptr_(nullptr)
+  public:
+    RefPtr()
+      : ptr_(nullptr)
+    {}
+
+    RefPtr(T* ptr)
+      : ptr_(ptr)
     {
-    }
-    RefPtr(T *ptr) : ptr_(ptr)
-    {
-        if (ptr_)
-        {
+        if (ptr_) {
             ptr_->addRef();
         }
     }
-    RefPtr(const RefPtr &other) : ptr_(other.ptr_)
+
+    RefPtr(const RefPtr& other)
+      : ptr_(other.ptr_)
     {
-        if (ptr_)
-        {
+        if (ptr_) {
             ptr_->addRef();
         }
     }
 
     template <typename TOther>
-        requires std::is_base_of<Object, TOther>::value
-    RefPtr(const RefPtr<TOther> &other) : ptr_(other.ptr_)
+    requires std::is_base_of<RefObject, TOther>::value
+    RefPtr(const RefPtr<TOther>& other)
+      : ptr_(other.ptr_)
     {
-        if (ptr_)
-        {
+        if (ptr_) {
             ptr_->addRef();
         }
     }
 
     ~RefPtr()
     {
-        if (ptr_)
-        {
+        if (ptr_) {
             ptr_->removeRef();
         }
     }
 
-public:
-    T *get() const
+  public:
+    T* get() const
     {
         return ptr_;
     }
 
-    void set(T *ptr)
+    void set(T* ptr)
     {
         if (ptr == ptr_)
             return;
@@ -71,7 +71,7 @@ public:
             ptr_->addRef();
     }
 
-    T *release()
+    T* release()
     {
         auto temp = ptr_;
         if (ptr_)
@@ -80,74 +80,76 @@ public:
         return temp;
     }
 
-    void swap(RefPtr &other)
+    void swap(RefPtr& other)
     {
         std::swap(ptr_, other.ptr_);
     }
 
-public:
+  public:
     bool operator!() const
     {
         return !ptr_;
     }
 
-    T *operator->() const
+    T* operator->() const
     {
         return ptr_;
     }
 
-    T &operator*() const
+    T& operator*() const
     {
         return *ptr_;
     }
 
-    RefPtr &operator=(const RefPtr &right)
+    RefPtr& operator=(const RefPtr& right)
     {
         set(right.ptr_);
         return *this;
     }
 
     template <typename TOther>
-        requires std::is_base_of<T, TOther>::value
-    RefPtr &operator=(const RefPtr<TOther> &right)
+    requires std::is_base_of<T, TOther>::value
+    RefPtr& operator=(const RefPtr<TOther>& right)
     {
         set(right.ptr_);
         return *this;
     }
 
     template <typename TOther>
-        requires std::is_base_of<T, TOther>::value
-    RefPtr &operator=(TOther *ptr)
+    requires std::is_base_of<T, TOther>::value
+    RefPtr& operator=(TOther* ptr)
     {
         set(ptr);
         return *this;
     }
 
-    bool operator==(const RefPtr &right) const
+    bool operator==(const RefPtr& right) const
     {
         return ptr_ == right.ptr_;
     }
 
-    bool operator==(const T *right) const
+    bool operator==(const T* right) const
     {
         return ptr_ == right;
     }
 
-    friend bool operator ==(const T* left, const RefPtr& right) {
+    friend bool operator==(const T* left, const RefPtr& right)
+    {
         return left == right.ptr_;
     }
 
-    bool operator!=(const RefPtr &right) const
+    bool operator!=(const RefPtr& right) const
     {
         return ptr_ != right.ptr_;
     }
 
-    bool operator!=(const T *right) const
+    bool operator!=(const T* right) const
     {
         return ptr_ != right;
     }
 
-    friend bool operator !=(const T* left, const RefPtr& right) {
+    friend bool operator!=(const T* left, const RefPtr& right)
+    {
         return left != right.ptr_;
     }
 
@@ -171,24 +173,34 @@ public:
         return ptr_ > right;
     }
 
-    bool hasValue() const {
+    bool hasValue() const
+    {
         return ptr_ != nullptr;
     }
 
-private:
-    T *ptr_;
+  private:
+    T* ptr_;
 };
 
-template<typename T, typename Y>
-requires std::is_base_of<Object, T>::value && std::is_base_of<Object, Y>::value
-inline RefPtr<T> static_pointer_cast(const RefPtr<Y>& rp) { return static_cast<T*>(rp.get()); }
+template <typename T, typename Y>
+requires std::is_base_of<RefObject, T>::value && std::is_base_of<RefObject, Y>::value
+inline RefPtr<T> static_pointer_cast(const RefPtr<Y>& rp)
+{
+    return static_cast<T*>(rp.get());
+}
 
-template<class T, class Y>
-requires std::is_base_of<Object, T>::value && std::is_base_of<Object, Y>::value
-inline RefPtr<T> dynamic_pointer_cast(const RefPtr<Y>& rp) { return dynamic_cast<T*>(rp.get()); }
+template <class T, class Y>
+requires std::is_base_of<RefObject, T>::value && std::is_base_of<RefObject, Y>::value
+inline RefPtr<T> dynamic_pointer_cast(const RefPtr<Y>& rp)
+{
+    return dynamic_cast<T*>(rp.get());
+}
 
-template<class T, class Y>
-requires std::is_base_of<Object, T>::value && std::is_base_of<Object, Y>::value
-inline RefPtr<T> const_pointer_cast(const RefPtr<Y>& rp) { return const_cast<T*>(rp.get()); }
+template <class T, class Y>
+requires std::is_base_of<RefObject, T>::value && std::is_base_of<RefObject, Y>::value
+inline RefPtr<T> const_pointer_cast(const RefPtr<Y>& rp)
+{
+    return const_cast<T*>(rp.get());
+}
 
 VI_CORE_NS_END

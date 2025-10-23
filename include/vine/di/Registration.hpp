@@ -3,7 +3,7 @@
 #include <functional>
 
 #include <vine/core/Class.hpp>
-#include <vine/core/Object.hpp>
+#include <vine/core/RefObject.hpp>
 #include <vine/core/core_defs.hpp>
 
 #include "Lifetime.hpp"
@@ -13,11 +13,11 @@ VI_DI_NS_BEGIN
 
 class Container;
 
-using InstanceFactory = std::function<Object*(Type, Container*)>;
+using InstanceFactory = std::function<RefObject*(Type, Container*)>;
 
 class RegistrationPrivate;
 
-class VI_DI_API Registration final : public Object {
+class VI_DI_API Registration final : public RefObject {
     VI_OBJECT_META;
     VI_DISABLE_MOVE(Registration);
 
@@ -28,8 +28,8 @@ class VI_DI_API Registration final : public Object {
     Registration(const Registration& reg);
 
   public:
-    Registration* instance(Object* inst);
-    Object*       instance() const;
+    Registration* instance(RefObject* inst);
+    RefObject*       instance() const;
 
     Registration*   instanceFactory(InstanceFactory fac);
     InstanceFactory instanceFactory() const;

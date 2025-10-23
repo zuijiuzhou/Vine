@@ -13,7 +13,7 @@ bool isValidRegistration(Registration* r) {
     return true;
 }
 } // namespace
-VI_OBJECT_META_IMPL(Container, Object)
+VI_OBJECT_META_IMPL(Container, RefObject)
 
 struct Container::Data {
     std::map<Type, Registration*> regs;
@@ -33,7 +33,7 @@ void Container::add(Registration* reg) {
     }
 }
 
-Object* Container::resolve(Type type) const {
+RefObject* Container::resolve(Type type) const {
     if (d->regs.contains(type)) {
         auto reg = d->regs[type];
 

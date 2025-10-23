@@ -2,7 +2,7 @@
 #include "gui_global.hpp"
 
 #include <vine/appfw/Application.hpp>
-#include <vine/core/Object.hpp>
+#include <vine/core/RefObject.hpp>
 
 
 VI_APPFWGUI_NS_BEGIN

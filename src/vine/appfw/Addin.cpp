@@ -2,13 +2,13 @@
 
 VI_APPFW_NS_BEGIN
 
-VI_OBJECT_META_IMPL(Addin, Object)
+VI_OBJECT_META_IMPL(Addin, RefObject)
 
-void Addin::Load(AddinLoadContext* context)
+void Addin::load(AddinLoadContext* context)
 {
 }
 
-void Addin::Unload() {
+void Addin::unload() {
 
 }
 

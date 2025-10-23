@@ -2,14 +2,14 @@
 
 #include "appfw_global.hpp"
 
-#include <vine/core/Object.hpp>
+#include <vine/core/RefObject.hpp>
 
 VI_APPFW_NS_BEGIN
 class CommandManager;
 class AddinManager;
 class ServiceManager;
 
-class VI_APPFW_API Application : public Object {
+class VI_APPFW_API Application : public RefObject {
     VI_OBJECT_META;
     VI_DISABLE_COPY_MOVE(Application);
 

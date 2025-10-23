@@ -1,12 +1,12 @@
 #pragma once
 #include "appfw_global.hpp"
 
-#include <vine/core/Object.hpp>
+#include <vine/core/RefObject.hpp>
 #include <vine/di/Registration.hpp>
 
 VI_APPFW_NS_BEGIN
 
-class VI_APPFW_API ServiceManager : public Object {
+class VI_APPFW_API ServiceManager : public RefObject {
     VI_OBJECT_META;
     VI_DISABLE_COPY_MOVE(ServiceManager);
 
@@ -16,7 +16,7 @@ class VI_APPFW_API ServiceManager : public Object {
 
   public:
     ServiceManager* registerService(di::Registration* reg);
-    Object*         getService(Type type) const;
+    RefObject*         getService(Type type) const;
 
   private:
     VI_OBJECT_DATA

@@ -12,7 +12,7 @@ VI_APPFW_NS_BEGIN
 
 static Application* s_current_app = nullptr;
 
-VI_OBJECT_META_IMPL(Application, Object)
+VI_OBJECT_META_IMPL(Application, RefObject)
 
 struct Application::Data {
     AddinManagerPtr   addin_manager;

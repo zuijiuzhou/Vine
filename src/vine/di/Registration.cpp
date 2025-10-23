@@ -9,7 +9,7 @@
 
 VI_DI_NS_BEGIN
 
-VI_OBJECT_META_IMPL(Registration, Object)
+VI_OBJECT_META_IMPL(Registration, RefObject)
 
 Registration::Registration(Type type)
   : d(new RegistrationPrivate()) {
@@ -22,7 +22,7 @@ Registration::Registration(const Registration& reg)
     *d = *reg.d;
 }
 
-Registration* Registration::instance(Object* inst) {
+Registration* Registration::instance(RefObject* inst) {
     if (inst && !inst->isKindOf(d->service_type)) {
         throw vine::Exception(vine::Exception::INVALID_ARGUMENTS, U"The inst is not kind of the service type.");
     }
@@ -31,7 +31,7 @@ Registration* Registration::instance(Object* inst) {
     return this;
 }
 
-Object* Registration::instance() const {
+RefObject* Registration::instance() const {
     return d->inst.get();
 }
 
@@ -67,7 +67,6 @@ InstanceFactory Registration::instanceFactory() const {
 }
 
 Registration& Registration::operator=(const Registration& reg) {
-    Object::operator=(reg);
     *d = *reg.d;
     return *this;
 }

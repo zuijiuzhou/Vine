@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Control.hpp"
-#include <vine/core/Object.hpp>
+#include <vine/core/RefObject.hpp>
 #include "gui_global.hpp"
 
 VI_APPFWGUI_NS_BEGIN

@@ -36,7 +36,7 @@ int main(int argc, char** argv) {
 
     di::Container c;
     auto          reg =
-        di::Registration::create<vine::Object>()->impl(fw::AddinManager::desc())->lifetime(di::Lifetime::Singleton);
+        di::Registration::create<vine::RefObject>()->impl(fw::AddinManager::desc())->lifetime(di::Lifetime::Singleton);
     c.add(reg);
 
     auto bar  = wnd->ribbonBar();

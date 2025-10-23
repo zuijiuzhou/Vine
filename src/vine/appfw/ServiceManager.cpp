@@ -3,7 +3,7 @@
 #include <vine/di/Container.hpp>
 
 VI_APPFW_NS_BEGIN
-VI_OBJECT_META_IMPL(ServiceManager, Object)
+VI_OBJECT_META_IMPL(ServiceManager, RefObject)
 
 struct ServiceManager::Data
 {
@@ -27,7 +27,7 @@ ServiceManager* ServiceManager::registerService(di::Registration* reg){
     return this;
 }
 
-Object* ServiceManager::getService(Type type) const{
+RefObject* ServiceManager::getService(Type type) const{
     return d->container->resolve(type);
 }
 

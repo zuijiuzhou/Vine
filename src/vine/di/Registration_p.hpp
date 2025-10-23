@@ -3,7 +3,7 @@
 #include <functional>
 
 #include <vine/core/Class.hpp>
-#include <vine/core/Object.hpp>
+#include <vine/core/RefObject.hpp>
 #include <vine/core/core_defs.hpp>
 
 #include <vine/di/Lifetime.hpp>
@@ -22,7 +22,7 @@ class RegistrationPrivate {
     Registration*   reg;
     Type            service_type      = nullptr;
     Type            service_impl_type = nullptr;
-    ObjectPtr       inst;
+    RefObjectPtr       inst;
     InstanceFactory inst_fac;
     Lifetime        lifetime = Lifetime::Transient;
 };

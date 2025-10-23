@@ -1,7 +1,7 @@
 #pragma once
 
 #include <vine/core/Events.hpp>
-#include <vine/core/Object.hpp>
+#include <vine/core/RefObject.hpp>
 #include <vine/core/String.hpp>
 #include "gui_global.hpp"
 
@@ -18,7 +18,7 @@ using UIObject = QObject;
 using UIObject = void;
 #endif
 
-class VI_APPFWGUI_API UIElement : public Object {
+class VI_APPFWGUI_API UIElement : public RefObject {
     VI_OBJECT_META
 
     VI_DISABLE_COPY_MOVE(UIElement)

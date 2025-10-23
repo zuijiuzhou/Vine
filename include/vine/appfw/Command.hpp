@@ -2,11 +2,11 @@
 
 #include "appfw_global.hpp"
 
-#include <vine/core/Object.hpp>
+#include <vine/core/RefObject.hpp>
 
 VI_APPFW_NS_BEGIN
 
-class VI_APPFW_API CommandExecutingContext : public Object {
+class VI_APPFW_API CommandExecutingContext : public RefObject {
     VI_OBJECT_META;
     VI_DISABLE_COPY_MOVE(CommandExecutingContext);
 
@@ -18,7 +18,7 @@ class VI_APPFW_API CommandExecutingContext : public Object {
 };
 using CommandExecutingContextPtr = RefPtr<CommandExecutingContext>;
 
-class VI_APPFW_API Command : public Object {
+class VI_APPFW_API Command : public RefObject {
     VI_OBJECT_META;
     VI_DISABLE_COPY_MOVE(Command);
 
