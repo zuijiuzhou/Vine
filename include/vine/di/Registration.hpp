@@ -29,7 +29,7 @@ class VI_DI_API Registration final : public RefObject {
 
   public:
     Registration* instance(RefObject* inst);
-    RefObject*       instance() const;
+    RefObject*    instance() const;
 
     Registration*   instanceFactory(InstanceFactory fac);
     InstanceFactory instanceFactory() const;
@@ -48,20 +48,19 @@ class VI_DI_API Registration final : public RefObject {
 
   public:
     template <typename T>
-        requires Objectifiable<T>
+    requires Objectifiable<T>
     static Registration* create();
 
   private:
     RegistrationPrivate* const d;
 };
 
-
 template <typename T>
-    requires Objectifiable<T>
-Registration* Registration::create() {
+requires Objectifiable<T>
+Registration* Registration::create()
+{
     return new Registration(T::desc());
 }
-
 
 using RegistrationPtr = RefPtr<Registration>;
 

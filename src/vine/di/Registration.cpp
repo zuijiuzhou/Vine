@@ -24,7 +24,7 @@ Registration::Registration(const Registration& reg)
 
 Registration* Registration::instance(RefObject* inst) {
     if (inst && !inst->isKindOf(d->service_type)) {
-        throw vine::Exception(vine::Exception::INVALID_ARGUMENTS, U"The inst is not kind of the service type.");
+        throw vine::Exception(vine::Exception::INVALID_ARGUMENTS, U"The 'inst' is not kind of the service type.");
     }
     d->inst     = inst;
     d->lifetime = Lifetime::Singleton;

@@ -22,8 +22,9 @@ class RegistrationPrivate {
     Registration*   reg;
     Type            service_type      = nullptr;
     Type            service_impl_type = nullptr;
-    RefObjectPtr       inst;
+    RefObjectPtr    inst;
     InstanceFactory inst_fac;
     Lifetime        lifetime = Lifetime::Transient;
 };
+
 VI_DI_NS_END

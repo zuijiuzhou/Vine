@@ -1,7 +1,6 @@
 #pragma once
-#include "core_global.hpp"
 
-#include <atomic>
+#include "core_global.hpp"
 
 #include "Object.hpp"
 #include "Ptr.hpp"
@@ -13,16 +12,19 @@ class VI_CORE_API RefObject : public Object {
 
   public:
     RefObject() noexcept;
-    RefObject(const RefObject& other) noexcept;
-    RefObject(RefObject&& other) noexcept;
+    RefObject(const RefObject& other) noexcept = delete;
+    RefObject(RefObject&& other) noexcept      = delete;
     virtual ~RefObject() noexcept;
 
   public:
+    /**
+     * @brief 
+     */
     void ref();
-
     void unref(bool del = true);
 
-    unsigned int nbRefs() const noexcept;
+    void weak_ref();
+    void weak_unref();
 
   private:
     struct Data;
