@@ -1,4 +1,4 @@
-vi_internal_add_library(Graphics OUT_TARGET_NAME)
+vi_add_library(GRAPHICS_TARGET_NAME Graphics)
 
 
-target_link_libraries(${OUT_TARGET_NAME} PUBLIC vi::Core)
+target_link_libraries(${GRAPHICS_TARGET_NAME} PUBLIC vi::Core)

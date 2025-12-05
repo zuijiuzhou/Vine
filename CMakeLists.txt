@@ -73,7 +73,7 @@ message(${CMAKE_BINARY_DIR})
 
 configure_package_config_file(${CMAKE_SOURCE_DIR}/cmake/VineConfig.cmake.in
     "${CMAKE_BINARY_DIR}/VineConfig.cmake"
-    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/VineConfig
+    INSTALL_DESTINATION lib/cmake/vine
 )
 install(
     FILES

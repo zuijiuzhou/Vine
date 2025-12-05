@@ -1,1 +1,1 @@
-vi_internal_add_library(System OUT_TARGET_NAME)
+vi_add_library(SYSTEM_TARGET_NAME System)

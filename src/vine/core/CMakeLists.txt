@@ -1,3 +1,3 @@
 # find_package(icu COMPONENTS uc)
 
-vi_internal_add_library(Core OUT_TARGET_NAME)
+vi_add_library(CORE_TARGET_NAME Core)

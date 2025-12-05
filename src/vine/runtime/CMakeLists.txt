@@ -1,1 +1,1 @@
-vi_internal_add_library(Runtime OUT_TARGET_NAME)
+vi_add_library(RUNTIME_TARGET_NAME Runtime)

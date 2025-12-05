@@ -1,4 +1,4 @@
-vi_internal_add_library(Di OUT_TARGET_NAME)
+vi_add_library(DI_TARGET_NAME Di)
 
 
-target_link_libraries(${OUT_TARGET_NAME} PUBLIC vi::Core)
+target_link_libraries(${DI_TARGET_NAME} PUBLIC vi::Core)

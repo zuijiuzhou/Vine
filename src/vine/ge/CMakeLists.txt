@@ -1,1 +1,1 @@
-﻿vi_internal_add_library(Ge OUT_TARGET_NAME)
+﻿vi_add_library(GE_TARGET_NAME Ge)

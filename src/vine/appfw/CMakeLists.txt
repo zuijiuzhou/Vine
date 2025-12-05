@@ -2,8 +2,8 @@
 find_package(Qt6 CONFIG REQUIRED COMPONENTS Core Gui Widgets)
 qt_standard_project_setup()
 
-vi_internal_add_library(Appfw OUT_TARGET_NAME)
+vi_add_library(APPFW_TARGET_NAME Appfw)
 
-target_link_libraries(${OUT_TARGET_NAME} PRIVATE Qt6::Core PUBLIC vi::Core vi::Di)
+target_link_libraries(${APPFW_TARGET_NAME} PRIVATE Qt6::Core PUBLIC vi::Core vi::Di)
 
 add_subdirectory(gui)
