@@ -3,7 +3,9 @@ function(vi_add_library target_name_var short_name)
     # CMAKE_CURRENT_SOURCE_DIR 当前CMakeLists.txt所在目录
     file(RELATIVE_PATH src_rel_dir ${CMAKE_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR})
     # SDK头文件所在目录
-    set(sdk_inc_dir ${CMAKE_SOURCE_DIR}/include/${src_rel_dir})
+    set(sdk_inc_root_dir ${CMAKE_SOURCE_DIR}/include)
+    set(sdk_inc_dir ${sdk_inc_root_dir}/${src_rel_dir})
+    
     # SDK头文件
     file(GLOB sdk_header_file_list ${sdk_inc_dir}/*.hpp ${sdk_inc_dir}/*.h)
     # CPP文件
@@ -56,7 +58,16 @@ function(vi_add_library target_name_var short_name)
     # string(TOLOWER ${CMAKE_PROJECT_NAME} proj_name_lowercase)
 
     # 安装头文件
-    install(FILES ${sdk_header_file_list} DESTINATION ${CMAKE_INSTALL_PREFIX}/include/${src_rel_dir})
+    # install(FILES ${sdk_header_file_list} DESTINATION ${CMAKE_INSTALL_PREFIX}/include/${src_rel_dir})
+    # install(DIRECTORY ${sdk_inc_dir} DESTINATION ${CMAKE_INSTALL_PREFIX}/include/${src_rel_dir})
+    # message(----------${sdk_inc_dir})
+    # message(----------${CMAKE_INSTALL_PREFIX}/include/${src_rel_dir})
+    foreach(sdk_file ${sdk_header_file_list})
+        get_filename_component(sdk_file_dir ${sdk_file} DIRECTORY)
+        file(RELATIVE_PATH sdk_file_rel_dir ${sdk_inc_root_dir} ${sdk_file_dir})
+        install(FILES ${sdk_file} DESTINATION ${CMAKE_INSTALL_PREFIX}/include/${sdk_file_rel_dir})
+    endforeach()
+
     # 安装目标文件
     install(
         TARGETS ${target_name}

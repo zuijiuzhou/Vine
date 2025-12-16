@@ -29,6 +29,7 @@ namespace di    = vine::di;
 
 int main(int argc, char** argv) {
 
+    printf("-------");
     guifw::GuiApplicationPtr app = new guifw::GuiApplication(argc, argv);
     app->init();
     guifw::MainWindowPtr wnd = new guifw::MainWindow();
