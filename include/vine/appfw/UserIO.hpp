@@ -5,7 +5,6 @@
 
 #include <vine/core/RefObject.hpp>
 #include <vine/core/String.hpp>
-#include <vine/core/core_defs.hpp>
 #include <vine/ge/ge_global.hpp>
 
 VI_GE_NS_BEGIN

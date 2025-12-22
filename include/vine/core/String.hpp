@@ -10,8 +10,8 @@ VI_CORE_NS_BEGIN
 class VI_CORE_API String final {
 
   public:
-    using iterator                = Char*;
-    using const_iterator          = const Char*;
+    using iterator       = Char*;
+    using const_iterator = const Char*;
 
   public:
     String();
@@ -19,7 +19,7 @@ class VI_CORE_API String final {
     String(const String& other) noexcept;
     String(String&& other) noexcept;
     virtual ~String();
-    
+
   public:
     String substr(int start) const;
 
@@ -47,9 +47,9 @@ class VI_CORE_API String final {
 
     bool equals(const String& other, bool ignore_case = false) const;
 
-    String toLower(bool is_asc_only = true) const;
+    String toLower(bool ascii_only = true) const;
 
-    String toUpper(bool is_asc_only = true) const;
+    String toUpper(bool ascii_only = true) const;
 
     String trimStart() const;
 

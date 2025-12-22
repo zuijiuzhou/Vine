@@ -1,12 +1,9 @@
 ﻿#pragma once
+#include "gui_global.hpp"
 
-#include <vine/core/core_defs.hpp>
 #include <vine/ge/Point2.hpp>
 #include <vine/ge/Rect2.hpp>
 #include <vine/ge/Vector2.hpp>
-
-#include "gui_global.hpp"
-
 
 VI_APPFWGUI_NS_BEGIN
 

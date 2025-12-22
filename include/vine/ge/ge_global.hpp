@@ -1,7 +1,6 @@
 #pragma once
 
-#include "../pltdef.hpp"
-#include "../videf.hpp"
+#include "../vi_global.hpp"
 
 #ifdef VI_GE_LIB
 #define VI_GE_API __API_EXPORT__

@@ -1,7 +1,6 @@
 #pragma once
 
-#include <vine/pltdef.hpp>
-#include <vine/videf.hpp>
+#include <vine/vi_global.hpp>
 
 #ifdef VI_APPFW_LIB
 #    define VI_APPFW_API __API_EXPORT__

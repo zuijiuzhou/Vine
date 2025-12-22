@@ -1,9 +1,9 @@
 #include <vine/core/String.hpp>
 
-#include <vector>
-#include <locale>
-#include <ctype.h>
 #include <cstring>
+#include <ctype.h>
+#include <locale>
+#include <vector>
 
 #include <vine/core/Exception.hpp>
 
@@ -11,24 +11,41 @@ VI_CORE_NS_BEGIN
 
 namespace
 {
-    template <typename T>
-    size_t get_data_len(const T *data)
-    {
-        size_t len = 0;
-        while (true)
-        {
-            if (*(data + len) == 0)
-                return len;
-            len++;
-        }
-        return len;
+
+template <typename T>
+size_t get_data_len(const T* data)
+{
+    size_t len = 0;
+
+    while (true) {
+        if (*(data + len) == T(0))
+            return len;
+        len++;
     }
 
-    inline bool is_white_char(Char c)
-    {
-        return c == U' ' || c == U'\r' || c == U'\n' || c == U'\t';
-    }
+    return len;
 }
+
+inline bool is_white_char(Char c)
+{
+    return c == U' ' || c == U'\r' || c == U'\n' || c == U'\t' || c == U'\v' || c == U'\f';
+}
+
+inline bool is_same_char_ignore_case(Char l, Char r)
+{
+    if (l == r)
+        return true;
+
+    if (l >= U'A' && l <= U'Z')
+        l += 32;
+
+    if (r >= U'A' && r <= U'Z')
+        r += 32;
+
+    return l == r;
+}
+
+} // namespace
 
 const String String::E = U"";
 
@@ -37,21 +54,21 @@ String::String()
     clear();
 }
 
-String::String(const Char *data)
+String::String(const Char* data)
 {
     set(data);
 }
 
-String::String(const String &other) noexcept
+String::String(const String& other) noexcept
 {
     (*this) = other;
 }
 
-String::String(String &&other) noexcept
+String::String(String&& other) noexcept
 {
     if (data_)
         delete[] data_;
-    data_ = other.data_;
+    data_       = other.data_;
     other.data_ = nullptr;
 }
 
@@ -68,14 +85,18 @@ String String::substr(int start) const
 String String::substr(int start, int count) const
 {
     String s;
+
     if (len_ == 0)
         return s;
-    if (start >= 0 && count >= 0 && start <= len_ && start + count <= len_)
-    {
-        if (start != len_)
+
+    if (start >= 0 && count >= 0 && start <= len_ && start + count <= len_) {
+        if (start != len_) {
             s.set(data_ + start, count);
+        }
+
         return s;
     }
+
     throw Exception(Exception::INDEX_OUT_OF_RANGE);
 }
 
@@ -91,13 +112,12 @@ size_t String::length() const noexcept
 
 void String::clear() noexcept
 {
-    if (data_)
-    {
+    if (data_) {
         delete[] data_;
         data_ = nullptr;
-        len_ = 0;
+        len_  = 0;
     }
-    data_ = new Char[1]{0};
+    data_ = new Char[1]{ 0 };
 }
 
 bool String::empty() const noexcept
@@ -105,36 +125,38 @@ bool String::empty() const noexcept
     return len_ == 0;
 }
 
-const Char *String::data() const noexcept
+const Char* String::data() const noexcept
 {
     return data_;
 }
 
-void String::set(const Char *data)
+void String::set(const Char* data)
 {
     set(data, get_data_len(data));
 }
 
-void String::set(const Char *data, size_t len)
+void String::set(const Char* data, size_t len)
 {
     clear();
-    if (data && len > 0)
-    {
-        auto temp = new Char[len + 1];
-        memcpy(temp, data, len * sizeof(Char));
-        temp[len] = 0;
-        if(data_){
+
+    if (data && len > 0) {
+        auto buf = new Char[len + 1];
+        memcpy(buf, data, len * sizeof(Char));
+        buf[len] = 0;
+
+        if (data_)
             delete[] data_;
-        }
-        data_ = temp;
-        len_ = len;
+
+        data_ = buf;
+        len_  = len;
     }
 }
 
-Char &String::at(size_t idx)
+Char& String::at(size_t idx)
 {
     if (idx >= len_)
         throw Exception(Exception::INDEX_OUT_OF_RANGE);
+
     return *(data_ + idx);
 }
 
@@ -143,13 +165,14 @@ long String::indexOf(Char c) const
     if (empty())
         return -1;
 
-    size_t idx = 0;
-    while (idx < len_)
-    {
+    size_t idx{ 0 };
+
+    while (idx < len_) {
         if (*(data_ + idx) == c)
             return idx;
         idx++;
     }
+
     return -1;
 }
 
@@ -158,49 +181,52 @@ long String::lastIndexOf(Char c) const
     if (empty())
         return -1;
 
-    auto idx = len_;
-    while (idx > 0)
-    {
+    size_t idx{ len_ };
+
+    while (idx > 0) {
         if (*(data_ + --idx) == c)
             return idx;
     }
+
     return -1;
 }
 
-bool String::equals(const String &other, bool ignore_case) const
+bool String::equals(const String& other, bool ignore_case) const
 {
     if (empty() && other.empty())
         return true;
+
     if (len_ != other.len_)
         return false;
-    if (ignore_case)
-    {
-        for (size_t i = 0; i < len_; i++)
-        {
-            auto &c1 = *(data_ + i);
-            auto &c2 = *(other.data_ + i);
-            if (!(c1 == c2 || c1 - c2 != 32 || c1 - c2 != -32))
+
+    if (ignore_case) {
+        for (size_t i = 0; i < len_; ++i) {
+            auto& c1 = *(data_ + i);
+            auto& c2 = *(other.data_ + i);
+
+            if (!is_same_char_ignore_case(c1, c2))
                 return false;
         }
     }
-    else
-    {
+    else {
         return memcmp(data_, other.data_, len_ * sizeof(Char)) == 0;
     }
+
     return true;
 }
 
-String String::toLower(bool is_asc_only) const
+String String::toLower(bool ascii_only) const
 {
     if (len_ == 0)
         return *this;
 
     auto s = *this;
-    if (is_asc_only) {
-        for (size_t i = 0; i < s.len_; i++)
-        {
+
+    if (ascii_only) {
+        for (size_t i = 0; i < s.len_; i++) {
             auto& c = s.at(i);
-            if (c >= 65 && c <= 90)
+
+            if (c >= U'A' && c <= U'Z')
                 c += 32;
         }
     }
@@ -211,17 +237,18 @@ String String::toLower(bool is_asc_only) const
     return s;
 }
 
-String String::toUpper(bool is_asc_only) const
+String String::toUpper(bool ascii_only) const
 {
     if (len_ == 0)
         return *this;
 
     auto s = *this;
-    if (is_asc_only) {
-        for (size_t i = 0; i < s.len_; i++)
-        {
+
+    if (ascii_only) {
+        for (size_t i = 0; i < s.len_; i++) {
             auto& c = s.at(i);
-            if (c >= 97 && c <= 122)
+
+            if (c >= U'a' && c <= U'z')
                 c -= 32;
         }
     }
@@ -235,14 +262,15 @@ String String::toUpper(bool is_asc_only) const
 String String::trimStart() const
 {
     String s;
+
     if (empty())
         return s;
-    auto len = len_;
+
+    auto len  = len_;
     auto data = data_;
-    while (len > 0)
-    {
-        if (is_white_char(*data))
-        {
+
+    while (len > 0) {
+        if (is_white_char(*data)) {
             len--;
             data++;
             continue;
@@ -251,6 +279,7 @@ String String::trimStart() const
     }
     if (len == 0)
         return s;
+
     s.set(data, len);
     return s;
 }
@@ -260,12 +289,10 @@ String String::trimEnd() const
     String s;
     if (empty())
         return s;
-    auto len = len_;
+    auto len  = len_;
     auto data = (data_ + len_ - 1);
-    while (len > 0)
-    {
-        if (is_white_char(*data))
-        {
+    while (len > 0) {
+        if (is_white_char(*data)) {
             len--;
             data--;
             continue;
@@ -283,12 +310,10 @@ String String::trim() const
     String s;
     if (empty())
         return s;
-    auto len = len_;
+    auto len        = len_;
     auto data_start = data_;
-    while (len > 0)
-    {
-        if (is_white_char(*data_start))
-        {
+    while (len > 0) {
+        if (is_white_char(*data_start)) {
             len--;
             data_start++;
             continue;
@@ -298,10 +323,8 @@ String String::trim() const
     if (len == 0)
         return s;
     auto data_end = (data_ + len_ - 1);
-    while (len > 0)
-    {
-        if (is_white_char(*data_end))
-        {
+    while (len > 0) {
+        if (is_white_char(*data_end)) {
             len--;
             data_end--;
             continue;
@@ -318,76 +341,70 @@ bool String::startsWith(Char c, bool ignore_case) const
 {
     if (empty())
         return false;
-    auto n = c > *data_ ? c - *data_ : *data_ - c;
-    if (ignore_case)
-    {
-        return n == 0 || n == 32;
+
+    if (ignore_case) {
+        return is_same_char_ignore_case(*data_, c);
     }
-    else
-    {
-        return n == 0;
+    else {
+        return *data_ == c;
     }
 }
 
-bool String::startsWith(const String &str, bool ignore_case) const
+bool String::startsWith(const String& str, bool ignore_case) const
 {
-    if (str.empty())
+    if (str.len_ == 0)
         return true;
-    if (length() < str.length())
+
+    if (len_ < str.len_)
         return false;
 
-    for (size_t i = 0; i < str.length(); i++)
-    {
-        auto c1 = *(data_ + i);
-        auto c2 = *(str.data_ + i);
+    if (ignore_case) {
+        for (size_t i = 0; i < str.len_; i++) {
+            if (is_same_char_ignore_case(data_[i], str.data_[i]))
+                continue;
 
-        auto n = c1 > c2 ? c1 - c2 : c2 - c1;
-        if (n == 0 || (ignore_case && n == 32))
-        {
-            continue;
+            return false;
         }
-        return false;
     }
+    else {
+        return memcmp(data_, str.data_, str.len_ * sizeof(Char)) == 0;
+    }
+
 
     return true;
 }
 
 bool String::endsWith(Char c, bool ignore_case) const
 {
-    if (empty())
+    if (len_ == 0)
         return false;
-    auto &c_last = *(data_ + len_ - 1);
-    auto n = c > c_last ? c - c_last : c_last - c;
-    if (ignore_case)
-    {
-        return n == 0 || n == 32;
+
+    if (ignore_case) {
+        return is_same_char_ignore_case(c, data_[len_ - 1]);
     }
-    else
-    {
-        return n == 0;
+    else {
+        return c == data_[len_ - 1];
     }
 }
 
-bool String::endsWith(const String &str, bool ignore_case) const
+bool String::endsWith(const String& str, bool ignore_case) const
 {
-    if (str.empty())
+    if (str.len_ == 0)
         return true;
-    if (length() < str.length())
+
+    if (len_ < str.len_)
         return false;
 
-    auto data1 = data_ + len_ - 1;
-    auto data2 = str.data_ + str.len_ - 1;
-    for (size_t i = 0; i < str.length(); i++)
-    {
-        auto c1 = *(data1--);
-        auto c2 = *(data2--);
+    if (ignore_case) {
+        for (size_t i = 0; i < str.len_; i++) {
+            if (is_same_char_ignore_case(data_[len_ - i - 1], str.data_[str.len_ - i - 1]))
+                continue;
 
-        auto n = c1 > c2 ? c1 - c2 : c2 - c1;
-        if (n == 0 || (ignore_case && n == 32))
-        {
-            continue;
+            return false;
         }
-        return false;
+    }
+    else {
+        return memcmp(data_ + len_ - str.len_, str.data_, str.len_ * sizeof(Char)) == 0;
     }
 
     return true;
@@ -413,57 +430,48 @@ String::const_iterator String::cend() const
     return data_ + len_;
 }
 
-String String::fromUtf8(const char *data)
+String String::fromUtf8(const char* data)
 {
+    if (!data)
+        return {};
+
     String s;
 
-    if (!data)
-        return s;
-
-    unsigned char c;
-    size_t i, n;
-    char32_t c32;
+    unsigned char         c;
+    size_t                i, n;
+    char32_t              c32;
     std::vector<char32_t> u32;
 
-    while (*data)
-    {
+    while (*data) {
         c = *data++;
-        if (c < 0x80)
-        {
+        if (c < 0x80) {
             c32 = c;
-            n = 1;
+            n   = 1;
         }
-        else if (c < 0xC0 || c > 0xFD)
-        {
+        else if (c < 0xC0 || c > 0xFD) {
             break;
         }
-        else if (c < 0xE0)
-        {
+        else if (c < 0xE0) {
             c32 = c & 0x1F;
-            n = 2;
+            n   = 2;
         }
-        else if (c < 0xF0)
-        {
+        else if (c < 0xF0) {
             c32 = c & 0x0F;
-            n = 3;
+            n   = 3;
         }
-        else if (c < 0xF8)
-        {
+        else if (c < 0xF8) {
             c32 = c & 7;
-            n = 4;
+            n   = 4;
         }
-        else if (c < 0xFC)
-        {
+        else if (c < 0xFC) {
             c32 = c & 3;
-            n = 5;
+            n   = 5;
         }
-        else
-        {
+        else {
             c32 = c & 1;
-            n = 6;
+            n   = 6;
         }
-        for (i = 1; i < n; i++)
-        {
+        for (i = 1; i < n; i++) {
             c = *data++;
             if (c < 0x80 || c > 0xBF)
                 break;
@@ -475,47 +483,45 @@ String String::fromUtf8(const char *data)
     return s;
 }
 
-String String::fromUtf16(const char16_t *data)
+String String::fromUtf16(const char16_t* data)
 {
     return String();
 }
 
-String String::fromLocal8Bit(const char *data)
+String String::fromLocal8Bit(const char* data)
 {
     return String();
 }
 
-String &String::operator=(const String &right)
+String& String::operator=(const String& right)
 {
     set(right.data_, right.len_);
     return *this;
 }
 
-Char &String::operator[](size_t idx)
+Char& String::operator[](size_t idx)
 {
     return at(idx);
 }
 
-bool String::operator==(const String &right) const
+bool String::operator==(const String& right) const
 {
     return equals(right);
 }
 
-bool String::operator!=(const String &right) const
+bool String::operator!=(const String& right) const
 {
     return !(*this == right);
 }
 
-bool String::operator<(const String &right) const
+bool String::operator<(const String& right) const
 {
     if (data_ && right.data_) {
         return memcmp(data_, right.data_, std::min(len_, right.len_));
     }
     else if (data_) {
-        
     }
     else if (right.data_) {
-
     }
     else {
         return false;
@@ -523,7 +529,7 @@ bool String::operator<(const String &right) const
     return false;
 }
 
-bool String::operator>(const String &right) const
+bool String::operator>(const String& right) const
 {
     return false;
 }

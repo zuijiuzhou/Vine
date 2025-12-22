@@ -4,7 +4,6 @@
 
 #include <vine/core/Class.hpp>
 #include <vine/core/RefObject.hpp>
-#include <vine/core/core_defs.hpp>
 
 #include <vine/di/Lifetime.hpp>
 #include <vine/di/Registration.hpp>

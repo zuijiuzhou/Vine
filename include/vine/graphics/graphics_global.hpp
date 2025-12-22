@@ -1,7 +1,6 @@
 #pragma once
 
-#include <vine/pltdef.hpp>
-#include <vine/videf.hpp>
+#include <vine/vi_global.hpp>
 
 #ifdef VI_GRAPHICS_LIB
 #define VI_GRAPHICS_API __API_EXPORT__

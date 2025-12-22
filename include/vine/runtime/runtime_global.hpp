@@ -1,7 +1,6 @@
 #pragma once
 
-#include <vine/pltdef.hpp>
-#include <vine/videf.hpp>
+#include <vine/vi_global.hpp>
 
 #ifdef VI_RUNTIME_LIB
 #define VI_RUNTIME_API __API_EXPORT__
