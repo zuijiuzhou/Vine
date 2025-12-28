@@ -47,7 +47,7 @@ class VI_DI_API Registration final : public RefObject {
 
   public:
     template <typename T>
-    requires Objectifiable<T>
+    requires ObjectBased<T>
     static Registration* create();
 
   private:
@@ -55,7 +55,7 @@ class VI_DI_API Registration final : public RefObject {
 };
 
 template <typename T>
-requires Objectifiable<T>
+requires ObjectBased<T>
 Registration* Registration::create()
 {
     return new Registration(T::desc());

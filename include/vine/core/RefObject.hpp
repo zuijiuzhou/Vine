@@ -1,6 +1,7 @@
 #pragma once
-
 #include "core_global.hpp"
+
+#include <atomic>
 
 #include "Object.hpp"
 #include "Ptr.hpp"
@@ -18,7 +19,7 @@ class VI_CORE_API RefObject : public Object {
 
   public:
     /**
-     * @brief 
+     * @brief
      */
     void ref();
     void unref(bool del = true);
@@ -27,8 +28,12 @@ class VI_CORE_API RefObject : public Object {
     void weak_unref();
 
   private:
-    struct Data;
-    Data* const d;
+    struct ControlBlock {
+        std::atomic<unsigned int> strong_refs{ 0 };
+        std::atomic<unsigned int> weak_refs{ 0 };
+    };
+
+    ControlBlock* const d;
 };
 
 using RefObjectPtr = RefPtr<RefObject>;

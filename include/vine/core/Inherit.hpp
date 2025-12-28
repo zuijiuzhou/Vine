@@ -7,7 +7,7 @@ VI_CORE_NS_BEGIN
 
 template <typename TParent, typename TSub>
 // requires std::is_base_of<RefObject, TParent>::value
-    requires Objectifiable<TParent>
+    requires ObjectBased<TParent>
 class Inherit : public TParent {
   public:
     template <typename... TArgs>

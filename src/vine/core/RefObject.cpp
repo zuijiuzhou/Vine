@@ -1,19 +1,13 @@
 #include <vine/core/RefObject.hpp>
 
-#include <atomic>
 #include <stdexcept>
 
 VI_CORE_NS_BEGIN
 
 VI_OBJECT_META_IMPL(RefObject, Object)
 
-struct RefObject::Data {
-    std::atomic<unsigned int> strong_refs = 0;
-    std::atomic<unsigned int> weak_refs   = 0;
-};
-
 RefObject::RefObject() noexcept
-  : d(new Data())
+  : d(new ControlBlock())
 {}
 
 RefObject::~RefObject() noexcept
@@ -36,12 +30,6 @@ void RefObject::unref(bool del)
 void RefObject::weak_ref()
 {
     d->weak_refs.fetch_add(1, std::memory_order_seq_cst);
-
-    if (d->strong_refs.load(std::memory_order_seq_cst) == 0 &&
-        d->weak_refs.fetch_sub(1, std::memory_order_seq_cst) == 1)
-    {
-        delete d;
-    }
 }
 
 void RefObject::weak_unref()

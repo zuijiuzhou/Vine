@@ -18,7 +18,7 @@ class VI_DI_API Container : public RefObject {
     RefObject* resolve(Type type) const;
 
     template <typename T>
-        requires Objectifiable<T>
+        requires ObjectBased<T>
     T* resolve() const;
 
   private:
@@ -28,7 +28,7 @@ class VI_DI_API Container : public RefObject {
 using ContainerPtr = RefPtr<Container>;
 
 template <typename T>
-    requires Objectifiable<T>
+    requires ObjectBased<T>
 T* Container::resolve() const {
     return resolve(T::desc());
 }
