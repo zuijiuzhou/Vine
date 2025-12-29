@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "gui_global.hpp"
 
 #include "Control.hpp"

@@ -1,4 +1,4 @@
-#include <vine/appfw/gui/RibbonGroup.hpp>
+﻿#include <vine/appfw/gui/RibbonGroup.hpp>
 
 #include <SARibbon.h>
 
@@ -11,11 +11,11 @@ VI_OBJECT_META_IMPL(RibbonGroup, Control)
 struct RibbonGroup::Data {};
 
 namespace {
-using itype = SARibbonPannel;
+using itype = SARibbonPanel;
 }
 
 RibbonGroup::RibbonGroup()
-  : Control(new SARibbonPannel())
+  : Control(new SARibbonPanel())
   , d(new Data()) {
 }
 
@@ -25,13 +25,13 @@ RibbonGroup::~RibbonGroup() {
 
 String RibbonGroup::title() const {
     auto   w = impl<itype>();
-    String s(w->pannelName().toStdU32String().data());
+    String s(w->panelName().toStdU32String().data());
     return s;
 }
 
 void RibbonGroup::title(const String& ti) {
     auto w = impl<itype>();
-    w->setPannelName(QString::fromUcs4(ti.data()));
+    w->setPanelName(QString::fromUcs4(ti.data()));
 }
 
 VI_APPFWGUI_NS_END

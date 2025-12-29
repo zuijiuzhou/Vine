@@ -29,7 +29,7 @@ using itype           = SARibbonMainWindow;
 } // namespace
 
 MainWindow::MainWindow()
-  : Control(new SARibbonMainWindow(nullptr, true))
+  : Control(new SARibbonMainWindow(nullptr))
   , d(new Data) {
     size(Size(600, 400));
     d->ribbon_bar = new RibbonBar(this);
