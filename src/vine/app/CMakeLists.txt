@@ -11,11 +11,11 @@ qt_add_executable(${APP_TARGET_NAME} WIN32 ${SRC_FILE_LIST} ${HEADER_FILE_LIST} 
 
 set_target_properties(${APP_TARGET_NAME} PROPERTIES WIN32_EXECUTABLE TRUE MACOSX_BUNDLE TRUE FOLDER vi)
 
-target_link_libraries(${APP_TARGET_NAME} PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets vi::AppfwGui vi::Di)
+target_link_libraries(${APP_TARGET_NAME} PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets vi::Appfw vi::Di)
 
 install(TARGETS ${APP_TARGET_NAME}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-
+    
 # add_custom_command(TARGET ${APP_TARGET_NAME} POST_BUILD
 #     COMMAND ${CMAKE_COMMAND} -E copy_if_different
 #         $<TARGET_FILE:Qt6::Core>
@@ -25,4 +25,21 @@ install(TARGETS ${APP_TARGET_NAME}
 # set_target_properties(${APP_TARGET_NAME} PROPERTIES WIN32_EXECUTABLE TRUE)
 
 # copy_qt_dependencies(${APP_TARGET_NAME} Qt::Core Qt::Widgets Qt::Gui)
+
+# find_package(Qt6 REQUIRED COMPONENTS Core)
+# qt_standard_project_setup()
+
+# qt_add_executable(MyApp main.cpp)
+
+# install(TARGETS MyApp
+#     BUNDLE  DESTINATION .
+#     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+# )
+
+# qt_generate_deploy_app_script(
+#     TARGET MyApp
+#     OUTPUT_SCRIPT deploy_script
+#     NO_UNSUPPORTED_PLATFORM_ERROR
+# )
+# install(SCRIPT ${deploy_script})
 

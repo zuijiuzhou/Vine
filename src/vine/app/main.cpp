@@ -3,8 +3,8 @@
 #include <iostream>
 #include <vector>
 
-#include <vine/ge/Point3.hpp>
-#include <vine/ge/Vector3.hpp>
+#include <vine/math/Point3.hpp>
+#include <vine/math/Vector3.hpp>
 
 #include <vine/core/Ptr.hpp>
 #include <vine/core/stl++.hpp>

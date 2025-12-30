@@ -39,11 +39,11 @@ bool VisualUserIO::getDouble(double& val, const String& prompt) const {
 void VisualUserIO::getDouble(double& val, double def, const String& prompt) const {
 }
 
-bool VisualUserIO::getPoint3d(ge::Point3d& val, const String& prompt) const {
+bool VisualUserIO::getPoint3d(math::Point3d& val, const String& prompt) const {
     return false;
 }
 
-void VisualUserIO::getPoint3d(ge::Point3d& val, ge::Point3d& def, const String& prompt) const {
+void VisualUserIO::getPoint3d(math::Point3d& val, math::Point3d& def, const String& prompt) const {
 }
 
 VI_APPFWGUI_NS_END

@@ -4,7 +4,6 @@
 #include <QSize>
 
 #include <vine/appfw/gui/Gui.hpp>
-#include <vine/appfw/gui/gui_global.hpp>
 
 VI_APPFWGUI_NS_BEGIN
 

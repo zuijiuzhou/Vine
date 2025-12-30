@@ -1,1 +1,0 @@
-﻿vi_add_library(GE_TARGET_NAME Ge)

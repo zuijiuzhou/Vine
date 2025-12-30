@@ -5,11 +5,11 @@
 
 #include <vine/core/RefObject.hpp>
 #include <vine/core/String.hpp>
-#include <vine/ge/ge_global.hpp>
+#include <vine/math/math_global.hpp>
 
-VI_GE_NS_BEGIN
+VI_MATH_NS_BEGIN
 class Point3d;
-VI_GE_NS_END
+VI_MATH_NS_END
 
 VI_APPFW_NS_BEGIN
 
@@ -32,8 +32,8 @@ class VI_APPFW_API UserIO : public RefObject {
     virtual bool getDouble(double& val, const String& prompt = String::E) const             = 0;
     virtual void getDouble(double& val, double def, const String& prompt = String::E) const = 0;
 
-    virtual bool getPoint3d(ge::Point3d& val, const String& prompt = String::E) const                   = 0;
-    virtual void getPoint3d(ge::Point3d& val, ge::Point3d& def, const String& prompt = String::E) const = 0;
+    virtual bool getPoint3d(math::Point3d& val, const String& prompt = String::E) const                   = 0;
+    virtual void getPoint3d(math::Point3d& val, math::Point3d& def, const String& prompt = String::E) const = 0;
 };
 using UserIOPtr = RefPtr<UserIO>;
 

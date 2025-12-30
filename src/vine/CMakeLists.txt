@@ -20,7 +20,7 @@ set(VI_SHARED_LIBRARY_PREFIX vi)
 
 include(VineLibraryHelper)
 
-add_subdirectory(ge)
+add_subdirectory(math)
 add_subdirectory(core)
 add_subdirectory(di)
 add_subdirectory(system)

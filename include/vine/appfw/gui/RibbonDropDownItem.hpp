@@ -1,12 +1,10 @@
 #pragma once
 
-#include "gui_global.hpp"
-
 #include "UIElement.hpp"
 
 VI_APPFWGUI_NS_BEGIN
 
-class VI_APPFWGUI_API RibbonDropDownItem : public UIElement {
+class VI_APPFW_API RibbonDropDownItem : public UIElement {
     VI_OBJECT_META
     friend class RibbonBar;
 

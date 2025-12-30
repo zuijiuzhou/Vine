@@ -7,13 +7,13 @@ function(vi_add_library target_name_var short_name)
     set(sdk_inc_dir ${sdk_inc_root_dir}/${src_rel_dir})
     
     # SDK头文件
-    file(GLOB sdk_header_file_list ${sdk_inc_dir}/*.hpp ${sdk_inc_dir}/*.h)
+    file(GLOB_RECURSE sdk_header_file_list ${sdk_inc_dir}/*.hpp ${sdk_inc_dir}/*.h)
     # CPP文件
-    file(GLOB src_file_list LIST_DIRECTORIES false *.cpp)
+    file(GLOB_RECURSE src_file_list LIST_DIRECTORIES false *.cpp)
     # 头文件
-    file(GLOB header_file_list LIST_DIRECTORIES false *.hpp *.h)
+    file(GLOB_RECURSE header_file_list LIST_DIRECTORIES false *.hpp *.h)
     # 资源文件
-    file(GLOB rc_file_list LIST_DIRECTORIES false *.rc *.qrc)
+    file(GLOB_RECURSE rc_file_list LIST_DIRECTORIES false *.rc *.qrc)
     # 目标名称
     set(target_name ${short_name})
     # 目标别名
@@ -32,9 +32,9 @@ function(vi_add_library target_name_var short_name)
 
     set_target_properties(${target_name} PROPERTIES PREFIX "")
     # 设置源文件分组
-    source_group(sdk FILES ${sdk_header_file_list})
-    # source_group(inc FILES ${header_file_list})
-    # source_group(src FILES ${src_file_list})
+    source_group(TREE ${sdk_inc_dir} PREFIX sdk FILES ${sdk_header_file_list})
+    source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} PREFIX headers FILES ${header_file_list})
+    source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} PREFIX src FILES ${src_file_list})
     # source_group(res FILES ${rc_file_list})
 
     string(TOUPPER VI_${short_name}_LIB lib_compile_def)

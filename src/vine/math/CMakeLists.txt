@@ -1,0 +1,1 @@
+﻿vi_add_library(MATH_TARGET_NAME Math)

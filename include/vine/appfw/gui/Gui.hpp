@@ -1,15 +1,16 @@
 ﻿#pragma once
-#include "gui_global.hpp"
 
-#include <vine/ge/Point2.hpp>
-#include <vine/ge/Rect2.hpp>
-#include <vine/ge/Vector2.hpp>
+#include <vine/appfw/appfw_global.hpp>
+
+#include <vine/math/Point2.hpp>
+#include <vine/math/Rect2.hpp>
+#include <vine/math/Vector2.hpp>
 
 VI_APPFWGUI_NS_BEGIN
 
-using Rect  = ge::Rect2i;
-using Point = ge::Point2i;
-using Size  = ge::Vec2i;
+using Rect  = math::Rect2i;
+using Point = math::Point2i;
+using Size  = math::Vec2i;
 
 enum class DockAreas
 {

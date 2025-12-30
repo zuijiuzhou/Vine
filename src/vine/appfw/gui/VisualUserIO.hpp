@@ -2,8 +2,6 @@
 
 #include <vine/appfw/UserIO.hpp>
 
-#include <vine/appfw/gui/gui_global.hpp>
-
 VI_APPFWGUI_NS_BEGIN
 
 class VisualUserIO : public UserIO {
@@ -26,8 +24,8 @@ class VisualUserIO : public UserIO {
     virtual bool getDouble(double& val, const String& prompt = String::E) const override;
     virtual void getDouble(double& val, double def, const String& prompt = String::E) const override;
 
-    virtual bool getPoint3d(ge::Point3d& val, const String& prompt = String::E) const override;
-    virtual void getPoint3d(ge::Point3d& val, ge::Point3d& def, const String& prompt = String::E) const override;
+    virtual bool getPoint3d(math::Point3d& val, const String& prompt = String::E) const override;
+    virtual void getPoint3d(math::Point3d& val, math::Point3d& def, const String& prompt = String::E) const override;
 
   private:
     VI_OBJECT_DATA;

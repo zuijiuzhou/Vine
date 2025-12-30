@@ -1,5 +1,4 @@
 ﻿#pragma once
-#include "gui_global.hpp"
 
 #include "Control.hpp"
 
@@ -7,7 +6,7 @@ VI_APPFWGUI_NS_BEGIN
 
 class RibbonTab;
 
-class VI_APPFWGUI_API RibbonGroup : public Control {
+class VI_APPFW_API RibbonGroup : public Control {
     VI_OBJECT_META
 
     friend class RibbonTab;

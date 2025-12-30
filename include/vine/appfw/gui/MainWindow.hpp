@@ -1,14 +1,13 @@
 #pragma once
 
 #include "Control.hpp"
-#include "gui_global.hpp"
 
 VI_APPFWGUI_NS_BEGIN
 
 class RibbonBar;
 class StatusBar;
 class DockPanel;
-class VI_APPFWGUI_API MainWindow : public Control {
+class VI_APPFW_API MainWindow : public Control {
     VI_OBJECT_META
 
     friend class RibbonBar;

@@ -1,6 +1,0 @@
-set(TEST_NAME test_ge)
-file(GLOB SRC_FILE_LIST *.cpp)
-add_executable(${TEST_NAME} ${SRC_FILE_LIST})
-set_target_properties(${TEST_NAME} PROPERTIES FOLDER test)
-target_link_libraries(${TEST_NAME} vi::Ge) 
-add_test(NAME ${TEST_NAME} COMMAND ${TEST_NAME})

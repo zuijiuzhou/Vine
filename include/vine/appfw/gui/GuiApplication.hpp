@@ -1,13 +1,11 @@
 #pragma once
-#include "gui_global.hpp"
 
 #include <vine/appfw/Application.hpp>
 #include <vine/core/RefObject.hpp>
 
-
 VI_APPFWGUI_NS_BEGIN
 
-class VI_APPFWGUI_API GuiApplication : public Application {
+class VI_APPFW_API GuiApplication : public Application {
     VI_OBJECT_META
   public:
     GuiApplication(int argc, char** argv);

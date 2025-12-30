@@ -1,5 +1,6 @@
 #include "Convert.hpp"
 
+
 VI_APPFWGUI_NS_BEGIN
 
 Point Convert::toPoint(const QPoint& pt) {

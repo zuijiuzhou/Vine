@@ -1,12 +1,12 @@
 #pragma once
 
-#include "Control.hpp"
 #include <vine/core/RefObject.hpp>
-#include "gui_global.hpp"
+
+#include "Control.hpp"
 
 VI_APPFWGUI_NS_BEGIN
 
-class VI_APPFWGUI_API DockPanel : public Control {
+class VI_APPFW_API DockPanel : public Control {
     VI_OBJECT_META;
 
   public:

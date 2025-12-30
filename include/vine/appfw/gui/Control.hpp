@@ -6,7 +6,7 @@ class QWidget;
 
 VI_APPFWGUI_NS_BEGIN
 
-class VI_APPFWGUI_API Control : public UIElement {
+class VI_APPFW_API Control : public UIElement {
     VI_OBJECT_META
 
   protected:
