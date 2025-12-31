@@ -1,0 +1,5 @@
+add_subdirectory(global)
+add_subdirectory(core)
+add_subdirectory(math)
+add_subdirectory(runtime)
+add_subdirectory(system)

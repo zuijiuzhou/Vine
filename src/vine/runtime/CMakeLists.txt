@@ -1,1 +1,0 @@
-vi_add_library(RUNTIME_TARGET_NAME Runtime)

@@ -1,1 +1,0 @@
-vi_add_library(SYSTEM_TARGET_NAME System)
