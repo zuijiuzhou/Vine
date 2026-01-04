@@ -6,7 +6,7 @@
 
 VI_APPFWGUI_NS_BEGIN
 
-VI_OBJECT_META_IMPL(RibbonGroup, Control)
+VI_OBJECT_META_IMPL(RibbonGroup, Widget)
 
 struct RibbonGroup::Data {};
 
@@ -15,7 +15,7 @@ using itype = SARibbonPanel;
 }
 
 RibbonGroup::RibbonGroup()
-  : Control(new SARibbonPanel())
+  : Widget(new SARibbonPanel())
   , d(new Data()) {
 }
 

@@ -1,13 +1,13 @@
 #pragma once
 
-#include "Control.hpp"
+#include "Widget.hpp"
 
 VI_APPFWGUI_NS_BEGIN
 
 class RibbonTab;
 class RibbonDropDownItem;
 class MainWindow;
-class VI_APPFW_API RibbonBar : public Control {
+class VI_APPFW_API RibbonBar : public Widget {
     VI_OBJECT_META
 
     friend class MainWindow;

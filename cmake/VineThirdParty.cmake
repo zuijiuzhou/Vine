@@ -1,2 +1,5 @@
 set(THIRD_PARTY_ROOT ${CMAKE_SOURCE_DIR}/third_party)
 set(THIRD_SARIBBON_ROOT ${THIRD_PARTY_ROOT}/SARibbon)
+
+
+add_subdirectory(third_party)

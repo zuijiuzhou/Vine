@@ -7,10 +7,6 @@ project(
     HOMEPAGE_URL "https://github.com/zuijiuzhou/Vine"
     LANGUAGES C CXX)
 
-if(WIN32)
-    option(VI_DEPLOY_WHEN_BUILDING "Whether to run the deploy command when building." OFF)
-endif()
-
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug)
 endif()
@@ -58,14 +54,11 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 add_subdirectory(src)
 
 if(WIN32)
-    if(VI_DEPLOY_WHEN_BUILDING)
-        include(VineDeploy)
-    endif()
+    include(VineDeployQt)
 endif()
 
 enable_testing()
 add_subdirectory(tests)
-add_subdirectory(third_party)
 
 include(CMakePackageConfigHelpers)
 

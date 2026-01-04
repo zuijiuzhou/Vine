@@ -1,53 +1,53 @@
-﻿#include <vine/appfw/gui/Control.hpp>
+﻿#include <vine/appfw/gui/Widget.hpp>
 
 #include <QWidget>
 
-#include "Convert.hpp"
+#include "vine/appfw/gui/Convert.hpp"
 
 VI_APPFWGUI_NS_BEGIN
 
-VI_OBJECT_META_IMPL(Control, UIElement)
+VI_OBJECT_META_IMPL(Widget, UIElement)
 
-struct Control::Data {};
+struct Widget::Data {};
 
 namespace {
 using itype = QWidget;
 }
 
-Control::Control(QWidget* impl)
+Widget::Widget(QWidget* impl)
   : UIElement(impl)
   , d(new Data()) {
 }
 
-Control::~Control() {
+Widget::~Widget() {
     delete d;
 }
 
-Rect Control::rect() const {
+Rect Widget::rect() const {
     auto w = impl<itype>();
     return Rect(w->x(), w->y(), w->width(), w->height());
 }
 
-void Control::rect(const Rect& rect) {
+void Widget::rect(const Rect& rect) {
     auto w = impl<itype>();
     w->setGeometry(rect.x, rect.y, rect.w, rect.h);
 }
 
-Point Control::position() const {
+Point Widget::position() const {
     auto w = impl<itype>();
     return Convert::toPoint(w->pos());
 }
 
-void Control::position(const Point& posi) {
+void Widget::position(const Point& posi) {
     rect(Rect(posi, size()));
 }
 
-Size Control::size() const {
+Size Widget::size() const {
     auto w = impl<itype>();
     return Convert::toSize(w->size());
 }
 
-void Control::size(const Size& s) {
+void Widget::size(const Size& s) {
     rect(Rect(position(), s));
 }
 

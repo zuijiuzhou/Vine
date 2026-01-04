@@ -8,7 +8,7 @@
 
 VI_APPFWGUI_NS_BEGIN
 
-VI_OBJECT_META_IMPL(RibbonTab, Control)
+VI_OBJECT_META_IMPL(RibbonTab, Widget)
 
 struct RibbonTab::Data {
     std::vector<RefPtr<RibbonGroup>> groups;
@@ -19,7 +19,7 @@ using itype = SARibbonCategory;
 }
 
 RibbonTab::RibbonTab()
-  : Control(new SARibbonCategory())
+  : Widget(new SARibbonCategory())
   , d(new Data()) {
 }
 

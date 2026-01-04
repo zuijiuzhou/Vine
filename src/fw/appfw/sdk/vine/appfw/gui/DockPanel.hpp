@@ -2,11 +2,11 @@
 
 #include <vine/RefObject.hpp>
 
-#include "Control.hpp"
+#include "Widget.hpp"
 
 VI_APPFWGUI_NS_BEGIN
 
-class VI_APPFW_API DockPanel : public Control {
+class VI_APPFW_API DockPanel : public Widget {
     VI_OBJECT_META;
 
   public:
@@ -24,8 +24,8 @@ class VI_APPFW_API DockPanel : public Control {
     void   setTitle(const String& title);
     String getTitle() const;
 
-    void     setContent(Control* content);
-    Control* getContent() const;
+    void     setContent(Widget* content);
+    Widget* getContent() const;
 
   public:
   private:

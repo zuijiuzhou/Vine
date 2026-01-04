@@ -9,7 +9,7 @@
 
 VI_APPFWGUI_NS_BEGIN
 
-VI_OBJECT_META_IMPL(RibbonBar, Control)
+VI_OBJECT_META_IMPL(RibbonBar, Widget)
 
 struct RibbonBar::Data {
     std::vector<RefPtr<RibbonTab>> tabs;
@@ -22,7 +22,7 @@ using itype = SARibbonBar;
 }
 
 RibbonBar::RibbonBar(MainWindow* wnd)
-  : Control(static_cast<SARibbonMainWindow*>(wnd->impl())->ribbonBar())
+  : Widget(static_cast<SARibbonMainWindow*>(wnd->impl())->ribbonBar())
   , d(new Data()) {
     d->wnd              = wnd;
     d->application_menu = new QMenu();

@@ -10,11 +10,11 @@
 #include <vine/appfw/gui/DockPanel.hpp>
 #include <vine/Ptr.hpp>
 
-#include "Convert.hpp"
+#include "vine/appfw/gui/Convert.hpp"
 
 VI_APPFWGUI_NS_BEGIN
 
-VI_OBJECT_META_IMPL(MainWindow, Control)
+VI_OBJECT_META_IMPL(MainWindow, Widget)
 
 struct MainWindow::Data {
     RefPtr<RibbonBar> ribbon_bar;
@@ -29,7 +29,7 @@ using itype           = SARibbonMainWindow;
 } // namespace
 
 MainWindow::MainWindow()
-  : Control(new SARibbonMainWindow(nullptr))
+  : Widget(new SARibbonMainWindow(nullptr))
   , d(new Data) {
     size(Size(600, 400));
     d->ribbon_bar = new RibbonBar(this);

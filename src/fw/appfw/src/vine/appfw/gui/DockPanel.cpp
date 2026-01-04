@@ -5,10 +5,10 @@
 #include <QLabel>
 #include <QEvent>
 
-#include "Convert.hpp"
+#include "vine/appfw/gui/Convert.hpp"
 
 VI_APPFWGUI_NS_BEGIN
-VI_OBJECT_META_IMPL(DockPanel, Control)
+VI_OBJECT_META_IMPL(DockPanel, Widget)
 
 namespace {
 using itype = QDockWidget;
@@ -52,14 +52,14 @@ struct QDockWidgetEx : public QDockWidget {
 } // namespace
 
 struct DockPanel::Data {
-    RefPtr<Control> content;
+    RefPtr<Widget> content;
 
     QDockWidget*       impl     = nullptr;
     DockPanelTitleBar* titlebar = nullptr;
 };
 
 DockPanel::DockPanel()
-  : Control(new QDockWidgetEx())
+  : Widget(new QDockWidgetEx())
   , d(new Data()) {
     d->impl = impl<QDockWidget>();
 }
@@ -93,12 +93,12 @@ String DockPanel::getTitle() const {
     return String((char32_t*)impl<itype>()->windowTitle().toUcs4().data());
 }
 
-void DockPanel::setContent(Control* content) {
+void DockPanel::setContent(Widget* content) {
     d->impl->setWidget(content->impl<QWidget>());
     d->content = content;
 }
 
-Control* DockPanel::getContent() const {
+Widget* DockPanel::getContent() const {
     return d->content.get();
 }
 

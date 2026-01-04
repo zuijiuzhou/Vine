@@ -6,14 +6,14 @@ class QWidget;
 
 VI_APPFWGUI_NS_BEGIN
 
-class VI_APPFW_API Control : public UIElement {
+class VI_APPFW_API Widget : public UIElement {
     VI_OBJECT_META
 
   protected:
-    Control(QWidget* impl);
+    Widget(QWidget* impl);
 
   public:
-    virtual ~Control();
+    virtual ~Widget();
 
   public:
     Rect rect() const;

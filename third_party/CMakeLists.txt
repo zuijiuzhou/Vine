@@ -1,1 +1,2 @@
 add_subdirectory(DockingPanes)
+add_subdirectory(SARibbon)

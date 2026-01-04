@@ -1,12 +1,12 @@
 ﻿#pragma once
 
-#include "Control.hpp"
+#include "Widget.hpp"
 
 VI_APPFWGUI_NS_BEGIN
 
 class RibbonTab;
 
-class VI_APPFW_API RibbonGroup : public Control {
+class VI_APPFW_API RibbonGroup : public Widget {
     VI_OBJECT_META
 
     friend class RibbonTab;

@@ -14,14 +14,4 @@ set_target_properties(${APPFW_TARGET_NAME} PROPERTIES
     AUTORCC ON
 )
 
-target_link_libraries(${APPFW_TARGET_NAME} PUBLIC vi::Core vi::Di vi::Math vi::Global PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets )
-
-file(GLOB THIRD_SARIBBON_SRC_FILE_LIST ${THIRD_SARIBBON_ROOT}/*.cpp)
-#file(GLOB THIRD_SARIBBON_RES_FILE_LIST ${THIRD_SARIBBON_ROOT}/*.qrc)
-
-#qt_add_resources(THIRD_SARIBBON_QT_RES_LIST ${THIRD_SARIBBON_RES_FILE_LIST})
-
-target_sources(${APPFW_TARGET_NAME} PRIVATE ${THIRD_SARIBBON_SRC_FILE_LIST} )
-#source_group(qres FILES ${THIRD_SARIBBON_QT_RES_LIST})
-
-target_include_directories(${APPFW_TARGET_NAME} PRIVATE ${THIRD_SARIBBON_ROOT})
+target_link_libraries(${APPFW_TARGET_NAME} PUBLIC vi::Core vi::Di vi::Math vi::Global PRIVATE tp::SARibbon tp::DockingPanes Qt6::Core Qt6::Gui Qt6::Widgets )

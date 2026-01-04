@@ -1,31 +1,35 @@
-find_package(
-    Qt6
-    COMPONENTS
-        Core
-        Gui
-        Widgets
-        Xml
-    REQUIRED
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Xml)
+
+file(GLOB_RECURSE HEADER_FILE_LIST *.h)
+file(GLOB_RECURSE SRC_FILE_LIST *.cpp)
+file(GLOB_RECURSE RC_FILE_LIST *.qrc)
+file(GLOB_RECURSE IMG_FILE_LIST *.png)
+
+add_library(DockingPanes STATIC
+    ${HEADER_FILE_LIST}
+    ${SRC_FILE_LIST}
+    ${RC_FILE_LIST}
 )
 
-set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTOUIC ON)
-set(CMAKE_AUTORCC ON)
+set_target_properties(DockingPanes PROPERTIES
+    AUTOMOC ON
+    AUTOUIC ON
+    AUTORCC ON
+    FOLDER third_party
+)
 
-file(GLOB_RECURSE SRC_FILES *.h * .cpp *.png *.qrc)
-
-add_library(DockingPanes STATIC ${SRC_FILES})
-
-source_group(TREE ${CMAKE_CURRENT_LIST_DIR} PREFIX "" FILES ${SRC_FILES})
-
-set_target_properties(DockingPanes PROPERTIES FOLDER third_party)
-
-target_link_libraries(
-    DockingPanes
+target_include_directories(DockingPanes
     PUBLIC
-        Qt6::Core
-        Qt6::Gui
-        Qt6::Widgets
-        Qt6::Xml
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/src>
 )
+
+target_link_libraries(DockingPanes
+    PUBLIC
+    Qt6::Core
+    Qt6::Gui
+    Qt6::Widgets
+    Qt6::Xml
+)
+
+add_library(tp::DockingPanes ALIAS DockingPanes)
 
