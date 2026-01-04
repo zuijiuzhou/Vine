@@ -7,6 +7,7 @@ VI_APPFWGUI_NS_BEGIN
 class RibbonTab;
 class RibbonDropDownItem;
 class MainWindow;
+
 class VI_APPFW_API RibbonBar : public Widget {
     VI_OBJECT_META
 

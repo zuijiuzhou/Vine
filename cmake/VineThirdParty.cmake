@@ -1,5 +1,3 @@
-set(THIRD_PARTY_ROOT ${CMAKE_SOURCE_DIR}/third_party)
-set(THIRD_SARIBBON_ROOT ${THIRD_PARTY_ROOT}/SARibbon)
-
+set(VI_THIRD_PARTY_ROOT ${CMAKE_SOURCE_DIR}/third_party)
 
 add_subdirectory(third_party)

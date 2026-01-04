@@ -11,7 +11,6 @@ class ServiceManager;
 
 class VI_APPFW_API Application : public RefObject {
     VI_OBJECT_META;
-    VI_DISABLE_COPY_MOVE(Application);
 
   public:
     Application(int argc, char** argv);

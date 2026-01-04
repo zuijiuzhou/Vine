@@ -8,7 +8,6 @@ VI_APPFW_NS_BEGIN
 class Addin;
 class VI_APPFW_API AddinManager : public RefObject {
     VI_OBJECT_META;
-    VI_DISABLE_COPY_MOVE(AddinManager);
 
   public:
     AddinManager();

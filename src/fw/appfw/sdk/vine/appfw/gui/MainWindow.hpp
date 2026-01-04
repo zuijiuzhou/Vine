@@ -7,6 +7,7 @@ VI_APPFWGUI_NS_BEGIN
 class RibbonBar;
 class StatusBar;
 class DockPanel;
+
 class VI_APPFW_API MainWindow : public Widget {
     VI_OBJECT_META
 

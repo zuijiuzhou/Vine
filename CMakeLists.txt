@@ -43,7 +43,6 @@ endif()
 list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_SOURCE_DIR}/cmake)
 
 add_definitions(-DUNICODE -D_UNICODE)
-add_definitions(-DVI_ROOT_NS=vine)
 
 include(VineThirdParty)
 
