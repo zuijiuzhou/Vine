@@ -14,11 +14,20 @@ class Line {
   public:
     using value_type = T;
 
+    struct Intersection {
+        // 是否相交
+        bool valid{ false };
+        // 是否重合
+        bool   coincident{ false };
+        double t1{ 0 };
+        double t2{ 0 };
+    };
+
   public:
     Line(const Point3<T>& origin, const Vector3<T>& direction);
 
   public:
-    bool intersectWith(const Line& line, Point3<T>& intersectionPt, T tol) const;
+    Intersection intersectWith(const Line& line, T eps) const;
 
   public:
     Point3<T>  origin;
