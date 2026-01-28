@@ -40,7 +40,7 @@ class Rect3 {
     void expandBy(const Point3<T>& pt);
     void expandBy(const Rect3<T>& rect);
 
-    Rect3<T> intersectWith(const Rect3<T>& rect);
+    Rect3<T> intersectWith(const Rect3<T>& rect) const;
 
     bool isZero() const;
     bool isZero(T eps) const;

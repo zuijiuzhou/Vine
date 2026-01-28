@@ -136,7 +136,7 @@ TMPL_PREFIX void Rect3<T>::expandBy(const Rect3<T>& rect)
     h = ub1.z - lb1.z;
 }
 
-TMPL_PREFIX Rect3<T> Rect3<T>::intersectWith(const Rect3<T>& rect)
+TMPL_PREFIX Rect3<T> Rect3<T>::intersectWith(const Rect3<T>& rect) const
 {
     return Rect3<T>();
 }
