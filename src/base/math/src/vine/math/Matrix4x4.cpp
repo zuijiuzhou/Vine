@@ -359,6 +359,20 @@ TMPL_PREFIX Matrix4x4<T> Matrix4x4<T>::lookAt(const Point3<T>& eye, const Point3
     return m;
 }
 
+// TMPL_PREFIX Matrix4x4<T> Matrix4x4<T>::fromEulerXYZ(const Vector3<T>& xyz)
+// {
+//     /* - In three-dimensional rotations, a specific intrinsic rotation and a specific extrinsic rotation are equivalent.
+//      * - For example, an extrinsic ZYX rotation (rotation about the fixed Z-axis, then the fixed Y-axis, and finally the
+//      * fixed X-axis)
+//      * - is mathematically equivalent to an intrinsic XYZ rotation (rotation about the current X-axis, then the current
+//      * Y-axis, and finally the current Z-axis).
+//      * - Both result in the same final orientation, but the reference frames of the rotation axes are different.
+//      * */
+// }
+
+// TMPL_PREFIX Matrix4x4<T> Matrix4x4<T>::fromEulerZYX(const Vector3<T>& xyz)
+// {}
+
 TMPL_PREFIX Vector3<T> operator*(const Matrix4x4<T>& m, const Vector3<T>& v)
 {
     return v;

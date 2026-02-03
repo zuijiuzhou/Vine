@@ -116,16 +116,6 @@ class Matrix4x4 {
     static Matrix4x4<T> scale(T x, T y, T z);
     static Matrix4x4<T> scale(T factor);
     static Matrix4x4<T> lookAt(const Point3<T>& eye, const Point3<T>& target, const Vector3<T>& up);
-    /**
-     * @brief 
-     * - In three-dimensional rotations, a specific intrinsic rotation and a specific extrinsic rotation are equivalent.
-     * - For example, an extrinsic ZYX rotation (rotation about the fixed Z-axis, then the fixed Y-axis, and finally the fixed X-axis)
-     * - is mathematically equivalent to an intrinsic XYZ rotation (rotation about the current X-axis, then the current Y-axis, and finally the current Z-axis).
-     * - Both result in the same final orientation, but the reference frames of the rotation axes are different.
-     * @param euler xyz intrinsic euler angles
-     * @return Matrix4x4<T>
-     */
-    static Matrix4x4<T> fromEuler(const Vector3<T>& euler);
 
   public:
     union
