@@ -8,7 +8,7 @@ class RibbonBar;
 class RibbonGroup;
 
 class VI_APPFW_API RibbonTab : public Widget {
-    VI_OBJECT_META
+    VI_OBJECT_META_DECL
 
     friend class RibbonBar;
 

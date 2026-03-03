@@ -7,7 +7,7 @@
 VI_APPFWGUI_NS_BEGIN
 
 class VI_APPFW_API DockPanel : public Widget {
-    VI_OBJECT_META;
+    VI_OBJECT_META_DECL;
 
   public:
   public:

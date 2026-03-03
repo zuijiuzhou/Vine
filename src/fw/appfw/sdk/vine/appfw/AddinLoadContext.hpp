@@ -7,7 +7,7 @@
 VI_APPFW_NS_BEGIN
 
 class VI_APPFW_API AddinLoadContext : public RefObject {
-    VI_OBJECT_META;
+    VI_OBJECT_META_DECL;
 };
 using AddinLoadContextPtr = RefPtr<AddinLoadContext>;
 

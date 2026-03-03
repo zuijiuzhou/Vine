@@ -30,9 +30,16 @@ class Signal {
         handlers_.erase(id);
     }
 
-    void setBlocked(bool blocked)
+    /**
+     * @brief 设置当前信号是否被阻塞
+     * @param val
+     * @return 返回之前的状态
+     */
+    bool setBlocked(bool val)
     {
-        is_blocked_ = blocked;
+        const auto blocked = is_blocked_;
+        is_blocked_        = val;
+        return blocked;
     }
 
     bool isBlocked() const
@@ -42,6 +49,10 @@ class Signal {
 
     void emit(TArgs... args)
     {
+        if (is_blocked_) {
+            return;
+        }
+
         for (auto& handler : handlers_) {
             handler(std::forward<TArgs>(args)...);
         }

@@ -1,24 +1,28 @@
 #include <vine/Class.hpp>
 
+#include <algorithm>
 #include <mutex>
 #include <set>
-#include <typeinfo>
-#include <algorithm>
 #include <stdexcept>
+#include <typeinfo>
 
 #ifdef __GCC__
-#include <cxxabi.h>
+#    include <cxxabi.h>
 #endif
 
 #include <vine/Exception.hpp>
 
 VI_CORE_NS_BEGIN
 
-namespace {
+namespace
+{
+
+std::set<Class*> s_classes;
 
 #ifdef __MSVC__
-bool parse_type_info_vc(const std::type_info& ti, String& name, String& ns, String& full_name) {
-    auto n    = ti.name();
+bool parse_type_info_vc(const std::type_info& c_type, String& name, String& ns, String& full_name)
+{
+    auto n    = c_type.name();
     full_name = String::fromUtf8(n);
     full_name = full_name.substr(6);
     auto idx  = full_name.lastIndexOf(U':');
@@ -29,22 +33,24 @@ bool parse_type_info_vc(const std::type_info& ti, String& name, String& ns, Stri
 #endif
 
 #ifdef __GCC__
-bool parse_type_info_gcc(const std::type_info& ti, String& name, String& ns, String& full_name) {
-    int status;
-    char* demangled = abi::__cxa_demangle(ti.name(), nullptr, nullptr, &status);
+bool parse_type_info_gcc(const std::type_info& c_type, String& name, String& ns, String& full_name)
+{
+    int   status;
+    char* demangled = abi::__cxa_demangle(c_type.name(), nullptr, nullptr, &status);
 
-    if(status != 0)
-    return false;
+    if (status != 0)
+        return false;
 
     full_name = String::fromUtf8(demangled);
     delete demangled;
 
-    size_t pos = full_name.lastIndexOf(U':');
+    size_t pos = full_name.rfind(U':');
 
-    if(pos == -1) {
+    if (pos == -1) {
         name = full_name;
-    } else {
-        ns = full_name.substr(0, pos - 1);
+    }
+    else {
+        ns   = full_name.substr(0, pos - 1);
         name = full_name.substr(pos + 1);
     }
 
@@ -54,96 +60,74 @@ bool parse_type_info_gcc(const std::type_info& ti, String& name, String& ns, Str
 
 } // namespace
 
-struct Class::Data {
-    Data(const std::type_info& i)
-      : ti(i) {}
-    const Class*            parent = nullptr;
-    const std::type_info&   ti;
-    String                  name;
-    String                  ns;
-    String                  full_name;
-    static std::set<Class*> classes;
-};
-
-std::set<Class*> Class::Data::classes = {};
-
-Class::Class(const Class* parent, const std::type_info& ti)
-  : d(new Data(ti)) {
-    if (getClass(ti)) 
+Class::Class(const std::type_info& c_type, const Class* parent)
+  : c_type_(c_type)
+{
+    if (getClass(c_type))
         throw Exception(Exception::ITEM_ALREADY_EXISTS);
-    d->parent = parent;
+    this->parent_ = parent;
 
     auto is_ok = false;
 
 #if defined(__MSVC__)
-    is_ok = parse_type_info_vc(ti, d->name, d->ns, d->full_name);
+    is_ok = parse_type_info_vc(c_type, name_, ns_, full_name_);
 #elif defined(__GCC__)
-    is_ok = parse_type_info_gcc(ti, d->name, d->ns, d->full_name);
+    is_ok = parse_type_info_gcc(c_type, name_, ns_, full_name_);
 #else
-    #error "Unsupported compiler"
+#    error "Unsupported compiler"
 #endif
 
-    if(!is_ok){
+    if (!is_ok) {
         throw std::runtime_error("Runtime error.");
     }
 
-    Data::classes.insert(this);
+    s_classes.insert(this);
 }
 
-Class::~Class() {
-    Data::classes.erase(this);
+Class::~Class()
+{
+    s_classes.erase(this);
 }
 
-const Class* Class::parent() const noexcept {
-    return d->parent;
-}
+bool Class::isSubclassOf(const Class* cls) const noexcept
+{
+    if (cls == nullptr)
+        return false;
 
-const Char* Class::name() const noexcept {
-    return d->name.data();
-}
-
-const Char* Class::ns() const noexcept {
-    return d->ns.data();
-}
-
-const Char* Class::fullName() const noexcept {
-    return d->full_name.data();
-}
-
-const std::type_info& Class::ctype() const noexcept {
-    return d->ti;
-}
-
-bool Class::isSubclassOf(const Class* cls) const {
-    if (cls == nullptr) return false;
-
-    auto type = this;
+    auto self = this;
     do {
-        if (type == cls) return true;
-        type = type->parent();
-    } while (type);
+        if (self == cls)
+            return true;
+        self = self->parent_;
+    }
+    while (self);
     return false;
 }
 
-Class* Class::getClass(const std::type_info& ti) {
-    auto iter = std::find_if(Data::classes.begin(), Data::classes.end(), [&ti](Class* c) { return c->ctype() == ti; });
-    if (iter == Data::classes.end()) return nullptr;
-    return *iter;
+Class* Class::getClass(const std::type_info& c_type)
+{
+    auto it = std::find_if(s_classes.begin(), s_classes.end(), [&c_type](Class* c) { return c->c_type_ == c_type; });
+    if (it == s_classes.end())
+        return nullptr;
+    return *it;
 }
 
-Class* Class::getClass(const Char* full_name) {
-    auto iter = std::find_if(Data::classes.begin(), Data::classes.end(), [&full_name](Class* c) {
-        return c->fullName() == full_name;
-    });
-    if (iter == Data::classes.end()) return nullptr;
-    return *iter;
+Class* Class::getClass(const String& full_name)
+{
+    auto it =
+        std::find_if(s_classes.begin(), s_classes.end(), [&full_name](Class* c) { return c->full_name_ == full_name; });
+    if (it == s_classes.end())
+        return nullptr;
+    return *it;
 }
 
-bool Class::operator==(const Class& right) const {
-    return d->ti == right.d->ti;
+bool Class::operator==(const Class& right) const noexcept
+{
+    return c_type_ == right.c_type_;
 }
 
-bool Class::operator!=(const Class& right) const {
+bool Class::operator!=(const Class& right) const noexcept
+{
     return !(*this == right);
 }
 

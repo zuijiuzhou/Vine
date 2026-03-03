@@ -6,7 +6,7 @@ VI_GRAPHICS_NS_BEGIN
 
 class Scene;
 class VI_GRAPHICS_API View : public RefObject {
-  VI_OBJECT_META;
+  VI_OBJECT_META_DECL;
   VI_DISABLE_MOVE(View);
 
 public:

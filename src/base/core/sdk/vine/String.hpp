@@ -10,52 +10,101 @@ VI_CORE_NS_BEGIN
 class VI_CORE_API String final {
 
   public:
+    using size_type      = size_t;
     using iterator       = Char*;
     using const_iterator = const Char*;
 
   public:
     String();
     String(const Char* data);
+    String(const Char* data, size_t count);
     String(const String& other) noexcept;
     String(String&& other) noexcept;
     virtual ~String();
 
   public:
-    String substr(int start) const;
+    static constexpr size_t NPOS = size_t(-1);
 
-    String substr(int start, int count) const;
+  public:
+    size_t size() const noexcept
+    {
+        return len_;
+    }
 
-    size_t size() const noexcept;
+    size_t length() const noexcept
+    {
+        return len_;
+    }
 
-    size_t length() const noexcept;
+    size_t capacity() const noexcept
+    {
+        return capacity_;
+    }
+
+    bool empty() const noexcept
+    {
+        return len_ == 0;
+    }
+
+    Char* data() noexcept
+    {
+        return data_;
+    }
+
+    const Char* data() const noexcept
+    {
+        return data_;
+    }
 
     void clear() noexcept;
 
-    bool empty() const noexcept;
+    void resize(size_t new_size, Char ch = {});
 
-    const Char* data() const noexcept;
+    void reserve(size_t new_cap);
 
-    void set(const Char* data);
+    void shrinkToFit();
 
-    void set(const Char* data, size_t len);
+    void swap(String& s) noexcept;
+
+    String& assign(Char ch, size_t count);
+
+    String& assign(const String& str);
+
+    String& assign(const String& str, size_t pos, size_t count);
+
+    String& assign(String&& str);
+
+    String& assign(const_iterator begin, const_iterator end);
+
+    String& assign(const Char* data, size_t count);
 
     Char& at(size_t idx);
 
-    long indexOf(Char c) const;
+    const Char& at(size_t idx) const;
 
-    long lastIndexOf(Char c) const;
+    String substr(size_t start, size_t count = NPOS) const;
 
-    bool equals(const String& other, bool ignore_case = false) const;
+    size_t find(Char c, size_t pos = 0) const;
+
+    size_t rfind(Char c, size_t pos = NPOS) const;
 
     String toLower(bool ascii_only = true) const;
 
     String toUpper(bool ascii_only = true) const;
 
-    String trimStart() const;
+    String& trimStart();
 
-    String trimEnd() const;
+    String trimmedStart() const;
 
-    String trim() const;
+    String trimmedEnd() const;
+
+    String& trimEnd();
+
+    String& trim();
+
+    String trimmed() const;
+
+    bool equals(const String& other, bool ignore_case = false) const;
 
     bool startsWith(Char c, bool ignore_case = false) const;
 
@@ -65,13 +114,25 @@ class VI_CORE_API String final {
 
     bool endsWith(const String& str, bool ignore_case = false) const;
 
-    iterator begin() const;
+    iterator begin() const
+    {
+        return data_;
+    }
 
-    iterator end() const;
+    iterator end() const
+    {
+        return data_ + len_;
+    }
 
-    const_iterator cbegin() const;
+    const_iterator cbegin() const
+    {
+        return data_;
+    }
 
-    const_iterator cend() const;
+    const_iterator cend() const
+    {
+        return data_ + len_;
+    }
 
   public:
     static String fromUtf8(const char* data);
@@ -82,18 +143,29 @@ class VI_CORE_API String final {
 
   public:
     String& operator=(const String& right);
-    Char&   operator[](size_t idx);
-    bool    operator==(const String& right) const;
-    bool    operator!=(const String& right) const;
-    bool    operator<(const String& right) const;
-    bool    operator>(const String& right) const;
 
-  public:
-    static const String E;
+    Char& operator[](size_t idx)
+    {
+        return *(data_ + idx);
+    }
+
+    const Char& operator[](size_t idx) const
+    {
+        return *(data_ + idx);
+    }
+
+    bool operator==(const String& right) const;
+    bool operator!=(const String& right) const;
+    bool operator<(const String& right) const;
+    bool operator>(const String& right) const;
+
+    String  operator+(const String& right) const;
+    String& operator+=(const String& right);
 
   private:
-    Char*  data_ = nullptr;
-    size_t len_  = 0;
+    Char*  data_{};
+    size_t len_{};
+    size_t capacity_{};
 };
 
 VI_CORE_NS_END

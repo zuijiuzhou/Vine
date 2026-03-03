@@ -10,7 +10,7 @@ class AddinManager;
 class ServiceManager;
 
 class VI_APPFW_API Application : public RefObject {
-    VI_OBJECT_META;
+    VI_OBJECT_META_DECL;
 
   public:
     Application(int argc, char** argv);

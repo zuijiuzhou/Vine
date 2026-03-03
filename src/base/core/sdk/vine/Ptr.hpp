@@ -182,11 +182,9 @@ class RefPtr {
     T* ptr_;
 };
 
-template<typename T>
+template <typename T>
 requires std::is_base_of<RefObject, T>::value
-class WeakRefPtr{
-
-};
+class WeakRefPtr {};
 
 template <typename T, typename Y>
 requires std::is_base_of<RefObject, T>::value && std::is_base_of<RefObject, Y>::value

@@ -11,7 +11,7 @@ VI_CORE_NS_BEGIN
 VI_DECLARE_PIMPL_CLASS(RefObject)
 
 class VI_CORE_API RefObject : public Object {
-    VI_OBJECT_META
+    VI_OBJECT_META_DECL
     VI_DECLARE_PRIVATE(RefObject)
     VI_DECLARE_DPTR(RefObject)
     VI_DISABLE_COPY_MOVE(RefObject)

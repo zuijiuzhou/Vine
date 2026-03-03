@@ -7,7 +7,7 @@ VI_APPFWGUI_NS_BEGIN
 class RibbonTab;
 
 class VI_APPFW_API RibbonGroup : public Widget {
-    VI_OBJECT_META
+    VI_OBJECT_META_DECL
 
     friend class RibbonTab;
 

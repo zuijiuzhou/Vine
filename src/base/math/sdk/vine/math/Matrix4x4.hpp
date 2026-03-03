@@ -10,11 +10,20 @@
 VI_MATH_NS_BEGIN
 
 /*
-COLUMN MAJOR MATRIX
-M00 M01 M02 M03
-M10 M11 M12 M13
-M20 M21 M22 M23
-M30 M31 M32 M33
+ * COLUMN MAJOR MATRIX
+ *
+ * | M00 M01 M02 M03 |
+ * | M10 M11 M12 M13 |
+ * | M20 M21 M22 M23 |
+ * | M30 M31 M32 M33 |
+ * 
+ * | Xx Yx Zx Tx |
+ * | Xy Yy Zy Ty |
+ * | Xz Yz Zz Tz |
+ * |  0  0  0  1 |
+ * 
+ * Memory order:
+ * M00 M10 M20 M30 M01...
  */
 template <typename T>
 class Matrix4x4 {

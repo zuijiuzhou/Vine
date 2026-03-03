@@ -9,7 +9,7 @@ class RibbonDropDownItem;
 class MainWindow;
 
 class VI_APPFW_API RibbonBar : public Widget {
-    VI_OBJECT_META
+    VI_OBJECT_META_DECL
 
     friend class MainWindow;
 

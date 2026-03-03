@@ -5,7 +5,7 @@
 VI_GRAPHICS_NS_BEGIN
 
 class VI_GRAPHICS_API Geometry : public Drawable {
-  VI_OBJECT_META;
+  VI_OBJECT_META_DECL;
 
 public:
   Geometry();

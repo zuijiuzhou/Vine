@@ -26,18 +26,19 @@ namespace fw    = vine::appfw;
 namespace guifw = fw::gui;
 namespace di    = vine::di;
 
-
-int main(int argc, char** argv) {
+int main(int argc, char** argv)
+{
 
     printf("-------");
     guifw::GuiApplicationPtr app = new guifw::GuiApplication(argc, argv);
     app->init();
     guifw::MainWindowPtr wnd = new guifw::MainWindow();
     wnd->show();
+    
+    auto reg =
+        di::Registration::create<vine::RefObject>()->impl(fw::AddinManager::desc())->lifetime(di::Lifetime::Singleton);
 
     di::Container c;
-    auto          reg =
-        di::Registration::create<vine::RefObject>()->impl(fw::AddinManager::desc())->lifetime(di::Lifetime::Singleton);
     c.add(reg);
 
     auto bar  = wnd->ribbonBar();

@@ -8,7 +8,7 @@ VI_APPFW_NS_BEGIN
 
 class AddinLoadContext;
 class VI_APPFW_API Addin : public RefObject {
-    VI_OBJECT_META;
+    VI_OBJECT_META_DECL;
 
   public:
     void load(AddinLoadContext* context);

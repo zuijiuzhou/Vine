@@ -17,7 +17,7 @@ using InstanceFactory = std::function<RefObject*(Type, Container*)>;
 class RegistrationPrivate;
 
 class VI_DI_API Registration final : public RefObject {
-    VI_OBJECT_META;
+    VI_OBJECT_META_DECL;
     VI_DISABLE_MOVE(Registration);
 
     friend class Container;

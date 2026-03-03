@@ -20,7 +20,30 @@ constexpr double LN10   = 2.30258509299404568402;  // ln(10)
 constexpr float  EPSF = 1e-6f;
 constexpr double EPSD = 1e-8;
 
-template <Real T> bool isZero(T val, T eps);
-template <Real T> bool isEqual(T a, T b, T eps);
+template <typename S>
+constexpr S EPS()
+{
+    return S(0);
+}
+
+template <>
+constexpr float EPS<float>()
+{
+    return EPSF;
+}
+
+template <>
+constexpr double EPS<double>()
+{
+    return EPSD;
+}
+
+constexpr double RAD_TO_DEG = 180.0 / PI;
+constexpr double DEG_TO_RAD = PI / 180.0;
+
+template <Real T>
+bool isZero(T val, T eps);
+template <Real T>
+bool isEqual(T a, T b, T eps);
 
 VI_MATH_NS_END

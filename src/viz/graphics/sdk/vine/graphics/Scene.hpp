@@ -6,7 +6,7 @@
 VI_GRAPHICS_NS_BEGIN
 
 class VI_GRAPHICS_API Scene : public RefObject {
-  VI_OBJECT_META;
+  VI_OBJECT_META_DECL;
   VI_DISABLE_COPY_MOVE(Scene);
 
 public:

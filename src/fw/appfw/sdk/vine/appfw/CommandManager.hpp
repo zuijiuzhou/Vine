@@ -6,7 +6,7 @@
 VI_APPFW_NS_BEGIN
 
 class VI_APPFW_API CommandManager : public RefObject {
-    VI_OBJECT_META;
+    VI_OBJECT_META_DECL;
 
   public:
     CommandManager();

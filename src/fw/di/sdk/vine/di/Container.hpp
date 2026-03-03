@@ -6,7 +6,7 @@ VI_DI_NS_BEGIN
 
 class Registration;
 class VI_DI_API Container : public RefObject {
-    VI_OBJECT_META;
+    VI_OBJECT_META_DECL;
     VI_DISABLE_COPY_MOVE(Container);
 
   public:

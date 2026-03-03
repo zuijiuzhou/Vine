@@ -12,7 +12,7 @@ VI_APPFWGUI_NS_BEGIN
 using UIObject = QObject;
 
 class VI_APPFW_API UIElement : public RefObject {
-    VI_OBJECT_META
+    VI_OBJECT_META_DECL
 
     VI_DISABLE_COPY_MOVE(UIElement)
 

@@ -5,13 +5,13 @@
 VI_CORE_NS_BEGIN
 
 class VI_CORE_API EventArgs : public Object {
-    VI_OBJECT_META
+    VI_OBJECT_META_DECL
   public:
 };
 
 template <typename TVal>
 class PropertyChangedEventArgs : public EventArgs {
-    VI_OBJECT_META;
+    VI_OBJECT_META_DECL;
 
   public:
     // using ValType   = typename std::remove_reference<typename std::remove_const<TVal>::type>::type;

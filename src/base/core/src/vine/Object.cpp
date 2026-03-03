@@ -42,7 +42,7 @@ String Object::toString() const
 
 const Class* Object::desc()
 {
-    static Class* cls = new Class(nullptr, typeid(Object));
+    static Class* cls = new Class(typeid(Object), nullptr);
     return cls;
 }
 

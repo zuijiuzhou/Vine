@@ -7,7 +7,7 @@ VI_APPFW_NS_BEGIN
 
 class Addin;
 class VI_APPFW_API AddinManager : public RefObject {
-    VI_OBJECT_META;
+    VI_OBJECT_META_DECL;
 
   public:
     AddinManager();

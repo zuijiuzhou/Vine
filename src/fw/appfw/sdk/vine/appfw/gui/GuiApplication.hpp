@@ -6,7 +6,7 @@
 VI_APPFWGUI_NS_BEGIN
 
 class VI_APPFW_API GuiApplication : public Application {
-    VI_OBJECT_META
+    VI_OBJECT_META_DECL
   public:
     GuiApplication(int argc, char** argv);
     virtual ~GuiApplication();

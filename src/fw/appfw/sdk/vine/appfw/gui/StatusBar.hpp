@@ -6,7 +6,7 @@ VI_APPFWGUI_NS_BEGIN
 
 class MainWindow;
 class VI_APPFW_API StatusBar : public Widget {
-    VI_OBJECT_META
+    VI_OBJECT_META_DECL
 
     friend class MainWindow;
 

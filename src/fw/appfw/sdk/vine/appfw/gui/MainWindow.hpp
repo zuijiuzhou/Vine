@@ -9,7 +9,7 @@ class StatusBar;
 class DockPanel;
 
 class VI_APPFW_API MainWindow : public Widget {
-    VI_OBJECT_META
+    VI_OBJECT_META_DECL
 
     friend class RibbonBar;
     friend class StatusBar;

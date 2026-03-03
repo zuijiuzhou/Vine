@@ -5,7 +5,7 @@
 VI_APPFWGUI_NS_BEGIN
 
 class VI_APPFW_API RibbonGallery : public UIElement {
-    VI_OBJECT_META
+    VI_OBJECT_META_DECL
     friend class RibbonBar;
 
   public:
