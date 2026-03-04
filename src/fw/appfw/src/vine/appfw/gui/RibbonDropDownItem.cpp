@@ -1,4 +1,4 @@
-#include <vine/appfw/gui/RibbonDropDownItem.hpp>
+﻿#include <vine/appfw/gui/RibbonDropDownItem.hpp>
 
 #include <QAction>
 
@@ -42,3 +42,4 @@ void RibbonDropDownItem::data(void* v) {
 }
 
 VI_APPFWGUI_NS_END
+

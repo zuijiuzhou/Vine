@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "di_global.hpp"
 
 VI_DI_NS_BEGIN

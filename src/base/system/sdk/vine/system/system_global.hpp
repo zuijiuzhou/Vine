@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <vine/vi_global.hpp>
 
@@ -15,3 +15,4 @@ namespace VI_ROOT_NS { \
 #define VI_SYSTEM_NS_END \
     }\
 }
+

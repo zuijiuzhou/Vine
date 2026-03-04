@@ -1,4 +1,4 @@
-#include "graphics_global.hpp"
+﻿#include "graphics_global.hpp"
 
 #include <vine/RefObject.hpp>
 

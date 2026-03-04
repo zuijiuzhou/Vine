@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "runtime_global.hpp"
 
 #include <vine/String.h"

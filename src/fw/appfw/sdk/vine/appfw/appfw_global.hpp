@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <vine/core_global.hpp>
 
@@ -26,3 +26,4 @@
 #define VI_APPFWGUI_NS_END                                                                                             \
     VI_APPFW_NS_END                                                                                                    \
     }
+

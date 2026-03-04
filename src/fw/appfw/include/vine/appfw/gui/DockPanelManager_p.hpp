@@ -1,4 +1,4 @@
-#include <vine/appfw/gui/DockPanelManager.hpp>
+﻿#include <vine/appfw/gui/DockPanelManager.hpp>
 
 #include <DockingPaneManager.h>
 

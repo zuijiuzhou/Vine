@@ -1,4 +1,4 @@
-#include <vine/Class.hpp>
+﻿#include <vine/Class.hpp>
 
 #include <algorithm>
 #include <mutex>
@@ -25,7 +25,7 @@ bool parse_type_info_vc(const std::type_info& c_type, String& name, String& ns, 
     auto n    = c_type.name();
     full_name = String::fromUtf8(n);
     full_name = full_name.substr(6);
-    auto idx  = full_name.lastIndexOf(U':');
+    auto idx  = full_name.rfind(U':');
     name      = full_name.substr(idx + 1);
     ns        = full_name.substr(0, idx - 1);
     return true;
@@ -132,3 +132,4 @@ bool Class::operator!=(const Class& right) const noexcept
 }
 
 VI_CORE_NS_END
+

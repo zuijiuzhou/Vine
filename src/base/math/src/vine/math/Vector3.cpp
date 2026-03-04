@@ -1,4 +1,4 @@
-#include <vine/math/Vector3.hpp>
+﻿#include <vine/math/Vector3.hpp>
 
 #include <algorithm>
 #include <cassert>

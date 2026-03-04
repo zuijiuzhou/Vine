@@ -1,4 +1,4 @@
-#include "runtime_global.hpp"
+﻿#include "runtime_global.hpp"
 
 VI_RUNTIME_NS_BEGIN
 

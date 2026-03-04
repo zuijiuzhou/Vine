@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "appfw_global.hpp"
 
@@ -44,3 +44,4 @@ class VI_APPFW_API Application : public RefObject {
 using ApplicationPtr = RefPtr<Application>;
 
 VI_APPFW_NS_END
+

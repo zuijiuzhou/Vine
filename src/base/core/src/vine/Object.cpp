@@ -1,4 +1,4 @@
-
+﻿
 #include <vine/Object.hpp>
 
 #include <atomic>

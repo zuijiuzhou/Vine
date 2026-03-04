@@ -1,4 +1,4 @@
-#include <QCoreApplication>
+﻿#include <QCoreApplication>
 
 #include <vine/Exception.hpp>
 #include <vine/Ptr.hpp>
@@ -81,3 +81,4 @@ char** Application::argv() const {
 }
 
 VI_APPFW_NS_END
+

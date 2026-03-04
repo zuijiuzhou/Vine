@@ -117,3 +117,4 @@ VI_CORE_NS_END
 //     class ClassName; \
 //     using ClassName##SharedPtr = std::shared_ptr<ClassName>; \
 // using ClassName##WeakPtr   = std::weak_ptr<ClassName>;
+

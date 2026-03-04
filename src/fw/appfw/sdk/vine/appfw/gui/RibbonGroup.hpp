@@ -24,3 +24,4 @@ class VI_APPFW_API RibbonGroup : public Widget {
 };
 
 VI_APPFWGUI_NS_END
+

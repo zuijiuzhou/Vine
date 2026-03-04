@@ -1,4 +1,4 @@
-#include <vine/RefObject.hpp>
+﻿#include <vine/RefObject.hpp>
 
 #include <stdexcept>
 

@@ -1,4 +1,4 @@
-#include "vine/appfw/gui/VisualUserIO.hpp"
+﻿#include "vine/appfw/gui/VisualUserIO.hpp"
 
 #include <QDockWidget>
 
@@ -47,3 +47,4 @@ void VisualUserIO::getPoint3d(math::Point3d& val, math::Point3d& def, const Stri
 }
 
 VI_APPFWGUI_NS_END
+

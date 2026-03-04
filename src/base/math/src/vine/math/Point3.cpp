@@ -1,4 +1,4 @@
-#include <vine/math/Point3.hpp>
+﻿#include <vine/math/Point3.hpp>
 
 #include <cassert>
 

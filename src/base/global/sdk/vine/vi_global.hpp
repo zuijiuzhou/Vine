@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #ifdef __GNUC__
 #    define __GCC__
@@ -47,3 +47,4 @@
 #define VI_DISABLE_COPY_MOVE(ClassName)                                                                                \
     VI_DISABLE_COPY(ClassName)                                                                                         \
     VI_DISABLE_MOVE(ClassName)
+

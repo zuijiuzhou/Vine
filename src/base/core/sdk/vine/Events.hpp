@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "RefObject.hpp"
 #include "Signal.hpp"
 

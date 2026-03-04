@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <vine/Events.hpp>
 #include <vine/RefObject.hpp>

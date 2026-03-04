@@ -1,4 +1,4 @@
-#include <vine/Exception.hpp>
+﻿#include <vine/Exception.hpp>
 
 #include <utility>
 

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "core_global.hpp"
 
 #include <concepts>
@@ -164,3 +164,4 @@ VI_CORE_NS_END
 // #define VI_OBJ(Parent) \
 // static const Class* desc(); \
 // virtual const Class* getType() const override;
+

@@ -1,4 +1,4 @@
-#include <vine/graphics/Drawable.hpp>
+﻿#include <vine/graphics/Drawable.hpp>
 
 VI_GRAPHICS_NS_BEGIN
 
@@ -11,3 +11,4 @@ Drawable::Drawable()
 {}
 
 VI_GRAPHICS_NS_END
+

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "math_global.hpp"
 
 #include <cstddef>

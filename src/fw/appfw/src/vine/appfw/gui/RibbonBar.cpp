@@ -1,4 +1,4 @@
-#include <vine/appfw/gui/RibbonBar.hpp>
+﻿#include <vine/appfw/gui/RibbonBar.hpp>
 
 #include <SARibbon.h>
 #include <vine/appfw/gui/MainWindow.hpp>

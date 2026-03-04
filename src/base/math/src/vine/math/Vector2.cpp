@@ -1,4 +1,4 @@
-
+﻿
 #include <vine/math/Vector2.hpp>
 
 #include <algorithm>

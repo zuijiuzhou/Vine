@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <vine/RefObject.hpp>
 #include <vine/appfw/appfw_global.hpp>

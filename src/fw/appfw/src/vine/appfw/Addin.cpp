@@ -1,4 +1,4 @@
-#include <vine/appfw/Addin.hpp>
+﻿#include <vine/appfw/Addin.hpp>
 
 VI_APPFW_NS_BEGIN
 
@@ -17,4 +17,5 @@ String Addin::getName() const {
 }
 
 VI_APPFW_NS_END
+
 

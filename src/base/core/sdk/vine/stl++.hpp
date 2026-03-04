@@ -1,4 +1,4 @@
-#include <iosfwd>
+﻿#include <iosfwd>
 
 VI_CORE_NS_BEGIN
 

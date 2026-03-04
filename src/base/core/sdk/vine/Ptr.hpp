@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "core_global.hpp"
 
@@ -208,3 +208,4 @@ inline RefPtr<T> const_pointer_cast(const RefPtr<Y>& rp)
 }
 
 VI_CORE_NS_END
+

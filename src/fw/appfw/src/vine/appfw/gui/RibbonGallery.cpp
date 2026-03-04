@@ -1,4 +1,4 @@
-#include <vine/appfw/gui/RibbonGallery.hpp>
+﻿#include <vine/appfw/gui/RibbonGallery.hpp>
 
 #include <SARibbon.h>
 
@@ -26,3 +26,4 @@ RibbonGallery::~RibbonGallery()
 }
 
 VI_APPFWGUI_NS_END
+

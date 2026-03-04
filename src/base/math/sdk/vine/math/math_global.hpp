@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <vine/vi_global.hpp>
 
@@ -15,3 +15,4 @@ namespace math {
 #define VI_MATH_NS_END \
 VI_ROOT_NS_END \
 }
+

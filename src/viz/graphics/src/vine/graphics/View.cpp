@@ -1,4 +1,4 @@
-#include <vine/Ptr.hpp>
+﻿#include <vine/Ptr.hpp>
 #include <vine/graphics/Scene.hpp>
 #include <vine/graphics/View.hpp>
 
@@ -20,3 +20,4 @@ void View::setScene(Scene* scene) {
 }
 
 VI_GRAPHICS_NS_END
+

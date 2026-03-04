@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Widget.hpp"
 
@@ -32,3 +32,4 @@ class VI_APPFW_API RibbonBar : public Widget {
 };
 
 VI_APPFWGUI_NS_END
+

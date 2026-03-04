@@ -1,4 +1,4 @@
-#include <vine/appfw/gui/MainWindow.hpp>
+﻿#include <vine/appfw/gui/MainWindow.hpp>
 
 #include <QDockWidget>
 #include <QTabWidget>

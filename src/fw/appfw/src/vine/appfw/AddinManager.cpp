@@ -1,4 +1,4 @@
-#include <vine/appfw/AddinManager.hpp>
+﻿#include <vine/appfw/AddinManager.hpp>
 
 #include <vector>
 
@@ -25,3 +25,4 @@ Addin* AddinManager::load(const String& str) {
 }
 
 VI_APPFW_NS_END
+

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "Class.hpp"
 #include "RefObject.hpp"
 #include "String.hpp"

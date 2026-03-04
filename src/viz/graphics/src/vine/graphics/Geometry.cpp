@@ -1,4 +1,4 @@
-#include <vine/graphics/Geometry.hpp>
+﻿#include <vine/graphics/Geometry.hpp>
 
 VI_GRAPHICS_NS_BEGIN
 
@@ -9,3 +9,4 @@ struct Geometry::Data {};
 Geometry::Geometry() : d(new Data()) {}
 
 VI_GRAPHICS_NS_END
+
