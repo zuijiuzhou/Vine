@@ -41,10 +41,10 @@ bool parse_type_info_gcc(const std::type_info& c_type, String& name, String& ns,
     if (status != 0)
         return false;
 
-    full_name = String::fromUtf8(demangled);
+    full_name = reinterpret_cast<char8_t*>(demangled);
     delete demangled;
 
-    size_t pos = full_name.rfind(U':');
+    size_t pos = full_name.rfind(u8':');
 
     if (pos == -1) {
         name = full_name;
@@ -114,8 +114,7 @@ Class* Class::getClass(const std::type_info& c_type)
 
 Class* Class::getClass(const String& full_name)
 {
-    auto it =
-        std::find_if(s_classes.begin(), s_classes.end(), [&full_name](Class* c) { return c->full_name_ == full_name; });
+    auto it = std::find_if(s_classes.begin(), s_classes.end(), [&full_name](Class* c) { return c->full_name_ == full_name; });
     if (it == s_classes.end())
         return nullptr;
     return *it;
@@ -132,4 +131,3 @@ bool Class::operator!=(const Class& right) const noexcept
 }
 
 VI_CORE_NS_END
-

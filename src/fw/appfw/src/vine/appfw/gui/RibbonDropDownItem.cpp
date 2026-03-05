@@ -8,38 +8,45 @@ VI_OBJECT_META_IMPL(RibbonDropDownItem, UIElement);
 
 struct RibbonDropDownItem::Data {};
 
-namespace {
+namespace
+{
+
 using itype = QAction;
+
 }
 
 RibbonDropDownItem::RibbonDropDownItem()
   : UIElement(new QAction())
-  , d(new Data()) {
-}
+  , d(new Data())
+{}
 
-RibbonDropDownItem::~RibbonDropDownItem() {
+RibbonDropDownItem::~RibbonDropDownItem()
+{
     delete d;
 }
 
-String RibbonDropDownItem::text() const {
+String RibbonDropDownItem::text() const
+{
     auto ac = impl<itype>();
-    return String(ac->text().toStdU32String().data());
+    return String::fromUtf16(reinterpret_cast<const char16_t*>(ac->text().constData()));
 }
 
-void RibbonDropDownItem::text(const String& txt) {
+void RibbonDropDownItem::text(const String& txt)
+{
     auto ac = impl<itype>();
-    ac->setText(QString::fromStdU32String(txt.data()));
+    ac->setText(QString::fromUtf8(reinterpret_cast<const char*>(txt.data())));
 }
 
-void* RibbonDropDownItem::data() const {
+void* RibbonDropDownItem::data() const
+{
     auto ac = impl<itype>();
     return ac->data().data();
 }
 
-void RibbonDropDownItem::data(void* v) {
+void RibbonDropDownItem::data(void* v)
+{
     auto ac = impl<itype>();
     ac->setData(QVariant::fromValue(v));
 }
 
 VI_APPFWGUI_NS_END
-

@@ -2,9 +2,9 @@
 
 #include <SARibbon.h>
 
-#include <vine/appfw/gui/RibbonGroup.hpp>
 #include <vine/Exception.hpp>
 #include <vine/Ptr.hpp>
+#include <vine/appfw/gui/RibbonGroup.hpp>
 
 VI_APPFWGUI_NS_BEGIN
 
@@ -14,41 +14,48 @@ struct RibbonTab::Data {
     std::vector<RefPtr<RibbonGroup>> groups;
 };
 
-namespace {
+namespace
+{
+
 using itype = SARibbonCategory;
+
 }
 
 RibbonTab::RibbonTab()
   : Widget(new SARibbonCategory())
-  , d(new Data()) {
-}
+  , d(new Data())
+{}
 
-RibbonTab::~RibbonTab() {
+RibbonTab::~RibbonTab()
+{
     delete d;
 }
 
-String RibbonTab::title() const {
-    auto   w = impl<itype>();
-    String s(w->categoryName().toStdU32String().data());
-    return s;
-}
-
-void RibbonTab::title(const String& ti) {
+String RibbonTab::title() const
+{
     auto w = impl<itype>();
-    w->setCategoryName(QString::fromUcs4(ti.data()));
-    this;
+    return String::fromUtf16(reinterpret_cast<const char16_t*>(w->categoryName().constData()));
 }
 
-void RibbonTab::addGroup(RibbonGroup* group) {
+void RibbonTab::title(const String& ti)
+{
+    auto w = impl<itype>();
+    w->setCategoryName(QString::fromUtf8(reinterpret_cast<const char*>(ti.data())));
+}
+
+void RibbonTab::addGroup(RibbonGroup* group)
+{
     VI_CHECK_NULL_THROW(group)
-    if (std::any_of(d->groups.begin(), d->groups.end(), [group](RefPtr<RibbonGroup>& g) { return g == group; })) return;
+    if (std::any_of(d->groups.begin(), d->groups.end(), [group](RefPtr<RibbonGroup>& g) { return g == group; }))
+        return;
     auto w = impl<itype>();
     w->addPanel(group->impl<SARibbonPanel>());
     d->groups.push_back(group);
     this;
 }
 
-void RibbonTab::removeGroup(RibbonGroup* group) {
+void RibbonTab::removeGroup(RibbonGroup* group)
+{
     VI_CHECK_NULL_THROW(group)
     if (std::none_of(d->groups.begin(), d->groups.end(), [group](RefPtr<RibbonGroup>& g) { return g == group; }))
         return;
@@ -57,11 +64,13 @@ void RibbonTab::removeGroup(RibbonGroup* group) {
     this;
 }
 
-int RibbonTab::numGroups() const {
+int RibbonTab::numGroups() const
+{
     return d->groups.size();
 }
 
-void RibbonTab::groupAt(int idx) const {
+void RibbonTab::groupAt(int idx) const
+{
     d->groups.at(idx).get();
 }
 

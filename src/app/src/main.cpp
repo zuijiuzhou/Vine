@@ -43,28 +43,28 @@ int main(int argc, char** argv)
 
     auto bar  = wnd->ribbonBar();
     auto rtab = new guifw::RibbonTab();
-    rtab->title(U"Tab1");
+    rtab->title(u8"Tab1");
     bar->addTab(rtab);
     auto rgroup = new guifw::RibbonGroup();
-    rgroup->title(U"Group1");
+    rgroup->title(u8"Group1");
     rtab->addGroup(rgroup);
 
     auto mi1 = new guifw::RibbonDropDownItem();
-    mi1->text(U"Open");
+    mi1->text(u8"Open");
     mi1->data((void*)123);
     bar->appendApplicationMenu(mi1);
 
     auto panel_left = new guifw::DockPanel();
-    panel_left->setTitle(U"Left");
+    panel_left->setTitle(u8"Left");
     wnd->addDockPanel(panel_left, guifw::DockAreas::Left);
     auto panel_top = new guifw::DockPanel();
-    panel_top->setTitle(U"Top");
+    panel_top->setTitle(u8"Top");
     wnd->addDockPanel(panel_top, guifw::DockAreas::Top);
     auto panel_right = new guifw::DockPanel();
-    panel_right->setTitle(U"Right");
+    panel_right->setTitle(u8"Right");
     wnd->addDockPanel(panel_right, guifw::DockAreas::Right);
     auto panel_bottom = new guifw::DockPanel();
-    panel_bottom->setTitle(U"Bottom");
+    panel_bottom->setTitle(u8"Bottom");
     wnd->addDockPanel(panel_bottom, guifw::DockAreas::Bottom);
 
     return app->run();

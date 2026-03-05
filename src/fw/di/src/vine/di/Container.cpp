@@ -29,7 +29,7 @@ void Container::add(Registration* reg) {
         d->regs[type] = reg;
     }
     else {
-        throw vine::Exception(vine::Exception::INVALID_ARGUMENTS, U"The registration is invalid.");
+        throw vine::Exception(vine::Exception::INVALID_ARGUMENTS, u8"The registration is invalid.");
     }
 }
 

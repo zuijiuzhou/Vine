@@ -2,10 +2,13 @@
 
 #include "core_global.hpp"
 
+#include <concepts>
 #include <uchar.h>
 
 VI_CORE_NS_BEGIN
-using Char = char32_t;
+
+template <typename T>
+concept CharType = std::same_as<T, char> || std::same_as<T, wchar_t> || std::same_as<T, char8_t> || std::same_as<T, char16_t> || std::same_as<T, char32_t>;
 
 /** Check if a character is whitespace (ASCII)
  *  ASCII whitespace characters:
@@ -18,9 +21,11 @@ using Char = char32_t;
  *  @param c The character to check
  *  @return true if c is an ASCII whitespace character, false otherwise
  */
-inline bool isspace(Char c)
+
+template <CharType Char>
+constexpr bool isspace(Char c)
 {
-    return c == U' ' || (c >= U'\t' && c <= U'\r');
+    return c == ' ' || (c >= '\t' && c <= '\r');
 }
 
 /** Compare two characters in a case-insensitive manner
@@ -33,13 +38,14 @@ inline bool isspace(Char c)
  *           iequals('A', 'B') returns false
  *           iequals('á', 'Á') returns false (non-ASCII, not converted)
  */
-inline bool iequals(Char l, Char r)
+template <CharType Char>
+constexpr bool iequals(Char l, Char r)
 {
     // Case-insensitive character comparison
     // Only ASCII uppercase letters (A-Z) are converted to lowercase
-    if (l >= U'A' && l <= U'Z')
+    if (l >= 'A' && l <= 'Z')
         l += 32;
-    if (r >= U'A' && r <= U'Z')
+    if (r >= 'A' && r <= 'Z')
         r += 32;
     return l == r;
 }
@@ -54,9 +60,10 @@ inline bool iequals(Char l, Char r)
  *           tolower('a') returns 'a'
  *           tolower('1') returns '1'
  */
-inline Char tolower(Char c)
+template <CharType Char>
+constexpr Char tolower(Char c)
 {
-    if (c >= U'A' && c <= U'Z')
+    if (c >= 'A' && c <= 'Z')
         return c + 32;
     return c;
 }
@@ -71,9 +78,10 @@ inline Char tolower(Char c)
  *           toupper('A') returns 'A'
  *           toupper('1') returns '1'
  */
-inline Char toupper(Char c)
+template <CharType Char>
+constexpr Char toupper(Char c)
 {
-    if (c >= U'a' && c <= U'z')
+    if (c >= 'a' && c <= 'z')
         return c - 32;
     return c;
 }
@@ -88,9 +96,10 @@ inline Char toupper(Char c)
  *           isalpha('1') returns false
  *           isalpha('á') returns false
  */
-inline bool isalpha(Char c)
+template <CharType Char>
+constexpr bool isalpha(Char c)
 {
-    return (c >= U'A' && c <= U'Z') || (c >= U'a' && c <= U'z');
+    return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
 }
 
 /** Check if a character is an ASCII digit
@@ -99,9 +108,10 @@ inline bool isalpha(Char c)
  *  @example isdigit('5') returns true
  *           isdigit('a') returns false
  */
-inline bool isdigit(Char c)
+template <CharType Char>
+constexpr bool isdigit(Char c)
 {
-    return c >= U'0' && c <= U'9';
+    return c >= '0' && c <= '9';
 }
 
 /** Check if a character is an ASCII letter or digit
@@ -111,7 +121,8 @@ inline bool isdigit(Char c)
  *           isalnum('5') returns true
  *           isalnum('!') returns false
  */
-inline bool isalnum(Char c)
+template <CharType Char>
+constexpr bool isalnum(Char c)
 {
     return isalpha(c) || isdigit(c);
 }
@@ -122,9 +133,10 @@ inline bool isalnum(Char c)
  *  @example isupper('A') returns true
  *           isupper('a') returns false
  */
-inline bool isupper(Char c)
+template <CharType Char>
+constexpr bool isupper(Char c)
 {
-    return c >= U'A' && c <= U'Z';
+    return c >= 'A' && c <= 'Z';
 }
 
 /** Check if a character is an ASCII lowercase letter
@@ -133,9 +145,10 @@ inline bool isupper(Char c)
  *  @example islower('a') returns true
  *           islower('A') returns false
  */
-inline bool islower(Char c)
+template <CharType Char>
+constexpr bool islower(Char c)
 {
-    return c >= U'a' && c <= U'z';
+    return c >= 'a' && c <= 'z';
 }
 
 VI_CORE_NS_END

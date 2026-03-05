@@ -2,8 +2,8 @@
 #include "core_global.hpp"
 
 #include <cstddef>
-
-#include "Char.hpp"
+#include <string>
+#include <vector>
 
 VI_CORE_NS_BEGIN
 
@@ -14,12 +14,7 @@ VI_CORE_NS_BEGIN
  *  @return The length of the string (number of characters before null terminator)
  */
 template <typename T>
-size_t cstrlen(const T* data)
-{
-    const T* p = data;
-    while (*p != T(0)) ++p;
-    return p - data;
-}
+size_t cstrlen(const T* data);
 
 /** Specialization for char using strlen
  *  Uses optimized std::strlen for maximum performance.
@@ -39,58 +34,116 @@ VI_CORE_API size_t cstrlen<char16_t>(const char16_t* data);
 template <>
 VI_CORE_API size_t cstrlen<char32_t>(const char32_t* data);
 
+/** String class that wraps std::string and provides additional functionality
+ *  such as encoding conversions, formatting, and splitting.
+ *  its a utf-8 string, but the internal storage is std::string for simplicity and performance.
+ */
 class VI_CORE_API String final {
 
   public:
-    using size_type      = size_t;
-    using iterator       = Char*;
-    using const_iterator = const Char*;
+    using impl_type              = std::u8string;
+    using value_type             = std::u8string::value_type;
+    using size_type              = std::u8string::size_type;
+    using iterator               = std::u8string::iterator;
+    using const_iterator         = std::u8string::const_iterator;
+    using reverse_iterator       = std::u8string::reverse_iterator;
+    using const_reverse_iterator = std::u8string::const_reverse_iterator;
 
   public:
     /** Default constructor, creates an empty string */
-    String();
+    String()
+    {}
+
+    String(size_type count, value_type ch)
+      : stdstr_(count, ch)
+    {}
 
     /** Constructor from null-terminated C-style string */
-    String(const Char* data);
+    String(const value_type* data)
+      : stdstr_(data)
+    {}
 
     /** Constructor from character array with specified length */
-    String(const Char* data, size_t count);
+    String(const value_type* data, size_type count)
+      : stdstr_(data, count)
+    {}
+
+    /** Constructor from std::u8string */
+    explicit String(const impl_type& str)
+      : stdstr_(str)
+    {}
+
+    explicit String(impl_type&& str)
+      : stdstr_(std::move(str))
+    {}
 
     /** Copy constructor */
-    String(const String& other) noexcept;
+    String(const String& other) noexcept
+      : stdstr_(other.stdstr_)
+    {}
 
     /** Move constructor */
-    String(String&& other) noexcept;
-
-    /** Destructor */
-    virtual ~String();
-
-  public:
-    static constexpr size_t NPOS = size_t(-1);
+    String(String&& other) noexcept
+      : stdstr_(std::move(other.stdstr_))
+    {}
 
   public:
+    /** reinterpret_cast the internal std::u8string as a std::string
+     *  the encoding of the string is UTF-8
+     *  @return Reference to the internal std::u8string
+     */
+    std::string& stdstr()
+    {
+        return reinterpret_cast<std::string&>(stdstr_);
+    }
+
+    /** reinterpret_cast the internal std::u8string as a std::string
+     *  the encoding of the string is UTF-8
+     *  @return Const reference to the internal std::u8string
+     */
+    const std::string& stdstr() const
+    {
+        return reinterpret_cast<const std::string&>(stdstr_);
+    }
+
+    /** Get a reference to the internal std::u8string
+     *  @return Reference to the internal std::u8string
+     */
+    std::u8string& stdu8str()
+    {
+        return stdstr_;
+    }
+
+    /** Get a const reference to the internal std::u8string
+     *  @return Const reference to the internal std::u8string
+     */
+    const std::u8string& stdu8str() const
+    {
+        return stdstr_;
+    }
+
     /** Get the number of characters in the string
      *  @return The length of the string
      */
-    size_t size() const noexcept
+    size_type size() const noexcept
     {
-        return len_;
+        return stdstr_.size();
     }
 
     /** Get the number of characters in the string (alias for size())
      *  @return The length of the string
      */
-    size_t length() const noexcept
+    size_type length() const noexcept
     {
-        return len_;
+        return stdstr_.length();
     }
 
     /** Get the allocated capacity of the string buffer
      *  @return The capacity of the allocated buffer
      */
-    size_t capacity() const noexcept
+    size_type capacity() const noexcept
     {
-        return capacity_;
+        return stdstr_.capacity();
     }
 
     /** Check if the string is empty
@@ -98,7 +151,7 @@ class VI_CORE_API String final {
      */
     bool empty() const noexcept
     {
-        return len_ == 0;
+        return stdstr_.empty();
     }
 
     /** Get a mutable pointer to the string data
@@ -108,9 +161,9 @@ class VI_CORE_API String final {
      *           Do not use the pointer after any such modification.
      *  @note The returned pointer is valid as long as the string is not modified
      */
-    Char* data() noexcept
+    value_type* data() noexcept
     {
-        return data_;
+        return stdstr_.data();
     }
 
     /** Get a const pointer to the string data
@@ -120,15 +173,18 @@ class VI_CORE_API String final {
      *           Do not use the pointer after any such modification.
      *  @note The returned pointer is valid as long as the string is not modified
      */
-    const Char* data() const noexcept
+    const value_type* data() const noexcept
     {
-        return data_;
+        return stdstr_.data();
     }
 
     /** Clear the string, making it empty
      *  @note The capacity is not changed
      */
-    void clear() noexcept;
+    void clear() noexcept
+    {
+        stdstr_.clear();
+    }
 
     /** Resize the string to a new size
      *  @param new_size The new size of the string
@@ -136,24 +192,36 @@ class VI_CORE_API String final {
      *  @note If new_size is larger than current size, appends ch characters
      *        If new_size is smaller than current size, truncates the string
      */
-    void resize(size_t new_size, Char ch = {});
+    void resize(size_type new_size, value_type ch = {})
+    {
+        stdstr_.resize(new_size, ch);
+    }
 
     /** Reserve capacity for the string
      *  @param new_cap The new capacity to reserve
      *  @note If new_cap is less than current capacity, this call has no effect
      */
-    void reserve(size_t new_cap);
+    void reserve(size_type new_cap)
+    {
+        stdstr_.reserve(new_cap);
+    }
 
     /** Shrink the capacity to match the current size
      *  @note Releases unused memory allocated by the string
      */
-    void shrinkToFit();
+    void shrinkToFit()
+    {
+        stdstr_.shrink_to_fit();
+    }
 
     /** Swap contents with another string
      *  @param s The string to swap with
      *  @note This operation is guaranteed to not throw
      */
-    void swap(String& s) noexcept;
+    void swap(String& s) noexcept
+    {
+        stdstr_.swap(s.stdstr_);
+    }
 
     /** Assign a character repeated count times
      *  @param ch The character to assign
@@ -161,14 +229,22 @@ class VI_CORE_API String final {
      *  @return Reference to this string
      *  @note Replaces the current string content
      */
-    String& assign(Char ch, size_t count);
+    String& assign(value_type ch, size_type count)
+    {
+        stdstr_.assign(count, ch);
+        return *this;
+    }
 
     /** Assign from another string
      *  @param str The source string to assign
      *  @return Reference to this string
      *  @note Performs a deep copy of the source string
      */
-    String& assign(const String& str);
+    String& assign(const String& str)
+    {
+        stdstr_.assign(str.stdstr_);
+        return *this;
+    }
 
     /** Assign a substring from another string
      *  @param str The source string
@@ -177,14 +253,22 @@ class VI_CORE_API String final {
      *  @return Reference to this string
      *  @note Copies characters [pos, pos + count) from str
      */
-    String& assign(const String& str, size_t pos, size_t count);
+    String& assign(const String& str, size_type pos, size_type count)
+    {
+        stdstr_.assign(str.stdstr_, pos, count);
+        return *this;
+    }
 
     /** Assign using move semantics from another string
      *  @param str The source string (will be moved from)
      *  @return Reference to this string
      *  @note Transfers ownership of the buffer from str to this string
      */
-    String& assign(String&& str);
+    String& assign(String&& str)
+    {
+        stdstr_.assign(std::move(str.stdstr_));
+        return *this;
+    }
 
     /** Assign from an iterator range
      *  @param begin Iterator to the beginning of the range
@@ -192,7 +276,11 @@ class VI_CORE_API String final {
      *  @return Reference to this string
      *  @note Copies all characters in the range [begin, end)
      */
-    String& assign(const_iterator begin, const_iterator end);
+    String& assign(const_iterator begin, const_iterator end)
+    {
+        stdstr_.assign(begin, end);
+        return *this;
+    }
 
     /** Assign from a C-style character array
      *  @param data Pointer to the character array
@@ -200,7 +288,11 @@ class VI_CORE_API String final {
      *  @return Reference to this string
      *  @note If count is NPOS, all characters up to the null terminator are copied
      */
-    String& assign(const Char* data, size_t count = NPOS);
+    String& assign(const value_type* data, size_type count)
+    {
+        stdstr_.assign(data, count);
+        return *this;
+    }
 
     /** Insert a single character at the specified position
      *  @param pos The position to insert at
@@ -208,7 +300,11 @@ class VI_CORE_API String final {
      *  @return Reference to this string
      *  @note Shifts all characters from pos onwards to the right
      */
-    String& insert(size_t pos, Char ch);
+    String& insert(size_type pos, size_type count, value_type ch)
+    {
+        stdstr_.insert(pos, count, ch);
+        return *this;
+    }
 
     /** Insert a C-style string at the specified position
      *  @param pos The position to insert at
@@ -217,7 +313,11 @@ class VI_CORE_API String final {
      *  @return Reference to this string
      *  @note If count is NPOS, all characters up to the null terminator are inserted
      */
-    String& insert(size_t pos, const Char* data, size_t count = NPOS);
+    String& insert(size_type pos, const value_type* data, size_type count)
+    {
+        stdstr_.insert(pos, data, count);
+        return *this;
+    }
 
     /** Insert a string at the specified position
      *  @param pos The position to insert at
@@ -225,7 +325,11 @@ class VI_CORE_API String final {
      *  @return Reference to this string
      *  @note The entire str is inserted at position pos
      */
-    String& insert(size_t pos, const String& str);
+    String& insert(size_type pos, const String& str)
+    {
+        stdstr_.insert(pos, str.stdstr_);
+        return *this;
+    }
 
     /** Insert a substring at the specified position
      *  @param pos The position to insert at
@@ -235,16 +339,25 @@ class VI_CORE_API String final {
      *  @return Reference to this string
      *  @note Inserts characters [str_pos, str_pos + count) from str at position pos
      */
-    String& insert(size_t pos, const String& str, size_t str_pos, size_t count = NPOS);
+    String& insert(size_type pos, const String& str, size_type str_pos, size_type count)
+    {
+        stdstr_.insert(pos, str.stdstr_, str_pos, count);
+        return *this;
+    }
 
     /** Replace a range with a single character
      *  @param pos The starting position of the range to replace
-     *  @param count The number of characters to replace
+     *  @param count1 The number of characters to replace
+     *  @param count2 The number of characters to insert
      *  @param ch The character to use as replacement
      *  @return Reference to this string
-     *  @note Replaces characters [pos, pos + count) with count copies of ch
+     *  @note Replaces characters [pos, pos + count1) with count2 copies of ch
      */
-    String& replace(size_t pos, size_t count, Char ch);
+    String& replace(size_type pos, size_type count1, size_type count2, value_type ch)
+    {
+        stdstr_.replace(pos, count1, count2, ch);
+        return *this;
+    }
 
     /** Replace a range with a C-style string
      *  @param pos The starting position of the range to replace
@@ -254,7 +367,11 @@ class VI_CORE_API String final {
      *  @return Reference to this string
      *  @note Replaces characters [pos, pos + count) with data[0..data_count)
      */
-    String& replace(size_t pos, size_t count, const Char* data, size_t data_count = NPOS);
+    String& replace(size_type pos, size_type count, const value_type* data, size_type data_count)
+    {
+        stdstr_.replace(pos, count, data, data_count);
+        return *this;
+    }
 
     /** Replace a range with another string
      *  @param pos The starting position of the range to replace
@@ -263,7 +380,11 @@ class VI_CORE_API String final {
      *  @return Reference to this string
      *  @note Replaces characters [pos, pos + count) with the entire str
      */
-    String& replace(size_t pos, size_t count, const String& str);
+    String& replace(size_type pos, size_type count, const String& str)
+    {
+        stdstr_.replace(pos, count, str.stdstr_);
+        return *this;
+    }
 
     /** Replace a range with a substring
      *  @param pos The starting position of the range to replace
@@ -274,7 +395,11 @@ class VI_CORE_API String final {
      *  @return Reference to this string
      *  @note Replaces characters [pos, pos + count) with str[str_pos, str_pos + str_count)
      */
-    String& replace(size_t pos, size_t count, const String& str, size_t str_pos, size_t str_count = NPOS);
+    String& replace(size_type pos, size_type count, const String& str, size_type str_pos, size_type str_count)
+    {
+        stdstr_.replace(pos, count, str.stdstr_, str_pos, str_count);
+        return *this;
+    }
 
     /** Get mutable reference to character at specified index
      *  @param idx The index of the character
@@ -284,7 +409,10 @@ class VI_CORE_API String final {
      *           Do not use the reference after any such modification.
      *  @note Does not perform bounds checking
      */
-    Char& at(size_t idx);
+    value_type& at(size_type idx)
+    {
+        return stdstr_.at(idx);
+    }
 
     /** Get const reference to character at specified index
      *  @param idx The index of the character
@@ -294,7 +422,10 @@ class VI_CORE_API String final {
      *           Do not use the reference after any such modification.
      *  @note Does not perform bounds checking
      */
-    const Char& at(size_t idx) const;
+    const value_type& at(size_type idx) const
+    {
+        return stdstr_.at(idx);
+    }
 
     /** Extract a substring
      *  @param start The starting position
@@ -303,7 +434,10 @@ class VI_CORE_API String final {
      *  @note Returns characters [start, start + count)
      *        If start >= size(), returns an empty string
      */
-    String substr(size_t start, size_t count = NPOS) const;
+    String substr(size_type start, size_type count = -1) const
+    {
+        return String(stdstr_.substr(start, count).c_str());
+    }
 
     /** Find the first occurrence of a character
      *  @param c The character to search for
@@ -311,7 +445,10 @@ class VI_CORE_API String final {
      *  @return The index of the first occurrence, or NPOS if not found
      *  @note Searches in the range [pos, size())
      */
-    size_t find(Char c, size_t pos = 0) const;
+    size_type find(value_type c, size_type pos = 0) const
+    {
+        return stdstr_.find(c, pos);
+    }
 
     /** Find the first occurrence of a substring
      *  @param str The substring to search for
@@ -320,7 +457,10 @@ class VI_CORE_API String final {
      *  @note Searches in the range [pos, size())
      *        If str is empty, returns pos
      */
-    size_t find(const String& str, size_t pos = 0) const;
+    size_type find(const String& str, size_type pos = 0) const
+    {
+        return stdstr_.find(str.stdstr_, pos);
+    }
 
     /** Find the first occurrence of a C-style string
      *  @param data The C-style string to search for
@@ -328,15 +468,21 @@ class VI_CORE_API String final {
      *  @return The index of the first occurrence, or NPOS if not found
      *  @note Searches in the range [pos, size())
      */
-    size_t find(const Char* data, size_t pos = 0) const;
+    size_type find(const value_type* data, size_type pos = 0) const
+    {
+        return stdstr_.find(data, pos);
+    }
 
     /** Find the last occurrence of a character
      *  @param c The character to search for
-     *  @param pos The starting position for backward search (default: NPOS = from the end)
+     *  @param pos The starting position for backward search (default: npos = from the end)
      *  @return The index of the last occurrence, or NPOS if not found
      *  @note Searches backward in the range [0, pos]
      */
-    size_t rfind(Char c, size_t pos = NPOS) const;
+    size_type rfind(value_type c, size_type pos = -1) const
+    {
+        return stdstr_.rfind(c, pos);
+    }
 
     /** Find the last occurrence of a substring
      *  @param str The substring to search for
@@ -345,7 +491,10 @@ class VI_CORE_API String final {
      *  @note Searches backward in the range [0, pos]
      *        If str is empty, returns min(pos, size())
      */
-    size_t rfind(const String& str, size_t pos = NPOS) const;
+    size_type rfind(const String& str, size_type pos = -1) const
+    {
+        return stdstr_.rfind(str.stdstr_, pos);
+    }
 
     /** Find the last occurrence of a C-style string
      *  @param data The C-style string to search for
@@ -353,21 +502,22 @@ class VI_CORE_API String final {
      *  @return The index of the last occurrence, or NPOS if not found
      *  @note Searches backward in the range [0, pos]
      */
-    size_t rfind(const Char* data, size_t pos = NPOS) const;
+    size_type rfind(const value_type* data, size_type pos = -1) const
+    {
+        return stdstr_.rfind(data, pos);
+    }
 
     /** Convert string to lowercase
-     *  @param ascii_only If true (default), only ASCII characters A-Z are converted
      *  @return A new string with lowercase characters
      *  @note This string is not modified
      */
-    String toLower(bool ascii_only = true) const;
+    String toLower() const;
 
     /** Convert string to uppercase
-     *  @param ascii_only If true (default), only ASCII characters a-z are converted
      *  @return A new string with uppercase characters
      *  @note This string is not modified
      */
-    String toUpper(bool ascii_only = true) const;
+    String toUpper() const;
 
     /** Remove whitespace from the beginning of the string (modifies in-place)
      *  @return Reference to this string
@@ -379,13 +529,21 @@ class VI_CORE_API String final {
      *  @return A new string with leading whitespace removed
      *  @note This string is not modified
      */
-    String trimmedStart() const;
+    String trimmedStart() const
+    {
+        String result(*this);
+        return result.trimStart();
+    }
 
     /** Get a copy with whitespace removed from the end
      *  @return A new string with trailing whitespace removed
      *  @note This string is not modified
      */
-    String trimmedEnd() const;
+    String trimmedEnd() const
+    {
+        String result(*this);
+        return result.trimEnd();
+    }
 
     /** Remove whitespace from the end of the string (modifies in-place)
      *  @return Reference to this string
@@ -397,48 +555,168 @@ class VI_CORE_API String final {
      *  @return Reference to this string
      *  @note Removes all leading and trailing whitespace characters
      */
-    String& trim();
+    String& trim()
+    {
+        return trimStart().trimEnd();
+    }
 
     /** Get a copy with whitespace removed from both ends
      *  @return A new string with all leading and trailing whitespace removed
      *  @note This string is not modified
      */
-    String trimmed() const;
+    String trimmed() const
+    {
+        String result(*this);
+        return result.trim();
+    }
 
     /** Check if the string equals another string
      *  @param other The string to compare with
      *  @param ignore_case If true, performs case-insensitive comparison (default: false)
      *  @return true if the strings are equal, false otherwise
      */
-    bool equals(const String& other, bool ignore_case = false) const;
+    bool equals(const String& other, bool ignore_case = false) const
+    {
+        if (stdstr_.size() != other.stdstr_.size())
+            return false;
+
+        if (ignore_case) {
+            return std::equal(stdstr_.begin(), stdstr_.end(), other.stdstr_.begin(), other.stdstr_.end(), [](char a, char b) {
+                return std::tolower(a) == std::tolower(b);
+            });
+        }
+        else {
+            return stdstr_ == other.stdstr_;
+        }
+    }
 
     /** Check if the string starts with a single character
      *  @param c The character to search for
      *  @param ignore_case If true, performs case-insensitive comparison (default: false)
      *  @return true if the string starts with the character, false otherwise
      */
-    bool startsWith(Char c, bool ignore_case = false) const;
+    bool startsWith(value_type c, bool ignore_case = false) const
+    {
+        if (stdstr_.empty())
+            return false;
+        if (ignore_case) {
+            return std::tolower(stdstr_[0]) == std::tolower(c);
+        }
+        else {
+            return stdstr_[0] == c;
+        }
+    }
 
     /** Check if the string starts with another string
      *  @param str The prefix to check for
      *  @param ignore_case If true, performs case-insensitive comparison (default: false)
      *  @return true if the string starts with str, false otherwise
      */
-    bool startsWith(const String& str, bool ignore_case = false) const;
+    bool startsWith(const String& str, bool ignore_case = false) const
+    {
+        if (str.size() > stdstr_.size())
+            return false;
+        if (ignore_case) {
+            return std::equal(str.stdstr_.begin(), str.stdstr_.end(), stdstr_.begin(), [](char a, char b) { return std::tolower(a) == std::tolower(b); });
+        }
+        else {
+            return stdstr_.compare(0, str.size(), str.stdstr_) == 0;
+        }
+    }
 
     /** Check if the string ends with a single character
      *  @param c The character to search for
      *  @param ignore_case If true, performs case-insensitive comparison (default: false)
      *  @return true if the string ends with the character, false otherwise
      */
-    bool endsWith(Char c, bool ignore_case = false) const;
+    bool endsWith(value_type c, bool ignore_case = false) const
+    {
+        if (stdstr_.empty())
+            return false;
+        if (ignore_case) {
+            return std::tolower(stdstr_.back()) == std::tolower(c);
+        }
+        else {
+            return stdstr_.back() == c;
+        }
+    }
 
     /** Check if the string ends with another string
      *  @param str The suffix to check for
      *  @param ignore_case If true, performs case-insensitive comparison (default: false)
      *  @return true if the string ends with str, false otherwise
      */
-    bool endsWith(const String& str, bool ignore_case = false) const;
+    bool endsWith(const String& str, bool ignore_case = false) const
+    {
+        if (str.size() > stdstr_.size())
+            return false;
+        if (ignore_case) {
+            return std::equal(str.stdstr_.rbegin(), str.stdstr_.rend(), stdstr_.rbegin(), [](char a, char b) { return std::tolower(a) == std::tolower(b); });
+        }
+        else {
+            return stdstr_.compare(stdstr_.size() - str.size(), str.size(), str.stdstr_) == 0;
+        }
+    }
+
+    /** Split string by delimiter
+     *  @param delimiter The character to split on
+     *  @param keepEmpty Whether to keep empty substrings (default: true)
+     *  @return Vector of substrings
+     *  @note If keepEmpty is false, consecutive delimiters will not produce empty strings
+     */
+    std::vector<String> split(value_type delimiter, bool keepEmpty = true) const;
+
+    /** Split string by delimiter string
+     *  @param delimiter The string to split on
+     *  @param keepEmpty Whether to keep empty substrings (default: true)
+     *  @return Vector of substrings
+     *  @note If keepEmpty is false, consecutive delimiters will not produce empty strings
+     */
+    std::vector<String> split(const String& delimiter, bool keepEmpty = true) const;
+
+    /** Get iterator to the beginning of the string
+     *  @return Iterator pointing to the first character
+     *  @warning Any modification to the string through methods like assign(), insert(), replace(),
+     *           clear(), resize(), or any operation that changes capacity invalidates all iterators.
+     *           Do not use iterators after any such modification.
+     */
+    iterator begin() noexcept
+    {
+        return stdstr_.begin();
+    }
+
+    /** Get iterator to the end of the string
+     *  @return Iterator pointing one past the last character
+     *  @warning Any modification to the string through methods like assign(), insert(), replace(),
+     *           clear(), resize(), or any operation that changes capacity invalidates all iterators.
+     *           Do not use iterators after any such modification.
+     */
+    iterator end() noexcept
+    {
+        return stdstr_.end();
+    }
+
+    /** Get const iterator to the beginning of the string
+     *  @return Const iterator pointing to the first character
+     *  @warning Any modification to the string through methods like assign(), insert(), replace(),
+     *           clear(), resize(), or any operation that changes capacity invalidates all iterators.
+     *           Do not use iterators after any such modification.
+     */
+    const_iterator cbegin() const noexcept
+    {
+        return stdstr_.cbegin();
+    }
+
+    /** Get const iterator to the end of the string
+     *  @return Const iterator pointing one past the last character
+     *  @warning Any modification to the string through methods like assign(), insert(), replace(),
+     *           clear(), resize(), or any operation that changes capacity invalidates all iterators.
+     *           Do not use iterators after any such modification.
+     */
+    const_iterator cend() const noexcept
+    {
+        return stdstr_.cend();
+    }
 
     /** Convert string to integer
      *  @return The integer value
@@ -449,7 +727,16 @@ class VI_CORE_API String final {
      *           String("45ab").toInt() returns 45 (stops at 'a')
      *           String("abc").toInt(&ok) returns 0, ok = false
      */
-    int toInt(bool* ok = nullptr) const;
+    int toInt(bool* ok = nullptr, int base = 10) const
+    {
+        auto  str    = reinterpret_cast<const char*>(stdstr_.c_str());
+        char* endptr = nullptr;
+        auto  result = std::strtol(str, &endptr, base);
+        if (ok) {
+            *ok = (endptr != str); // Conversion succeeded if endptr moved past the start
+        }
+        return static_cast<int>(result);
+    }
 
     /** Convert string to double
      *  @return The double value
@@ -460,61 +747,45 @@ class VI_CORE_API String final {
      *           String("1.23e-4").toDouble() returns 0.000123
      *           String("abc").toDouble(&ok) returns 0.0, ok = false
      */
-    double toDouble(bool* ok = nullptr) const;
-
-    /** Get iterator to the beginning of the string
-     *  @return Iterator pointing to the first character
-     *  @warning Any modification to the string through methods like assign(), insert(), replace(),
-     *           clear(), resize(), or any operation that changes capacity invalidates all iterators.
-     *           Do not use iterators after any such modification.
-     */
-    iterator begin() const
+    double toDouble(bool* ok = nullptr) const
     {
-        return data_;
+        auto  str    = reinterpret_cast<const char*>(stdstr_.c_str());
+        char* endptr = nullptr;
+        auto  result = std::strtod(str, &endptr);
+        if (ok) {
+            *ok = (endptr != str); // Conversion succeeded if endptr moved past the start
+        }
+        return result;
     }
 
-    /** Get iterator to the end of the string
-     *  @return Iterator pointing one past the last character
-     *  @warning Any modification to the string through methods like assign(), insert(), replace(),
-     *           clear(), resize(), or any operation that changes capacity invalidates all iterators.
-     *           Do not use iterators after any such modification.
+    /** Convert string to local 8-bit encoded bytes
+     *  @return std::string containing local 8-bit encoded data
+     *  @note On Windows, uses Win32 API to convert to the system's ANSI code page (CP_ACP)
+     *        On Linux/other systems, not implemented yet and will throw an exception
+     *  @throws Exception if the encoding is not supported on the platform
      */
-    iterator end() const
-    {
-        return data_ + len_;
-    }
+    std::string toLocal8Bit() const;
 
-    /** Get const iterator to the beginning of the string
-     *  @return Const iterator pointing to the first character
-     *  @warning Any modification to the string through methods like assign(), insert(), replace(),
-     *           clear(), resize(), or any operation that changes capacity invalidates all iterators.
-     *           Do not use iterators after any such modification.
+    /** Convert string to UTF-16 encoded code units
+     *  @return std::u16string containing UTF-16 encoded data
+     *  @note The returned string contains properly encoded UTF-16 surrogates for characters beyond the BMP
      */
-    const_iterator cbegin() const
-    {
-        return data_;
-    }
+    std::u16string toUtf16() const;
 
-    /** Get const iterator to the end of the string
-     *  @return Const iterator pointing one past the last character
-     *  @warning Any modification to the string through methods like assign(), insert(), replace(),
-     *           clear(), resize(), or any operation that changes capacity invalidates all iterators.
-     *           Do not use iterators after any such modification.
+    /** Convert string to UTF-32 encoded code units
+     *  @return std::u32string containing UTF-32 encoded data
+     *  @note The returned string contains properly encoded UTF-32 code units for all characters
      */
-    const_iterator cend() const
-    {
-        return data_ + len_;
-    }
+    std::u32string toUtf32() const;
 
   public:
-    /** Create a string from UTF-8 encoded data
-     *  @param data Pointer to UTF-8 encoded character array
-     *  @param count The number of bytes to read (default: NPOS = until null terminator)
-     *  @return A new String with the decoded UTF-8 data
-     *  @note Invalid UTF-8 sequences may be skipped or handled according to implementation
-     *        If count is NPOS, all bytes up to the null terminator are processed
+    /** Create a string from local 8-bit encoded data
+     *  @param data Pointer to local 8-bit encoded character array
+     *  @return A new String with the decoded data
+     *  @note The encoding depends on the platform's locale settings
+     *  @throws e.g., invalid encoding or unsupported locale
      */
-    static String fromUtf8(const char* data, size_t count = NPOS);
+    static String fromLocal8Bit(const char* data, size_type count = std::string::npos);
 
     /** Create a string from UTF-16 encoded data
      *  @param data Pointer to UTF-16 encoded character array
@@ -523,14 +794,16 @@ class VI_CORE_API String final {
      *  @note Properly handles UTF-16 surrogate pairs for characters beyond the BMP
      *        If count is NPOS, processing continues until a null terminator is found
      */
-    static String fromUtf16(const char16_t* data, size_t count = NPOS);
+    static String fromUtf16(const char16_t* data, size_type count = std::string::npos);
 
-    /** Create a string from local 8-bit encoded data
-     *  @param data Pointer to local 8-bit encoded character array
-     *  @return A new String with the decoded data
-     *  @note The encoding depends on the platform's locale settings
+    /** Create a string from UTF-32 encoded data
+     *  @param data Pointer to UTF-32 encoded character array
+     *  @param count The number of code units to read (default: NPOS = until null terminator)
+     *  @return A new String with the decoded UTF-32 data
+     *  @note Properly handles UTF-32 code points
+     *        If count is NPOS, processing continues until a null terminator is found
      */
-    static String fromLocal8Bit(const char* data, size_t count = NPOS);
+    static String fromUtf32(const char32_t* data, size_type count = std::string::npos);
 
   public:
     /** Assignment operator
@@ -538,16 +811,20 @@ class VI_CORE_API String final {
      *  @return Reference to this string
      *  @note Performs a deep copy of the source string
      */
-    String& operator=(const String& right);
+    String& operator=(const String& right)
+    {
+        stdstr_ = right.stdstr_;
+        return *this;
+    }
 
     /** Get mutable reference to character at specified index
      *  @param idx The index of the character
      *  @return Reference to the character
      *  @note Does not perform bounds checking
      */
-    Char& operator[](size_t idx)
+    value_type& operator[](size_type idx)
     {
-        return *(data_ + idx);
+        return stdstr_[idx];
     }
 
     /** Get const reference to character at specified index
@@ -555,53 +832,80 @@ class VI_CORE_API String final {
      *  @return Const reference to the character
      *  @note Does not perform bounds checking
      */
-    const Char& operator[](size_t idx) const
+    const value_type& operator[](size_type idx) const
     {
-        return *(data_ + idx);
+        return stdstr_[idx];
     }
 
     /** Equality comparison operator
      *  @param right The string to compare with
      *  @return true if the strings are equal, false otherwise
      */
-    bool operator==(const String& right) const;
+    bool operator==(const String& right) const
+    {
+        return stdstr_ == right.stdstr_;
+    }
 
     /** Inequality comparison operator
      *  @param right The string to compare with
      *  @return true if the strings are not equal, false otherwise
      */
-    bool operator!=(const String& right) const;
+    bool operator!=(const String& right) const
+    {
+        return stdstr_ != right.stdstr_;
+    }
 
     /** Less than comparison operator
      *  @param right The string to compare with
      *  @return true if this string is lexicographically less than right
      */
-    bool operator<(const String& right) const;
+    bool operator<(const String& right) const
+    {
+        return stdstr_ < right.stdstr_;
+    }
 
     /** Greater than comparison operator
      *  @param right The string to compare with
      *  @return true if this string is lexicographically greater than right
      */
-    bool operator>(const String& right) const;
+    bool operator>(const String& right) const
+    {
+        return stdstr_ > right.stdstr_;
+    }
 
     /** String concatenation operator
      *  @param right The string to concatenate
      *  @return A new string containing this string followed by right
      *  @note This string is not modified
      */
-    String operator+(const String& right) const;
+    String operator+(const String& right) const
+    {
+        String result;
+        result.stdstr_ = stdstr_ + right.stdstr_;
+        return result;
+    }
 
     /** Append operator
      *  @param right The string to append
      *  @return Reference to this string
      *  @note Appends right to the end of this string
      */
-    String& operator+=(const String& right);
+    String& operator+=(const String& right)
+    {
+        stdstr_ += right.stdstr_;
+        return *this;
+    }
 
   private:
-    Char*  data_{};
-    size_t len_{};
-    size_t capacity_{};
+    std::u8string stdstr_; // Internal storage for string data
 };
+
+template <typename T>
+size_t cstrlen(const T* data)
+{
+    const T* p = data;
+    while (*p != T(0)) ++p;
+    return p - data;
+}
 
 VI_CORE_NS_END

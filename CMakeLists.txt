@@ -40,10 +40,17 @@ if(UNIX AND NOT ANDROID)
     set(CMAKE_INSTALL_RPATH_USE_LINK_PATH OFF)
 endif()
 
+if(WIN32)
+    add_definitions(-DUNICODE -D_UNICODE)
+endif()
+
+if(MSVC)
+    add_compile_options(/utf-8)
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+    add_compile_options(-finput-charset=UTF-8 -fexec-charset=UTF-8)
+endif()
+
 list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_SOURCE_DIR}/cmake)
-
-add_definitions(-DUNICODE -D_UNICODE)
-
 include(VineThirdParty)
 
 # link_directories(${CMAKE_LIBRARY_OUTPUT_DIRECTORY})

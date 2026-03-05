@@ -22,7 +22,7 @@ TabWidth: 4
 
 # 行宽限制
 # -- 0 - NoLimit
-ColumnLimit: 120
+ColumnLimit: 160
 
 # 注释重新排版
 ReflowComments: true
