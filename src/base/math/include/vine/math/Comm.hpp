@@ -17,16 +17,11 @@ inline TypeF<T> calc_vec_len2_safe(T first, Rest... rest)
 {
     // static_assert((std::is_same_v<T, Rest> && ...), "All parameters must have type T");
 
-    if constexpr (FP<T>) {
-        return first * first + (... + (rest * rest));
-    }
+    if constexpr (FP<T>) { return first * first + (... + (rest * rest)); }
     else {
-        using LT = TypeF<T>;
-
-        auto sum = static_cast<LT>(first) * static_cast<LT>(first);
-
-        ((sum += static_cast<LT>(rest) * static_cast<LT>(rest)), ...);
-
+        using ret_type = TypeF<T>;
+        auto sum       = static_cast<ret_type>(first) * static_cast<ret_type>(first);
+        ((sum += static_cast<ret_type>(rest) * static_cast<ret_type>(rest)), ...);
         return sum;
     }
 }
@@ -48,9 +43,7 @@ inline TypeF<T> calc_vec_len_safe(T first, Rest... rest)
 template <Real T>
 inline TypeF<T> multiply_safe(T first, T second)
 {
-    if constexpr (FP<T>) {
-        return first * second;
-    }
+    if constexpr (FP<T>) { return first * second; }
     else {
         using LT = TypeF<T>;
 
@@ -65,9 +58,7 @@ inline TypeF<T> multiply_safe(T first, T second)
 template <Arithmetic T>
 inline T arithmetic_add(T left, T right)
 {
-    if constexpr (std::is_same_v<T, bool>) {
-        return left || right;
-    }
+    if constexpr (std::is_same_v<T, bool>) { return left || right; }
     else {
         return left + right;
     }
@@ -80,9 +71,7 @@ inline T arithmetic_add(T left, T right)
 template <Arithmetic T>
 inline T arithmetic_sub(T left, T right)
 {
-    if constexpr (std::is_same_v<T, bool>) {
-        return left && !right;
-    }
+    if constexpr (std::is_same_v<T, bool>) { return left && !right; }
     else {
         return left - right;
     }
@@ -95,9 +84,7 @@ inline T arithmetic_sub(T left, T right)
 template <Arithmetic T>
 inline T arithmetic_multiply(T left, T right)
 {
-    if constexpr (std::is_same_v<T, bool>) {
-        return left && right;
-    }
+    if constexpr (std::is_same_v<T, bool>) { return left && right; }
     else {
         return left * right;
     }
@@ -110,11 +97,18 @@ inline T arithmetic_multiply(T left, T right)
 template <Arithmetic T>
 inline T arithmetic_division(T left, T right)
 {
-    if constexpr (std::is_same_v<T, bool>) {
-        return left && right;
-    }
+    if constexpr (std::is_same_v<T, bool>) { return left && right; }
     else {
         return left / right;
+    }
+}
+
+template <Arithmetic T>
+inline T arithmetic_nagate(T left)
+{
+    if constexpr (std::is_same_v<T, bool>) { return !left; }
+    else {
+        return -left;
     }
 }
 

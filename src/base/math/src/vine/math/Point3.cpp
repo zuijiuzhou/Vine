@@ -105,7 +105,7 @@ TMPL_PREFIX Point3<T>& Point3<T>::operator-=(const Vector3<T>& right)
 
 TMPL_PREFIX Point3<T> Point3<T>::operator-() const
 {
-    return Point3<T>(-x, -y, -z);
+    return Point3<T>(arithmetic_nagate(x), arithmetic_nagate(y), arithmetic_nagate(z));
 }
 
 TMPL_PREFIX T& Point3<T>::operator[](size_t index)

@@ -95,6 +95,25 @@ TMPL_PREFIX TypeF<T> Vector4<T>::angleTo(const Vector4<T>& other) const requires
     return std::acos(std::clamp<T>(dot(other) / (llen * rlen), T(-1), T(1)));
 }
 
+TMPL_PREFIX T Vector4<T>::normalize() requires(FP<T>)
+{
+    auto len = length();
+
+    if (len > T(0)) {
+        x /= len;
+        y /= len;
+        z /= len;
+        w /= len;
+    }
+    else {
+        x = T(0);
+        y = T(0);
+        z = T(0);
+        w = T(0);
+    }
+    return len;
+}
+
 TMPL_PREFIX T Vector4<T>::dot(const Vector4<T>& other) const requires(Real<T>)
 {
     return x * other.x + y * other.y + z * other.z + w * other.w;
@@ -117,8 +136,7 @@ TMPL_PREFIX bool Vector4<T>::isEqual(const Vector4<T>& other) const
 
 TMPL_PREFIX bool Vector4<T>::isEqual(const Vector4<T>& other, T eps) const requires(Real<T>)
 {
-    return math::isEqual<T>(x, other.x, eps) && math::isEqual<T>(y, other.y, eps) && math::isEqual<T>(z, other.z, eps) &&
-           math::isEqual<T>(w, other.w, eps);
+    return math::isEqual<T>(x, other.x, eps) && math::isEqual<T>(y, other.y, eps) && math::isEqual<T>(z, other.z, eps) && math::isEqual<T>(w, other.w, eps);
 }
 
 TMPL_PREFIX bool Vector4<T>::operator==(const Vector4<T>& right) const
@@ -133,18 +151,12 @@ TMPL_PREFIX bool Vector4<T>::operator!=(const Vector4<T>& right) const
 
 TMPL_PREFIX Vector4<T> Vector4<T>::operator+(const Vector4<T>& right) const
 {
-    return Vector4<T>(arithmetic_add(x, right.x),
-                      arithmetic_add(y, right.y),
-                      arithmetic_add(z, right.z),
-                      arithmetic_add(w, right.w));
+    return Vector4<T>(arithmetic_add(x, right.x), arithmetic_add(y, right.y), arithmetic_add(z, right.z), arithmetic_add(w, right.w));
 }
 
 TMPL_PREFIX Vector4<T> Vector4<T>::operator-(const Vector4<T>& right) const
 {
-    return Vector4<T>(arithmetic_sub(x, right.x),
-                      arithmetic_sub(y, right.y),
-                      arithmetic_sub(z, right.z),
-                      arithmetic_sub(w, right.w));
+    return Vector4<T>(arithmetic_sub(x, right.x), arithmetic_sub(y, right.y), arithmetic_sub(z, right.z), arithmetic_sub(w, right.w));
 }
 
 TMPL_PREFIX Vector4<T> Vector4<T>::operator*(T scale) const
@@ -213,7 +225,7 @@ TMPL_PREFIX Vector4<T>& Vector4<T>::operator/=(T scale)
 
 TMPL_PREFIX Vector4<T> Vector4<T>::operator-() const
 {
-    return Vector4<T>(-x, -y, -z, -w);
+    return Vector4<T>(arithmetic_nagate(x), arithmetic_nagate(y), arithmetic_nagate(z), arithmetic_nagate(w));
 }
 
 TMPL_PREFIX T Vector4<T>::operator*(const Vector4<T>& other) const requires(Real<T>)

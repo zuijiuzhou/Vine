@@ -23,9 +23,9 @@ std::set<Class*> s_classes;
 bool parse_type_info_vc(const std::type_info& c_type, String& name, String& ns, String& full_name)
 {
     auto n    = c_type.name();
-    full_name = String::fromUtf8(n);
+    full_name = String::fromLocal8Bit(n);
     full_name = full_name.substr(6);
-    auto idx  = full_name.rfind(U':');
+    auto idx  = full_name.rfind(u8':');
     name      = full_name.substr(idx + 1);
     ns        = full_name.substr(0, idx - 1);
     return true;

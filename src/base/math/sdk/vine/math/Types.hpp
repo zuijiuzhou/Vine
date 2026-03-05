@@ -45,12 +45,6 @@ template <typename T>
 concept Arithmetic = FP<T> || Integral<T>;
 
 /**
- * @brief evaluation type for arithmetic operations, following the c++ integral promotion rules
- */
-template <Arithmetic T>
-using TypeI = std::conditional_t<std::is_integral_v<T>, decltype(T() + T()), T>;
-
-/**
  * @brief double for integral types, and T itself for floating point types
  */
 template <Arithmetic T>

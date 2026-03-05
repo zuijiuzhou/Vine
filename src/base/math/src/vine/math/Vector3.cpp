@@ -226,7 +226,7 @@ TMPL_PREFIX Vector3<T>& Vector3<T>::operator/=(T scale)
 
 TMPL_PREFIX Vector3<T> Vector3<T>::operator-() const
 {
-    return Vector3<T>(-x, -y, -z);
+    return Vector3<T>(arithmetic_nagate(x), arithmetic_nagate(y), arithmetic_nagate(z));
 }
 
 TMPL_PREFIX T Vector3<T>::operator*(const Vector3<T>& other) const requires(Real<T>)
