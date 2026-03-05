@@ -11,8 +11,9 @@ template <typename T>
 class Vector3;
 
 /**
- * @brief
- * @tparam T
+ * @brief A class representing a rectangle in 3D space, defined by its lower bound corner and size.
+ *        The rectangle is axis-aligned, meaning its edges are parallel to the coordinate axes.
+ * @tparam T Only accepts float double and integers(not boolean)
  */
 template <typename T>
 class Rect3 {

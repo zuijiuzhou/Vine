@@ -15,7 +15,7 @@ template <typename T>
 class Point2;
 
 /**
- * @brief
+ * @brief A class representing a point in 3D space
  * @tparam T Only accepts float double and integers
  */
 template <typename T>

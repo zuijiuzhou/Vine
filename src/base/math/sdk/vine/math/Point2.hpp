@@ -4,7 +4,9 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <cmath>
 
+#include "Math.hpp"
 #include "Types.hpp"
 
 VI_MATH_NS_BEGIN
@@ -13,7 +15,7 @@ template <typename T>
 class Vector2;
 
 /**
- * @brief
+ * @brief A class representing a point in 2D space
  * @tparam T Only accepts float double and integers
  */
 template <typename T>
@@ -22,22 +24,63 @@ class Point2 {
     using value_type = T;
 
   public:
-    Point2();
-    Point2(T xx, T yy);
+    constexpr Point2()
+      : x(T())
+      , y(T())
+    {}
+
+    constexpr Point2(T xx, T yy)
+      : x(xx)
+      , y(yy)
+    {}
 
   public:
-    const Vector2<T>& asVector() const;
-    Vector2<T>        toVector() const;
-    double            distanceTo(const Point2<T>& pt) const;
+    const Vector2<T>& asVector() const
+    {
+        return reinterpret_cast<const Vector2<T>&>(*this);
+    }
 
-    bool isZero() const;
-    bool isZero(T eps) const requires(Real<T>);
-    bool isEqual(const Point2<T>& other) const;
-    bool isEqual(const Point2<T>& other, T eps) const requires(Real<T>);
+    constexpr Vector2<T> toVector() const
+    {
+        return Vector2<T>(x, y);
+    }
+
+    constexpr double distanceTo(const Point2<T>& pt) const
+    {
+        return std::sqrt((x - pt.x) * (x - pt.x) + (y - pt.y) * (y - pt.y));
+    }
+
+    constexpr bool isZero() const
+    {
+        return x == T() && y == T();
+    }
+
+    constexpr bool isZero(T eps) const requires(Real<T>)
+    {
+        return math::isZero<T>(x, eps) && math::isZero<T>(y, eps);
+    }
+
+    constexpr bool isEqual(const Point2<T>& other) const
+    {
+        return x == other.x && y == other.y;
+    }
+
+    constexpr bool isEqual(const Point2<T>& other, T eps) const requires(Real<T>)
+    {
+        return math::isEqual<T>(x, other.x, eps) && math::isEqual<T>(y, other.y, eps);
+    }
 
   public:
-    bool       operator==(const Point2<T>& right) const;
-    bool       operator!=(const Point2<T>& right) const;
+    constexpr bool operator==(const Point2<T>& right) const
+    {
+        return x == right.x && y == right.y;
+    }
+
+    bool operator!=(const Point2<T>& right) const
+    {
+        return !(*this == right);
+    }
+
     Vector2<T> operator-(const Point2<T>& right) const;
     Point2<T>  operator+(const Vector2<T>& right) const;
     Point2<T>& operator+=(const Vector2<T>& right);

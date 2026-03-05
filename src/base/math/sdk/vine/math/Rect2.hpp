@@ -10,8 +10,9 @@
 VI_MATH_NS_BEGIN
 
 /**
- * @brief
- * @tparam T
+ * @brief A class representing a rectangle in 2D space, defined by its top-left corner and size.
+ *        The rectangle is axis-aligned, meaning its edges are parallel to the coordinate axes.
+ * @tparam T Only accepts float double and integers(not boolean)
  */
 template <typename T>
 class Rect2 {

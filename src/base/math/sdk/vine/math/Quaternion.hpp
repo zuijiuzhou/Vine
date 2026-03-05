@@ -10,6 +10,10 @@
 
 VI_MATH_NS_BEGIN
 
+/**
+ * @brief A class representing a quaternion for 3D rotations
+ * @tparam T Only accepts float and double
+ */
 template <typename T>
 class Quaternion {
   public:

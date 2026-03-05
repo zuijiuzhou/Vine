@@ -5,6 +5,7 @@
 #include <concepts>
 #include <cstddef>
 #include <cstdint>
+#include <cmath>
 
 #include "Types.hpp"
 
@@ -13,8 +14,8 @@ template <typename T>
 class Point2;
 
 /**
- * @brief
- * @tparam T Only accepts float double and integers
+ * @brief A class representing a vector in 2D space
+ * @tparam T Only accepts float double and integers(include boolean)
  */
 template <typename T>
 class Vector2 {
@@ -22,22 +23,73 @@ class Vector2 {
     using value_type = T;
 
   public:
-    Vector2();
-    Vector2(T xx, T yy);
+    constexpr Vector2()
+      : x(T())
+      , y(T())
+    {}
+
+    constexpr Vector2(T xx, T yy)
+      : x(xx)
+      , y(yy)
+    {}
 
   public:
-    void set(T xx, T yy);
-    void get(T& xx, T& yy) const;
+    void set(T xx, T yy)
+    {
+        x = xx;
+        y = yy;
+    }
 
-    Point2<T>        toPoint() const;
-    const Point2<T>& asPoint() const;
+    void get(T& xx, T& yy) const
+    {
+        xx = x;
+        yy = y;
+    }
+
+    constexpr Point2<T> toPoint() const
+    {
+        return Point2<T>(x, y);
+    }
+
+    constexpr const Point2<T>& asPoint() const
+    {
+        return reinterpret_cast<const Point2<T>&>(*this);
+    }
+
+    constexpr T length2() const requires(Real<T>)
+    {
+        return static_cast<T>(x * x + y * y);
+    }
+
+    constexpr float length2f() const requires(Real<T>)
+    {
+        return static_cast<float>(x) * static_cast<float>(x) + static_cast<float>(y) * static_cast<float>(y);
+    }
+
+    constexpr double length2d() const requires(Real<T>)
+    {
+        return static_cast<double>(x) * static_cast<double>(x) + static_cast<double>(y) * static_cast<double>(y);
+    }
 
     /**
      * @brief length of the vector
      *        only for real types (floating point and integers) not boolean.
      */
-    TypeF<T> length() const requires(Real<T>);
-    TypeF<T> length2() const requires(Real<T>);
+    T length() const requires(Real<T>)
+    {
+        return static_cast<T>(std::sqrt(length2()));
+    }
+
+    float lengthf() const requires(Real<T>)
+    {
+        return sqrtf(length2f());
+    }
+
+    double lengthd() const requires(Real<T>)
+    {
+        return std::sqrt(length2d());
+    }
+
     TypeF<T> angleTo(const Vector2<T>& other) const requires(Real<T>);
 
     /**
@@ -51,14 +103,20 @@ class Vector2 {
      *        only for real types (floating point and integers) not boolean.
      *        for integer types, overflow is possible.
      */
-    T dot(const Vector2<T>& other) const requires(Real<T>);
+    T dot(const Vector2<T>& other) const requires(Real<T>)
+    {
+        return static_cast<T>(x * other.x + y * other.y);
+    }
 
     /**
      * @brief cross product (in 2D, it is a scalar)
      *        only for real types (floating point and integers) not boolean.
      *        for integer types, overflow is possible.
      */
-    T cross(const Vector2<T>& other) const requires(Real<T>);
+    T cross(const Vector2<T>& other) const requires(Real<T>)
+    {
+        return static_cast<T>(x * other.y - y * other.x);
+    }
 
     bool isZero() const;
     bool isZero(T eps) const requires(Real<T>);

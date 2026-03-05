@@ -13,7 +13,7 @@ VI_MATH_NS_BEGIN
  *        for integer types, it is promoted to double first, then calculated
  */
 template <Real T, Real... Rest>
-inline TypeF<T> calc_vec_len2_safe(T first, Rest... rest)
+inline constexpr TypeF<T> calc_vec_len2_safe(T first, Rest... rest)
 {
     // static_assert((std::is_same_v<T, Rest> && ...), "All parameters must have type T");
 
@@ -31,7 +31,7 @@ inline TypeF<T> calc_vec_len2_safe(T first, Rest... rest)
  *        for integer types, it is promoted to double first, then calculated
  */
 template <Real T, Real... Rest>
-inline TypeF<T> calc_vec_len_safe(T first, Rest... rest)
+inline constexpr TypeF<T> calc_vec_len_safe(T first, Rest... rest)
 {
     return std::sqrt(calc_vec_len2_safe(first, rest...));
 }
@@ -41,13 +41,13 @@ inline TypeF<T> calc_vec_len_safe(T first, Rest... rest)
  *        for integer types, it is promoted to double first, then multiplied
  */
 template <Real T>
-inline TypeF<T> multiply_safe(T first, T second)
+inline constexpr TypeF<T> multiply_safe(T first, T second)
 {
     if constexpr (FP<T>) { return first * second; }
     else {
-        using LT = TypeF<T>;
+        using ret_type = TypeF<T>;
 
-        return static_cast<LT>(first) * static_cast<LT>(first);
+        return static_cast<ret_type>(first) * static_cast<ret_type>(second);
     }
 }
 
@@ -56,7 +56,7 @@ inline TypeF<T> multiply_safe(T first, T second)
  * for other types, it is normal addition
  */
 template <Arithmetic T>
-inline T arithmetic_add(T left, T right)
+inline constexpr T arithmetic_add(T left, T right)
 {
     if constexpr (std::is_same_v<T, bool>) { return left || right; }
     else {
@@ -69,7 +69,7 @@ inline T arithmetic_add(T left, T right)
  * for other types, it is normal subtraction
  */
 template <Arithmetic T>
-inline T arithmetic_sub(T left, T right)
+inline constexpr T arithmetic_sub(T left, T right)
 {
     if constexpr (std::is_same_v<T, bool>) { return left && !right; }
     else {
@@ -82,7 +82,7 @@ inline T arithmetic_sub(T left, T right)
  * for other types, it is normal multiplication
  */
 template <Arithmetic T>
-inline T arithmetic_multiply(T left, T right)
+inline constexpr T arithmetic_multiply(T left, T right)
 {
     if constexpr (std::is_same_v<T, bool>) { return left && right; }
     else {
@@ -95,7 +95,7 @@ inline T arithmetic_multiply(T left, T right)
  * for other types, it is normal division
  */
 template <Arithmetic T>
-inline T arithmetic_division(T left, T right)
+inline constexpr T arithmetic_division(T left, T right)
 {
     if constexpr (std::is_same_v<T, bool>) { return left && right; }
     else {
@@ -104,7 +104,7 @@ inline T arithmetic_division(T left, T right)
 }
 
 template <Arithmetic T>
-inline T arithmetic_nagate(T left)
+inline constexpr T arithmetic_nagate(T left)
 {
     if constexpr (std::is_same_v<T, bool>) { return !left; }
     else {

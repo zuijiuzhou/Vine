@@ -12,8 +12,8 @@ template <typename T>
 class Vector3;
 
 /**
- * @brief
- * @tparam T Only accepts float double and integers
+ * @brief A class representing a vector in 4D space
+ * @tparam T Only accepts float double and integers(include boolean)
  */
 template <typename T>
 class Vector4 {
