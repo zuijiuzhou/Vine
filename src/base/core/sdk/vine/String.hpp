@@ -660,19 +660,27 @@ class VI_CORE_API String final {
 
     /** Split string by delimiter
      *  @param delimiter The character to split on
-     *  @param keepEmpty Whether to keep empty substrings (default: true)
+     *  @param keep_empty Whether to keep empty substrings (default: true)
      *  @return Vector of substrings
-     *  @note If keepEmpty is false, consecutive delimiters will not produce empty strings
+     *  @note If keep_empty is false, consecutive delimiters will not produce empty strings
      */
-    std::vector<String> split(value_type delimiter, bool keepEmpty = true) const;
+    std::vector<String> split(value_type delimiter, bool keep_empty = true) const;
+
+    /** Split string by delimiter
+     *  @param delimiters The characters to split on
+     *  @param keep_empty Whether to keep empty substrings (default: true)
+     *  @return Vector of substrings
+     *  @note If keep_empty is false, consecutive delimiters will not produce empty strings
+     */
+    std::vector<String> split(const std::initializer_list<value_type>& delimiters, bool keep_empty = true) const;
 
     /** Split string by delimiter string
      *  @param delimiter The string to split on
-     *  @param keepEmpty Whether to keep empty substrings (default: true)
+     *  @param keep_empty Whether to keep empty substrings (default: true)
      *  @return Vector of substrings
-     *  @note If keepEmpty is false, consecutive delimiters will not produce empty strings
+     *  @note If keep_empty is false, consecutive delimiters will not produce empty strings
      */
-    std::vector<String> split(const String& delimiter, bool keepEmpty = true) const;
+    std::vector<String> split(const String& delimiter, bool keep_empty = true) const;
 
     /** Get iterator to the beginning of the string
      *  @return Iterator pointing to the first character
