@@ -51,39 +51,39 @@ class VI_CORE_API String final {
 
   public:
     /** Default constructor, creates an empty string */
-    String()
+    constexpr String()
     {}
 
-    String(size_type count, value_type ch)
+    constexpr String(size_type count, value_type ch)
       : stdstr_(count, ch)
     {}
 
     /** Constructor from null-terminated C-style string */
-    String(const value_type* data)
+    constexpr String(const value_type* data)
       : stdstr_(data)
     {}
 
     /** Constructor from character array with specified length */
-    String(const value_type* data, size_type count)
+    constexpr String(const value_type* data, size_type count)
       : stdstr_(data, count)
     {}
 
     /** Constructor from std::u8string */
-    explicit String(const impl_type& str)
+    constexpr explicit String(const impl_type& str)
       : stdstr_(str)
     {}
 
-    explicit String(impl_type&& str)
+    constexpr explicit String(impl_type&& str)
       : stdstr_(std::move(str))
     {}
 
     /** Copy constructor */
-    String(const String& other) noexcept
+    constexpr String(const String& other) noexcept
       : stdstr_(other.stdstr_)
     {}
 
     /** Move constructor */
-    String(String&& other) noexcept
+    constexpr String(String&& other) noexcept
       : stdstr_(std::move(other.stdstr_))
     {}
 
@@ -109,7 +109,7 @@ class VI_CORE_API String final {
     /** Get a reference to the internal std::u8string
      *  @return Reference to the internal std::u8string
      */
-    std::u8string& stdu8str()
+    constexpr std::u8string& stdu8str()
     {
         return stdstr_;
     }
@@ -117,7 +117,7 @@ class VI_CORE_API String final {
     /** Get a const reference to the internal std::u8string
      *  @return Const reference to the internal std::u8string
      */
-    const std::u8string& stdu8str() const
+    constexpr const std::u8string& stdu8str() const
     {
         return stdstr_;
     }
@@ -125,7 +125,7 @@ class VI_CORE_API String final {
     /** Get the number of characters in the string
      *  @return The length of the string
      */
-    size_type size() const noexcept
+    constexpr size_type size() const noexcept
     {
         return stdstr_.size();
     }
@@ -133,7 +133,7 @@ class VI_CORE_API String final {
     /** Get the number of characters in the string (alias for size())
      *  @return The length of the string
      */
-    size_type length() const noexcept
+    constexpr size_type length() const noexcept
     {
         return stdstr_.length();
     }
@@ -141,7 +141,7 @@ class VI_CORE_API String final {
     /** Get the allocated capacity of the string buffer
      *  @return The capacity of the allocated buffer
      */
-    size_type capacity() const noexcept
+    constexpr size_type capacity() const noexcept
     {
         return stdstr_.capacity();
     }
@@ -149,7 +149,7 @@ class VI_CORE_API String final {
     /** Check if the string is empty
      *  @return true if the string has no characters, false otherwise
      */
-    bool empty() const noexcept
+    constexpr bool empty() const noexcept
     {
         return stdstr_.empty();
     }
@@ -161,7 +161,7 @@ class VI_CORE_API String final {
      *           Do not use the pointer after any such modification.
      *  @note The returned pointer is valid as long as the string is not modified
      */
-    value_type* data() noexcept
+    constexpr value_type* data() noexcept
     {
         return stdstr_.data();
     }
@@ -173,7 +173,7 @@ class VI_CORE_API String final {
      *           Do not use the pointer after any such modification.
      *  @note The returned pointer is valid as long as the string is not modified
      */
-    const value_type* data() const noexcept
+    constexpr const value_type* data() const noexcept
     {
         return stdstr_.data();
     }
@@ -181,7 +181,7 @@ class VI_CORE_API String final {
     /** Clear the string, making it empty
      *  @note The capacity is not changed
      */
-    void clear() noexcept
+    constexpr void clear() noexcept
     {
         stdstr_.clear();
     }
@@ -192,7 +192,7 @@ class VI_CORE_API String final {
      *  @note If new_size is larger than current size, appends ch characters
      *        If new_size is smaller than current size, truncates the string
      */
-    void resize(size_type new_size, value_type ch = {})
+    constexpr void resize(size_type new_size, value_type ch = {})
     {
         stdstr_.resize(new_size, ch);
     }
@@ -201,7 +201,7 @@ class VI_CORE_API String final {
      *  @param new_cap The new capacity to reserve
      *  @note If new_cap is less than current capacity, this call has no effect
      */
-    void reserve(size_type new_cap)
+    constexpr void reserve(size_type new_cap)
     {
         stdstr_.reserve(new_cap);
     }
@@ -209,7 +209,7 @@ class VI_CORE_API String final {
     /** Shrink the capacity to match the current size
      *  @note Releases unused memory allocated by the string
      */
-    void shrinkToFit()
+    constexpr void shrinkToFit() noexcept
     {
         stdstr_.shrink_to_fit();
     }
@@ -218,7 +218,7 @@ class VI_CORE_API String final {
      *  @param s The string to swap with
      *  @note This operation is guaranteed to not throw
      */
-    void swap(String& s) noexcept
+    constexpr void swap(String& s) noexcept
     {
         stdstr_.swap(s.stdstr_);
     }
@@ -229,7 +229,7 @@ class VI_CORE_API String final {
      *  @return Reference to this string
      *  @note Replaces the current string content
      */
-    String& assign(value_type ch, size_type count)
+    constexpr String& assign(value_type ch, size_type count)
     {
         stdstr_.assign(count, ch);
         return *this;
@@ -240,7 +240,7 @@ class VI_CORE_API String final {
      *  @return Reference to this string
      *  @note Performs a deep copy of the source string
      */
-    String& assign(const String& str)
+    constexpr String& assign(const String& str)
     {
         stdstr_.assign(str.stdstr_);
         return *this;
@@ -253,7 +253,7 @@ class VI_CORE_API String final {
      *  @return Reference to this string
      *  @note Copies characters [pos, pos + count) from str
      */
-    String& assign(const String& str, size_type pos, size_type count)
+    constexpr String& assign(const String& str, size_type pos, size_type count)
     {
         stdstr_.assign(str.stdstr_, pos, count);
         return *this;
@@ -264,7 +264,7 @@ class VI_CORE_API String final {
      *  @return Reference to this string
      *  @note Transfers ownership of the buffer from str to this string
      */
-    String& assign(String&& str)
+    constexpr String& assign(String&& str)
     {
         stdstr_.assign(std::move(str.stdstr_));
         return *this;
@@ -276,7 +276,7 @@ class VI_CORE_API String final {
      *  @return Reference to this string
      *  @note Copies all characters in the range [begin, end)
      */
-    String& assign(const_iterator begin, const_iterator end)
+    constexpr String& assign(const_iterator begin, const_iterator end)
     {
         stdstr_.assign(begin, end);
         return *this;
@@ -288,7 +288,7 @@ class VI_CORE_API String final {
      *  @return Reference to this string
      *  @note If count is NPOS, all characters up to the null terminator are copied
      */
-    String& assign(const value_type* data, size_type count)
+    constexpr String& assign(const value_type* data, size_type count)
     {
         stdstr_.assign(data, count);
         return *this;
@@ -300,7 +300,7 @@ class VI_CORE_API String final {
      *  @return Reference to this string
      *  @note Shifts all characters from pos onwards to the right
      */
-    String& insert(size_type pos, size_type count, value_type ch)
+    constexpr String& insert(size_type pos, size_type count, value_type ch)
     {
         stdstr_.insert(pos, count, ch);
         return *this;
@@ -313,7 +313,7 @@ class VI_CORE_API String final {
      *  @return Reference to this string
      *  @note If count is NPOS, all characters up to the null terminator are inserted
      */
-    String& insert(size_type pos, const value_type* data, size_type count)
+    constexpr String& insert(size_type pos, const value_type* data, size_type count)
     {
         stdstr_.insert(pos, data, count);
         return *this;
@@ -325,7 +325,7 @@ class VI_CORE_API String final {
      *  @return Reference to this string
      *  @note The entire str is inserted at position pos
      */
-    String& insert(size_type pos, const String& str)
+    constexpr String& insert(size_type pos, const String& str)
     {
         stdstr_.insert(pos, str.stdstr_);
         return *this;
@@ -339,7 +339,7 @@ class VI_CORE_API String final {
      *  @return Reference to this string
      *  @note Inserts characters [str_pos, str_pos + count) from str at position pos
      */
-    String& insert(size_type pos, const String& str, size_type str_pos, size_type count)
+    constexpr String& insert(size_type pos, const String& str, size_type str_pos, size_type count)
     {
         stdstr_.insert(pos, str.stdstr_, str_pos, count);
         return *this;
@@ -353,7 +353,7 @@ class VI_CORE_API String final {
      *  @return Reference to this string
      *  @note Replaces characters [pos, pos + count1) with count2 copies of ch
      */
-    String& replace(size_type pos, size_type count1, size_type count2, value_type ch)
+    constexpr String& replace(size_type pos, size_type count1, size_type count2, value_type ch)
     {
         stdstr_.replace(pos, count1, count2, ch);
         return *this;
@@ -367,7 +367,7 @@ class VI_CORE_API String final {
      *  @return Reference to this string
      *  @note Replaces characters [pos, pos + count) with data[0..data_count)
      */
-    String& replace(size_type pos, size_type count, const value_type* data, size_type data_count)
+    constexpr String& replace(size_type pos, size_type count, const value_type* data, size_type data_count)
     {
         stdstr_.replace(pos, count, data, data_count);
         return *this;
@@ -380,7 +380,7 @@ class VI_CORE_API String final {
      *  @return Reference to this string
      *  @note Replaces characters [pos, pos + count) with the entire str
      */
-    String& replace(size_type pos, size_type count, const String& str)
+    constexpr String& replace(size_type pos, size_type count, const String& str)
     {
         stdstr_.replace(pos, count, str.stdstr_);
         return *this;
@@ -395,7 +395,7 @@ class VI_CORE_API String final {
      *  @return Reference to this string
      *  @note Replaces characters [pos, pos + count) with str[str_pos, str_pos + str_count)
      */
-    String& replace(size_type pos, size_type count, const String& str, size_type str_pos, size_type str_count)
+    constexpr String& replace(size_type pos, size_type count, const String& str, size_type str_pos, size_type str_count)
     {
         stdstr_.replace(pos, count, str.stdstr_, str_pos, str_count);
         return *this;
@@ -409,7 +409,7 @@ class VI_CORE_API String final {
      *           Do not use the reference after any such modification.
      *  @note Does not perform bounds checking
      */
-    value_type& at(size_type idx)
+    constexpr value_type& at(size_type idx)
     {
         return stdstr_.at(idx);
     }
@@ -422,7 +422,7 @@ class VI_CORE_API String final {
      *           Do not use the reference after any such modification.
      *  @note Does not perform bounds checking
      */
-    const value_type& at(size_type idx) const
+    constexpr const value_type& at(size_type idx) const
     {
         return stdstr_.at(idx);
     }
@@ -434,7 +434,7 @@ class VI_CORE_API String final {
      *  @note Returns characters [start, start + count)
      *        If start >= size(), returns an empty string
      */
-    String substr(size_type start, size_type count = -1) const
+    constexpr String substr(size_type start, size_type count = -1) const
     {
         return String(stdstr_.substr(start, count).c_str());
     }
@@ -445,7 +445,7 @@ class VI_CORE_API String final {
      *  @return The index of the first occurrence, or NPOS if not found
      *  @note Searches in the range [pos, size())
      */
-    size_type find(value_type c, size_type pos = 0) const
+    constexpr size_type find(value_type c, size_type pos = 0) const
     {
         return stdstr_.find(c, pos);
     }
@@ -457,7 +457,7 @@ class VI_CORE_API String final {
      *  @note Searches in the range [pos, size())
      *        If str is empty, returns pos
      */
-    size_type find(const String& str, size_type pos = 0) const
+    constexpr size_type find(const String& str, size_type pos = 0) const
     {
         return stdstr_.find(str.stdstr_, pos);
     }
@@ -468,7 +468,7 @@ class VI_CORE_API String final {
      *  @return The index of the first occurrence, or NPOS if not found
      *  @note Searches in the range [pos, size())
      */
-    size_type find(const value_type* data, size_type pos = 0) const
+    constexpr size_type find(const value_type* data, size_type pos = 0) const
     {
         return stdstr_.find(data, pos);
     }
@@ -479,7 +479,7 @@ class VI_CORE_API String final {
      *  @return The index of the last occurrence, or NPOS if not found
      *  @note Searches backward in the range [0, pos]
      */
-    size_type rfind(value_type c, size_type pos = -1) const
+    constexpr size_type rfind(value_type c, size_type pos = -1) const
     {
         return stdstr_.rfind(c, pos);
     }
@@ -491,7 +491,7 @@ class VI_CORE_API String final {
      *  @note Searches backward in the range [0, pos]
      *        If str is empty, returns min(pos, size())
      */
-    size_type rfind(const String& str, size_type pos = -1) const
+    constexpr size_type rfind(const String& str, size_type pos = -1) const
     {
         return stdstr_.rfind(str.stdstr_, pos);
     }
@@ -502,7 +502,7 @@ class VI_CORE_API String final {
      *  @return The index of the last occurrence, or NPOS if not found
      *  @note Searches backward in the range [0, pos]
      */
-    size_type rfind(const value_type* data, size_type pos = -1) const
+    constexpr size_type rfind(const value_type* data, size_type pos = -1) const
     {
         return stdstr_.rfind(data, pos);
     }
@@ -599,6 +599,7 @@ class VI_CORE_API String final {
     {
         if (stdstr_.empty())
             return false;
+
         if (ignore_case) {
             return std::tolower(stdstr_[0]) == std::tolower(c);
         }
@@ -616,6 +617,7 @@ class VI_CORE_API String final {
     {
         if (str.size() > stdstr_.size())
             return false;
+
         if (ignore_case) {
             return std::equal(str.stdstr_.begin(), str.stdstr_.end(), stdstr_.begin(), [](char a, char b) { return std::tolower(a) == std::tolower(b); });
         }
@@ -633,6 +635,7 @@ class VI_CORE_API String final {
     {
         if (stdstr_.empty())
             return false;
+
         if (ignore_case) {
             return std::tolower(stdstr_.back()) == std::tolower(c);
         }
@@ -650,6 +653,7 @@ class VI_CORE_API String final {
     {
         if (str.size() > stdstr_.size())
             return false;
+
         if (ignore_case) {
             return std::equal(str.stdstr_.rbegin(), str.stdstr_.rend(), stdstr_.rbegin(), [](char a, char b) { return std::tolower(a) == std::tolower(b); });
         }
@@ -688,7 +692,7 @@ class VI_CORE_API String final {
      *           clear(), resize(), or any operation that changes capacity invalidates all iterators.
      *           Do not use iterators after any such modification.
      */
-    iterator begin() noexcept
+    constexpr iterator begin() noexcept
     {
         return stdstr_.begin();
     }
@@ -699,7 +703,7 @@ class VI_CORE_API String final {
      *           clear(), resize(), or any operation that changes capacity invalidates all iterators.
      *           Do not use iterators after any such modification.
      */
-    iterator end() noexcept
+    constexpr iterator end() noexcept
     {
         return stdstr_.end();
     }
@@ -710,7 +714,7 @@ class VI_CORE_API String final {
      *           clear(), resize(), or any operation that changes capacity invalidates all iterators.
      *           Do not use iterators after any such modification.
      */
-    const_iterator cbegin() const noexcept
+    constexpr const_iterator cbegin() const noexcept
     {
         return stdstr_.cbegin();
     }
@@ -721,9 +725,29 @@ class VI_CORE_API String final {
      *           clear(), resize(), or any operation that changes capacity invalidates all iterators.
      *           Do not use iterators after any such modification.
      */
-    const_iterator cend() const noexcept
+    constexpr const_iterator cend() const noexcept
     {
         return stdstr_.cend();
+    }
+
+    constexpr reverse_iterator rbegin() noexcept
+    {
+        return stdstr_.rbegin();
+    }
+
+    constexpr reverse_iterator rend() noexcept
+    {
+        return stdstr_.rend();
+    }
+
+    constexpr const_reverse_iterator crbegin() const noexcept
+    {
+        return stdstr_.crbegin();
+    }
+
+    constexpr const_reverse_iterator crend() const noexcept
+    {
+        return stdstr_.crend();
     }
 
     /** Convert string to integer
@@ -819,9 +843,20 @@ class VI_CORE_API String final {
      *  @return Reference to this string
      *  @note Performs a deep copy of the source string
      */
-    String& operator=(const String& right)
+    constexpr String& operator=(const String& right)
     {
         stdstr_ = right.stdstr_;
+        return *this;
+    }
+
+    /** Move assignment operator
+     *  @param right The string to move from
+     *  @return Reference to this string
+     *  @note Transfers ownership of the buffer from right to this string
+     */
+    constexpr String& operator=(String&& right)
+    {
+        stdstr_ = std::move(right.stdstr_);
         return *this;
     }
 
@@ -830,7 +865,7 @@ class VI_CORE_API String final {
      *  @return Reference to the character
      *  @note Does not perform bounds checking
      */
-    value_type& operator[](size_type idx)
+    constexpr value_type& operator[](size_type idx)
     {
         return stdstr_[idx];
     }
@@ -840,7 +875,7 @@ class VI_CORE_API String final {
      *  @return Const reference to the character
      *  @note Does not perform bounds checking
      */
-    const value_type& operator[](size_type idx) const
+    constexpr const value_type& operator[](size_type idx) const
     {
         return stdstr_[idx];
     }
@@ -849,7 +884,7 @@ class VI_CORE_API String final {
      *  @param right The string to compare with
      *  @return true if the strings are equal, false otherwise
      */
-    bool operator==(const String& right) const
+    constexpr bool operator==(const String& right) const
     {
         return stdstr_ == right.stdstr_;
     }
@@ -858,7 +893,7 @@ class VI_CORE_API String final {
      *  @param right The string to compare with
      *  @return true if the strings are not equal, false otherwise
      */
-    bool operator!=(const String& right) const
+    constexpr bool operator!=(const String& right) const
     {
         return stdstr_ != right.stdstr_;
     }
@@ -867,7 +902,7 @@ class VI_CORE_API String final {
      *  @param right The string to compare with
      *  @return true if this string is lexicographically less than right
      */
-    bool operator<(const String& right) const
+    constexpr bool operator<(const String& right) const
     {
         return stdstr_ < right.stdstr_;
     }
@@ -876,7 +911,7 @@ class VI_CORE_API String final {
      *  @param right The string to compare with
      *  @return true if this string is lexicographically greater than right
      */
-    bool operator>(const String& right) const
+    constexpr bool operator>(const String& right) const
     {
         return stdstr_ > right.stdstr_;
     }
@@ -886,7 +921,7 @@ class VI_CORE_API String final {
      *  @return A new string containing this string followed by right
      *  @note This string is not modified
      */
-    String operator+(const String& right) const
+    constexpr String operator+(const String& right) const
     {
         String result;
         result.stdstr_ = stdstr_ + right.stdstr_;
@@ -898,7 +933,7 @@ class VI_CORE_API String final {
      *  @return Reference to this string
      *  @note Appends right to the end of this string
      */
-    String& operator+=(const String& right)
+    constexpr String& operator+=(const String& right)
     {
         stdstr_ += right.stdstr_;
         return *this;

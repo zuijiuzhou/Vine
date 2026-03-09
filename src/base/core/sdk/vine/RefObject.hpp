@@ -16,7 +16,6 @@ class VI_CORE_API RefObject : public Object {
     VI_DECLARE_DPTR(RefObject)
     VI_DISABLE_COPY_MOVE(RefObject)
 
-
   public:
     RefObject();
     virtual ~RefObject() noexcept;

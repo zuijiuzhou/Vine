@@ -25,7 +25,7 @@ concept CharType = std::same_as<T, char> || std::same_as<T, wchar_t> || std::sam
 template <CharType Char>
 constexpr bool isspace(Char c)
 {
-    return c == ' ' || (c >= '\t' && c <= '\r');
+    return c == static_cast<Char>(' ') || (c >= static_cast<Char>('\t') && c <= static_cast<Char>('\r'));
 }
 
 /** Compare two characters in a case-insensitive manner
@@ -43,9 +43,9 @@ constexpr bool iequals(Char l, Char r)
 {
     // Case-insensitive character comparison
     // Only ASCII uppercase letters (A-Z) are converted to lowercase
-    if (l >= 'A' && l <= 'Z')
+    if (l >= static_cast<Char>('A') && l <= static_cast<Char>('Z'))
         l += 32;
-    if (r >= 'A' && r <= 'Z')
+    if (r >= static_cast<Char>('A') && r <= static_cast<Char>('Z'))
         r += 32;
     return l == r;
 }
@@ -63,7 +63,7 @@ constexpr bool iequals(Char l, Char r)
 template <CharType Char>
 constexpr Char tolower(Char c)
 {
-    if (c >= 'A' && c <= 'Z')
+    if (c >= static_cast<Char>('A') && c <= static_cast<Char>('Z'))
         return c + 32;
     return c;
 }
@@ -81,7 +81,7 @@ constexpr Char tolower(Char c)
 template <CharType Char>
 constexpr Char toupper(Char c)
 {
-    if (c >= 'a' && c <= 'z')
+    if (c >= static_cast<Char>('a') && c <= static_cast<Char>('z'))
         return c - 32;
     return c;
 }
@@ -99,7 +99,7 @@ constexpr Char toupper(Char c)
 template <CharType Char>
 constexpr bool isalpha(Char c)
 {
-    return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
+    return (c >= static_cast<Char>('A') && c <= static_cast<Char>('Z')) || (c >= static_cast<Char>('a') && c <= static_cast<Char>('z'));
 }
 
 /** Check if a character is an ASCII digit
@@ -111,7 +111,7 @@ constexpr bool isalpha(Char c)
 template <CharType Char>
 constexpr bool isdigit(Char c)
 {
-    return c >= '0' && c <= '9';
+    return c >= static_cast<Char>('0') && c <= static_cast<Char>('9');
 }
 
 /** Check if a character is an ASCII letter or digit
@@ -136,7 +136,7 @@ constexpr bool isalnum(Char c)
 template <CharType Char>
 constexpr bool isupper(Char c)
 {
-    return c >= 'A' && c <= 'Z';
+    return c >= static_cast<Char>('A') && c <= static_cast<Char>('Z');
 }
 
 /** Check if a character is an ASCII lowercase letter
@@ -148,7 +148,7 @@ constexpr bool isupper(Char c)
 template <CharType Char>
 constexpr bool islower(Char c)
 {
-    return c >= 'a' && c <= 'z';
+    return c >= static_cast<Char>('a') && c <= static_cast<Char>('z');
 }
 
 VI_CORE_NS_END

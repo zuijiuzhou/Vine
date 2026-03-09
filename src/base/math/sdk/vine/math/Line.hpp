@@ -1,4 +1,4 @@
-﻿#pragma once 
+﻿#pragma once
 #include "Point3.hpp"
 #include "Vector3.hpp"
 
@@ -49,11 +49,16 @@ class Line {
     };
 
   public:
-    Line(const Point3<T>& origin, const Vector3<T>& direction);
+    constexpr Line(const Point3<T>& origin, const Vector3<T>& direction)
+      : origin(origin)
+      , direction(direction)
+    {}
 
   public:
+    [[nodiscard]]
     Intersection intersectWith(const Line& other, T eps) const;
 
+    [[nodiscard]]
     Point3<T> closestPoint(const Point3<T>& pt) const;
 
   public:

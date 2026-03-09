@@ -9,82 +9,6 @@ VI_MATH_NS_BEGIN
 
 #define TMPL_PREFIX template <typename T>
 
-TMPL_PREFIX Rect2<T>::Rect2()
-  : x(T())
-  , y(T())
-  , w(T())
-  , h(T())
-{}
-
-TMPL_PREFIX Rect2<T>::Rect2(const Point2<T>& top_left, const Vector2<T>& size)
-  : x(top_left.x)
-  , y(top_left.y)
-  , w(size.x)
-  , h(size.y)
-{}
-
-TMPL_PREFIX Rect2<T>::Rect2(T xx, T yy, T ww, T hh)
-  : x(xx)
-  , y(yy)
-  , w(ww)
-  , h(hh)
-{}
-
-TMPL_PREFIX T Rect2<T>::top() const
-{
-    return std::max<T>(y, y + h);
-}
-
-TMPL_PREFIX T Rect2<T>::bottom() const
-{
-    return std::min<T>(y, y + h);
-}
-
-TMPL_PREFIX T Rect2<T>::left() const
-{
-    return std::min<T>(x, x + w);
-}
-
-TMPL_PREFIX T Rect2<T>::right() const
-{
-    return std::max<T>(x, x + w);
-}
-
-TMPL_PREFIX Point2<T> Rect2<T>::bottomLeft() const
-{
-    return Point2<T>(std::min<T>(x, x + w), std::min<T>(y, y + h));
-}
-
-TMPL_PREFIX Point2<T> Rect2<T>::bottomRight() const
-{
-    return Point2<T>(std::max<T>(x, x + w), std::min<T>(y, y + h));
-}
-
-TMPL_PREFIX Point2<T> Rect2<T>::topLeft() const
-{
-    return Point2<T>(std::min<T>(x, x + w), std::max<T>(y, y + h));
-}
-
-TMPL_PREFIX Point2<T> Rect2<T>::topRight() const
-{
-    return Point2<T>(std::max<T>(x, x + w), std::max<T>(y, y + h));
-}
-
-TMPL_PREFIX T Rect2<T>::width() const
-{
-    return w < 0 ? -w : w;
-}
-
-TMPL_PREFIX T Rect2<T>::height() const
-{
-    return h < 0 ? -h : h;
-}
-
-TMPL_PREFIX Vector2<T> Rect2<T>::size() const
-{
-    return Vector2<T>(w < 0 ? -w : w, h < 0 ? -h : h);
-}
-
 TMPL_PREFIX bool Rect2<T>::contains(T x, T y) const
 {
     auto l = bottomLeft();
@@ -130,26 +54,6 @@ TMPL_PREFIX void Rect2<T>::expandBy(const Rect2<T>& rect)
 
     w = ub1.x - lb1.x;
     h = ub1.y - lb1.y;
-}
-
-TMPL_PREFIX bool Rect2<T>::isZero() const
-{
-    return x == T(0) && y == T(0) && w == T(0) && h == T(0);
-}
-
-TMPL_PREFIX bool Rect2<T>::isZero(T eps) const
-{
-    return math::isZero(x, eps) && math::isZero(y, eps) && math::isZero(w, eps) && math::isZero(h, eps);
-}
-
-TMPL_PREFIX bool Rect2<T>::operator==(const Rect2<T>& right) const
-{
-    return x == right.x && y == right.y && w == right.w && h == right.h;
-}
-
-TMPL_PREFIX bool Rect2<T>::operator!=(const Rect2<T>& right) const
-{
-    return !(*this == right);
 }
 
 #undef TMPL_PREFIX

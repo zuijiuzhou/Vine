@@ -2,12 +2,12 @@
 
 #include "math_global.hpp"
 
+#include <cmath>
 #include <concepts>
 #include <cstddef>
 #include <cstdint>
-#include <cmath>
 
-#include "Types.hpp"
+#include "Math.hpp"
 
 VI_MATH_NS_BEGIN
 template <typename T>
@@ -46,63 +46,21 @@ class Vector2 {
         yy = y;
     }
 
-    constexpr Point2<T> toPoint() const
-    {
-        return Point2<T>(x, y);
-    }
+    [[nodiscard]]
+    Point2<T> toPoint() const;
 
+    [[nodiscard]]
     constexpr const Point2<T>& asPoint() const
     {
         return reinterpret_cast<const Point2<T>&>(*this);
     }
-
-    constexpr T length2() const requires(Real<T>)
-    {
-        return static_cast<T>(x * x + y * y);
-    }
-
-    constexpr float length2f() const requires(Real<T>)
-    {
-        return static_cast<float>(x) * static_cast<float>(x) + static_cast<float>(y) * static_cast<float>(y);
-    }
-
-    constexpr double length2d() const requires(Real<T>)
-    {
-        return static_cast<double>(x) * static_cast<double>(x) + static_cast<double>(y) * static_cast<double>(y);
-    }
-
-    /**
-     * @brief length of the vector
-     *        only for real types (floating point and integers) not boolean.
-     */
-    T length() const requires(Real<T>)
-    {
-        return static_cast<T>(std::sqrt(length2()));
-    }
-
-    float lengthf() const requires(Real<T>)
-    {
-        return sqrtf(length2f());
-    }
-
-    double lengthd() const requires(Real<T>)
-    {
-        return std::sqrt(length2d());
-    }
-
-    TypeF<T> angleTo(const Vector2<T>& other) const requires(Real<T>);
-
-    /**
-     * @brief normalize the vector to unit length.
-     *        only for floating point types.
-     */
-    T normalize() requires(FP<T>);
 
     /**
      * @brief dot product
      *        only for real types (floating point and integers) not boolean.
      *        for integer types, overflow is possible.
      */
+    [[nodiscard]]
     T dot(const Vector2<T>& other) const requires(Real<T>)
     {
         return static_cast<T>(x * other.x + y * other.y);
@@ -113,44 +71,220 @@ class Vector2 {
      *        only for real types (floating point and integers) not boolean.
      *        for integer types, overflow is possible.
      */
+    [[nodiscard]]
     T cross(const Vector2<T>& other) const requires(Real<T>)
     {
         return static_cast<T>(x * other.y - y * other.x);
     }
 
-    bool isZero() const;
-    bool isZero(T eps) const requires(Real<T>);
-    bool isEqual(const Vector2<T>& other) const;
-    bool isEqual(const Vector2<T>& other, T eps) const requires(Real<T>);
+    /**
+     * @brief length squared of the vector
+     *        only for real types (floating point and integers) not boolean.
+     *        for integer types, overflow is possible.
+     */
+    [[nodiscard]]
+    constexpr TypeF<T> length2() const requires(Real<T>)
+    {
+        return safeLengthSquared(x, y);
+    }
+
+    /**
+     * @brief length of the vector
+     *        only for real types (floating point and integers) not boolean.
+     */
+    [[nodiscard]]
+    constexpr TypeF<T> length() const requires(Real<T>)
+    {
+        return safeLength(x, y);
+    }
+
+    /**
+     * @brief calculate the angle between this vector and another vector
+     * @param other the other vector
+     * @return the angle in radians
+     *         only for real types (floating point and integers) not boolean.
+     */
+    [[nodiscard]]
+    constexpr TypeF<T> angleTo(const Vector2<T>& other) const requires(Real<T>)
+    {
+        using ft   = TypeF<T>;
+        auto dot   = static_cast<ft>(x) * static_cast<ft>(other.x) + static_cast<ft>(y) * static_cast<ft>(other.y);
+        auto cross = static_cast<ft>(x) * static_cast<ft>(other.y) - static_cast<ft>(y) * static_cast<ft>(other.x);
+
+        return std::atan2(std::abs(cross), dot);
+
+        // auto llen = length();
+        // if (llen == 0. || !std::isfinite(llen))
+        //     return ft(0);
+
+        // auto rlen = other.length();
+        // if (rlen == 0. || !std::isfinite(rlen))
+        //     return ft(0);
+
+        // auto dot = static_cast<ft>(x) * static_cast<ft>(other.x) + static_cast<ft>(y) * static_cast<ft>(other.y);
+
+        // return std::acos(std::clamp<ft>(dot / (llen * rlen), ft(-1), ft(1)));
+    }
+
+    /**
+     * @brief normalize the vector to unit length.
+     *        only for floating point types.
+     */
+    constexpr T normalize() requires(FP<T>)
+    {
+        auto len = length();
+
+        if (len == T(0)) {
+            x = T(0);
+            y = T(0);
+        }
+        else {
+            x /= len;
+            y /= len;
+        }
+        return len;
+    }
+
+    [[nodiscard]]
+    constexpr bool isZero() const
+    {
+        return x == T(0) && y == T(0);
+    }
+
+    [[nodiscard]]
+    constexpr bool isZero(T eps) const requires(Real<T>)
+    {
+        return math::isZero<T>(x, eps) && math::isZero<T>(y, eps);
+    }
+
+    [[nodiscard]]
+    constexpr bool isEqual(const Vector2<T>& other) const
+    {
+        return x == other.x && y == other.y;
+    }
+
+    [[nodiscard]]
+    constexpr bool isEqual(const Vector2<T>& other, T eps) const requires(Real<T>)
+    {
+        return math::isEqual<T>(x, other.x, eps) && math::isEqual<T>(y, other.y, eps);
+    }
 
   public:
-    bool operator==(const Vector2<T>& right) const;
-    bool operator!=(const Vector2<T>& right) const;
+    [[nodiscard]]
+    constexpr bool operator==(const Vector2<T>& right) const
+    {
+        return x == right.x && y == right.y;
+    }
 
-    Vector2<T> operator+(const Vector2<T>& right) const;
-    Vector2<T> operator-(const Vector2<T>& right) const;
-    Vector2<T> operator*(T scale) const;
-    Vector2<T> operator/(T scale) const;
+    [[nodiscard]]
+    constexpr bool operator!=(const Vector2<T>& right) const
+    {
+        return x != right.x || y != right.y;
+    }
 
-    Vector2<T>& operator+=(const Vector2<T>& right);
-    Vector2<T>& operator-=(const Vector2<T>& right);
-    Vector2<T>& operator*=(T scale);
-    Vector2<T>& operator/=(T scale);
+    [[nodiscard]]
+    constexpr Vector2<T> operator+(const Vector2<T>& right) const
+    {
+        return Vector2<T>(arithmeticAdd(x, right.x), arithmeticAdd(y, right.y));
+    }
 
-    Vector2<T> operator-() const;
+    [[nodiscard]]
+    constexpr Vector2<T> operator-(const Vector2<T>& right) const
+    {
+        return Vector2<T>(arithmeticSub(x, right.x), arithmeticSub(y, right.y));
+    }
+
+    [[nodiscard]]
+    constexpr Vector2<T> operator*(T scale) const
+    {
+        Vector2<T> v;
+
+        v.x = arithmeticMultiply(x, scale);
+        v.y = arithmeticMultiply(y, scale);
+
+        return v;
+    }
+
+    [[nodiscard]]
+    constexpr Vector2<T> operator/(T scale) const
+    {
+        Vector2<T> v;
+
+        v.x = arithmeticDivision(x, scale);
+        v.y = arithmeticDivision(y, scale);
+
+        return v;
+    }
+
+    constexpr Vector2<T>& operator+=(const Vector2<T>& right)
+    {
+        x = arithmeticAdd(x, right.x);
+        y = arithmeticAdd(y, right.y);
+
+        return *this;
+    }
+
+    constexpr Vector2<T>& operator-=(const Vector2<T>& right)
+    {
+        x = arithmeticSub(x, right.x);
+        y = arithmeticSub(y, right.y);
+
+        return *this;
+    }
+
+    constexpr Vector2<T>& operator*=(T scale)
+    {
+        x = arithmeticMultiply(x, scale);
+        y = arithmeticMultiply(y, scale);
+
+        return *this;
+    }
+
+    Vector2<T>& operator/=(T scale)
+    {
+        x = arithmeticDivision(x, scale);
+        y = arithmeticDivision(y, scale);
+
+        return *this;
+    }
+
+    [[nodiscard]]
+    constexpr Vector2<T> operator-() const
+    {
+        return Vector2<T>(arithmeticNagate(x), arithmeticNagate(y));
+    }
 
     /**
      * @brief dot product
      */
-    T operator*(const Vector2<T>& other) const requires(Real<T>);
+    [[nodiscard]]
+    constexpr T operator*(const Vector2<T>& other) const requires(Real<T>)
+    {
+        return dot(other);
+    }
 
     /**
      * @brief cross product
      */
-    T operator^(const Vector2<T>& other) const requires(Real<T>);
+    [[nodiscard]]
+    constexpr T operator^(const Vector2<T>& other) const requires(Real<T>)
+    {
+        return cross(other);
+    }
 
-    T&       operator[](size_t index);
-    const T& operator[](size_t index) const;
+    [[nodiscard]]
+    constexpr T& operator[](size_t index)
+    {
+        // assert(index < 2);
+        return data[index];
+    }
+
+    [[nodiscard]]
+    constexpr const T& operator[](size_t index) const
+    {
+        // assert(index < 2);
+        return data[index];
+    }
 
   public:
     union

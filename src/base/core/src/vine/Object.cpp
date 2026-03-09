@@ -8,17 +8,6 @@
 #include <vine/String.hpp>
 
 VI_CORE_NS_BEGIN
-Object::Object() noexcept
-{}
-
-Object::Object(const Object& other) noexcept
-{}
-
-Object::Object(Object&& other) noexcept
-{}
-
-Object::~Object() noexcept
-{}
 
 const Class* Object::getClass() const noexcept
 {

@@ -14,44 +14,38 @@
 
 #define VI_CORE_NS_END VI_ROOT_NS_END
 
-#define VI_ENUM_CLASS_FLAGS(EnumName)                                                                                  \
-    inline constexpr EnumName& operator|=(EnumName& left, EnumName right)                                              \
-    {                                                                                                                  \
-        return left = static_cast<EnumName>(static_cast<std::underlying_type_t<EnumName>>(left) |                      \
-                                            static_cast<std::underlying_type_t<EnumName>>(right));                     \
-    }                                                                                                                  \
-    inline constexpr EnumName& operator&=(EnumName& left, EnumName right)                                              \
-    {                                                                                                                  \
-        return left = static_cast<EnumName>(static_cast<std::underlying_type_t<EnumName>>(left) &                      \
-                                            static_cast<std::underlying_type_t<EnumName>>(right));                     \
-    }                                                                                                                  \
-    inline constexpr EnumName& operator^=(EnumName& left, EnumName right)                                              \
-    {                                                                                                                  \
-        return left = static_cast<EnumName>(static_cast<std::underlying_type_t<EnumName>>(left) ^                      \
-                                            static_cast<std::underlying_type_t<EnumName>>(right));                     \
-    }                                                                                                                  \
-    inline constexpr EnumName operator|(EnumName left, EnumName right)                                                 \
-    {                                                                                                                  \
-        return static_cast<EnumName>(static_cast<std::underlying_type_t<EnumName>>(left) |                             \
-                                     static_cast<std::underlying_type_t<EnumName>>(right));                            \
-    }                                                                                                                  \
-    inline constexpr EnumName operator&(EnumName left, EnumName right)                                                 \
-    {                                                                                                                  \
-        return static_cast<EnumName>(static_cast<std::underlying_type_t<EnumName>>(left) &                             \
-                                     static_cast<std::underlying_type_t<EnumName>>(right));                            \
-    }                                                                                                                  \
-    inline constexpr EnumName operator^(EnumName left, EnumName right)                                                 \
-    {                                                                                                                  \
-        return static_cast<EnumName>(static_cast<std::underlying_type_t<EnumName>>(left) ^                             \
-                                     static_cast<std::underlying_type_t<EnumName>>(right));                            \
-    }                                                                                                                  \
-    inline constexpr bool operator!(EnumName left)                                                                     \
-    {                                                                                                                  \
-        return !static_cast<std::underlying_type_t<EnumName>>(left);                                                   \
-    }                                                                                                                  \
-    inline constexpr EnumName operator~(EnumName left)                                                                 \
-    {                                                                                                                  \
-        return static_cast<EnumName>(~static_cast<std::underlying_type_t<EnumName>>(left));                            \
+#define VI_ENUM_CLASS_FLAGS(EnumName)                                                                                                                          \
+    inline constexpr EnumName& operator|=(EnumName& left, EnumName right)                                                                                      \
+    {                                                                                                                                                          \
+        return left = static_cast<EnumName>(static_cast<std::underlying_type_t<EnumName>>(left) | static_cast<std::underlying_type_t<EnumName>>(right));       \
+    }                                                                                                                                                          \
+    inline constexpr EnumName& operator&=(EnumName& left, EnumName right)                                                                                      \
+    {                                                                                                                                                          \
+        return left = static_cast<EnumName>(static_cast<std::underlying_type_t<EnumName>>(left) & static_cast<std::underlying_type_t<EnumName>>(right));       \
+    }                                                                                                                                                          \
+    inline constexpr EnumName& operator^=(EnumName& left, EnumName right)                                                                                      \
+    {                                                                                                                                                          \
+        return left = static_cast<EnumName>(static_cast<std::underlying_type_t<EnumName>>(left) ^ static_cast<std::underlying_type_t<EnumName>>(right));       \
+    }                                                                                                                                                          \
+    inline constexpr EnumName operator|(EnumName left, EnumName right)                                                                                         \
+    {                                                                                                                                                          \
+        return static_cast<EnumName>(static_cast<std::underlying_type_t<EnumName>>(left) | static_cast<std::underlying_type_t<EnumName>>(right));              \
+    }                                                                                                                                                          \
+    inline constexpr EnumName operator&(EnumName left, EnumName right)                                                                                         \
+    {                                                                                                                                                          \
+        return static_cast<EnumName>(static_cast<std::underlying_type_t<EnumName>>(left) & static_cast<std::underlying_type_t<EnumName>>(right));              \
+    }                                                                                                                                                          \
+    inline constexpr EnumName operator^(EnumName left, EnumName right)                                                                                         \
+    {                                                                                                                                                          \
+        return static_cast<EnumName>(static_cast<std::underlying_type_t<EnumName>>(left) ^ static_cast<std::underlying_type_t<EnumName>>(right));              \
+    }                                                                                                                                                          \
+    inline constexpr bool operator!(EnumName left)                                                                                                             \
+    {                                                                                                                                                          \
+        return !static_cast<std::underlying_type_t<EnumName>>(left);                                                                                           \
+    }                                                                                                                                                          \
+    inline constexpr EnumName operator~(EnumName left)                                                                                                         \
+    {                                                                                                                                                          \
+        return static_cast<EnumName>(~static_cast<std::underlying_type_t<EnumName>>(left));                                                                    \
     }
 
 VI_CORE_NS_BEGIN
@@ -63,28 +57,28 @@ inline constexpr bool testFlag(TEnum a, TEnum b)
 
 VI_CORE_NS_END
 
-#define VI_DECLARE_PIMPL_CLASS(ClassName)                                                                              \
-    class ClassName;                                                                                                   \
+#define VI_DECLARE_PIMPL_CLASS(ClassName)                                                                                                                      \
+    class ClassName;                                                                                                                                           \
     class ClassName##Private;
 
-#define VI_DECLARE_DPTR(ClassName)                                                                                     \
-  protected:                                                                                                             \
+#define VI_DECLARE_DPTR(ClassName)                                                                                                                             \
+  protected:                                                                                                                                                   \
     ClassName##Private* const d_ptr;
 
-#define VI_DECLARE_VPTR(ClassName)                                                                                     \
-  protected:                                                                                                             \
+#define VI_DECLARE_VPTR(ClassName)                                                                                                                             \
+  protected:                                                                                                                                                   \
     ClassName* v_ptr;
 
-#define VI_DECLARE_PRIVATE(ClassName)                                                                                  \
-  public:                                                                                                              \
-    friend class ClassName##Private;                                                                                   \
-    inline ClassName##Private* getDPtr()                                                                               \
-    {                                                                                                                  \
-        return reinterpret_cast<ClassName##Private*>(d_ptr);                                                           \
-    }                                                                                                                  \
-    inline const ClassName##Private* getDPtr() const                                                                   \
-    {                                                                                                                  \
-        return reinterpret_cast<const ClassName##Private*>(d_ptr);                                                     \
+#define VI_DECLARE_PRIVATE(ClassName)                                                                                                                          \
+  public:                                                                                                                                                      \
+    friend class ClassName##Private;                                                                                                                           \
+    inline ClassName##Private* getDPtr()                                                                                                                       \
+    {                                                                                                                                                          \
+        return reinterpret_cast<ClassName##Private*>(d_ptr);                                                                                                   \
+    }                                                                                                                                                          \
+    inline const ClassName##Private* getDPtr() const                                                                                                           \
+    {                                                                                                                                                          \
+        return reinterpret_cast<const ClassName##Private*>(d_ptr);                                                                                             \
     }
 
 // #define VI_DECLARE_CTOR_PRIVATE(ClassName)                                                                             \
@@ -95,16 +89,16 @@ VI_CORE_NS_END
 //   public:                                                                                                              \
 //     virtual ~ClassName();
 
-#define VI_DECLARE_PUBLIC(ClassName)                                                                                   \
-  public:                                                                                                              \
-    friend class ClassName;                                                                                            \
-    inline ClassName* getVPtr()                                                                                        \
-    {                                                                                                                  \
-        return reinterpret_cast<ClassName*>(v_ptr);                                                                    \
-    }                                                                                                                  \
-    inline const ClassName* getVPtr() const                                                                            \
-    {                                                                                                                  \
-        return reinterpret_cast<const ClassName*>(v_ptr);                                                              \
+#define VI_DECLARE_PUBLIC(ClassName)                                                                                                                           \
+  public:                                                                                                                                                      \
+    friend class ClassName;                                                                                                                                    \
+    inline ClassName* getVPtr()                                                                                                                                \
+    {                                                                                                                                                          \
+        return reinterpret_cast<ClassName*>(v_ptr);                                                                                                            \
+    }                                                                                                                                                          \
+    inline const ClassName* getVPtr() const                                                                                                                    \
+    {                                                                                                                                                          \
+        return reinterpret_cast<const ClassName*>(v_ptr);                                                                                                      \
     }
 
 // pimpl模式中，将d_ptr转换为派生类的具体IMPL类型指针，类似于Qt中的Q_D宏
@@ -113,8 +107,7 @@ VI_CORE_NS_END
 #define VI_V(ClassName) auto* const v = getVPtr();
 
 // 定义类的共享指针和弱指针类型，并前向声明类
- // #define VI_DEFINE_PTR(ClassName) \
+// #define VI_DEFINE_PTR(ClassName) \
 //     class ClassName; \
 //     using ClassName##SharedPtr = std::shared_ptr<ClassName>; \
 // using ClassName##WeakPtr   = std::weak_ptr<ClassName>;
-

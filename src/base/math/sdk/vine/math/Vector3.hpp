@@ -4,7 +4,7 @@
 #include <cstddef>
 #include <cstdint>
 
-#include "Types.hpp"
+#include "Math.hpp"
 
 VI_MATH_NS_BEGIN
 
@@ -23,81 +23,274 @@ class Vector3 {
     using value_type = T;
 
   public:
-    Vector3();
-    Vector3(const Vector2<T>& vec2, T zz = 0.);
-    Vector3(T xx, T yy, T zz);
+    constexpr Vector3()
+      : x(T())
+      , y(T())
+      , z(T())
+    {}
+
+    constexpr Vector3(const Vector2<T>& vec2, T zz = 0.)
+      : x(vec2.x)
+      , y(vec2.y)
+      , z(zz)
+    {}
+
+    constexpr Vector3(T xx, T yy, T zz)
+      : x(xx)
+      , y(yy)
+      , z(zz) {};
 
   public:
-    void set(const Vector2<T>& vec2);
-    void set(const Vector2<T>& vec2, T zz);
-    void set(T xx, T yy, T zz);
-    void get(T& xx, T& yy, T& zz) const;
+    constexpr void set(const Vector2<T>& vec2)
+    {
+        x = vec2.x;
+        y = vec2.y;
+    }
 
-    Point3<T>         toPoint() const;
-    const Point3<T>&  asPoint() const;
-    const Vector2<T>& asVector2() const;
+    constexpr void set(const Vector2<T>& vec2, T zz)
+    {
+        x = vec2.x;
+        y = vec2.y;
+        z = zz;
+    }
 
-    /**
-     * @brief length of the vector
-     *        only for real types (floating point and integers) not boolean.
-     */
-    TypeF<T> length() const requires(Real<T>);
-    TypeF<T> length2() const requires(Real<T>);
-    TypeF<T> angleTo(const Vector3<T>& other) const requires(Real<T>);
+    constexpr void set(T xx, T yy, T zz)
+    {
+        x = xx;
+        y = yy;
+        z = zz;
+    }
 
-    /**
-     * @brief normalize the vector to unit length.
-     *        only for floating point types.
-     */
-    T normalize() requires(FP<T>);
+    constexpr void get(T& xx, T& yy, T& zz) const
+    {
+        xx = x;
+        yy = y;
+        zz = z;
+    }
+
+    [[nodiscard]]
+    Point3<T> toPoint() const;
+
+    [[nodiscard]]
+    constexpr const Point3<T>& asPoint() const
+    {
+        return reinterpret_cast<const Point3<T>&>(*this);
+    }
+
+    [[nodiscard]]
+    constexpr const Vector2<T>& asVector2() const
+    {
+        return reinterpret_cast<const Vector2<T>&>(*this);
+    }
 
     /**
      * @brief dot product
      *        only for real types (floating point and integers) not boolean.
      *        for integer types, overflow is possible.
      */
-    T dot(const Vector3<T>& other) const requires(Real<T>);
+    [[nodiscard]]
+    constexpr T dot(const Vector3<T>& other) const requires(Real<T>)
+    {
+        return static_cast<T>(x * other.x + y * other.y + z * other.z);
+    }
 
     /**
      * @brief cross product (in 2D, it is a scalar)
      *        only for real types (floating point and integers) not boolean.
      *        for integer types, overflow is possible.
      */
-    Vector3<T> cross(const Vector3<T>& other) const requires(Real<T>);
+    [[nodiscard]]
+    constexpr Vector3<T> cross(const Vector3<T>& other) const requires(Real<T>)
+    {
+        return Vector3<T>(y * other.z - z * other.y, z * other.x - x * other.z, x * other.y - y * other.x);
+    }
 
-    bool isZero() const;
-    bool isZero(T eps) const requires(Real<T>);
-    bool isEqual(const Vector3<T>& other) const;
-    bool isEqual(const Vector3<T>& other, T eps) const requires(Real<T>);
+    /**
+     * @brief length of the vector
+     *        only for real types (floating point and integers) not boolean.
+     */
+    [[nodiscard]]
+    constexpr TypeF<T> length() const requires(Real<T>)
+    {
+        return safeLength(x, y, z);
+    }
+
+    [[nodiscard]]
+    constexpr TypeF<T> length2() const requires(Real<T>)
+    {
+        return safeLengthSquared(x, y, z);
+    }
+
+    [[nodiscard]]
+    constexpr TypeF<T> angleTo(const Vector3<T>& other) const requires(Real<T>)
+    {
+        using ft = TypeF<T>;
+        auto dot =
+            static_cast<ft>(x) * static_cast<ft>(other.x) + static_cast<ft>(y) * static_cast<ft>(other.y) + static_cast<ft>(z) * static_cast<ft>(other.z);
+        auto cross_x   = static_cast<ft>(y) * static_cast<ft>(other.z) - static_cast<ft>(z) * static_cast<ft>(other.y);
+        auto cross_y   = static_cast<ft>(z) * static_cast<ft>(other.x) - static_cast<ft>(x) * static_cast<ft>(other.z);
+        auto cross_z   = static_cast<ft>(x) * static_cast<ft>(other.y) - static_cast<ft>(y) * static_cast<ft>(other.x);
+        auto cross_len = std::sqrt(cross_x * cross_x + cross_y * cross_y + cross_z * cross_z);
+
+        return std::atan2(cross_len, dot);
+    }
+
+    /**
+     * @brief normalize the vector to unit length.
+     *        only for floating point types.
+     */
+    constexpr T normalize() requires(FP<T>)
+    {
+        auto len = length();
+
+        if (len == T(0)) {
+            x = T(0);
+            y = T(0);
+            z = T(0);
+        }
+        else {
+            x /= len;
+            y /= len;
+            z /= len;
+        }
+
+        return len;
+    }
+
+    [[nodiscard]]
+    constexpr bool isZero() const
+    {
+        return x == T() && y == T() && z == T();
+    }
+
+    [[nodiscard]]
+    constexpr bool isZero(T eps) const requires(Real<T>)
+    {
+        return math::isZero<T>(x, eps) && math::isZero<T>(y, eps) && math::isZero<T>(z, eps);
+    }
+
+    [[nodiscard]]
+    constexpr bool isEqual(const Vector3<T>& other) const
+    {
+        return x == other.x && y == other.y && z == other.z;
+    }
+
+    [[nodiscard]]
+    constexpr bool isEqual(const Vector3<T>& other, T eps) const requires(Real<T>)
+    {
+        return math::isEqual<T>(x, other.x, eps) && math::isEqual<T>(y, other.y, eps) && math::isEqual<T>(z, other.z, eps);
+    }
 
   public:
-    bool operator==(const Vector3<T>& right) const;
-    bool operator!=(const Vector3<T>& right) const;
+    [[nodiscard]]
+    constexpr bool operator==(const Vector3<T>& right) const
+    {
+        return x == right.x && y == right.y && z == right.z;
+    }
 
-    Vector3<T> operator+(const Vector3<T>& right) const;
-    Vector3<T> operator-(const Vector3<T>& right) const;
-    Vector3<T> operator*(T scale) const;
-    Vector3<T> operator/(T scale) const;
+    [[nodiscard]]
+    constexpr bool operator!=(const Vector3<T>& right) const
+    {
+        return !(*this == right);
+    }
 
-    Vector3<T>& operator+=(const Vector3<T>& right);
-    Vector3<T>& operator-=(const Vector3<T>& right);
-    Vector3<T>& operator*=(T scale);
-    Vector3<T>& operator/=(T scale);
+    [[nodiscard]]
+    constexpr Vector3<T> operator+(const Vector3<T>& right) const
+    {
+        return Vector3<T>(arithmeticAdd(x, right.x), arithmeticAdd(y, right.y), arithmeticAdd(z, right.z));
+    }
 
-    Vector3<T> operator-() const;
+    [[nodiscard]]
+    constexpr Vector3<T> operator-(const Vector3<T>& right) const
+    {
+        return Vector3<T>(arithmeticSub(x, right.x), arithmeticSub(y, right.y), arithmeticSub(z, right.z));
+    }
+
+    [[nodiscard]]
+    constexpr Vector3<T> operator*(T scale) const
+    {
+        return Vector3<T>(arithmeticMultiply(x, scale), arithmeticMultiply(y, scale), arithmeticMultiply(z, scale));
+    }
+
+    [[nodiscard]]
+    constexpr Vector3<T> operator/(T scale) const
+    {
+        return Vector3<T>(arithmeticDivision(x, scale), arithmeticDivision(y, scale), arithmeticDivision(z, scale));
+    }
+
+    constexpr Vector3<T>& operator+=(const Vector3<T>& right)
+    {
+        x = arithmeticAdd(x, right.x);
+        y = arithmeticAdd(y, right.y);
+        z = arithmeticAdd(z, right.z);
+
+        return *this;
+    }
+
+    constexpr Vector3<T>& operator-=(const Vector3<T>& right)
+    {
+        x = arithmeticSub(x, right.x);
+        y = arithmeticSub(y, right.y);
+        z = arithmeticSub(z, right.z);
+
+        return *this;
+    }
+
+    constexpr Vector3<T>& operator*=(T scale)
+    {
+        x = arithmeticMultiply(x, scale);
+        y = arithmeticMultiply(y, scale);
+        z = arithmeticMultiply(z, scale);
+
+        return *this;
+    }
+
+    constexpr Vector3<T>& operator/=(T scale)
+    {
+        x = arithmeticDivision(x, scale);
+        y = arithmeticDivision(y, scale);
+        z = arithmeticDivision(z, scale);
+
+        return *this;
+    }
+
+    [[nodiscard]]
+    constexpr Vector3<T> operator-() const
+    {
+        return Vector3<T>(arithmeticNagate(x), arithmeticNagate(y), arithmeticNagate(z));
+    }
 
     /**
      * @brief dot product
      */
-    T operator*(const Vector3<T>& other) const requires(Real<T>);
+    [[nodiscard]]
+    constexpr T operator*(const Vector3<T>& other) const requires(Real<T>)
+    {
+        return dot(other);
+    }
 
     /**
      * @brief cross product
      */
-    Vector3<T> operator^(const Vector3<T>& other) const requires(Real<T>);
+    [[nodiscard]]
+    constexpr Vector3<T> operator^(const Vector3<T>& other) const requires(Real<T>)
+    {
+        return cross(other);
+    }
 
-    T&       operator[](size_t index);
-    const T& operator[](size_t index) const;
+    [[nodiscard]]
+    constexpr T& operator[](size_t index)
+    {
+        // assert(index < 3);
+        return data[index];
+    }
+
+    [[nodiscard]]
+    constexpr const T& operator[](size_t index) const
+    {
+        // assert(index < 3);
+        return data[index];
+    }
 
   public:
     union

@@ -23,15 +23,28 @@ class VI_CORE_API Exception {
     };
 
   public:
-    Exception() noexcept;
-    explicit Exception(Code code) noexcept;
-    explicit Exception(Code code, String msg) noexcept;
+    Exception() noexcept {};
     explicit Exception(int code) noexcept;
-    explicit Exception(int code, String msg) noexcept;
+
+    Exception(int code, const String& msg) noexcept
+      : code_(code)
+      , msg_(msg)
+    {}
+
+    virtual ~Exception() noexcept = default;
 
   public:
-    int           code() const noexcept;
-    const String& msg() const noexcept;
+    [[nodiscard]]
+    int code() const noexcept
+    {
+        return code_;
+    }
+
+    [[nodiscard]]
+    const String& msg() const noexcept
+    {
+        return msg_;
+    }
 
   private:
     int    code_;

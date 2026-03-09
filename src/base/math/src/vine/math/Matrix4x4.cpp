@@ -12,30 +12,6 @@ VI_MATH_NS_BEGIN
 
 #define TMPL_PREFIX template <typename T>
 
-TMPL_PREFIX Matrix4x4<T>::Matrix4x4()
-  : vecs{
-      { 1, 0, 0, 0 }, // COL0
-      { 0, 1, 0, 0 }, // COL1
-      { 0, 0, 1, 0 }, // COL2
-      { 0, 0, 0, 1 }  // COL3
-}
-{}
-
-TMPL_PREFIX Matrix4x4<T>::Matrix4x4(const Quaternion<T>& quat)
-{
-    // quta 必须归一化
-    // R = | 1 - 2*(y*y + z*z)      2*(x*y - z*w)        2*(x*z + y*w)     |
-    //     | 2*(x*y + z*w)          1 - 2*(x*x + z*z)    2*(y*z - x*w)     |
-    //     | 2*(x*z - y*w)          2*(y*z + x*w)        1 - 2*(x*x + y*y) |
-}
-
-TMPL_PREFIX void Matrix4x4<T>::makeIdentity()
-{
-    // std::fill((T*)vecs, ((T*)vecs)+16, 0.0);
-    memset(data, 0, sizeof(data));
-    vec0.x = vec1.y = vec2.z = vec3.w = T(0);
-}
-
 TMPL_PREFIX void Matrix4x4<T>::makeRotation(const Vector3<T>& start, const Vector3<T>& end)
 {}
 
@@ -87,44 +63,13 @@ TMPL_PREFIX void Matrix4x4<T>::makeRotation(const Vector3<T>& axis, T angle)
     vecs[3][3] = T(1);
 }
 
-TMPL_PREFIX void Matrix4x4<T>::makeTranslation(const Vector3<T>& offset)
+template <typename T>
+void Matrix4x4<T>::makeRotation(const Quaternion<T>& quat)
 {
-    makeIdentity();
-    vecs[3][0] = offset.x;
-    vecs[3][1] = offset.y;
-    vecs[3][2] = offset.z;
-}
-
-TMPL_PREFIX void Matrix4x4<T>::makeTranslation(T x, T y, T z)
-{
-    makeIdentity();
-    vecs[3][0] = x;
-    vecs[3][1] = y;
-    vecs[3][2] = z;
-}
-
-TMPL_PREFIX void Matrix4x4<T>::makeScale(const Vector3<T>& vec)
-{
-    makeIdentity();
-    vecs[0][0] = vec.x;
-    vecs[1][1] = vec.y;
-    vecs[2][2] = vec.z;
-}
-
-TMPL_PREFIX void Matrix4x4<T>::makeScale(T x, T y, T z)
-{
-    makeIdentity();
-    vecs[0][0] = x;
-    vecs[1][1] = y;
-    vecs[2][2] = z;
-}
-
-TMPL_PREFIX void Matrix4x4<T>::makeScale(T factor)
-{
-    makeIdentity();
-    vecs[0][0] = factor;
-    vecs[1][1] = factor;
-    vecs[2][2] = factor;
+    // quat 必须归一化
+    // R = | 1 - 2*(y*y + z*z)      2*(x*y - z*w)        2*(x*z + y*w)     |
+    //     | 2*(x*y + z*w)          1 - 2*(x*x + z*z)    2*(y*z - x*w)     |
+    //     | 2*(x*z - y*w)          2*(y*z + x*w)        1 - 2*(x*x + y*y) |
 }
 
 TMPL_PREFIX void Matrix4x4<T>::makeLookAt(const Point3<T>& eye, const Point3<T>& target, const Vector3<T>& up)
@@ -135,12 +80,11 @@ TMPL_PREFIX void Matrix4x4<T>::makeLookAt(const Point3<T>& eye, const Point3<T>&
     f.normalize();
     s.normalize();
     u.normalize();
-    setCoordSystem(eye, s, u, f);
+    setBasis(eye, s, u, f);
     invert();
 }
 
-TMPL_PREFIX void
-Matrix4x4<T>::makeOrtho(double left, double right, double bottom, double top, double z_near, double z_far)
+TMPL_PREFIX void Matrix4x4<T>::makeOrtho(double left, double right, double bottom, double top, double z_near, double z_far)
 {
     auto tx = -(right + left) / (right - left);
     auto ty = -(top + bottom) / (top - bottom);
@@ -155,10 +99,7 @@ Matrix4x4<T>::makeOrtho(double left, double right, double bottom, double top, do
 TMPL_PREFIX void Matrix4x4<T>::makePerspective(double fovy, double aspect_ratio, double z_near, double z_far)
 {}
 
-TMPL_PREFIX void Matrix4x4<T>::setCoordSystem(const Point3<T>&  origin,
-                                              const Vector3<T>& x_axis,
-                                              const Vector3<T>& y_axis,
-                                              const Vector3<T>& z_axis)
+TMPL_PREFIX void Matrix4x4<T>::setBasis(const Point3<T>& origin, const Vector3<T>& x_axis, const Vector3<T>& y_axis, const Vector3<T>& z_axis)
 {
     // col0
     vecs[0].set(x_axis, T(0));
@@ -170,10 +111,7 @@ TMPL_PREFIX void Matrix4x4<T>::setCoordSystem(const Point3<T>&  origin,
     vecs[0].set(origin.x, origin.y, origin.z, T(1));
 }
 
-TMPL_PREFIX void Matrix4x4<T>::getCoordSystem(Point3<T>&  o_origin,
-                                              Vector3<T>& o_x_axis,
-                                              Vector3<T>& o_y_axis,
-                                              Vector3<T>& o_z_axis) const
+TMPL_PREFIX void Matrix4x4<T>::getBasis(Point3<T>& o_origin, Vector3<T>& o_x_axis, Vector3<T>& o_y_axis, Vector3<T>& o_z_axis) const
 {
     o_origin = vecs[3].asVector3().asPoint();
     o_x_axis = vecs[0].asVector3();
@@ -193,30 +131,17 @@ TMPL_PREFIX void Matrix4x4<T>::transpose()
     std::swap(vecs[2][3], vecs[3][2]);
 }
 
-TMPL_PREFIX Matrix4x4<T> Matrix4x4<T>::transposed() const
-{
-    auto m = *this;
-    m.transpose();
-    return m;
-}
-
 TMPL_PREFIX void Matrix4x4<T>::invert()
 {}
-
-TMPL_PREFIX Matrix4x4<T> Matrix4x4<T>::inverted() const
-{
-    auto m = *this;
-    m.invert();
-    return m;
-}
 
 TMPL_PREFIX bool Matrix4x4<T>::isRigid() const
 {
     if (!isAffine())
         return false;
+
     Point3<T>  o;
     Vector3<T> x, y, z;
-    getCoordSystem(o, x, y, z);
+    getBasis(o, x, y, z);
 
     return true;
 }
@@ -234,16 +159,6 @@ TMPL_PREFIX bool Matrix4x4<T>::isIdentity() const
            vecs[3][0] == T(0) && vecs[3][1] == T(0) && vecs[3][2] == T(0) && vecs[3][3] == T(1);   // col4
 }
 
-TMPL_PREFIX T Matrix4x4<T>::operator()(int row, int col) const
-{
-    return vecs[col][row];
-}
-
-TMPL_PREFIX T& Matrix4x4<T>::operator()(int row, int col)
-{
-    return vecs[col][row];
-}
-
 TMPL_PREFIX Matrix4x4<T> Matrix4x4<T>::operator*(const Matrix4x4<T>& right) const
 {
     Matrix4x4<T> m;
@@ -259,41 +174,25 @@ TMPL_PREFIX Matrix4x4<T> Matrix4x4<T>::operator*(const Matrix4x4<T>& right) cons
 
     // m1 * m2 * m3 = m3T * m2T * m1T
 
-    m.vecs[0][0] = vecs[0][0] * right.vecs[0][0] + vecs[1][0] * right.vecs[0][1] + vecs[2][0] * right.vecs[0][2] +
-                   vecs[3][0] * right.vecs[0][3];
-    m.vecs[0][1] = vecs[0][1] * right.vecs[0][0] + vecs[1][1] * right.vecs[0][1] + vecs[2][1] * right.vecs[0][2] +
-                   vecs[3][1] * right.vecs[0][3];
-    m.vecs[0][2] = vecs[0][2] * right.vecs[0][0] + vecs[1][2] * right.vecs[0][1] + vecs[2][2] * right.vecs[0][2] +
-                   vecs[3][2] * right.vecs[0][3];
-    m.vecs[0][3] = vecs[0][3] * right.vecs[0][0] + vecs[1][3] * right.vecs[0][1] + vecs[2][3] * right.vecs[0][2] +
-                   vecs[3][3] * right.vecs[0][3];
+    m.vecs[0][0] = vecs[0][0] * right.vecs[0][0] + vecs[1][0] * right.vecs[0][1] + vecs[2][0] * right.vecs[0][2] + vecs[3][0] * right.vecs[0][3];
+    m.vecs[0][1] = vecs[0][1] * right.vecs[0][0] + vecs[1][1] * right.vecs[0][1] + vecs[2][1] * right.vecs[0][2] + vecs[3][1] * right.vecs[0][3];
+    m.vecs[0][2] = vecs[0][2] * right.vecs[0][0] + vecs[1][2] * right.vecs[0][1] + vecs[2][2] * right.vecs[0][2] + vecs[3][2] * right.vecs[0][3];
+    m.vecs[0][3] = vecs[0][3] * right.vecs[0][0] + vecs[1][3] * right.vecs[0][1] + vecs[2][3] * right.vecs[0][2] + vecs[3][3] * right.vecs[0][3];
 
-    m.vecs[1][0] = vecs[0][0] * right.vecs[1][0] + vecs[1][0] * right.vecs[1][1] + vecs[2][0] * right.vecs[1][2] +
-                   vecs[3][0] * right.vecs[1][3];
-    m.vecs[1][1] = vecs[0][1] * right.vecs[1][0] + vecs[1][1] * right.vecs[1][1] + vecs[2][1] * right.vecs[1][2] +
-                   vecs[3][1] * right.vecs[1][3];
-    m.vecs[1][2] = vecs[0][2] * right.vecs[1][0] + vecs[1][2] * right.vecs[1][1] + vecs[2][2] * right.vecs[1][2] +
-                   vecs[3][2] * right.vecs[1][3];
-    m.vecs[1][3] = vecs[0][3] * right.vecs[1][0] + vecs[1][3] * right.vecs[1][1] + vecs[2][3] * right.vecs[1][2] +
-                   vecs[3][3] * right.vecs[1][3];
+    m.vecs[1][0] = vecs[0][0] * right.vecs[1][0] + vecs[1][0] * right.vecs[1][1] + vecs[2][0] * right.vecs[1][2] + vecs[3][0] * right.vecs[1][3];
+    m.vecs[1][1] = vecs[0][1] * right.vecs[1][0] + vecs[1][1] * right.vecs[1][1] + vecs[2][1] * right.vecs[1][2] + vecs[3][1] * right.vecs[1][3];
+    m.vecs[1][2] = vecs[0][2] * right.vecs[1][0] + vecs[1][2] * right.vecs[1][1] + vecs[2][2] * right.vecs[1][2] + vecs[3][2] * right.vecs[1][3];
+    m.vecs[1][3] = vecs[0][3] * right.vecs[1][0] + vecs[1][3] * right.vecs[1][1] + vecs[2][3] * right.vecs[1][2] + vecs[3][3] * right.vecs[1][3];
 
-    m.vecs[2][0] = vecs[0][0] * right.vecs[2][0] + vecs[1][0] * right.vecs[2][1] + vecs[2][0] * right.vecs[2][2] +
-                   vecs[3][0] * right.vecs[2][3];
-    m.vecs[2][1] = vecs[0][1] * right.vecs[2][0] + vecs[1][1] * right.vecs[2][1] + vecs[2][1] * right.vecs[2][2] +
-                   vecs[3][1] * right.vecs[2][3];
-    m.vecs[2][2] = vecs[0][2] * right.vecs[2][0] + vecs[1][2] * right.vecs[2][1] + vecs[2][2] * right.vecs[2][2] +
-                   vecs[3][2] * right.vecs[2][3];
-    m.vecs[2][3] = vecs[0][3] * right.vecs[2][0] + vecs[1][3] * right.vecs[2][1] + vecs[2][3] * right.vecs[2][2] +
-                   vecs[3][3] * right.vecs[2][3];
+    m.vecs[2][0] = vecs[0][0] * right.vecs[2][0] + vecs[1][0] * right.vecs[2][1] + vecs[2][0] * right.vecs[2][2] + vecs[3][0] * right.vecs[2][3];
+    m.vecs[2][1] = vecs[0][1] * right.vecs[2][0] + vecs[1][1] * right.vecs[2][1] + vecs[2][1] * right.vecs[2][2] + vecs[3][1] * right.vecs[2][3];
+    m.vecs[2][2] = vecs[0][2] * right.vecs[2][0] + vecs[1][2] * right.vecs[2][1] + vecs[2][2] * right.vecs[2][2] + vecs[3][2] * right.vecs[2][3];
+    m.vecs[2][3] = vecs[0][3] * right.vecs[2][0] + vecs[1][3] * right.vecs[2][1] + vecs[2][3] * right.vecs[2][2] + vecs[3][3] * right.vecs[2][3];
 
-    m.vecs[3][0] = vecs[0][0] * right.vecs[3][0] + vecs[1][0] * right.vecs[3][1] + vecs[2][0] * right.vecs[3][2] +
-                   vecs[3][0] * right.vecs[3][3];
-    m.vecs[3][1] = vecs[0][1] * right.vecs[3][0] + vecs[1][1] * right.vecs[3][1] + vecs[2][1] * right.vecs[3][2] +
-                   vecs[3][1] * right.vecs[3][3];
-    m.vecs[3][2] = vecs[0][2] * right.vecs[3][0] + vecs[1][2] * right.vecs[3][1] + vecs[2][2] * right.vecs[3][2] +
-                   vecs[3][2] * right.vecs[3][3];
-    m.vecs[3][3] = vecs[0][3] * right.vecs[3][0] + vecs[1][3] * right.vecs[3][1] + vecs[2][3] * right.vecs[3][2] +
-                   vecs[3][3] * right.vecs[3][3];
+    m.vecs[3][0] = vecs[0][0] * right.vecs[3][0] + vecs[1][0] * right.vecs[3][1] + vecs[2][0] * right.vecs[3][2] + vecs[3][0] * right.vecs[3][3];
+    m.vecs[3][1] = vecs[0][1] * right.vecs[3][0] + vecs[1][1] * right.vecs[3][1] + vecs[2][1] * right.vecs[3][2] + vecs[3][1] * right.vecs[3][3];
+    m.vecs[3][2] = vecs[0][2] * right.vecs[3][0] + vecs[1][2] * right.vecs[3][1] + vecs[2][2] * right.vecs[3][2] + vecs[3][2] * right.vecs[3][3];
+    m.vecs[3][3] = vecs[0][3] * right.vecs[3][0] + vecs[1][3] * right.vecs[3][1] + vecs[2][3] * right.vecs[3][2] + vecs[3][3] * right.vecs[3][3];
 
     return m;
 }
@@ -303,60 +202,6 @@ TMPL_PREFIX Matrix4x4<T>& Matrix4x4<T>::operator*=(const Matrix4x4<T>& right)
     auto m = *this * right;
     std::memcpy(m.data, data, sizeof(data));
     return *this;
-}
-
-TMPL_PREFIX Matrix4x4<T> Matrix4x4<T>::rotate(const Vector3<T>& start, const Vector3<T>& end)
-{
-    return rotate(start, end);
-}
-
-TMPL_PREFIX Matrix4x4<T> Matrix4x4<T>::rotate(const Vector3<T>& axis, T angle)
-{
-    Matrix4x4<T> m;
-    m.makeRotation(axis, angle);
-    return m;
-}
-
-TMPL_PREFIX Matrix4x4<T> Matrix4x4<T>::translate(const Vector3<T>& offset)
-{
-    Matrix4x4<T> m;
-    m.makeTranslation(offset);
-    return m;
-}
-
-TMPL_PREFIX Matrix4x4<T> Matrix4x4<T>::translate(T x, T y, T z)
-{
-    Matrix4x4<T> m;
-    m.makeTranslation(x, y, z);
-    return m;
-}
-
-TMPL_PREFIX Matrix4x4<T> Matrix4x4<T>::scale(const Vector3<T>& vec)
-{
-    Matrix4x4<T> m;
-    m.makeScale(vec);
-    return m;
-}
-
-TMPL_PREFIX Matrix4x4<T> Matrix4x4<T>::scale(T x, T y, T z)
-{
-    Matrix4x4<T> m;
-    m.makeScale(x, y, z);
-    return m;
-}
-
-TMPL_PREFIX Matrix4x4<T> Matrix4x4<T>::scale(T factor)
-{
-    Matrix4x4<T> m;
-    m.makeScale(factor);
-    return m;
-}
-
-TMPL_PREFIX Matrix4x4<T> Matrix4x4<T>::lookAt(const Point3<T>& eye, const Point3<T>& target, const Vector3<T>& up)
-{
-    Matrix4x4<T> m;
-    m.makeLookAt(eye, target, up);
-    return m;
 }
 
 // TMPL_PREFIX Matrix4x4<T> Matrix4x4<T>::fromEulerXYZ(const Vector3<T>& xyz)

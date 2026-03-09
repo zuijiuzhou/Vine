@@ -2,9 +2,9 @@
 
 #include "math_global.hpp"
 
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
-#include <cmath>
 
 #include "Math.hpp"
 #include "Types.hpp"
@@ -35,60 +35,108 @@ class Point2 {
     {}
 
   public:
-    const Vector2<T>& asVector() const
+    [[nodiscard]]
+    constexpr const Vector2<T>& asVector() const
     {
+        static_assert(sizeof(Point2<T>) == sizeof(Vector2<T>));
+        static_assert(std::is_standard_layout_v<Point2<T>>);
+        static_assert(std::is_standard_layout_v<Vector2<T>>);
         return reinterpret_cast<const Vector2<T>&>(*this);
     }
 
-    constexpr Vector2<T> toVector() const
-    {
-        return Vector2<T>(x, y);
-    }
+    [[nodiscard]]
+    Vector2<T> toVector() const;
 
-    constexpr double distanceTo(const Point2<T>& pt) const
+    [[nodiscard]]
+    constexpr TypeF<T> distanceTo(const Point2<T>& pt) const
     {
         return std::sqrt((x - pt.x) * (x - pt.x) + (y - pt.y) * (y - pt.y));
     }
 
+    [[nodiscard]]
     constexpr bool isZero() const
     {
         return x == T() && y == T();
     }
 
+    [[nodiscard]]
     constexpr bool isZero(T eps) const requires(Real<T>)
     {
         return math::isZero<T>(x, eps) && math::isZero<T>(y, eps);
     }
 
+    [[nodiscard]]
     constexpr bool isEqual(const Point2<T>& other) const
     {
         return x == other.x && y == other.y;
     }
 
+    [[nodiscard]]
     constexpr bool isEqual(const Point2<T>& other, T eps) const requires(Real<T>)
     {
         return math::isEqual<T>(x, other.x, eps) && math::isEqual<T>(y, other.y, eps);
     }
 
   public:
+    [[nodiscard]]
     constexpr bool operator==(const Point2<T>& right) const
     {
         return x == right.x && y == right.y;
     }
 
-    bool operator!=(const Point2<T>& right) const
+    [[nodiscard]]
+    constexpr bool operator!=(const Point2<T>& right) const
     {
         return !(*this == right);
     }
 
-    Vector2<T> operator-(const Point2<T>& right) const;
-    Point2<T>  operator+(const Vector2<T>& right) const;
-    Point2<T>& operator+=(const Vector2<T>& right);
-    Point2<T>& operator-=(const Vector2<T>& right);
-    Point2<T>  operator-() const;
+    [[nodiscard]]
+    constexpr Vector2<T> operator-(const Point2<T>& right) const
+    {
+        return Vector2<T>(arithmeticSub(x, right.x), arithmeticSub(y, right.y));
+    }
 
-    T&       operator[](size_t index);
-    const T& operator[](size_t index) const;
+    [[nodiscard]]
+    constexpr Point2<T> operator+(const Vector2<T>& right) const
+    {
+        return Point2<T>(arithmeticAdd(x, right.x), arithmeticAdd(y, right.y));
+    }
+
+    constexpr Point2<T>& operator+=(const Vector2<T>& right)
+    {
+        x = arithmeticAdd(x, right.x);
+        y = arithmeticAdd(y, right.y);
+
+        return *this;
+    }
+
+    constexpr Point2<T>& operator-=(const Vector2<T>& right)
+    {
+        x = arithmeticSub(x, right.x);
+        y = arithmeticSub(y, right.y);
+
+        return *this;
+    }
+
+    [[nodiscard]]
+    constexpr Point2<T> operator-() const
+    {
+        return Point2<T>(arithmeticNagate(x), arithmeticNagate(y));
+    }
+
+    [[nodiscard]]
+    constexpr T& operator[](size_t index)
+    {
+        // assert(index < 2);
+        return data[index];
+    }
+
+    [[nodiscard]]
+    constexpr const T& operator[](size_t index) const
+    {
+        // assert(index < 2);
+        return data[index];
+    }
 
   public:
     union

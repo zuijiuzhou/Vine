@@ -38,17 +38,17 @@ concept Comparable = ObjectBased<T> && requires(const T& t, const Object& obj) {
 
 class VI_CORE_API Object {
   public:
-    Object() noexcept;
-    Object(const Object& other) noexcept;
-    Object(Object&& other) noexcept;
-    virtual ~Object() noexcept;
+    Object() noexcept {};
+    virtual ~Object() noexcept {};
 
   public:
     virtual const Class* getClass() const noexcept;
 
+    [[nodiscard]]
     bool isKindOf(const Class* type) const;
 
     template <ObjectBased T>
+    [[nodiscard]]
     bool isKindOf()
     {
         return isKindOf(T::desc());
@@ -69,10 +69,12 @@ class VI_CORE_API Object {
     virtual String toString() const;
 
   public:
+    [[nodiscard]]
     static const Class* desc();
 };
 
 template <ObjectBased T>
+[[nodiscard]]
 T* obj_cast(Object* obj)
 {
     if (obj && obj->isKindOf(T::desc())) {
@@ -82,6 +84,7 @@ T* obj_cast(Object* obj)
 }
 
 template <ObjectBased T>
+[[nodiscard]]
 const T* obj_cast(const Object* obj)
 {
     if (obj && obj->isKindOf(T::desc())) {
@@ -91,6 +94,7 @@ const T* obj_cast(const Object* obj)
 }
 
 template <ObjectBased T>
+[[nodiscard]]
 T& obj_cast(Object& obj)
 {
     if (obj.isKindOf(T::desc()))
@@ -99,6 +103,7 @@ T& obj_cast(Object& obj)
 }
 
 template <ObjectBased T>
+[[nodiscard]]
 const T& obj_cast(const Object& obj)
 {
     if (obj.isKindOf(T::desc()))
@@ -108,60 +113,59 @@ const T& obj_cast(const Object& obj)
 
 VI_CORE_NS_END
 
-#define VI_OBJECT_META                                                                                                 \
-  public:                                                                                                              \
-    virtual const vine::Class* getClass() const noexcept override                                                      \
-    {                                                                                                                  \
-        return desc();                                                                                                 \
-    }                                                                                                                  \
-    static const vine::Class* desc()                                                                                   \
-    {                                                                                                                  \
-        static const vine::Class* cls = new vine::Class(typeid(Sub), Parent::desc());                                  \
-        return cls;                                                                                                    \
+#define VI_OBJECT_META                                                                                                                                         \
+  public:                                                                                                                                                      \
+    virtual const vine::Class* getClass() const noexcept override                                                                                              \
+    {                                                                                                                                                          \
+        return desc();                                                                                                                                         \
+    }                                                                                                                                                          \
+    static const vine::Class* desc()                                                                                                                           \
+    {                                                                                                                                                          \
+        static const vine::Class* cls = new vine::Class(typeid(Sub), Parent::desc());                                                                          \
+        return cls;                                                                                                                                            \
     }
 
-#define VI_OBJECT_META_DECL                                                                                            \
-  public:                                                                                                              \
-    virtual const vine::Class* getClass() const noexcept override;                                                     \
+#define VI_OBJECT_META_DECL                                                                                                                                    \
+  public:                                                                                                                                                      \
+    virtual const vine::Class* getClass() const noexcept override;                                                                                             \
     static const vine::Class*  desc();
 
-#define VI_OBJECT_META_IMPL(Sub, Parent)                                                                               \
-    const vine::Class* Sub::getClass() const noexcept                                                                  \
-    {                                                                                                                  \
-        return desc();                                                                                                 \
-    }                                                                                                                  \
-                                                                                                                       \
-    const vine::Class* Sub::desc()                                                                                     \
-    {                                                                                                                  \
-        static const vine::Class* cls = new vine::Class(typeid(Sub), Parent::desc());                                  \
-        if constexpr (std::is_default_constructible<Sub>::value) {                                                     \
-            /*auto fac = []() { return new Sub(); };     */                                                            \
-        }                                                                                                              \
-        return cls;                                                                                                    \
+#define VI_OBJECT_META_IMPL(Sub, Parent)                                                                                                                       \
+    const vine::Class* Sub::getClass() const noexcept                                                                                                          \
+    {                                                                                                                                                          \
+        return desc();                                                                                                                                         \
+    }                                                                                                                                                          \
+                                                                                                                                                               \
+    const vine::Class* Sub::desc()                                                                                                                             \
+    {                                                                                                                                                          \
+        static const vine::Class* cls = new vine::Class(typeid(Sub), Parent::desc());                                                                          \
+        if constexpr (std::is_default_constructible<Sub>::value) {                                                                                             \
+            /*auto fac = []() { return new Sub(); };     */                                                                                                    \
+        }                                                                                                                                                      \
+        return cls;                                                                                                                                            \
     }
 
-#define VI_TMPL_OBJECT_META_IMPL(TmplPrefix, Sub, Parent)                                                              \
-    TmplPrefix const vine::Class* Sub::getClass() const noexcept                                                       \
-    {                                                                                                                  \
-        return desc();                                                                                                 \
-    }                                                                                                                  \
-                                                                                                                       \
-    TmplPrefix const vine::Class* Sub::desc()                                                                          \
-    {                                                                                                                  \
-        static const vine::Class* cls = new vine::Class(typeid(Sub), Parent::desc());                                  \
-        if constexpr (std::is_default_constructible<Sub>::value) {                                                     \
-            /*auto fac = []() { return new Sub(); };     */                                                            \
-        }                                                                                                              \
-        return cls;                                                                                                    \
+#define VI_TMPL_OBJECT_META_IMPL(TmplPrefix, Sub, Parent)                                                                                                      \
+    TmplPrefix const vine::Class* Sub::getClass() const noexcept                                                                                               \
+    {                                                                                                                                                          \
+        return desc();                                                                                                                                         \
+    }                                                                                                                                                          \
+                                                                                                                                                               \
+    TmplPrefix const vine::Class* Sub::desc()                                                                                                                  \
+    {                                                                                                                                                          \
+        static const vine::Class* cls = new vine::Class(typeid(Sub), Parent::desc());                                                                          \
+        if constexpr (std::is_default_constructible<Sub>::value) {                                                                                             \
+            /*auto fac = []() { return new Sub(); };     */                                                                                                    \
+        }                                                                                                                                                      \
+        return cls;                                                                                                                                            \
     }
 
 
-#define VI_OBJECT_DATA                                                                                                 \
-    struct Data;                                                                                                       \
+#define VI_OBJECT_DATA                                                                                                                                         \
+    struct Data;                                                                                                                                               \
     Data* const d;
 
 
 // #define VI_OBJ(Parent) \
 // static const Class* desc(); \
 // virtual const Class* getType() const override;
-

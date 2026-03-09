@@ -20,39 +20,127 @@ class Rect2 {
     using value_type = T;
 
   public:
-    Rect2();
-    Rect2(const Point2<T>& top_left, const Vector2<T>& size);
-    Rect2(T xx, T yy, T ww, T hh);
+    constexpr Rect2()
+      : x(T())
+      , y(T())
+      , w(T())
+      , h(T())
+    {}
+
+    constexpr Rect2(const Point2<T>& corner, const Vector2<T>& size)
+      : x(corner.x)
+      , y(corner.y)
+      , w(size.x)
+      , h(size.y)
+    {}
+
+    constexpr Rect2(T xx, T yy, T ww, T hh)
+      : x(xx)
+      , y(yy)
+      , w(ww)
+      , h(hh)
+    {}
 
   public:
-    T top() const;
-    T bottom() const;
-    T left() const;
-    T right() const;
+    [[nodiscard]]
+    constexpr T top() const
+    {
+        return std::max<T>(y, y + h);
+    }
+
+    [[nodiscard]]
+    constexpr T bottom() const
+    {
+        return std::min<T>(y, y + h);
+    }
+
+    [[nodiscard]]
+    constexpr T left() const
+    {
+        return std::min<T>(x, x + w);
+    }
+
+    [[nodiscard]]
+    constexpr T right() const
+    {
+        return std::max<T>(x, x + w);
+    }
 
     // the min corner
-    Point2<T> bottomLeft() const;
-    Point2<T> bottomRight() const;
+    [[nodiscard]]
+    constexpr Point2<T> bottomLeft() const
+    {
+        return Point2<T>(std::min<T>(x, x + w), std::min<T>(y, y + h));
+    }
+
+    [[nodiscard]]
+    constexpr Point2<T> bottomRight() const
+    {
+        return Point2<T>(std::max<T>(x, x + w), std::min<T>(y, y + h));
+    }
+
     // the max corner
-    Point2<T> topLeft() const;
-    Point2<T> topRight() const;
+    [[nodiscard]]
+    constexpr Point2<T> topLeft() const
+    {
+        return Point2<T>(std::min<T>(x, x + w), std::min<T>(y, y + h));
+    }
 
-    T width() const;
-    T height() const;
+    [[nodiscard]]
+    constexpr Point2<T> topRight() const
+    {
+        return Point2<T>(std::max<T>(x, x + w), std::max<T>(y, y + h));
+    }
 
-    Vector2<T> size() const;
+    [[nodiscard]]
+    constexpr T width() const
+    {
+        return w;
+    }
 
+    [[nodiscard]]
+    constexpr T height() const
+    {
+        return h;
+    }
+
+    [[nodiscard]]
+    constexpr Vector2<T> size() const
+    {
+        return Vector2<T>(w, h);
+    }
+
+    [[nodiscard]]
     bool contains(T x, T y) const;
+    [[nodiscard]]
     bool contains(const Point2<T>& pt) const;
 
     void expandBy(const Vector2<T>& pt);
     void expandBy(const Rect2<T>& rect);
 
-    bool isZero() const;
-    bool isZero(T eps) const;
+    [[nodiscard]]
+    constexpr bool isZero() const
+    {
+        return w == T() && h == T();
+    }
 
-    bool operator==(const Rect2<T>& right) const;
-    bool operator!=(const Rect2<T>& right) const;
+    [[nodiscard]]
+    constexpr bool isZero(T eps) const requires(Real<T>)
+    {
+        return math::isZero<T>(w, eps) && math::isZero<T>(h, eps);
+    }
+
+    [[nodiscard]]
+    constexpr bool operator==(const Rect2<T>& right) const
+    {
+        return x == right.x && y == right.y && w == right.w && h == right.h;
+    }
+
+    [[nodiscard]]
+    constexpr bool operator!=(const Rect2<T>& right) const
+    {
+        return !(*this == right);
+    }
 
   public:
     union

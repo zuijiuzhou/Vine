@@ -12,75 +12,6 @@ VI_MATH_NS_BEGIN
 
 #define TMPL_PREFIX template <typename T>
 
-TMPL_PREFIX Rect3<T>::Rect3()
-  : x(T())
-  , y(T())
-  , z(T())
-  , l(T())
-  , w(T())
-  , h(T())
-{}
-
-TMPL_PREFIX Rect3<T>::Rect3(const Point3<T>& conner, const Vector3<T>& size)
-  : x(conner.x)
-  , y(conner.y)
-  , z(conner.z)
-  , l(size.x)
-  , w(size.y)
-  , h(size.z)
-{}
-
-TMPL_PREFIX Rect3<T>::Rect3(T xx, T yy, T zz, T ll, T ww, T hh)
-  : x(xx)
-  , y(yy)
-  , z(zz)
-  , l(ll)
-  , w(ww)
-  , h(hh)
-{}
-
-TMPL_PREFIX Point3<T> Rect3<T>::lowerBound() const
-{
-    return Point3<T>(std::min<T>(x, x + l), std::min<T>(y, y + w), std::min<T>(z, z + h));
-}
-
-TMPL_PREFIX Point3<T> Rect3<T>::upperBound() const
-{
-    return Point3<T>(std::max<T>(x, x + l), std::max<T>(y, y + w), std::max<T>(z, z + h));
-}
-
-TMPL_PREFIX T Rect3<T>::length() const
-{
-    return l < 0 ? -l : l;
-}
-
-TMPL_PREFIX T Rect3<T>::width() const
-{
-    return w < 0 ? -w : w;
-}
-
-TMPL_PREFIX T Rect3<T>::height() const
-{
-    return h < 0 ? -h : h;
-}
-
-// TMPL_PREFIX Point3<T> Rect3<T>::topLeft() const {
-//     return Point3<T>(x, y);
-// }
-// TMPL_PREFIX Point3<T> Rect3<T>::topRight() const {
-//     return Point3<T>(x + w, y);
-// }
-// TMPL_PREFIX Point3<T> Rect3<T>::bottomLeft() const {
-//     return Point3<T>(x, y + h);
-// }
-// TMPL_PREFIX Point3<T> Rect3<T>::bottomRight() const {
-//     return Point3<T>(x + w, y + h);
-// }
-TMPL_PREFIX Vector3<T> Rect3<T>::size() const
-{
-    return Vector3<T>(l < 0 ? -l : l, w < 0 ? -w : w, h < 0 ? -h : h);
-}
-
 TMPL_PREFIX bool Rect3<T>::contains(T x, T y, T z) const
 {
     auto l = lowerBound();
@@ -139,27 +70,6 @@ TMPL_PREFIX void Rect3<T>::expandBy(const Rect3<T>& rect)
 TMPL_PREFIX Rect3<T> Rect3<T>::intersectWith(const Rect3<T>& rect) const
 {
     return Rect3<T>();
-}
-
-TMPL_PREFIX bool Rect3<T>::isZero() const
-{
-    return x == T(0) && y == T(0) && z == T(0) && l == T(0) && w == T(0) && h == T(0);
-}
-
-TMPL_PREFIX bool Rect3<T>::isZero(T eps) const
-{
-    return math::isZero(x, eps) && math::isZero(y, eps) && math::isZero(z, eps) && math::isZero(l, eps) && math::isZero(w, eps) &&
-           math::isZero(h, eps);
-}
-
-TMPL_PREFIX bool Rect3<T>::operator==(const Rect3<T>& right) const
-{
-    return x == right.x && y == right.y && w == right.w && h == right.h;
-}
-
-TMPL_PREFIX bool Rect3<T>::operator!=(const Rect3<T>& right) const
-{
-    return !(*this == right);
 }
 
 #undef TMPL_PREFIX
