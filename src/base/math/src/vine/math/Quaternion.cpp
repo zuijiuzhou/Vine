@@ -35,27 +35,27 @@ TMPL_PREFIX void Quaternion<T>::makeRotate(const Vector3<T>& from, const Vector3
 {
     /**
      * Create a quaternion representing rotation from vector 'from' to vector 'to'
-     * 
+     *
      * Algorithm:
      *   1. Normalize both vectors
      *   2. Compute rotation axis: axis = from × to
      *   3. Compute rotation angle using: cos(θ) = from · to
-     *   
+     *
      * Efficient construction without explicit angle calculation:
      *   q.w = sqrt(|from|² * |to|²) + (from · to)
      *   q.v = from × to
      *   then normalize
-     * 
+     *
      * This avoids sqrt and trig functions in the common case.
-     * 
+     *
      * Special cases:
      *   - Parallel vectors (same direction): identity quaternion
      *   - Anti-parallel vectors (opposite direction): 180° rotation around any perpendicular axis
      */
-    
+
     auto from_len2 = from.length2();
     auto to_len2   = to.length2();
-    
+
     // Handle zero-length vectors
     if (from_len2 == T(0) || to_len2 == T(0)) {
         // Identity quaternion
@@ -65,14 +65,18 @@ TMPL_PREFIX void Quaternion<T>::makeRotate(const Vector3<T>& from, const Vector3
         w = T(1);
         return;
     }
-    
+
     auto cross = from.cross(to);
     auto dot   = from.dot(to);
-    
+
     // Check if vectors are parallel (cross product near zero)
     auto cross_len2 = cross.length2();
-    
-    if (cross_len2 < T(1e-10) * from_len2 * to_len2) {
+
+    // |from x to|^2 = |from|^2 * |to|^2 * sin^2(theta)
+    // So this checks sin^2(theta) < 1e-10, i.e. vectors are nearly parallel
+    // (theta close to 0 or pi). The right side scales with vector magnitudes.
+
+    if (cross_len2 < EPS<T>() * from_len2 * to_len2) {
         // Vectors are nearly parallel
         if (dot > T(0)) {
             // Same direction: identity quaternion
@@ -105,14 +109,14 @@ TMPL_PREFIX void Quaternion<T>::makeRotate(const Vector3<T>& from, const Vector3
                     axis = Vector3<T>(from.y, -from.x, T(0));
                 }
             }
-            
+
             auto axis_len = axis.length();
             if (axis_len > T(0)) {
                 auto axis_rcp = T(1) / axis_len;
-                x = axis.x * axis_rcp;
-                y = axis.y * axis_rcp;
-                z = axis.z * axis_rcp;
-                w = T(0);  // cos(180°/2) = cos(90°) = 0
+                x             = axis.x * axis_rcp;
+                y             = axis.y * axis_rcp;
+                z             = axis.z * axis_rcp;
+                w             = T(0); // cos(180°/2) = cos(90°) = 0
             }
             else {
                 // Fallback to identity
@@ -124,17 +128,17 @@ TMPL_PREFIX void Quaternion<T>::makeRotate(const Vector3<T>& from, const Vector3
         }
         return;
     }
-    
+
     // General case: construct quaternion efficiently
     // q.w = sqrt(|from|² * |to|²) + (from · to)
     // q.v = from × to
     // then normalize
-    
+
     w = std::sqrt(from_len2 * to_len2) + dot;
     x = cross.x;
     y = cross.y;
     z = cross.z;
-    
+
     // Normalize the quaternion
     auto len = std::sqrt(x * x + y * y + z * z + w * w);
     if (len > T(0)) {
@@ -184,31 +188,31 @@ TMPL_PREFIX Quaternion<T> Quaternion<T>::slerp(const Quaternion<T>& from, const 
 {
     /**
      * Spherical Linear Interpolation (SLERP) between two quaternions
-     * 
+     *
      * Algorithm:
      *   slerp(q1, q2, t) = (sin((1-t)θ) / sinθ) * q1 + (sin(tθ) / sinθ) * q2
      *   where θ = acos(q1 · q2) is the angle between quaternions
-     * 
+     *
      * Properties:
      *   - Produces constant angular velocity interpolation
      *   - Result is always on the unit sphere (if inputs are unit quaternions)
      *   - Always takes the shortest path between rotations
-     * 
+     *
      * Special cases:
      *   - t = 0: returns from
      *   - t = 1: returns to
      *   - θ near 0 (quaternions very close): use linear interpolation to avoid division by small sinθ
      *   - dot < 0: negate one quaternion to take shorter path
-     * 
+     *
      * Performance note:
      *   For many sequential interpolations, consider using normalized lerp (nlerp) as approximation
      */
-    
+
     Quaternion<T> result;
-    
+
     // Compute dot product (cosine of angle between quaternions)
     T dot = from.x * to.x + from.y * to.y + from.z * to.z + from.w * to.w;
-    
+
     // If dot product is negative, negate one quaternion to take the shorter path
     // This is because q and -q represent the same rotation, but we want the shorter arc
     Quaternion<T> to_adjusted = to;
@@ -217,18 +221,16 @@ TMPL_PREFIX Quaternion<T> Quaternion<T>::slerp(const Quaternion<T>& from, const 
         to_adjusted.y = -to.y;
         to_adjusted.z = -to.z;
         to_adjusted.w = -to.w;
-        dot = -dot;
+        dot           = -dot;
     }
-    
+
     // Clamp dot product to avoid numerical issues with acos
-    if (dot > T(1)) {
-        dot = T(1);
-    }
-    
+    if (dot > T(1)) { dot = T(1); }
+
     // Threshold for switching to linear interpolation
     // When quaternions are very close, sin(theta) becomes very small
     constexpr T SLERP_THRESHOLD = T(0.9995);
-    
+
     if (dot > SLERP_THRESHOLD) {
         // Quaternions are very close, use linear interpolation (LERP)
         // to avoid division by near-zero sin(theta)
@@ -236,10 +238,9 @@ TMPL_PREFIX Quaternion<T> Quaternion<T>::slerp(const Quaternion<T>& from, const 
         result.y = from.y + t * (to_adjusted.y - from.y);
         result.z = from.z + t * (to_adjusted.z - from.z);
         result.w = from.w + t * (to_adjusted.w - from.w);
-        
+
         // Normalize the result
-        T len = std::sqrt(result.x * result.x + result.y * result.y + 
-                         result.z * result.z + result.w * result.w);
+        T len = std::sqrt(result.x * result.x + result.y * result.y + result.z * result.z + result.w * result.w);
         if (len > T(0)) {
             T len_rcp = T(1) / len;
             result.x *= len_rcp;
@@ -254,18 +255,18 @@ TMPL_PREFIX Quaternion<T> Quaternion<T>::slerp(const Quaternion<T>& from, const 
     }
     else {
         // Standard SLERP
-        T theta = std::acos(dot);           // Angle between quaternions
-        T sin_theta = std::sin(theta);      // sin(theta)
-        
+        T theta     = std::acos(dot);  // Angle between quaternions
+        T sin_theta = std::sin(theta); // sin(theta)
+
         T weight_from = std::sin((T(1) - t) * theta) / sin_theta;
-        T weight_to = std::sin(t * theta) / sin_theta;
-        
+        T weight_to   = std::sin(t * theta) / sin_theta;
+
         result.x = weight_from * from.x + weight_to * to_adjusted.x;
         result.y = weight_from * from.y + weight_to * to_adjusted.y;
         result.z = weight_from * from.z + weight_to * to_adjusted.z;
         result.w = weight_from * from.w + weight_to * to_adjusted.w;
     }
-    
+
     return result;
 }
 
@@ -273,28 +274,28 @@ TMPL_PREFIX Quaternion<T> Quaternion<T>::operator*(const Quaternion& right) cons
 {
     /**
      * Hamilton quaternion multiplication: q1 * q2
-     * 
+     *
      * Quaternion representation: q = xi + yj + zk + w
      * where i, j, k are imaginary units satisfying:
      *   i² = j² = k² = ijk = -1
      *   ij = k,  jk = i,  ki = j
      *   ji = -k, kj = -i, ik = -j  (non-commutative)
-     * 
+     *
      * Alternative form: q = (v, w) where v = (x, y, z) is the vector part
-     * 
+     *
      * Multiplication formula:
      *   q1 * q2 = (w1*w2 - v1·v2,  w1*v2 + w2*v1 + v1×v2)
-     * 
+     *
      * Expanded component-wise:
      *   w = w1*w2 - x1*x2 - y1*y2 - z1*z2    (scalar part: w1*w2 - dot product)
      *   x = w1*x2 + x1*w2 + y1*z2 - z1*y2    (vector part: cross product + scalar terms)
      *   y = w1*y2 - x1*z2 + y1*w2 + z1*x2
      *   z = w1*z2 + x1*y2 - y1*x2 + z1*w2
-     * 
+     *
      * Physical meaning: Composing rotations
      *   If q1 and q2 represent rotations, q1*q2 applies rotation q2 first, then q1
      *   (Note: order matters due to non-commutativity)
-     * 
+     *
      * Verification examples:
      *   i * j = k,  j * k = i,  k * i = j
      *   i * i = -1, j * j = -1, k * k = -1

@@ -33,6 +33,9 @@ class Matrix4x4 {
     using value_type = T;
 
   public:
+    /**
+     * @brief Construct an identity matrix.
+     */
     constexpr Matrix4x4() noexcept
       : vecs{
           { 1, 0, 0, 0 },
@@ -42,12 +45,19 @@ class Matrix4x4 {
     }
     {}
 
+    /**
+     * @brief Construct a rotation matrix from quaternion.
+     * @param quat Rotation quaternion.
+     */
     Matrix4x4(const Quaternion<T>& quat)
     {
         makeRotation(quat);
     }
 
   public:
+    /**
+     * @brief Reset this matrix to identity.
+     */
     void makeIdentity() noexcept
     {
         // std::fill((T*)vecs, ((T*)vecs)+16, 0.0);
@@ -55,10 +65,28 @@ class Matrix4x4 {
         vec0.x = vec1.y = vec2.z = vec3.w = T(1);
     }
 
+    /**
+     * @brief Build rotation from start vector to end vector.
+     * @param start Source direction vector.
+     * @param end Target direction vector.
+     */
     void makeRotation(const Vector3<T>& start, const Vector3<T>& end);
+    /**
+     * @brief Build axis-angle rotation matrix.
+     * @param axis Rotation axis.
+     * @param angle Rotation angle in radians.
+     */
     void makeRotation(const Vector3<T>& axis, T angle);
+    /**
+     * @brief Build rotation matrix from quaternion.
+     * @param quat Rotation quaternion.
+     */
     void makeRotation(const Quaternion<T>& quat);
 
+    /**
+     * @brief Build translation matrix from offset vector.
+     * @param offset Translation offset.
+     */
     void makeTranslation(const Vector3<T>& offset) noexcept
     {
         makeIdentity();
@@ -67,6 +95,12 @@ class Matrix4x4 {
         vecs[3][2] = offset.z;
     }
 
+    /**
+     * @brief Build translation matrix from components.
+     * @param x Translation along X axis.
+     * @param y Translation along Y axis.
+     * @param z Translation along Z axis.
+     */
     void makeTranslation(T x, T y, T z) noexcept
     {
         makeIdentity();
@@ -75,6 +109,10 @@ class Matrix4x4 {
         vecs[3][2] = z;
     }
 
+    /**
+     * @brief Build non-uniform scale matrix from vector.
+     * @param vec Scale factors for x/y/z.
+     */
     void makeScale(const Vector3<T>& vec) noexcept
     {
         makeIdentity();
@@ -83,6 +121,12 @@ class Matrix4x4 {
         vecs[2][2] = vec.z;
     }
 
+    /**
+     * @brief Build non-uniform scale matrix from components.
+     * @param x Scale factor along X axis.
+     * @param y Scale factor along Y axis.
+     * @param z Scale factor along Z axis.
+     */
     void makeScale(T x, T y, T z) noexcept
     {
         makeIdentity();
@@ -91,6 +135,10 @@ class Matrix4x4 {
         vecs[2][2] = z;
     }
 
+    /**
+     * @brief Build uniform scale matrix.
+     * @param factor Uniform scale factor.
+     */
     void makeScale(T factor) noexcept
     {
         makeIdentity();
@@ -99,6 +147,78 @@ class Matrix4x4 {
         vecs[2][2] = factor;
     }
 
+    /**
+     * @brief Left-multiply this matrix by another matrix.
+     * @param left Left matrix in M := left * M.
+     * @return Reference to this matrix.
+     * @note Pre-operations are commonly used for world/fixed-axis composition.
+     */
+    Matrix4x4<T>& preMulti(const Matrix4x4<T>& left);
+    /**
+     * @brief Right-multiply this matrix by another matrix.
+     * @param right Right matrix in M := M * right.
+     * @return Reference to this matrix.
+     * @note Post-operations are commonly used for local/moving-axis composition.
+     */
+    Matrix4x4<T>& postMulti(const Matrix4x4<T>& right);
+    /**
+     * @brief Prepend an axis-angle rotation.
+     * @param axis Rotation axis.
+     * @param angle Rotation angle in radians.
+     * @return Reference to this matrix.
+     */
+    Matrix4x4<T>& preRotate(const Vector3<T>& axis, T angle);
+    /**
+     * @brief Append an axis-angle rotation.
+     * @param axis Rotation axis.
+     * @param angle Rotation angle in radians.
+     * @return Reference to this matrix.
+     */
+    Matrix4x4<T>& postRotate(const Vector3<T>& axis, T angle);
+    /**
+     * @brief Prepend a quaternion rotation.
+     * @param quat Rotation quaternion.
+     * @return Reference to this matrix.
+     */
+    Matrix4x4<T>& preRotate(const Quaternion<T>& quat);
+    /**
+     * @brief Append a quaternion rotation.
+     * @param quat Rotation quaternion.
+     * @return Reference to this matrix.
+     */
+    Matrix4x4<T>& postRotate(const Quaternion<T>& quat);
+    /**
+     * @brief Prepend a translation.
+     * @param offset Translation offset.
+     * @return Reference to this matrix.
+     */
+    Matrix4x4<T>& preTranslate(const Vector3<T>& offset);
+    /**
+     * @brief Append a translation.
+     * @param offset Translation offset.
+     * @return Reference to this matrix.
+     */
+    Matrix4x4<T>& postTranslate(const Vector3<T>& offset);
+    /**
+     * @brief Prepend a non-uniform scale.
+     * @param factor Scale factor per axis.
+     * @return Reference to this matrix.
+     */
+    Matrix4x4<T>& preScale(const Vector3<T>& factor);
+    /**
+     * @brief Append a non-uniform scale.
+     * @param factor Scale factor per axis.
+     * @return Reference to this matrix.
+     */
+    Matrix4x4<T>& postScale(const Vector3<T>& factor);
+
+    /**
+     * @brief Build a look-at view matrix.
+     * @param eye Camera position.
+     * @param target Camera target point.
+     * @param up Up direction reference.
+     * @note Uses backward-axis convention: backward = eye - target.
+     */
     void makeLookAt(const Point3<T>& eye, const Point3<T>& target, const Vector3<T>& up);
     /**
      * @brief make an orthographic projection matrix
@@ -128,6 +248,10 @@ class Matrix4x4 {
     void setBasis(const Point3<T>& origin, const Vector3<T>& x_axis, const Vector3<T>& y_axis, const Vector3<T>& z_axis);
     /**
      * @brief get the coordinate system represented by this matrix
+     * @param o_origin Output origin point.
+     * @param o_x_axis Output x-axis direction.
+     * @param o_y_axis Output y-axis direction.
+     * @param o_z_axis Output z-axis direction.
      */
     void getBasis(Point3<T>& o_origin, Vector3<T>& o_x_axis, Vector3<T>& o_y_axis, Vector3<T>& o_z_axis) const;
     /**
@@ -152,6 +276,16 @@ class Matrix4x4 {
 
     /**
      * @brief return the inverted matrix without modifying the original one
+     * @note Inverse exists only when determinant is non-zero (det(M) != 0).
+     * @note Typical invertible cases:
+     *       - Rigid transforms (rotation + translation).
+     *       - Affine transforms with non-zero scale on all axes.
+     *       - Basis matrix with linearly independent x/y/z axes.
+     * @note Typical non-invertible cases:
+     *       - Any axis scale is zero (matrix squashes dimension).
+     *       - Basis axes are linearly dependent (determinant becomes zero).
+     *       - Any transform that collapses 3D space into lower dimension.
+     * @note For singular matrices (det(M) == 0), current implementation returns an unchanged copy.
      */
     Matrix4x4<T> inverted() const
     {
@@ -194,22 +328,50 @@ class Matrix4x4 {
     bool isZero(T eps = EPS<T>()) const;
 
   public:
+    /**
+     * @brief Read matrix element by row and column.
+     * @param row Row index.
+     * @param col Column index.
+     * @return Element value at (row, col).
+     */
     [[nodiscard]]
     T operator()(int row, int col) const
     {
         return vecs[col][row];
     }
 
+    /**
+     * @brief Access matrix element by row and column.
+     * @param row Row index.
+     * @param col Column index.
+     * @return Mutable element reference at (row, col).
+     */
     [[nodiscard]]
     T& operator()(int row, int col)
     {
         return vecs[col][row];
     }
 
-    Matrix4x4<T>  operator*(const Matrix4x4<T>& right) const;
+    /**
+     * @brief Matrix multiplication.
+     * @param right Right-hand matrix.
+     * @return Product matrix.
+     */
+    Matrix4x4<T> operator*(const Matrix4x4<T>& right) const;
+    /**
+     * @brief Matrix multiplication assignment.
+     * @param right Right-hand matrix.
+     * @return Reference to this matrix.
+     */
     Matrix4x4<T>& operator*=(const Matrix4x4<T>& right);
 
   public:
+    /**
+     * @brief Create a rotation matrix from start and end vectors.
+     * @param start Source direction vector.
+     * @param end Target direction vector.
+     * @return Rotation matrix.
+     */
     [[nodiscard]]
     static Matrix4x4<T> rotate(const Vector3<T>& start, const Vector3<T>& end)
     {
@@ -218,6 +380,12 @@ class Matrix4x4 {
         return m;
     }
 
+    /**
+     * @brief Create an axis-angle rotation matrix.
+     * @param axis Rotation axis.
+     * @param angle Rotation angle in radians.
+     * @return Rotation matrix.
+     */
     [[nodiscard]]
     static Matrix4x4<T> rotate(const Vector3<T>& axis, T angle)
     {
@@ -226,6 +394,11 @@ class Matrix4x4 {
         return m;
     }
 
+    /**
+     * @brief Create a translation matrix from vector.
+     * @param offset Translation offset.
+     * @return Translation matrix.
+     */
     [[nodiscard]]
     static Matrix4x4<T> translate(const Vector3<T>& offset)
     {
@@ -234,6 +407,13 @@ class Matrix4x4 {
         return m;
     }
 
+    /**
+     * @brief Create a translation matrix from components.
+     * @param x Translation along X axis.
+     * @param y Translation along Y axis.
+     * @param z Translation along Z axis.
+     * @return Translation matrix.
+     */
     [[nodiscard]]
     static Matrix4x4<T> translate(T x, T y, T z)
     {
@@ -242,6 +422,11 @@ class Matrix4x4 {
         return m;
     }
 
+    /**
+     * @brief Create a non-uniform scale matrix from vector.
+     * @param vec Scale factors for x/y/z.
+     * @return Scale matrix.
+     */
     [[nodiscard]]
     static Matrix4x4<T> scale(const Vector3<T>& vec)
     {
@@ -250,6 +435,13 @@ class Matrix4x4 {
         return m;
     }
 
+    /**
+     * @brief Create a non-uniform scale matrix from components.
+     * @param x Scale factor along X axis.
+     * @param y Scale factor along Y axis.
+     * @param z Scale factor along Z axis.
+     * @return Scale matrix.
+     */
     [[nodiscard]]
     static Matrix4x4<T> scale(T x, T y, T z)
     {
@@ -258,6 +450,11 @@ class Matrix4x4 {
         return m;
     }
 
+    /**
+     * @brief Create a uniform scale matrix.
+     * @param factor Uniform scale factor.
+     * @return Scale matrix.
+     */
     [[nodiscard]]
     static Matrix4x4<T> scale(T factor)
     {
@@ -266,6 +463,13 @@ class Matrix4x4 {
         return m;
     }
 
+    /**
+     * @brief Create a look-at view matrix.
+     * @param eye Camera position.
+     * @param target Camera target point.
+     * @param up Up direction reference.
+     * @return View matrix.
+     */
     [[nodiscard]]
     static Matrix4x4<T> lookAt(const Point3<T>& eye, const Point3<T>& target, const Vector3<T>& up)
     {
@@ -274,6 +478,16 @@ class Matrix4x4 {
         return m;
     }
 
+    /**
+     * @brief Create an orthographic projection matrix.
+     * @param left Left clipping plane.
+     * @param right Right clipping plane.
+     * @param bottom Bottom clipping plane.
+     * @param top Top clipping plane.
+     * @param z_near Near clipping plane.
+     * @param z_far Far clipping plane.
+     * @return Orthographic projection matrix.
+     */
     [[nodiscard]]
     static Matrix4x4<T> ortho(double left, double right, double bottom, double top, double z_near, double z_far)
     {
@@ -282,6 +496,14 @@ class Matrix4x4 {
         return m;
     }
 
+    /**
+     * @brief Create a perspective projection matrix.
+     * @param fovy Vertical field of view in radians.
+     * @param aspect_ratio Viewport aspect ratio.
+     * @param z_near Near clipping plane.
+     * @param z_far Far clipping plane.
+     * @return Perspective projection matrix.
+     */
     [[nodiscard]]
     static Matrix4x4<T> perspective(double fovy, double aspect_ratio, double z_near, double z_far)
     {
@@ -290,6 +512,14 @@ class Matrix4x4 {
         return m;
     }
 
+    /**
+     * @brief Create a matrix from basis vectors and origin.
+     * @param origin Coordinate system origin.
+     * @param x_axis X-axis direction.
+     * @param y_axis Y-axis direction.
+     * @param z_axis Z-axis direction.
+     * @return Transform matrix composed from basis.
+     */
     [[nodiscard]]
     static Matrix4x4<T> fromBasis(const Point3<T>& origin, const Vector3<T>& x_axis, const Vector3<T>& y_axis, const Vector3<T>& z_axis)
     {

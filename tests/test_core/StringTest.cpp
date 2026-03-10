@@ -24,9 +24,9 @@ TEST(String, EqualsStartsWithEndsWith)
 {
     const vine::String value(u8"AbCdEf");
 
-    EXPECT_TRUE(value.equals(vine::String(u8"AbCdEf")));
-    EXPECT_FALSE(value.equals(vine::String(u8"abcdef")));
-    EXPECT_TRUE(value.equals(vine::String(u8"abcdef"), true));
+    EXPECT_TRUE(value.isEqual(vine::String(u8"AbCdEf")));
+    EXPECT_FALSE(value.isEqual(vine::String(u8"abcdef")));
+    EXPECT_TRUE(value.isEqual(vine::String(u8"abcdef"), true));
 
     EXPECT_TRUE(value.startsWith(u8'A'));
     EXPECT_TRUE(value.startsWith(vine::String(u8"AbC")));
@@ -128,4 +128,24 @@ TEST(String, Local8BitAsciiRoundTrip)
     const auto  s = vine::String::fromLocal8Bit(plain);
     EXPECT_EQ(s.stdu8str(), std::u8string(u8"Hello-123"));
     EXPECT_EQ(s.toLocal8Bit(), std::string("Hello-123"));
+}
+
+TEST(String, InvalidUtf8DoesNotSkipFollowingByte)
+{
+    // Invalid 3-byte lead (0xE2) followed by non-continuation byte '(' and then 'A'.
+    // Expected decoding: U+FFFD, '(', U+FFFD, 'A'.
+    std::u8string raw;
+    raw.push_back(static_cast<char8_t>(0xE2));
+    raw.push_back(static_cast<char8_t>(0x28));
+    raw.push_back(static_cast<char8_t>(0xA1));
+    raw.push_back(static_cast<char8_t>('A'));
+
+    vine::String s(raw);
+    const auto   utf32 = s.toUtf32();
+
+    ASSERT_EQ(utf32.size(), 4u);
+    EXPECT_EQ(utf32[0], 0xFFFDu);
+    EXPECT_EQ(utf32[1], static_cast<char32_t>('('));
+    EXPECT_EQ(utf32[2], 0xFFFDu);
+    EXPECT_EQ(utf32[3], static_cast<char32_t>('A'));
 }

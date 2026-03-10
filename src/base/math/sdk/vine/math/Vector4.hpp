@@ -2,6 +2,7 @@
 
 #include "math_global.hpp"
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 
@@ -21,6 +22,9 @@ class Vector4 {
     using value_type = T;
 
   public:
+        /**
+         * @brief Construct a zero vector.
+         */
     constexpr Vector4()
       : x(T())
       , y(T())
@@ -28,6 +32,11 @@ class Vector4 {
       , w(T())
     {}
 
+        /**
+         * @brief Construct a 4D vector from a 3D vector and w component.
+         * @param vec3 Source 3D vector.
+         * @param ww W component.
+         */
     constexpr Vector4(const Vector3<T>& vec3, T ww = 1.0)
       : x(vec3.x)
       , y(vec3.y)
@@ -35,6 +44,13 @@ class Vector4 {
       , w(ww)
     {}
 
+        /**
+         * @brief Construct a vector from components.
+         * @param xx X component.
+         * @param yy Y component.
+         * @param zz Z component.
+         * @param ww W component.
+         */
     constexpr Vector4(T xx, T yy, T zz, T ww)
       : x(xx)
       , y(yy)
@@ -43,6 +59,10 @@ class Vector4 {
     {}
 
   public:
+        /**
+         * @brief Set x/y/z from a 3D vector.
+         * @param vec3 Source 3D vector.
+         */
     constexpr void set(const Vector3<T>& vec3)
     {
         x = vec3.x;
@@ -50,6 +70,11 @@ class Vector4 {
         z = vec3.z;
     }
 
+    /**
+     * @brief Set x/y/z from a 3D vector and w explicitly.
+     * @param vec3 Source 3D vector.
+     * @param ww W component.
+     */
     constexpr void set(const Vector3<T>& vec3, T ww)
     {
         x = vec3.x;
@@ -58,6 +83,13 @@ class Vector4 {
         w = ww;
     }
 
+    /**
+     * @brief Set all components.
+     * @param xx X component.
+     * @param yy Y component.
+     * @param zz Z component.
+     * @param ww W component.
+     */
     constexpr void set(T xx, T yy, T zz, T ww)
     {
         x = xx;
@@ -66,6 +98,13 @@ class Vector4 {
         w = ww;
     }
 
+    /**
+     * @brief Output all components.
+     * @param xx Output X component.
+     * @param yy Output Y component.
+     * @param zz Output Z component.
+     * @param ww Output W component.
+     */
     constexpr void get(T& xx, T& yy, T& zz, T& ww) const
     {
         xx = x;
@@ -74,6 +113,10 @@ class Vector4 {
         ww = w;
     }
 
+    /**
+     * @brief View this vector as a 3D vector without copying.
+     * @return Const reference to x/y/z part.
+     */
     [[nodiscard]]
     constexpr const Vector3<T>& asVector3() const
     {
@@ -84,6 +127,8 @@ class Vector4 {
      * @brief dot product
      *        only for real types (floating point and integers) not boolean.
      *        for integer types, overflow is possible.
+        * @param other Right-hand vector.
+        * @return Dot product value.
      */
 
     [[nodiscard]]
@@ -92,6 +137,10 @@ class Vector4 {
         return static_cast<T>(x * other.x + y * other.y + z * other.z + w * other.w);
     }
 
+    /**
+     * @brief Compute squared vector length.
+     * @return Squared length value.
+     */
     [[nodiscard]]
     constexpr TypeF<T> length2() const requires(Real<T>)
     {
@@ -101,6 +150,7 @@ class Vector4 {
     /**
      * @brief length of the vector
      *        only for real types (floating point and integers) not boolean.
+        * @return Vector length.
      */
     [[nodiscard]]
     constexpr TypeF<T> length() const requires(Real<T>)
@@ -108,6 +158,11 @@ class Vector4 {
         return safeLength(x, y, z, w);
     }
 
+    /**
+     * @brief Compute angle to another vector.
+     * @param other Right-hand vector.
+     * @return Angle in radians.
+     */
     [[nodiscard]]
     constexpr TypeF<T> angleTo(const Vector4<T>& other) const requires(Real<T>)
     {
@@ -147,7 +202,7 @@ class Vector4 {
         // Calculate sin²θ using |a|²|b|² - (a·b)², then take square root to get sinθ (non-negative)
         // This avoids precision issues with acos when dot product approaches ±1
         const ft sin_theta_sq = len1_sq * len2_sq - dot * dot;
-        const ft sin_theta    = std::sqrt(std::max(ft(0), sin_theta_sq));
+        const ft sin_theta    = std::sqrt((std::max)(ft(0), sin_theta_sq));
 
         // Result range [0, π]:
         //   dot > 0 (same direction)     → angle in [0, π/2)
@@ -159,6 +214,7 @@ class Vector4 {
     /**
      * @brief normalize the vector to unit length.
      *        only for floating point types.
+        * @return Original vector length before normalization.
      */
     [[nodiscard]]
     constexpr T normalize() requires(FP<T>)
@@ -181,24 +237,44 @@ class Vector4 {
         return len;
     }
 
+    /**
+     * @brief Check whether all components are zero.
+     * @return True when x/y/z/w are exactly zero.
+     */
     [[nodiscard]]
     constexpr bool isZero() const
     {
         return x == T() && y == T() && z == T() && w == T();
     }
 
+    /**
+     * @brief Check whether all components are near zero.
+     * @param eps Tolerance used for comparison.
+     * @return True when all components are within tolerance of zero.
+     */
     [[nodiscard]]
     constexpr bool isZero(T eps) const requires(Real<T>)
     {
         return math::isZero<T>(x, eps) && math::isZero<T>(y, eps) && math::isZero<T>(z, eps) && math::isZero<T>(w, eps);
     }
 
+    /**
+     * @brief Compare with another vector using exact equality.
+     * @param other Vector to compare.
+     * @return True when components are equal.
+     */
     [[nodiscard]]
     constexpr bool isEqual(const Vector4<T>& other) const
     {
         return x == other.x && y == other.y && z == other.z && w == other.w;
     }
 
+    /**
+     * @brief Compare with another vector using tolerance.
+     * @param other Vector to compare.
+     * @param eps Tolerance used for comparison.
+     * @return True when components are equal within tolerance.
+     */
     [[nodiscard]]
     constexpr bool isEqual(const Vector4<T>& other, T eps) const requires(Real<T>)
     {
@@ -206,42 +282,77 @@ class Vector4 {
     }
 
   public:
+        /**
+         * @brief Equality operator.
+         * @param right Right-hand vector.
+         * @return True when vectors are equal.
+         */
     [[nodiscard]]
     constexpr bool operator==(const Vector4<T>& right) const
     {
         return x == right.x && y == right.y && z == right.z && w == right.w;
     }
 
+    /**
+     * @brief Inequality operator.
+     * @param right Right-hand vector.
+     * @return True when vectors are not equal.
+     */
     [[nodiscard]]
     constexpr bool operator!=(const Vector4<T>& right) const
     {
         return !(*this == right);
     }
 
+    /**
+     * @brief Vector addition.
+     * @param right Right-hand vector.
+     * @return Sum vector.
+     */
     [[nodiscard]]
     constexpr Vector4<T> operator+(const Vector4<T>& right) const
     {
         return Vector4<T>(arithmeticAdd(x, right.x), arithmeticAdd(y, right.y), arithmeticAdd(z, right.z), arithmeticAdd(w, right.w));
     }
 
+    /**
+     * @brief Vector subtraction.
+     * @param right Right-hand vector.
+     * @return Difference vector.
+     */
     [[nodiscard]]
     constexpr Vector4<T> operator-(const Vector4<T>& right) const
     {
         return Vector4<T>(arithmeticSub(x, right.x), arithmeticSub(y, right.y), arithmeticSub(z, right.z), arithmeticSub(w, right.w));
     }
 
+    /**
+     * @brief Scale this vector.
+     * @param scale Scalar multiplier.
+     * @return Scaled vector.
+     */
     [[nodiscard]]
     constexpr Vector4<T> operator*(T scale) const
     {
         return Vector4<T>(arithmeticMultiply(x, scale), arithmeticMultiply(y, scale), arithmeticMultiply(z, scale), arithmeticMultiply(w, scale));
     }
 
+    /**
+     * @brief Divide this vector by a scalar.
+     * @param scale Scalar divisor.
+     * @return Scaled vector.
+     */
     [[nodiscard]]
     constexpr Vector4<T> operator/(T scale) const
     {
         return Vector4<T>(arithmeticDivision(x, scale), arithmeticDivision(y, scale), arithmeticDivision(z, scale), arithmeticDivision(w, scale));
     }
 
+    /**
+     * @brief Add another vector in-place.
+     * @param right Right-hand vector.
+     * @return Reference to this vector.
+     */
     constexpr Vector4<T>& operator+=(const Vector4<T>& right)
     {
         x = arithmeticAdd(x, right.x);
@@ -252,6 +363,11 @@ class Vector4 {
         return *this;
     }
 
+    /**
+     * @brief Subtract another vector in-place.
+     * @param right Right-hand vector.
+     * @return Reference to this vector.
+     */
     constexpr Vector4<T>& operator-=(const Vector4<T>& right)
     {
         x = arithmeticSub(x, right.x);
@@ -262,6 +378,11 @@ class Vector4 {
         return *this;
     }
 
+    /**
+     * @brief Multiply by scalar in-place.
+     * @param scale Scalar multiplier.
+     * @return Reference to this vector.
+     */
     constexpr Vector4<T>& operator*=(T scale)
     {
         x = arithmeticMultiply(x, scale);
@@ -272,6 +393,11 @@ class Vector4 {
         return *this;
     }
 
+    /**
+     * @brief Divide by scalar in-place.
+     * @param scale Scalar divisor.
+     * @return Reference to this vector.
+     */
     constexpr Vector4<T>& operator/=(T scale)
     {
         x = arithmeticDivision(x, scale);
@@ -282,6 +408,10 @@ class Vector4 {
         return *this;
     }
 
+    /**
+     * @brief Unary negation.
+     * @return Vector with negated components.
+     */
     [[nodiscard]]
     constexpr Vector4<T> operator-() const
     {
@@ -290,6 +420,8 @@ class Vector4 {
 
     /**
      * @brief dot product
+        * @param other Right-hand vector.
+        * @return Dot product value.
      */
     [[nodiscard]]
     constexpr T operator*(const Vector4<T>& other) const requires(Real<T>)
@@ -297,6 +429,11 @@ class Vector4 {
         return dot(other);
     }
 
+    /**
+     * @brief Access component by index.
+     * @param index Component index in [0, 3].
+     * @return Mutable component reference.
+     */
     [[nodiscard]]
     constexpr T& operator[](size_t index)
     {
@@ -304,6 +441,11 @@ class Vector4 {
         return data[index];
     }
 
+    /**
+     * @brief Access component by index.
+     * @param index Component index in [0, 3].
+     * @return Const component reference.
+     */
     [[nodiscard]]
     constexpr const T& operator[](size_t index) const
     {

@@ -179,3 +179,68 @@ TEST(Matrix4x4, perspectiveMapsPointWithHomogeneousDivide) {
     EXPECT_GE(clip_ndc.z, -1.0);
     EXPECT_LE(clip_ndc.z, 1.0);
 }
+
+TEST(Matrix4x4, prePostOperationsMatchMatrixMultiplication) {
+    constexpr double kTol = 1e-12;
+
+    auto expectMatNear = [&](const Mat4d& lhs, const Mat4d& rhs) {
+        for (int r = 0; r < 4; ++r) {
+            for (int c = 0; c < 4; ++c) {
+                EXPECT_NEAR(lhs(r, c), rhs(r, c), kTol);
+            }
+        }
+    };
+
+    Mat4d base;
+    Mat4d tr;
+    tr.makeTranslation(1.2, -3.4, 5.6);
+    Mat4d rot;
+    rot.makeRotation(Vec3d(1.0, 2.0, 3.0), 0.47);
+    Mat4d sc;
+    sc.makeScale(0.8, 1.3, 2.1);
+    base = tr * rot * sc;
+
+    const Vec3d axis(2.0, -1.0, 0.5);
+    const double angle = 0.33;
+    const Quatd q(angle, axis);
+    const Vec3d offset(7.0, -8.0, 9.0);
+    const Vec3d factor(1.5, 0.6, 1.2);
+
+    Mat4d rmat;
+    rmat.makeRotation(q);
+    Mat4d tmat;
+    tmat.makeTranslation(offset);
+    Mat4d smat;
+    smat.makeScale(factor);
+
+    {
+        Mat4d m = base;
+        m.preRotate(q);
+        expectMatNear(m, rmat * base);
+    }
+    {
+        Mat4d m = base;
+        m.postRotate(q);
+        expectMatNear(m, base * rmat);
+    }
+    {
+        Mat4d m = base;
+        m.preTranslate(offset);
+        expectMatNear(m, tmat * base);
+    }
+    {
+        Mat4d m = base;
+        m.postTranslate(offset);
+        expectMatNear(m, base * tmat);
+    }
+    {
+        Mat4d m = base;
+        m.preScale(factor);
+        expectMatNear(m, smat * base);
+    }
+    {
+        Mat4d m = base;
+        m.postScale(factor);
+        expectMatNear(m, base * smat);
+    }
+}

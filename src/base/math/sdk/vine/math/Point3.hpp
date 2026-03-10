@@ -24,6 +24,9 @@ class Point3 {
     using value_type = T;
 
   public:
+        /**
+         * @brief Construct a point at the origin.
+         */
     constexpr Point3()
     {
         x = T();
@@ -31,12 +34,23 @@ class Point3 {
         z = T();
     }
 
+        /**
+         * @brief Construct a 3D point from a 2D point and z value.
+         * @param pt2 Source 2D point.
+         * @param zz Z coordinate.
+         */
     constexpr Point3(const Point2<T>& pt2, T zz)
       : x(pt2.x)
       , y(pt2.y)
       , z(zz)
     {}
 
+        /**
+         * @brief Construct a point from coordinates.
+         * @param xx X coordinate.
+         * @param yy Y coordinate.
+         * @param zz Z coordinate.
+         */
     constexpr Point3(T xx, T yy, T zz)
       : x(xx)
       , y(yy)
@@ -44,39 +58,71 @@ class Point3 {
     {}
 
   public:
+        /**
+         * @brief View this point as a 2D point without copying.
+         * @return Const reference to the x/y part.
+         */
     [[nodiscard]]
     constexpr const Point2<T>& asPoint2() const
     {
         return reinterpret_cast<const Point2<T>&>(*this);
     }
 
+    /**
+     * @brief View this point as a 3D vector without copying.
+     * @return Const reference to the same memory as a vector.
+     */
     [[nodiscard]]
     constexpr const Vector3<T>& asVector() const
     {
         return reinterpret_cast<const Vector3<T>&>(*this);
     }
 
+    /**
+     * @brief Convert this point to a 3D vector.
+     * @return Converted vector.
+     */
     [[nodiscard]]
     Vector3<T> toVector() const;
 
+    /**
+     * @brief Check whether all coordinates are zero.
+     * @return True when x, y and z are exactly zero.
+     */
     [[nodiscard]]
     constexpr bool isZero() const
     {
         return x == T() && y == T() && z == T();
     }
 
+    /**
+     * @brief Check whether all coordinates are near zero.
+     * @param eps Tolerance used for comparison.
+     * @return True when all coordinates are within tolerance of zero.
+     */
     [[nodiscard]]
     constexpr bool isZero(T eps) const requires(Real<T>)
     {
         return math::isZero<T>(x, eps) && math::isZero<T>(y, eps) && math::isZero<T>(z, eps);
     }
 
+    /**
+     * @brief Compare with another point using exact equality.
+     * @param other Point to compare.
+     * @return True when coordinates are equal.
+     */
     [[nodiscard]]
     constexpr bool isEqual(const Point3<T>& other) const
     {
         return *this == other;
     }
 
+    /**
+     * @brief Compare with another point using tolerance.
+     * @param other Point to compare.
+     * @param eps Tolerance used for coordinate comparison.
+     * @return True when coordinates are equal within tolerance.
+     */
     [[nodiscard]]
     constexpr bool isEqual(const Point3<T>& other, T eps) const requires(Real<T>)
     {
@@ -84,30 +130,55 @@ class Point3 {
     }
 
   public:
+        /**
+         * @brief Equality operator.
+         * @param right Right-hand point.
+         * @return True when coordinates are equal.
+         */
     [[nodiscard]]
     constexpr bool operator==(const Point3<T>& right) const
     {
         return x == right.x && y == right.y && z == right.z;
     }
 
+    /**
+     * @brief Inequality operator.
+     * @param right Right-hand point.
+     * @return True when points are not equal.
+     */
     [[nodiscard]]
     constexpr bool operator!=(const Point3<T>& right) const
     {
         return !(*this == right);
     }
 
+    /**
+     * @brief Subtract two points to get a displacement vector.
+     * @param right Right-hand point.
+     * @return Vector from right to this point.
+     */
     [[nodiscard]]
     constexpr Vector3<T> operator-(const Point3<T>& right) const
     {
         return Vector3<T>(arithmeticSub(x, right.x), arithmeticSub(y, right.y), arithmeticSub(z, right.z));
     }
 
+    /**
+     * @brief Translate this point by a vector.
+     * @param right Translation vector.
+     * @return Translated point.
+     */
     [[nodiscard]]
     constexpr Point3<T> operator+(const Vector3<T>& right) const
     {
         return Point3<T>(arithmeticAdd(x, right.x), arithmeticAdd(y, right.y), arithmeticAdd(z, right.z));
     }
 
+    /**
+     * @brief Translate this point in-place.
+     * @param right Translation vector.
+     * @return Reference to this point.
+     */
     constexpr Point3<T>& operator+=(const Vector3<T>& right)
     {
         x = arithmeticAdd(x, right.x);
@@ -117,6 +188,11 @@ class Point3 {
         return *this;
     }
 
+    /**
+     * @brief Translate this point in-place by the inverse vector.
+     * @param right Translation vector.
+     * @return Reference to this point.
+     */
     constexpr Point3<T>& operator-=(const Vector3<T>& right)
     {
         x = arithmeticSub(x, right.x);
@@ -126,12 +202,21 @@ class Point3 {
         return *this;
     }
 
+    /**
+     * @brief Unary negation of point coordinates.
+     * @return Point with negated coordinates.
+     */
     [[nodiscard]]
     constexpr Point3<T> operator-() const
     {
         return Point3<T>(arithmeticNagate(x), arithmeticNagate(y), arithmeticNagate(z));
     }
 
+    /**
+     * @brief Access coordinate by index.
+     * @param index Coordinate index (0 for x, 1 for y, 2 for z).
+     * @return Mutable coordinate reference.
+     */
     [[nodiscard]]
     constexpr T& operator[](size_t index)
     {
@@ -139,6 +224,11 @@ class Point3 {
         return data[index];
     }
 
+    /**
+     * @brief Access coordinate by index.
+     * @param index Coordinate index (0 for x, 1 for y, 2 for z).
+     * @return Const coordinate reference.
+     */
     [[nodiscard]]
     constexpr const T& operator[](size_t index) const
     {

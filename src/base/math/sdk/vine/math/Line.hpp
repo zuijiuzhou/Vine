@@ -5,7 +5,7 @@
 VI_MATH_NS_BEGIN
 
 /**
- * @brief
+ * @brief A 3D line represented by an origin point and a direction vector.
  * @tparam T Only accepts float and double.
  */
 template <typename T>
@@ -49,15 +49,31 @@ class Line {
     };
 
   public:
+    /**
+     * @brief Construct a line from origin and direction.
+     * @param origin Line origin point.
+     * @param direction Line direction vector.
+     */
     constexpr Line(const Point3<T>& origin, const Vector3<T>& direction)
       : origin(origin)
       , direction(direction)
     {}
 
   public:
+    /**
+     * @brief Compute closest-point relationship between two lines.
+     * @param other Other line.
+     * @param eps Numerical tolerance.
+     * @return Intersection information and closest points.
+     */
     [[nodiscard]]
     Intersection intersectWith(const Line& other, T eps = EPS<T>()) const;
 
+    /**
+     * @brief Project a point onto this line.
+     * @param pt Point to project.
+     * @return Closest point on this line.
+     */
     [[nodiscard]]
     Point3<T> closestPoint(const Point3<T>& pt) const;
 

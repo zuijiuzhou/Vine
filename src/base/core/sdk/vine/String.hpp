@@ -1245,7 +1245,7 @@ class VI_CORE_API String final {
      *  @param ignore_case If true, performs case-insensitive comparison (default: false)
      *  @return true if the strings are equal, false otherwise
      */
-    bool equals(const String& other, bool ignore_case = false) const
+    bool isEqual(const String& other, bool ignore_case = false) const
     {
         if (stdstr_.size() != other.stdstr_.size())
             return false;
