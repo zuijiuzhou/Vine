@@ -56,7 +56,7 @@ class Line {
 
   public:
     [[nodiscard]]
-    Intersection intersectWith(const Line& other, T eps) const;
+    Intersection intersectWith(const Line& other, T eps = EPS<T>()) const;
 
     [[nodiscard]]
     Point3<T> closestPoint(const Point3<T>& pt) const;

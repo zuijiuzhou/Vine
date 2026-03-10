@@ -1,0 +1,16 @@
+CompileFlags:
+  CompilationDatabase: build
+  Remove: [-mabi=*, -march=*, -mtune=*]
+
+Index:
+  Background: Build
+  StandardLibrary: true
+
+Hover:
+  ShowAKA: true
+
+InlayHints:
+  Enabled: true
+
+Completion:
+  AllScopes: true

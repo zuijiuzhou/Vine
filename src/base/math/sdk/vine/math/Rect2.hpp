@@ -83,7 +83,7 @@ class Rect2 {
     [[nodiscard]]
     constexpr Point2<T> topLeft() const
     {
-        return Point2<T>(std::min<T>(x, x + w), std::min<T>(y, y + h));
+        return Point2<T>(std::min<T>(x, x + w), std::max<T>(y, y + h));
     }
 
     [[nodiscard]]
@@ -117,6 +117,9 @@ class Rect2 {
 
     void expandBy(const Vector2<T>& pt);
     void expandBy(const Rect2<T>& rect);
+
+    [[nodiscard]]
+    Rect2<T> intersectWith(const Rect2<T>& rect) const;
 
     [[nodiscard]]
     constexpr bool isZero() const

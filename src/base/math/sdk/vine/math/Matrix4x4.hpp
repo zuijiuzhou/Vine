@@ -42,7 +42,8 @@ class Matrix4x4 {
     }
     {}
 
-    Matrix4x4(const Quaternion<T>& quat){
+    Matrix4x4(const Quaternion<T>& quat)
+    {
         makeRotation(quat);
     }
 
@@ -161,18 +162,36 @@ class Matrix4x4 {
 
     /**
      * @brief is this matrix a rigid transformation matrix (only rotation and translation)
+     * @param eps tolerance for floating-point comparisons
      */
-    bool isRigid() const;
+    bool isRigid(T eps = EPS<T>()) const;
     /**
      * @brief is this matrix an affine transformation matrix (last row is [0 0 0 1]).
      *        affine matrix that preserve the parallelism of straight lines, such as translation, scaling, rotation,
      * shearing, and reflection. non-affine matrix includes projection matrix.
+     * @param eps tolerance for floating-point comparisons
      */
-    bool isAffine() const;
+    bool isAffine(T eps = EPS<T>()) const;
     /*
      * @brief is this matrix an identity matrix
+     * @param eps tolerance for floating-point comparisons
      */
-    bool isIdentity() const;
+    bool isIdentity(T eps = EPS<T>()) const;
+
+    /**
+     * @brief is this matrix approximately equal to another matrix within a certain tolerance (epsilon).
+     * @param other the matrix to compare with
+     * @param eps tolerance for floating-point comparisons
+     * @return true if the matrices are approximately equal, false otherwise
+     */
+    bool isEqual(const Matrix4x4<T>& other, T eps = EPS<T>()) const;
+
+    /**
+     * @brief check if all elements of the matrix are zero within a certain tolerance (epsilon).
+     * @param eps tolerance for floating-point comparisons
+     * @return true if all elements are approximately zero, false otherwise
+     */
+    bool isZero(T eps = EPS<T>()) const;
 
   public:
     [[nodiscard]]

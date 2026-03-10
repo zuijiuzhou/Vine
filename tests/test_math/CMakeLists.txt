@@ -1,5 +1,10 @@
 set(TEST_NAME test_math)
-file(GLOB SRC_FILE_LIST *.cpp)
+set(SRC_FILE_LIST
+	MatrixTest.cpp
+	QuaternionTest.cpp
+	RectTest.cpp
+	VectorTest.cpp
+)
 add_executable(${TEST_NAME} ${SRC_FILE_LIST})
 set_target_properties(${TEST_NAME} PROPERTIES FOLDER test)
 target_link_libraries(${TEST_NAME} vi::Math) 

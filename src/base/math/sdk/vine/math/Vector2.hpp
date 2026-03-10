@@ -107,23 +107,30 @@ class Vector2 {
     [[nodiscard]]
     constexpr TypeF<T> angleTo(const Vector2<T>& other) const requires(Real<T>)
     {
+        /**
+         * Algorithm: θ = atan2(|a × b|, a·b)
+         *
+         * In 2D, the cross product is a scalar: a × b = x₁y₂ - y₁x₂
+         * The magnitude |a × b| = |a||b|sinθ
+         *
+         * Therefore:
+         *   θ = atan2(|a||b|sinθ, |a||b|cosθ)
+         *     = atan2(|a × b|, a·b)
+         *
+         * Result range [0, π]:
+         *   dot > 0 (same direction)     → angle in [0, π/2)
+         *   dot = 0 (orthogonal)         → angle = π/2
+         *   dot < 0 (opposite direction) → angle in (π/2, π]
+         *
+         * This approach is numerically stable compared to acos(dot/(|a||b|))
+         * which suffers from precision loss when vectors are nearly parallel.
+         */
+
         using ft   = TypeF<T>;
         auto dot   = static_cast<ft>(x) * static_cast<ft>(other.x) + static_cast<ft>(y) * static_cast<ft>(other.y);
         auto cross = static_cast<ft>(x) * static_cast<ft>(other.y) - static_cast<ft>(y) * static_cast<ft>(other.x);
 
         return std::atan2(std::abs(cross), dot);
-
-        // auto llen = length();
-        // if (llen == 0. || !std::isfinite(llen))
-        //     return ft(0);
-
-        // auto rlen = other.length();
-        // if (rlen == 0. || !std::isfinite(rlen))
-        //     return ft(0);
-
-        // auto dot = static_cast<ft>(x) * static_cast<ft>(other.x) + static_cast<ft>(y) * static_cast<ft>(other.y);
-
-        // return std::acos(std::clamp<ft>(dot / (llen * rlen), ft(-1), ft(1)));
     }
 
     /**

@@ -56,6 +56,25 @@ TMPL_PREFIX void Rect2<T>::expandBy(const Rect2<T>& rect)
     h = ub1.y - lb1.y;
 }
 
+TMPL_PREFIX Rect2<T> Rect2<T>::intersectWith(const Rect2<T>& rect) const
+{
+    auto lb1 = bottomLeft();
+    auto ub1 = topRight();
+    auto lb2 = rect.bottomLeft();
+    auto ub2 = rect.topRight();
+
+    auto ix0 = std::max<T>(lb1.x, lb2.x);
+    auto iy0 = std::max<T>(lb1.y, lb2.y);
+    auto ix1 = std::min<T>(ub1.x, ub2.x);
+    auto iy1 = std::min<T>(ub1.y, ub2.y);
+
+    if (ix1 < ix0 || iy1 < iy0) {
+        return Rect2<T>();
+    }
+
+    return Rect2<T>(ix0, iy0, ix1 - ix0, iy1 - iy0);
+}
+
 #undef TMPL_PREFIX
 
 template class VI_MATH_API Rect2<float>;

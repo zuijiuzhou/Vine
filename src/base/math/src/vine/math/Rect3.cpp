@@ -69,7 +69,23 @@ TMPL_PREFIX void Rect3<T>::expandBy(const Rect3<T>& rect)
 
 TMPL_PREFIX Rect3<T> Rect3<T>::intersectWith(const Rect3<T>& rect) const
 {
-    return Rect3<T>();
+    auto lb1 = lowerBound();
+    auto ub1 = upperBound();
+    auto lb2 = rect.lowerBound();
+    auto ub2 = rect.upperBound();
+
+    auto ix0 = std::max<T>(lb1.x, lb2.x);
+    auto iy0 = std::max<T>(lb1.y, lb2.y);
+    auto iz0 = std::max<T>(lb1.z, lb2.z);
+    auto ix1 = std::min<T>(ub1.x, ub2.x);
+    auto iy1 = std::min<T>(ub1.y, ub2.y);
+    auto iz1 = std::min<T>(ub1.z, ub2.z);
+
+    if (ix1 < ix0 || iy1 < iy0 || iz1 < iz0) {
+        return Rect3<T>();
+    }
+
+    return Rect3<T>(ix0, iy0, iz0, ix1 - ix0, iy1 - iy0, iz1 - iz0);
 }
 
 #undef TMPL_PREFIX

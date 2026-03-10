@@ -21,9 +21,9 @@ class Plane {
 
   public:
     [[nodiscard]]
-    bool intersectWith(const Line<T>& line, Point3<T>& intersectionPt, T tol) const;
+    bool intersectWith(const Line<T>& line, Point3<T>& intersection_pt, T eps = EPS<T>()) const;
     [[nodiscard]]
-    bool intersectWith(const Plane<T>& plane, Line<T>& intersectionLine, T tol) const;
+    bool intersectWith(const Plane<T>& plane, Line<T>& intersection_line, T eps = EPS<T>()) const;
 
   public:
     Point3<T>  origin;

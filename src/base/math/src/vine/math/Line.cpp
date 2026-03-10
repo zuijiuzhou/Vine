@@ -101,7 +101,7 @@ TMPL_PREFIX Line<T>::Intersection Line<T>::intersectWith(const Line<T>& other, T
 TMPL_PREFIX Point3<T> Line<T>::closestPoint(const Point3<T>& pt) const
 {
     const auto denom = direction.dot(direction);
-    if (denom < EPSD) {
+    if (denom < EPS<T>()) {
         return origin;
     }
 

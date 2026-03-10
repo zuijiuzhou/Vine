@@ -124,15 +124,42 @@ class Vector3 {
     [[nodiscard]]
     constexpr TypeF<T> angleTo(const Vector3<T>& other) const requires(Real<T>)
     {
-        using ft = TypeF<T>;
-        auto dot =
-            static_cast<ft>(x) * static_cast<ft>(other.x) + static_cast<ft>(y) * static_cast<ft>(other.y) + static_cast<ft>(z) * static_cast<ft>(other.z);
-        auto cross_x   = static_cast<ft>(y) * static_cast<ft>(other.z) - static_cast<ft>(z) * static_cast<ft>(other.y);
-        auto cross_y   = static_cast<ft>(z) * static_cast<ft>(other.x) - static_cast<ft>(x) * static_cast<ft>(other.z);
-        auto cross_z   = static_cast<ft>(x) * static_cast<ft>(other.y) - static_cast<ft>(y) * static_cast<ft>(other.x);
-        auto cross_len = std::sqrt(cross_x * cross_x + cross_y * cross_y + cross_z * cross_z);
+        /**
+         * Algorithm: θ = atan2(|a||b|sinθ, a·b)
+         * 
+         * Derivation:
+         *   cosθ = (a·b) / (|a||b|)
+         *   sin²θ = 1 - cos²θ = 1 - (a·b)² / (|a|²|b|²)
+         *        = (|a|²|b|² - (a·b)²) / (|a|²|b|²)
+         *   
+         *   Therefore: |a||b|sinθ = sqrt(|a|²|b|² - (a·b)²)
+         *   
+         *   θ = atan2(|a||b|sinθ, |a||b|cosθ)
+         *     = atan2(sqrt(|a|²|b|² - (a·b)²), a·b)
+         * 
+         * Note: In 3D, this is equivalent to |a × b| = |a||b|sinθ
+         * This approach is numerically stable compared to acos(dot/(|a||b|))
+         * which suffers from precision loss when vectors are nearly parallel.
+         */
 
-        return std::atan2(cross_len, dot);
+        using ft = TypeF<T>;
+
+        const ft x1 = static_cast<ft>(x);
+        const ft y1 = static_cast<ft>(y);
+        const ft z1 = static_cast<ft>(z);
+
+        const ft x2 = static_cast<ft>(other.x);
+        const ft y2 = static_cast<ft>(other.y);
+        const ft z2 = static_cast<ft>(other.z);
+
+        const ft dot = x1 * x2 + y1 * y2 + z1 * z2;
+        const ft len1_sq = x1 * x1 + y1 * y1 + z1 * z1;
+        const ft len2_sq = x2 * x2 + y2 * y2 + z2 * z2;
+
+        const ft sin_theta_sq = len1_sq * len2_sq - dot * dot;
+        const ft sin_theta    = std::sqrt(std::max(ft(0), sin_theta_sq));
+
+        return std::atan2(sin_theta, dot);
     }
 
     /**
