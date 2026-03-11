@@ -1,10 +1,10 @@
 ﻿#pragma once
 
+#include <vine/appfw/appfw_global.hpp>
+
 #include <vine/Events.hpp>
 #include <vine/RefObject.hpp>
 #include <vine/String.hpp>
-
-#include "Gui.hpp"
 
 class QObject;
 
@@ -13,8 +13,6 @@ using UIObject = QObject;
 
 class VI_APPFW_API UIElement : public RefObject {
     VI_OBJECT_META_DECL
-
-    VI_DISABLE_COPY_MOVE(UIElement)
 
   protected:
     UIElement(QObject* impl);
@@ -29,9 +27,14 @@ class VI_APPFW_API UIElement : public RefObject {
   public:
     const Event<UIElement, PropertyChangedEventArgs<String>> NameChanged;
 
-  //protected:
+    // protected:
     virtual UIObject* impl() const;
-    template <typename TImpl> TImpl* impl() const { return (TImpl*)impl(); }
+
+    template <typename TImpl>
+    TImpl* impl() const
+    {
+        return (TImpl*)impl();
+    }
 
   private:
     VI_OBJECT_DATA

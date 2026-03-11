@@ -1,5 +1,7 @@
 ﻿#pragma once
 
+#include <vine/appfw/appfw_global.hpp>
+
 #include "Widget.hpp"
 
 VI_APPFWGUI_NS_BEGIN

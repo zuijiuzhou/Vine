@@ -3,6 +3,7 @@
 #include <iostream>
 #include <vector>
 
+
 #include <vine/math/Point3.hpp>
 #include <vine/math/Vector3.hpp>
 
@@ -22,6 +23,8 @@
 #include <vine/appfw/gui/RibbonGroup.hpp>
 #include <vine/appfw/gui/RibbonTab.hpp>
 
+#include <QDialog>
+
 namespace fw    = vine::appfw;
 namespace guifw = fw::gui;
 namespace di    = vine::di;
@@ -32,11 +35,14 @@ int main(int argc, char** argv)
     printf("-------");
     guifw::GuiApplicationPtr app = new guifw::GuiApplication(argc, argv);
     app->init();
+
+    QDialog dialog;
+    dialog.exec();
+
     guifw::MainWindowPtr wnd = new guifw::MainWindow();
     wnd->show();
-    
-    auto reg =
-        di::Registration::create<vine::RefObject>()->impl(fw::AddinManager::desc())->lifetime(di::Lifetime::Singleton);
+
+    auto reg = di::Registration::create<vine::RefObject>()->impl(fw::AddinManager::desc())->lifetime(di::Lifetime::Singleton);
 
     di::Container c;
     c.add(reg);

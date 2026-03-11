@@ -8,7 +8,7 @@ VI_OBJECT_META_IMPL(GuiApplication, Application)
 
 struct GuiApplication::Data
 {
-    QApplication *app = nullptr;
+    QApplication *app{nullptr};
 };
 
 GuiApplication::GuiApplication(int argc, char **argv)

@@ -13,22 +13,28 @@ struct UIElement::Data {
     QMetaObject::Connection impl_destroyed_connection;
 };
 
-namespace {
-void ImplDestroyed(QObject* obj) {
-}
+namespace
+{
+
+void ImplDestroyed(QObject* obj)
+{}
+
 } // namespace
 
 UIElement::UIElement(QObject* impl)
-  : d(new Data()) {
-    d->impl                      = impl;
-    Data* dptr                   = d;
+  : d(new Data())
+{
+    d->impl    = impl;
+    Data* dptr = d;
+
     d->impl_destroyed_connection = QObject::connect(impl, &QObject::destroyed, [this, dptr](QObject* obj) {
         dptr->impl         = nullptr;
         dptr->impl_deleted = true;
     });
 }
 
-UIElement::~UIElement() {
+UIElement::~UIElement()
+{
     if (d->impl) {
         QObject::disconnect(d->impl_destroyed_connection);
         delete d->impl;
@@ -36,15 +42,18 @@ UIElement::~UIElement() {
     delete d;
 }
 
-String UIElement::name() const {
+String UIElement::name() const
+{
     return d->name;
 }
 
-void UIElement::name(const String& name) {
+void UIElement::name(const String& name)
+{
     d->name = name;
 }
 
-QObject* UIElement::impl() const {
+QObject* UIElement::impl() const
+{
     return d->impl;
 }
 

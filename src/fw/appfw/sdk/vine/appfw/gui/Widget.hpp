@@ -2,6 +2,8 @@
 
 #include "UIElement.hpp"
 
+#include "Gui.hpp"
+
 class QWidget;
 
 VI_APPFWGUI_NS_BEGIN

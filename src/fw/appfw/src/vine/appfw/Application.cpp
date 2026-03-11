@@ -20,12 +20,13 @@ struct Application::Data {
     CommandManagerPtr command_manager;
     QCoreApplication* app = nullptr;
 
-    int    argc;
-    char** argv;
+    int    argc{};
+    char** argv{};
 };
 
 Application::Application(int argc, char** argv)
-  : d(new Data()) {
+  : d(new Data())
+{
     if (s_current_app) {
         throw Exception(-1);
     }
@@ -37,48 +38,57 @@ Application::Application(int argc, char** argv)
     d->argv            = argv;
 }
 
-Application::~Application() {
+Application::~Application()
+{
     delete d;
     s_current_app = nullptr;
 }
 
-void Application::init() {
+void Application::init()
+{
     if (d->app == nullptr) {
         d->app = new QCoreApplication(d->argc, d->argv);
     }
 }
 
-int Application::run() {
+int Application::run()
+{
     return d->app->exec();
 }
 
-void Application::exit(int code) {
+void Application::exit(int code)
+{
     QCoreApplication::exit(code);
 }
 
-CommandManager* Application::commandManager() const {
+CommandManager* Application::commandManager() const
+{
     return d->command_manager.get();
 }
 
-AddinManager* Application::addinManager() const {
+AddinManager* Application::addinManager() const
+{
     return d->addin_manager.get();
 }
 
-ServiceManager* Application::serviceManager() const {
+ServiceManager* Application::serviceManager() const
+{
     return d->service_manager.get();
 }
 
-Application* Application::current() {
+Application* Application::current()
+{
     return s_current_app;
 }
 
-int Application::argc() const {
+int Application::argc() const
+{
     return d->argc;
 }
 
-char** Application::argv() const {
+char** Application::argv() const
+{
     return d->argv;
 }
 
 VI_APPFW_NS_END
-

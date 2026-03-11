@@ -1,10 +1,10 @@
 ﻿#pragma once
+#include "core_global.hpp"
+
 #include <functional>
 #include <map>
 #include <utility>
 #include <vector>
-
-#include "core_global.hpp"
 
 VI_CORE_NS_BEGIN
 

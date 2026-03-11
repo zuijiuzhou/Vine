@@ -44,7 +44,7 @@ class PropertyChangedEventArgs : public EventArgs {
 
 template <typename TSender, typename TEventArgs = EventArgs>
 requires std::is_base_of_v<EventArgs, TEventArgs>
-using Event = Signal<TSender, TEventArgs>;
+using Event = Signal<TSender&, TEventArgs&>;
 
 VI_TMPL_OBJECT_META_IMPL(template <typename TVal>, PropertyChangedEventArgs<TVal>, EventArgs);
 

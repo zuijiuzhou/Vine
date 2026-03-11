@@ -4,11 +4,11 @@
 #include <QTabWidget>
 #include <SARibbon.h>
 
+#include <vine/Ptr.hpp>
+#include <vine/appfw/gui/DockPanel.hpp>
+#include <vine/appfw/gui/Gui.hpp>
 #include <vine/appfw/gui/RibbonBar.hpp>
 #include <vine/appfw/gui/StatusBar.hpp>
-#include <vine/appfw/gui/Gui.hpp>
-#include <vine/appfw/gui/DockPanel.hpp>
-#include <vine/Ptr.hpp>
 
 #include "vine/appfw/gui/Convert.hpp"
 
@@ -24,20 +24,24 @@ struct MainWindow::Data {
     bool              is_first_time_displayed = true;
 };
 
-namespace {
-using itype           = SARibbonMainWindow;
+namespace
+{
+
+using itype = SARibbonMainWindow;
+
 } // namespace
 
 MainWindow::MainWindow()
   : Widget(new SARibbonMainWindow(nullptr))
-  , d(new Data) {
+  , d(new Data)
+{
     size(Size(600, 400));
     d->ribbon_bar = new RibbonBar(this);
     d->status_bar = new StatusBar(this);
 
     // SAFramelessHelper* helper = impl<itype>()->framelessHelper();
     // helper->setRubberBandOnResize(false);
-    impl<itype>()->setWindowTitle(("Vine"));
+    impl<itype>()->setWindowTitle("Vine");
 
     impl<itype>()->setStatusBar(d->status_bar->impl<QStatusBar>());
 
@@ -45,27 +49,30 @@ MainWindow::MainWindow()
     // 通过setContentsMargins设置ribbon四周的间距
     ribbon->setContentsMargins(5, 0, 5, 0);
     // 设置applicationButton
-    ribbon->applicationButton()->setText(("File"));
+    ribbon->applicationButton()->setText("File");
 
     auto central_widget = new QTabWidget();
     auto wnd            = impl<itype>();
     wnd->setCentralWidget(central_widget);
-    
 }
 
-MainWindow::~MainWindow() {
+MainWindow::~MainWindow()
+{
     delete d;
 }
 
-void MainWindow::startupPosition(StartupPosition position) {
+void MainWindow::startupPosition(StartupPosition position)
+{
     d->startup_posi = position;
 }
 
-StartupPosition MainWindow::startupPosition() const {
+StartupPosition MainWindow::startupPosition() const
+{
     return d->startup_posi;
 }
 
-void MainWindow::windowState(WindowState state) {
+void MainWindow::windowState(WindowState state)
+{
     d->wnd_state = state;
     Qt::WindowState qstate;
     if (state == WindowState::Minimized)
@@ -77,7 +84,8 @@ void MainWindow::windowState(WindowState state) {
     impl<itype>()->setWindowState(qstate);
 }
 
-WindowState MainWindow::windowState() const {
+WindowState MainWindow::windowState() const
+{
     WindowState state;
     auto        qstate = impl<itype>()->windowState();
     if (qstate & Qt::WindowState::WindowFullScreen)
@@ -91,53 +99,62 @@ WindowState MainWindow::windowState() const {
     return state;
 }
 
-void MainWindow::activate() {
+void MainWindow::activate()
+{
     auto qstate = impl<itype>()->windowState();
     impl<itype>()->activateWindow();
 }
 
-void MainWindow::setEnabled() {
+void MainWindow::setEnabled()
+{
     impl<itype>()->setEnabled(true);
 }
 
-void MainWindow::setDisabled() {
+void MainWindow::setDisabled()
+{
     impl<itype>()->setEnabled(false);
 }
 
-bool MainWindow::isActive() const {
+bool MainWindow::isActive() const
+{
     return impl<itype>()->isActiveWindow();
 }
 
-bool MainWindow::isEnabled() const {
+bool MainWindow::isEnabled() const
+{
     return impl<itype>()->isEnabled();
 }
 
-void MainWindow::show() {
+void MainWindow::show()
+{
     if (d->is_first_time_displayed) {
     }
     d->is_first_time_displayed = false;
     impl<itype>()->show();
 }
 
-void MainWindow::close() {
+void MainWindow::close()
+{
     impl<itype>()->close();
 }
 
-RibbonBar* MainWindow::ribbonBar() const {
+RibbonBar* MainWindow::ribbonBar() const
+{
     return d->ribbon_bar.get();
 }
 
-StatusBar* MainWindow::statusBar() const {
+StatusBar* MainWindow::statusBar() const
+{
     return d->status_bar.get();
 }
 
-void MainWindow::addDockPanel(DockPanel* panel, DockAreas area){
+void MainWindow::addDockPanel(DockPanel* panel, DockAreas area)
+{
     auto qdockpanel = panel->impl<QDockWidget>();
-    auto qwnd = impl<itype>();
-    auto qarea = Convert::toQDockAreas(area);
+    auto qwnd       = impl<itype>();
+    auto qarea      = Convert::toQDockAreas(area);
     qdockpanel->setAllowedAreas(qarea);
     qwnd->addDockWidget((Qt::DockWidgetArea)qarea.toInt(), qdockpanel);
-
 }
 
 VI_APPFWGUI_NS_END

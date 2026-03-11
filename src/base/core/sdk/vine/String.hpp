@@ -1639,7 +1639,7 @@ class VI_CORE_API String final {
      *           clear(), resize(), or any operation that changes capacity invalidates all references.
      *           Do not use the reference after any such modification.
      */
-    constexpr operator const std::u8string&() const noexcept
+    constexpr /*explicit*/ operator const std::u8string&() const noexcept
     {
         return stdstr_;
     }

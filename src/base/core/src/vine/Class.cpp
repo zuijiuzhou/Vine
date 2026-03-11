@@ -17,6 +17,7 @@ VI_CORE_NS_BEGIN
 namespace
 {
 
+// todo:: thread safety
 std::set<Class*> s_classes;
 
 #ifdef __MSVC__
@@ -42,7 +43,7 @@ bool parse_type_info_gcc(const std::type_info& c_type, String& name, String& ns,
         return false;
 
     full_name = reinterpret_cast<char8_t*>(demangled);
-    delete demangled;
+    free(demangled);
 
     size_t pos = full_name.rfind(u8':');
 
