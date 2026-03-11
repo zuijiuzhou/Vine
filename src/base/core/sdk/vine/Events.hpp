@@ -1,5 +1,6 @@
 ﻿#pragma once
-#include "RefObject.hpp"
+
+#include "Object.hpp"
 #include "Signal.hpp"
 
 VI_CORE_NS_BEGIN

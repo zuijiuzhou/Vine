@@ -1,9 +1,6 @@
 ﻿
 #include <vine/Object.hpp>
 
-#include <atomic>
-#include <cstddef>
-
 #include <vine/Class.hpp>
 #include <vine/String.hpp>
 

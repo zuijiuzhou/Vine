@@ -3,12 +3,12 @@
 #include "core_global.hpp"
 
 #include <concepts>
-#include <uchar.h>
 
 VI_CORE_NS_BEGIN
 
 template <typename T>
-concept CharType = std::same_as<T, char> || std::same_as<T, wchar_t> || std::same_as<T, char8_t> || std::same_as<T, char16_t> || std::same_as<T, char32_t>;
+concept CharType = std::same_as<T, char> || std::same_as<T, signed char> || std::same_as<T, unsigned char> || std::same_as<T, wchar_t> ||
+                   std::same_as<T, char8_t> || std::same_as<T, char16_t> || std::same_as<T, char32_t>;
 
 /** Check if a character is whitespace (ASCII)
  *  ASCII whitespace characters:
@@ -32,7 +32,7 @@ constexpr bool isspace(Char c)
  *  @param l The left character to compare
  *  @param r The right character to compare
  *  @return true if l and r are equal (ignoring case for ASCII letters), false otherwise
- *  @note Only ASCII uppercase letters (A-Z) are converted to lowercase (add 32 to code point)
+ *  @note Only ASCII uppercase letters (A-Z) are converted to lowercase (add 'a' - 'A' to code point)
  *        Non-ASCII and already lowercase characters are compared as-is
  *  @example iequals('A', 'a') returns true
  *           iequals('A', 'B') returns false
@@ -41,12 +41,13 @@ constexpr bool isspace(Char c)
 template <CharType Char>
 constexpr bool iequals(Char l, Char r)
 {
+    constexpr Char ascii_case_delta = static_cast<Char>('a' - 'A');
     // Case-insensitive character comparison
     // Only ASCII uppercase letters (A-Z) are converted to lowercase
     if (l >= static_cast<Char>('A') && l <= static_cast<Char>('Z'))
-        l += 32;
+        l += ascii_case_delta;
     if (r >= static_cast<Char>('A') && r <= static_cast<Char>('Z'))
-        r += 32;
+        r += ascii_case_delta;
     return l == r;
 }
 
@@ -63,8 +64,9 @@ constexpr bool iequals(Char l, Char r)
 template <CharType Char>
 constexpr Char tolower(Char c)
 {
+    constexpr Char ascii_case_delta = static_cast<Char>('a' - 'A');
     if (c >= static_cast<Char>('A') && c <= static_cast<Char>('Z'))
-        return c + 32;
+        return c + ascii_case_delta;
     return c;
 }
 
@@ -81,8 +83,9 @@ constexpr Char tolower(Char c)
 template <CharType Char>
 constexpr Char toupper(Char c)
 {
+    constexpr Char ascii_case_delta = static_cast<Char>('a' - 'A');
     if (c >= static_cast<Char>('a') && c <= static_cast<Char>('z'))
-        return c - 32;
+        return c - ascii_case_delta;
     return c;
 }
 

@@ -14,4 +14,4 @@ set_target_properties(${APPFW_TARGET_NAME} PROPERTIES
     AUTORCC ON
 )
 
-target_link_libraries(${APPFW_TARGET_NAME} PUBLIC vi::Core vi::Di vi::Math vi::Global PRIVATE tp::SARibbon tp::DockingPanes Qt6::Core Qt6::Gui Qt6::Widgets )
+target_link_libraries(${APPFW_TARGET_NAME} PUBLIC vi::Core vi::Di vi::Math vi::Global PRIVATE tp::SARibbon tp::DockingPanes Qt6::Core Qt6::Gui Qt6::Widgets)

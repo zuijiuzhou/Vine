@@ -53,7 +53,7 @@ class VI_CORE_API String final {
     using view_type              = std::u8string_view;
 
     /** Not-found sentinel value, same semantics as std::u8string::npos. */
-    static constexpr size_type NPOS = impl_type::npos;
+    static constexpr size_type npos = impl_type::npos;
 
   public:
     /** Default constructor, creates an empty string */
@@ -95,9 +95,9 @@ class VI_CORE_API String final {
     /** Constructor from substring of std::u8string
      *  @param str Source string
      *  @param pos Start position in str
-     *  @param count Number of characters to copy (default: NPOS = until end)
+     *  @param count Number of characters to copy (default: npos = until end)
      */
-    constexpr String(const impl_type& str, size_type pos, size_type count = NPOS)
+    constexpr String(const impl_type& str, size_type pos, size_type count = npos)
       : stdstr_(str, pos, count)
     {}
 
@@ -118,9 +118,9 @@ class VI_CORE_API String final {
     /** Constructor from substring of std::u8string_view
      *  @param str Source view
      *  @param pos Start position in str
-     *  @param count Number of characters to copy (default: NPOS = until end)
+     *  @param count Number of characters to copy (default: npos = until end)
      */
-    constexpr String(view_type str, size_type pos, size_type count = NPOS)
+    constexpr String(view_type str, size_type pos, size_type count = npos)
       : stdstr_(str.substr(pos, count))
     {}
 
@@ -367,10 +367,10 @@ class VI_CORE_API String final {
     /** Assign from substring of UTF-8 string_view
      *  @param str Source view
      *  @param pos Start position in str
-     *  @param count Number of characters to copy (default: NPOS = until end)
+     *  @param count Number of characters to copy (default: npos = until end)
      *  @return Reference to this string
      */
-    constexpr String& assign(view_type str, size_type pos, size_type count = NPOS)
+    constexpr String& assign(view_type str, size_type pos, size_type count = npos)
     {
         stdstr_.assign(str.substr(pos, count));
         return *this;
@@ -426,9 +426,9 @@ class VI_CORE_API String final {
 
     /** Assign from a C-style character array
      *  @param data Pointer to the character array
-     *  @param count The number of characters to copy (default: NPOS = until null terminator)
+     *  @param count The number of characters to copy (default: npos = until null terminator)
      *  @return Reference to this string
-     *  @note If count is NPOS, all characters up to the null terminator are copied
+     *  @note If count is npos, all characters up to the null terminator are copied
      */
     constexpr String& assign(const value_type* data, size_type count)
     {
@@ -490,10 +490,10 @@ class VI_CORE_API String final {
     /** Append substring [pos, pos+count) from another String
      *  @param str Source string
      *  @param pos Start position in str
-     *  @param count Number of characters to append (default: NPOS = until end)
+     *  @param count Number of characters to append (default: npos = until end)
      *  @return Reference to this string
      */
-    constexpr String& append(const String& str, size_type pos, size_type count = NPOS)
+    constexpr String& append(const String& str, size_type pos, size_type count = npos)
     {
         stdstr_.append(str.stdstr_, pos, count);
         return *this;
@@ -502,10 +502,10 @@ class VI_CORE_API String final {
     /** Append substring of UTF-8 string_view
      *  @param str Source view
      *  @param pos Start position in str
-     *  @param count Number of characters to append (default: NPOS = until end)
+     *  @param count Number of characters to append (default: npos = until end)
      *  @return Reference to this string
      */
-    constexpr String& append(view_type str, size_type pos, size_type count = NPOS)
+    constexpr String& append(view_type str, size_type pos, size_type count = npos)
     {
         stdstr_.append(str.substr(pos, count));
         return *this;
@@ -569,9 +569,9 @@ class VI_CORE_API String final {
     /** Insert a C-style string at the specified position
      *  @param pos The position to insert at
      *  @param data Pointer to the character array
-     *  @param count The number of characters to insert (default: NPOS = until null terminator)
+     *  @param count The number of characters to insert (default: npos = until null terminator)
      *  @return Reference to this string
-     *  @note If count is NPOS, all characters up to the null terminator are inserted
+     *  @note If count is npos, all characters up to the null terminator are inserted
      */
     constexpr String& insert(size_type pos, const value_type* data, size_type count)
     {
@@ -606,11 +606,11 @@ class VI_CORE_API String final {
      *  @param pos The position to insert at
      *  @param str The source string
      *  @param str_pos The starting position in the source string
-     *  @param count The number of characters to insert (default: NPOS)
+     *  @param count The number of characters to insert (default: npos)
      *  @return Reference to this string
      *  @note Inserts characters [str_pos, str_pos + count) from str at position pos
      */
-    constexpr String& insert(size_type pos, const String& str, size_type str_pos, size_type count = NPOS)
+    constexpr String& insert(size_type pos, const String& str, size_type str_pos, size_type count = npos)
     {
         stdstr_.insert(pos, str.stdstr_, str_pos, count);
         return *this;
@@ -665,7 +665,7 @@ class VI_CORE_API String final {
      *  @param pos The starting position of the range to replace
      *  @param count The number of characters to replace
      *  @param data Pointer to the character array
-     *  @param data_count The number of characters to use (default: NPOS = until null terminator)
+     *  @param data_count The number of characters to use (default: npos = until null terminator)
      *  @return Reference to this string
      *  @note Replaces characters [pos, pos + count) with data[0..data_count)
      */
@@ -705,7 +705,7 @@ class VI_CORE_API String final {
      *  @param count The number of characters to replace
      *  @param str The source string
      *  @param str_pos The starting position in the source string
-     *  @param str_count The number of characters to use (default: NPOS)
+     *  @param str_count The number of characters to use (default: npos)
      *  @return Reference to this string
      *  @note Replaces characters [pos, pos + count) with str[str_pos, str_pos + str_count)
      */
@@ -779,10 +779,10 @@ class VI_CORE_API String final {
 
     /** Erase count characters starting at index
      *  @param index Start position to erase
-     *  @param count Number of characters to erase (default: NPOS = until end)
+     *  @param count Number of characters to erase (default: npos = until end)
      *  @return Reference to this string
      */
-    constexpr String& erase(size_type index = 0, size_type count = NPOS)
+    constexpr String& erase(size_type index = 0, size_type count = npos)
     {
         stdstr_.erase(index, count);
         return *this;
@@ -828,12 +828,12 @@ class VI_CORE_API String final {
 
     /** Extract a substring
      *  @param start The starting position
-     *  @param count The number of characters to extract (default: NPOS = to the end)
+     *  @param count The number of characters to extract (default: npos = to the end)
      *  @return A new string containing the substring
      *  @note Returns characters [start, start + count)
      *        If start >= size(), returns an empty string
      */
-    constexpr String substr(size_type start, size_type count = NPOS) const
+    constexpr String substr(size_type start, size_type count = npos) const
     {
         return String(stdstr_.substr(start, count));
     }
@@ -841,7 +841,7 @@ class VI_CORE_API String final {
     /** Find the first occurrence of a character
      *  @param c The character to search for
      *  @param pos The starting position (default: 0)
-     *  @return The index of the first occurrence, or NPOS if not found
+     *  @return The index of the first occurrence, or npos if not found
      *  @note Searches in the range [pos, size())
      */
     constexpr size_type find(value_type c, size_type pos = 0) const
@@ -852,7 +852,7 @@ class VI_CORE_API String final {
     /** Find the first occurrence of a substring
      *  @param str The substring to search for
      *  @param pos The starting position (default: 0)
-     *  @return The index of the first occurrence, or NPOS if not found
+     *  @return The index of the first occurrence, or npos if not found
      *  @note Searches in the range [pos, size())
      *        If str is empty, returns pos
      */
@@ -864,7 +864,7 @@ class VI_CORE_API String final {
     /** Find the first occurrence of a C-style string
      *  @param data The C-style string to search for
      *  @param pos The starting position (default: 0)
-     *  @return The index of the first occurrence, or NPOS if not found
+     *  @return The index of the first occurrence, or npos if not found
      *  @note Searches in the range [pos, size())
      */
     constexpr size_type find(const value_type* data, size_type pos = 0) const
@@ -876,7 +876,7 @@ class VI_CORE_API String final {
      *  @param data Pointer to UTF-8 code units to search for
      *  @param pos Starting search position
      *  @param count Number of code units from data used for matching
-     *  @return The index of the first occurrence, or NPOS if not found
+     *  @return The index of the first occurrence, or npos if not found
      */
     constexpr size_type find(const value_type* data, size_type pos, size_type count) const
     {
@@ -886,7 +886,7 @@ class VI_CORE_API String final {
     /** Find the first occurrence of a UTF-8 string_view starting from pos
      *  @param str The substring to search for
      *  @param pos Starting search position
-     *  @return The index of the first occurrence, or NPOS if not found
+     *  @return The index of the first occurrence, or npos if not found
      */
     constexpr size_type find(view_type str, size_type pos = 0) const noexcept
     {
@@ -896,33 +896,33 @@ class VI_CORE_API String final {
     /** Find the last occurrence of a character
      *  @param c The character to search for
      *  @param pos The starting position for backward search (default: npos = from the end)
-     *  @return The index of the last occurrence, or NPOS if not found
+     *  @return The index of the last occurrence, or npos if not found
      *  @note Searches backward in the range [0, pos]
      */
-    constexpr size_type rfind(value_type c, size_type pos = NPOS) const
+    constexpr size_type rfind(value_type c, size_type pos = npos) const
     {
         return stdstr_.rfind(c, pos);
     }
 
     /** Find the last occurrence of a substring
      *  @param str The substring to search for
-     *  @param pos The starting position for backward search (default: NPOS = from the end)
-     *  @return The index of the last occurrence, or NPOS if not found
+     *  @param pos The starting position for backward search (default: npos = from the end)
+     *  @return The index of the last occurrence, or npos if not found
      *  @note Searches backward in the range [0, pos]
      *        If str is empty, returns min(pos, size())
      */
-    constexpr size_type rfind(const String& str, size_type pos = NPOS) const
+    constexpr size_type rfind(const String& str, size_type pos = npos) const
     {
         return stdstr_.rfind(str.stdstr_, pos);
     }
 
     /** Find the last occurrence of a C-style string
      *  @param data The C-style string to search for
-     *  @param pos The starting position for backward search (default: NPOS = from the end)
-     *  @return The index of the last occurrence, or NPOS if not found
+     *  @param pos The starting position for backward search (default: npos = from the end)
+     *  @return The index of the last occurrence, or npos if not found
      *  @note Searches backward in the range [0, pos]
      */
-    constexpr size_type rfind(const value_type* data, size_type pos = NPOS) const
+    constexpr size_type rfind(const value_type* data, size_type pos = npos) const
     {
         return stdstr_.rfind(data, pos);
     }
@@ -931,7 +931,7 @@ class VI_CORE_API String final {
      *  @param data Pointer to UTF-8 code units to search for
      *  @param pos Starting position for backward search
      *  @param count Number of code units from data used for matching
-     *  @return The index of the last occurrence, or NPOS if not found
+     *  @return The index of the last occurrence, or npos if not found
      */
     constexpr size_type rfind(const value_type* data, size_type pos, size_type count) const
     {
@@ -941,9 +941,9 @@ class VI_CORE_API String final {
     /** Find the last occurrence of a UTF-8 string_view searching backward from pos
      *  @param str The substring to search for
      *  @param pos Starting position for backward search
-     *  @return The index of the last occurrence, or NPOS if not found
+     *  @return The index of the last occurrence, or npos if not found
      */
-    constexpr size_type rfind(view_type str, size_type pos = NPOS) const noexcept
+    constexpr size_type rfind(view_type str, size_type pos = npos) const noexcept
     {
         return stdstr_.rfind(str, pos);
     }
@@ -951,7 +951,7 @@ class VI_CORE_API String final {
     /** Find first character that matches any character in str
      *  @param str Set of candidate characters
      *  @param pos Starting search position
-     *  @return The index of the first matching character, or NPOS if not found
+     *  @return The index of the first matching character, or npos if not found
      */
     constexpr size_type find_first_of(const String& str, size_type pos = 0) const
     {
@@ -961,7 +961,7 @@ class VI_CORE_API String final {
     /** Find first occurrence of character ch
      *  @param ch Character to search for
      *  @param pos Starting search position
-     *  @return The index of the first occurrence, or NPOS if not found
+     *  @return The index of the first occurrence, or npos if not found
      */
     constexpr size_type find_first_of(value_type ch, size_type pos = 0) const
     {
@@ -971,7 +971,7 @@ class VI_CORE_API String final {
     /** Find first character matching any in null-terminated C-string data
      *  @param data Null-terminated set of candidate characters
      *  @param pos Starting search position
-     *  @return The index of the first matching character, or NPOS if not found
+     *  @return The index of the first matching character, or npos if not found
      */
     constexpr size_type find_first_of(const value_type* data, size_type pos = 0) const
     {
@@ -982,7 +982,7 @@ class VI_CORE_API String final {
      *  @param data Pointer to candidate characters
      *  @param pos Starting search position
      *  @param count Number of candidate characters
-     *  @return The index of the first matching character, or NPOS if not found
+     *  @return The index of the first matching character, or npos if not found
      */
     constexpr size_type find_first_of(const value_type* data, size_type pos, size_type count) const
     {
@@ -992,9 +992,9 @@ class VI_CORE_API String final {
     /** Find last character that matches any character in str
      *  @param str Set of candidate characters
      *  @param pos Starting position for backward search
-     *  @return The index of the last matching character, or NPOS if not found
+     *  @return The index of the last matching character, or npos if not found
      */
-    constexpr size_type find_last_of(const String& str, size_type pos = NPOS) const
+    constexpr size_type find_last_of(const String& str, size_type pos = npos) const
     {
         return stdstr_.find_last_of(str.stdstr_, pos);
     }
@@ -1002,9 +1002,9 @@ class VI_CORE_API String final {
     /** Find last occurrence of character ch
      *  @param ch Character to search for
      *  @param pos Starting position for backward search
-     *  @return The index of the last occurrence, or NPOS if not found
+     *  @return The index of the last occurrence, or npos if not found
      */
-    constexpr size_type find_last_of(value_type ch, size_type pos = NPOS) const
+    constexpr size_type find_last_of(value_type ch, size_type pos = npos) const
     {
         return stdstr_.find_last_of(ch, pos);
     }
@@ -1012,9 +1012,9 @@ class VI_CORE_API String final {
     /** Find last character matching any in null-terminated C-string data
      *  @param data Null-terminated set of candidate characters
      *  @param pos Starting position for backward search
-     *  @return The index of the last matching character, or NPOS if not found
+     *  @return The index of the last matching character, or npos if not found
      */
-    constexpr size_type find_last_of(const value_type* data, size_type pos = NPOS) const
+    constexpr size_type find_last_of(const value_type* data, size_type pos = npos) const
     {
         return stdstr_.find_last_of(data, pos);
     }
@@ -1023,7 +1023,7 @@ class VI_CORE_API String final {
      *  @param data Pointer to candidate characters
      *  @param pos Starting position for backward search
      *  @param count Number of candidate characters
-     *  @return The index of the last matching character, or NPOS if not found
+     *  @return The index of the last matching character, or npos if not found
      */
     constexpr size_type find_last_of(const value_type* data, size_type pos, size_type count) const
     {
@@ -1033,7 +1033,7 @@ class VI_CORE_API String final {
     /** Find first character that is not in str
      *  @param str Set of characters to exclude
      *  @param pos Starting search position
-     *  @return The index of the first non-matching character, or NPOS if not found
+     *  @return The index of the first non-matching character, or npos if not found
      */
     constexpr size_type find_first_not_of(const String& str, size_type pos = 0) const
     {
@@ -1043,7 +1043,7 @@ class VI_CORE_API String final {
     /** Find first character that is not ch
      *  @param ch Character to exclude
      *  @param pos Starting search position
-     *  @return The index of the first non-matching character, or NPOS if not found
+     *  @return The index of the first non-matching character, or npos if not found
      */
     constexpr size_type find_first_not_of(value_type ch, size_type pos = 0) const
     {
@@ -1053,7 +1053,7 @@ class VI_CORE_API String final {
     /** Find first character that is not in null-terminated C-string data
      *  @param data Null-terminated set of excluded characters
      *  @param pos Starting search position
-     *  @return The index of the first non-matching character, or NPOS if not found
+     *  @return The index of the first non-matching character, or npos if not found
      */
     constexpr size_type find_first_not_of(const value_type* data, size_type pos = 0) const
     {
@@ -1064,7 +1064,7 @@ class VI_CORE_API String final {
      *  @param data Pointer to excluded characters
      *  @param pos Starting search position
      *  @param count Number of excluded characters
-     *  @return The index of the first non-matching character, or NPOS if not found
+     *  @return The index of the first non-matching character, or npos if not found
      */
     constexpr size_type find_first_not_of(const value_type* data, size_type pos, size_type count) const
     {
@@ -1074,9 +1074,9 @@ class VI_CORE_API String final {
     /** Find last character that is not in str
      *  @param str Set of characters to exclude
      *  @param pos Starting position for backward search
-     *  @return The index of the last non-matching character, or NPOS if not found
+     *  @return The index of the last non-matching character, or npos if not found
      */
-    constexpr size_type find_last_not_of(const String& str, size_type pos = NPOS) const
+    constexpr size_type find_last_not_of(const String& str, size_type pos = npos) const
     {
         return stdstr_.find_last_not_of(str.stdstr_, pos);
     }
@@ -1084,9 +1084,9 @@ class VI_CORE_API String final {
     /** Find last character that is not ch
      *  @param ch Character to exclude
      *  @param pos Starting position for backward search
-     *  @return The index of the last non-matching character, or NPOS if not found
+     *  @return The index of the last non-matching character, or npos if not found
      */
-    constexpr size_type find_last_not_of(value_type ch, size_type pos = NPOS) const
+    constexpr size_type find_last_not_of(value_type ch, size_type pos = npos) const
     {
         return stdstr_.find_last_not_of(ch, pos);
     }
@@ -1094,9 +1094,9 @@ class VI_CORE_API String final {
     /** Find last character that is not in null-terminated C-string data
      *  @param data Null-terminated set of excluded characters
      *  @param pos Starting position for backward search
-     *  @return The index of the last non-matching character, or NPOS if not found
+     *  @return The index of the last non-matching character, or npos if not found
      */
-    constexpr size_type find_last_not_of(const value_type* data, size_type pos = NPOS) const
+    constexpr size_type find_last_not_of(const value_type* data, size_type pos = npos) const
     {
         return stdstr_.find_last_not_of(data, pos);
     }
@@ -1105,7 +1105,7 @@ class VI_CORE_API String final {
      *  @param data Pointer to excluded characters
      *  @param pos Starting position for backward search
      *  @param count Number of excluded characters
-     *  @return The index of the last non-matching character, or NPOS if not found
+     *  @return The index of the last non-matching character, or npos if not found
      */
     constexpr size_type find_last_not_of(const value_type* data, size_type pos, size_type count) const
     {
@@ -1137,10 +1137,10 @@ class VI_CORE_API String final {
      *  @param count1 Number of characters from this string
      *  @param str String to compare with
      *  @param pos2 Start position in str
-     *  @param count2 Number of characters from str (default: NPOS = until end)
+     *  @param count2 Number of characters from str (default: npos = until end)
      *  @return Negative if left < right, zero if equal, positive if left > right
      */
-    constexpr int compare(size_type pos1, size_type count1, const String& str, size_type pos2, size_type count2 = NPOS) const
+    constexpr int compare(size_type pos1, size_type count1, const String& str, size_type pos2, size_type count2 = npos) const
     {
         return stdstr_.compare(pos1, count1, str.stdstr_, pos2, count2);
     }
@@ -1503,19 +1503,19 @@ class VI_CORE_API String final {
 
     /** Create a string from UTF-16 encoded data
      *  @param data Pointer to UTF-16 encoded character array
-     *  @param count The number of code units to read (default: NPOS = until null terminator)
+     *  @param count The number of code units to read (default: npos = until null terminator)
      *  @return A new String with the decoded UTF-16 data
      *  @note Properly handles UTF-16 surrogate pairs for characters beyond the BMP
-     *        If count is NPOS, processing continues until a null terminator is found
+     *        If count is npos, processing continues until a null terminator is found
      */
     static String fromUtf16(const char16_t* data, size_type count = std::string::npos);
 
     /** Create a string from UTF-32 encoded data
      *  @param data Pointer to UTF-32 encoded character array
-     *  @param count The number of code units to read (default: NPOS = until null terminator)
+     *  @param count The number of code units to read (default: npos = until null terminator)
      *  @return A new String with the decoded UTF-32 data
      *  @note Properly handles UTF-32 code points
-     *        If count is NPOS, processing continues until a null terminator is found
+     *        If count is npos, processing continues until a null terminator is found
      */
     static String fromUtf32(const char32_t* data, size_type count = std::string::npos);
 
@@ -1619,6 +1619,29 @@ class VI_CORE_API String final {
     {
         stdstr_ += right.stdstr_;
         return *this;
+    }
+
+    /* Conversion operator to std::u8string
+     *  @return Reference to the internal std::u8string
+     *  @warning Modifying the returned reference will affect this String's content.
+     *           Any modification to the string through methods like assign(), insert(), replace(),
+     *           clear(), resize(), or any operation that changes capacity invalidates all references.
+     *           Do not use the reference after any such modification.
+     */
+    constexpr operator std::u8string&() noexcept
+    {
+        return stdstr_;
+    }
+
+    /* Conversion operator to const std::u8string
+     *  @return Const reference to the internal std::u8string
+     *  @warning Any modification to the string through methods like assign(), insert(), replace(),
+     *           clear(), resize(), or any operation that changes capacity invalidates all references.
+     *           Do not use the reference after any such modification.
+     */
+    constexpr operator const std::u8string&() const noexcept
+    {
+        return stdstr_;
     }
 
   private:

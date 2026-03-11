@@ -1,6 +1,8 @@
 ﻿#pragma once
 #include <functional>
 #include <map>
+#include <utility>
+#include <vector>
 
 #include "core_global.hpp"
 
@@ -18,10 +20,10 @@ class Signal {
     Signal(Signal&&)      = delete;
 
   public:
-    HandlerId addHandler(const Handler& handler)
+    HandlerId addHandler(Handler handler)
     {
         auto id = ++last_id_;
-        handlers_.emplace_back(id, handler);
+        handlers_.emplace(id, std::move(handler));
         return id;
     }
 
@@ -53,8 +55,19 @@ class Signal {
             return;
         }
 
-        for (auto& handler : handlers_) {
-            handler(std::forward<TArgs>(args)...);
+        // copy handlers to avoid issues with handlers being added/removed during emit
+        std::vector<HandlerId> snapshot_ids;
+        snapshot_ids.reserve(handlers_.size());
+
+        for (const auto& [id, _] : handlers_) {
+            snapshot_ids.push_back(id);
+        }
+
+        for (const auto id : snapshot_ids) {
+            auto it = handlers_.find(id);
+            if (it != handlers_.end()) {
+                it->second(args...);
+            }
         }
     }
 
