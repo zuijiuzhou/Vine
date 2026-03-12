@@ -6,7 +6,6 @@ VI_GRAPHICS_NS_BEGIN
 
 class VI_GRAPHICS_API Drawable : public RefObject {
   VI_OBJECT_META_DECL;
-  VI_DISABLE_COPY_MOVE(Drawable);
 
 public:
   Drawable();
