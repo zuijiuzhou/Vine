@@ -1,5 +1,7 @@
 ﻿#pragma once
 
+#include <type_traits>
+
 #ifdef __GNUC__
 #    define __GCC__
 #elif defined(__clang__)
@@ -28,23 +30,66 @@
 #    define VI_ROOT_NS vine
 #endif
 
-#define VI_ROOT_NS_BEGIN                                                                                               \
-    namespace VI_ROOT_NS                                                                                               \
+#define VI_ROOT_NS_BEGIN                                                                                                                                       \
+    namespace VI_ROOT_NS                                                                                                                                       \
     {
 
 #define VI_ROOT_NS_END }
 
-#define VI_DISABLE_COPY(ClassName)                                                                                     \
-  private:                                                                                                             \
-    ClassName(const ClassName&)            = delete;                                                                   \
+#define VI_DISABLE_COPY(ClassName)                                                                                                                             \
+  private:                                                                                                                                                     \
+    ClassName(const ClassName&)            = delete;                                                                                                           \
     ClassName& operator=(const ClassName&) = delete;
 
-#define VI_DISABLE_MOVE(ClassName)                                                                                     \
-  private:                                                                                                             \
-    ClassName(ClassName&&)            = delete;                                                                        \
+#define VI_DISABLE_MOVE(ClassName)                                                                                                                             \
+  private:                                                                                                                                                     \
+    ClassName(ClassName&&)            = delete;                                                                                                                \
     ClassName& operator=(ClassName&&) = delete;
 
-#define VI_DISABLE_COPY_MOVE(ClassName)                                                                                \
-    VI_DISABLE_COPY(ClassName)                                                                                         \
+#define VI_DISABLE_COPY_MOVE(ClassName)                                                                                                                        \
+    VI_DISABLE_COPY(ClassName)                                                                                                                                 \
     VI_DISABLE_MOVE(ClassName)
 
+
+#define VI_ENABLE_ENUM_FLAGS(Enum)                                                                                                                             \
+    inline constexpr Enum& operator|=(Enum& left, Enum right)                                                                                                  \
+    {                                                                                                                                                          \
+        return left = static_cast<Enum>(static_cast<std::underlying_type_t<Enum>>(left) | static_cast<std::underlying_type_t<Enum>>(right));                   \
+    }                                                                                                                                                          \
+    inline constexpr Enum& operator&=(Enum& left, Enum right)                                                                                                  \
+    {                                                                                                                                                          \
+        return left = static_cast<Enum>(static_cast<std::underlying_type_t<Enum>>(left) & static_cast<std::underlying_type_t<Enum>>(right));                   \
+    }                                                                                                                                                          \
+    inline constexpr Enum& operator^=(Enum& left, Enum right)                                                                                                  \
+    {                                                                                                                                                          \
+        return left = static_cast<Enum>(static_cast<std::underlying_type_t<Enum>>(left) ^ static_cast<std::underlying_type_t<Enum>>(right));                   \
+    }                                                                                                                                                          \
+    inline constexpr Enum operator|(Enum left, Enum right)                                                                                                     \
+    {                                                                                                                                                          \
+        return static_cast<Enum>(static_cast<std::underlying_type_t<Enum>>(left) | static_cast<std::underlying_type_t<Enum>>(right));                          \
+    }                                                                                                                                                          \
+    inline constexpr Enum operator&(Enum left, Enum right)                                                                                                     \
+    {                                                                                                                                                          \
+        return static_cast<Enum>(static_cast<std::underlying_type_t<Enum>>(left) & static_cast<std::underlying_type_t<Enum>>(right));                          \
+    }                                                                                                                                                          \
+    inline constexpr Enum operator^(Enum left, Enum right)                                                                                                     \
+    {                                                                                                                                                          \
+        return static_cast<Enum>(static_cast<std::underlying_type_t<Enum>>(left) ^ static_cast<std::underlying_type_t<Enum>>(right));                          \
+    }                                                                                                                                                          \
+    inline constexpr bool operator!(Enum left)                                                                                                                 \
+    {                                                                                                                                                          \
+        return !static_cast<std::underlying_type_t<Enum>>(left);                                                                                               \
+    }                                                                                                                                                          \
+    inline constexpr Enum operator~(Enum left)                                                                                                                 \
+    {                                                                                                                                                          \
+        return static_cast<Enum>(~static_cast<std::underlying_type_t<Enum>>(left));                                                                            \
+    }
+
+VI_ROOT_NS_BEGIN
+template <typename TEnum>
+inline constexpr bool testFlag(TEnum a, TEnum b)
+{
+    return static_cast<bool>(static_cast<std::underlying_type_t<TEnum>>(a & b));
+}
+
+VI_ROOT_NS_END

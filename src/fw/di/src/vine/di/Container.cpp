@@ -1,55 +1,61 @@
-﻿#include <map>
+﻿#include <vine/di/Container.hpp>
 
 #include <vine/Exception.hpp>
-#include <vine/di/Container.hpp>
+#include <vine/di/ContainerPrivate.hpp>
 #include <vine/di/Registration.hpp>
-
-#include "vine/di/Registration_p.hpp"
 
 VI_DI_NS_BEGIN
 
-namespace {
-bool isValidRegistration(Registration* r) {
+namespace
+{
+
+bool isValidRegistration(const Registration& reg)
+{
     return true;
 }
+
 } // namespace
+
+ContainerPrivate::ContainerPrivate()
+{}
+
 VI_OBJECT_META_IMPL(Container, RefObject)
 
-struct Container::Data {
-    std::map<Type, Registration*> regs;
-};
-
 Container::Container()
-  : d(new Data()) {
-}
+  : RefObject(new ContainerPrivate())
+{}
 
-void Container::add(Registration* reg) {
+void Container::add(const Registration& reg)
+{
+    VI_D(Container);
+
     if (isValidRegistration(reg)) {
-        auto type     = reg->serviceType();
-        d->regs[type] = reg;
+        auto type = reg.serviceType();
+        d->regs.insert({ type, reg });
     }
     else {
         throw vine::Exception(vine::Exception::INVALID_ARGUMENTS, u8"The registration is invalid.");
     }
 }
 
-RefObject* Container::resolve(Type type) const {
+RefObject* Container::resolve(Type type) const
+{
+    VI_D(Container);
+
     if (d->regs.contains(type)) {
-        auto reg = d->regs[type];
+        auto& reg = d->regs.at(type);
 
-        auto reg_p = reg->d;
+        auto inst = reg.instance();
+        if (inst)
+            return inst;
 
-        auto inst = reg_p->inst.get();
-        if (inst) return inst;
-
-        auto impl_type = reg_p->service_impl_type;
+        auto impl_type = reg.serviceType();
         if (impl_type) {
-            
         }
 
-        auto fac = reg->instanceFactory();
+        auto fac = reg.instanceFactory();
         if (fac) {
-            inst = fac(reg->serviceType(), const_cast<Container*>(this));
+            inst = fac(reg.serviceType(), const_cast<Container&>(*this));
         }
     }
     return nullptr;

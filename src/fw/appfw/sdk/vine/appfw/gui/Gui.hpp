@@ -21,7 +21,7 @@ enum class DockAreas
     Bottom = 8,
     All    = Left | Top | Right | Bottom,
 };
-VI_ENUM_CLASS_FLAGS(DockAreas);
+VI_ENABLE_ENUM_FLAGS(DockAreas);
 
 enum class DockFeatures
 {
@@ -31,7 +31,7 @@ enum class DockFeatures
     Floatable = 4,
     All       = Closable | Movable | Floatable
 };
-VI_ENUM_CLASS_FLAGS(DockFeatures);
+VI_ENABLE_ENUM_FLAGS(DockFeatures);
 
 enum class StartupPosition
 {

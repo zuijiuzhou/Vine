@@ -11,56 +11,79 @@
 VI_DI_NS_BEGIN
 
 class Container;
+using InstanceFactory = std::function<RefObject*(Type, Container&)>;
 
-using InstanceFactory = std::function<RefObject*(Type, Container*)>;
-
-class RegistrationPrivate;
-
-class VI_DI_API Registration final : public RefObject {
-    VI_OBJECT_META_DECL;
-    VI_DISABLE_MOVE(Registration);
-
-    friend class Container;
+class VI_DI_API Registration final {
 
   private:
+    Registration() = default;
     Registration(Type type);
-    Registration(const Registration& reg);
 
   public:
-    Registration* instance(RefObject* inst);
-    RefObject*    instance() const;
+    Registration& instance(RefObject* inst);
 
-    Registration*   instanceFactory(InstanceFactory fac);
-    InstanceFactory instanceFactory() const;
+    RefObject* instance() const
+    {
+        return inst_.get();
+    }
 
-    Registration* impl(Type type);
-    Type          impl();
+    Registration& instanceFactory(InstanceFactory fac)
+    {
+        inst_fac_ = std::move(fac);
+        return *this;
+    }
 
-    Registration* lifetime(Lifetime lt);
-    Lifetime      lifetime() const;
+    InstanceFactory instanceFactory() const
+    {
+        return inst_fac_;
+    }
 
-    Type serviceType() const;
+    Registration& impl(Type type)
+    {
+        service_impl_type_ = type;
+        return *this;
+    }
 
+    Type impl()
+    {
+        return service_impl_type_;
+    }
+
+    Registration& lifetime(Lifetime lt)
+    {
+        lifetime_ = lt;
+        return *this;
+    }
+
+    Lifetime lifetime() const
+    {
+        return lifetime_;
+    }
+
+    Type serviceType() const
+    {
+        return service_type_;
+    }
 
   public:
     Registration& operator=(const Registration& reg);
 
   public:
-    template <typename T>
-    requires ObjectBased<T>
-    static Registration* create();
+    template <ObjectBased T>
+    static Registration create();
 
   private:
-    RegistrationPrivate* const d;
+    Type service_type_{};
+    Type service_impl_type_{};
+    VI_PTR(RefObject) inst_;
+    InstanceFactory inst_fac_;
+    Lifetime        lifetime_ = Lifetime::Transient;
 };
 
-template <typename T>
-requires ObjectBased<T>
-Registration* Registration::create()
+template <ObjectBased T>
+Registration Registration::create()
 {
-    return new Registration(T::desc());
+    return Registration(T::desc());
 }
-
-using RegistrationPtr = RefPtr<Registration>;
 
 VI_DI_NS_END

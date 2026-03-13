@@ -14,11 +14,11 @@ ServiceManager::ServiceManager()
     : d(new Data())
 {
     d->container = new di::Container();
-    d->container->ref();
+    d->container->strong_ref();
 }
 
 ServiceManager::~ServiceManager(){
-    d->container->unref();
+    d->container->strong_unref();
     delete d;
 }
 

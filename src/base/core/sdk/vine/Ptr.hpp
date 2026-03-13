@@ -2,18 +2,19 @@
 
 #include "core_global.hpp"
 
-#include <type_traits>
+#include <atomic>
 
 VI_CORE_NS_BEGIN
 
-class RefObject;
+struct ControlBlock {
+    std::atomic<unsigned int> strong_refs{ 0 };
+    std::atomic<unsigned int> weak_refs{ 0 };
+};
 
 template <typename T>
-requires std::is_base_of<RefObject, T>::value
 class RefPtr {
   private:
     template <typename TOther>
-    requires std::is_base_of<RefObject, TOther>::value
     friend class RefPtr;
 
   public:
@@ -25,7 +26,7 @@ class RefPtr {
       : ptr_(ptr)
     {
         if (ptr_) {
-            ptr_->ref();
+            ptr_->strong_ref();
         }
     }
 
@@ -33,24 +34,23 @@ class RefPtr {
       : ptr_(other.ptr_)
     {
         if (ptr_) {
-            ptr_->ref();
+            ptr_->strong_ref();
         }
     }
 
     template <typename TOther>
-    requires std::is_base_of<RefObject, TOther>::value
     RefPtr(const RefPtr<TOther>& other)
       : ptr_(other.ptr_)
     {
         if (ptr_) {
-            ptr_->ref();
+            ptr_->strong_ref();
         }
     }
 
     ~RefPtr()
     {
         if (ptr_) {
-            ptr_->unref();
+            ptr_->strong_unref();
         }
     }
 
@@ -65,17 +65,17 @@ class RefPtr {
         if (ptr == ptr_)
             return;
         if (ptr_)
-            ptr_->unref();
+            ptr_->strong_unref();
         ptr_ = ptr;
         if (ptr_)
-            ptr_->ref();
+            ptr_->strong_ref();
     }
 
     T* release()
     {
         auto temp = ptr_;
         if (ptr_)
-            ptr_->unref(false);
+            ptr_->strong_unref(false);
         ptr_ = nullptr;
         return temp;
     }
@@ -108,7 +108,6 @@ class RefPtr {
     }
 
     template <typename TOther>
-    requires std::is_base_of<T, TOther>::value
     RefPtr& operator=(const RefPtr<TOther>& right)
     {
         set(right.ptr_);
@@ -116,7 +115,6 @@ class RefPtr {
     }
 
     template <typename TOther>
-    requires std::is_base_of<T, TOther>::value
     RefPtr& operator=(TOther* ptr)
     {
         set(ptr);
@@ -183,25 +181,21 @@ class RefPtr {
 };
 
 template <typename T>
-requires std::is_base_of<RefObject, T>::value
-class WeakRefPtr {};
+class WRefPtr {};
 
 template <typename T, typename Y>
-requires std::is_base_of<RefObject, T>::value && std::is_base_of<RefObject, Y>::value
 inline RefPtr<T> static_pointer_cast(const RefPtr<Y>& rp)
 {
     return static_cast<T*>(rp.get());
 }
 
-template <class T, class Y>
-requires std::is_base_of<RefObject, T>::value && std::is_base_of<RefObject, Y>::value
+template <typename T, typename Y>
 inline RefPtr<T> dynamic_pointer_cast(const RefPtr<Y>& rp)
 {
     return dynamic_cast<T*>(rp.get());
 }
 
-template <class T, class Y>
-requires std::is_base_of<RefObject, T>::value && std::is_base_of<RefObject, Y>::value
+template <typename T, typename Y>
 inline RefPtr<T> const_pointer_cast(const RefPtr<Y>& rp)
 {
     return const_cast<T*>(rp.get());
@@ -209,3 +203,4 @@ inline RefPtr<T> const_pointer_cast(const RefPtr<Y>& rp)
 
 VI_CORE_NS_END
 
+#define VI_PTR(ClassName) RefPtr<ClassName>

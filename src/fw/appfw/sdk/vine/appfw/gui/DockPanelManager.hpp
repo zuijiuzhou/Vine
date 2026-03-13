@@ -5,7 +5,7 @@
 
 VI_APPFWGUI_NS_BEGIN
 
-VI_DECLARE_PIMPL_CLASS(DockPanelManager)
+VI_DECLARE_PIMPL(DockPanelManager)
 
 class VI_APPFW_API DockPanelManager : public RefObject {
     VI_OBJECT_META_DECL

@@ -8,7 +8,10 @@
 
 VI_CORE_NS_BEGIN
 
-VI_DECLARE_PIMPL_CLASS(RefObject)
+VI_DECLARE_PIMPL(RefObject)
+
+template <typename T>
+concept RefObjectBased = std::is_base_of<RefObject, T>::value;
 
 class VI_CORE_API RefObject : public Object {
     VI_OBJECT_META_DECL
@@ -17,7 +20,7 @@ class VI_CORE_API RefObject : public Object {
     VI_DISABLE_COPY_MOVE(RefObject)
 
   public:
-    RefObject();
+    RefObject() noexcept;
     virtual ~RefObject() noexcept;
 
   protected:
@@ -25,12 +28,22 @@ class VI_CORE_API RefObject : public Object {
 
   public:
     /**
-     * @brief
+     * @brief ref count +1
      */
-    void ref();
-    void unref(bool del = true);
+    void strong_ref();
+    /**
+     * @brief ref count -1, if ref count becomes 0, the object will be deleted, the control block will be deleted when weak ref count becomes 0
+     */
+    void strong_unref();
 
+    /**
+     * @brief weak ref count +1
+     */
     void weak_ref();
+
+    /**
+     * @brief weak ref count -1, if weak ref count becomes 0 and strong ref count is 0, the control block will be deleted
+     */
     void weak_unref();
 
   private:
@@ -47,7 +60,9 @@ class VI_CORE_API RefObjectPrivate {
     VI_DECLARE_VPTR(RefObject)
 
   protected:
-    RefObjectPrivate();
+    RefObjectPrivate()
+      : v_ptr(nullptr)
+    {}
 };
 
 using RefObjectPtr = RefPtr<RefObject>;

@@ -42,7 +42,7 @@ int main(int argc, char** argv)
     guifw::MainWindowPtr wnd = new guifw::MainWindow();
     wnd->show();
 
-    auto reg = di::Registration::create<vine::RefObject>()->impl(fw::AddinManager::desc())->lifetime(di::Lifetime::Singleton);
+    auto reg = di::Registration::create<vine::RefObject>().impl(fw::AddinManager::desc()).lifetime(di::Lifetime::Singleton);
 
     di::Container c;
     c.add(reg);

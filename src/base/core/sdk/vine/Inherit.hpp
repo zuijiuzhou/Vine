@@ -1,41 +1,43 @@
 ﻿#pragma once
+
+#include "core_global.hpp"
+
 #include "Class.hpp"
-#include "RefObject.hpp"
-#include "String.hpp"
+#include "Object.hpp"
 
 VI_CORE_NS_BEGIN
 
-template <ObjectBased TParent, typename TSub>
-class Inherit : public TParent {
+template <ObjectBased Parent, typename Sub>
+class Inherit : public Parent {
   public:
     template <typename... TArgs>
     Inherit(TArgs&&... args)
-      : TParent(args...)
+      : Parent(std::forward<TArgs>(args)...)
     {}
 
   public:
-    virtual const Class* getType() const override
+    virtual const Class* getClass() const noexcept override
     {
         return desc();
     }
 
     static const Class* desc()
     {
-        static const Class* cls = new Class(TParent::desc(), typeid(TSub));
+        static const Class* cls = new Class(Parent::desc(), typeid(Sub));
         return cls;
     }
 
-    template <typename... TArgs>
-    static TSub* create(TArgs&&... args)
-    {
-        return new TSub(args...);
-    }
+    // template <typename... TArgs>
+    // static Sub* create(TArgs&&... args)
+    // {
+    //     return new Sub(std::forward<TArgs>(args)...);
+    // }
 
-    template <typename... TArgs>
-    static TSub* create_if(bool flag, TArgs&&... args)
-    {
-        return flag ? new TSub(args...) : nullptr;
-    }
+    // template <typename... TArgs>
+    // static Sub* create_if(bool flag, TArgs&&... args)
+    // {
+    //     return flag ? new Sub(std::forward<TArgs>(args)...) : nullptr;
+    // }
 };
 
 VI_CORE_NS_END
