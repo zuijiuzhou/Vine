@@ -6,7 +6,7 @@
 
 VI_CORE_NS_BEGIN
 
-struct ControlBlock {
+struct PtrControlBlock {
     std::atomic<unsigned int> strong_refs{ 0 };
     std::atomic<unsigned int> weak_refs{ 0 };
 };

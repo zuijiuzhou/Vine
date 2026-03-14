@@ -13,6 +13,12 @@ VI_DECLARE_PIMPL(RefObject)
 template <typename T>
 concept RefObjectBased = std::is_base_of<RefObject, T>::value;
 
+/*
+ * @brief RefObject is a base class for reference-counted objects.
+ * It provides strong and weak reference counting mechanisms.
+ * The control block is used to manage the reference counts and ensure proper deletion of the object and control block when necessary.
+ * @note: RefObject cannot be moved or copied, otherwise it will cause memory leak or dangling pointer
+ */
 class VI_CORE_API RefObject : public Object {
     VI_OBJECT_META_DECL
     VI_DECLARE_PRIVATE(RefObject)
@@ -29,6 +35,7 @@ class VI_CORE_API RefObject : public Object {
   public:
     /**
      * @brief ref count +1
+     * @note: ref and unref must be paired, otherwise it will cause memory leak or dangling pointer
      */
     void strong_ref();
     /**
@@ -38,6 +45,7 @@ class VI_CORE_API RefObject : public Object {
 
     /**
      * @brief weak ref count +1
+     * @note: ref and unref must be paired, otherwise it will cause memory leak or dangling pointer
      */
     void weak_ref();
 
@@ -47,12 +55,7 @@ class VI_CORE_API RefObject : public Object {
     void weak_unref();
 
   private:
-    struct ControlBlock {
-        std::atomic<unsigned int> strong_refs{ 0 };
-        std::atomic<unsigned int> weak_refs{ 0 };
-    };
-
-    ControlBlock* const cb_;
+    PtrControlBlock* const cb_;
 };
 
 class VI_CORE_API RefObjectPrivate {

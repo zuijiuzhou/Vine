@@ -10,7 +10,7 @@ RefObject::RefObject() noexcept
 
 RefObject::RefObject(RefObjectPrivate* dptr) noexcept
   : d_ptr(dptr)
-  , cb_(new ControlBlock())
+  , cb_(new PtrControlBlock())
 {
     d_ptr->v_ptr = this;
 }
