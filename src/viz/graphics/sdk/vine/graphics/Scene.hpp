@@ -3,17 +3,19 @@
 
 #include <vine/RefObject.hpp>
 
-VI_GRAPHICS_NS_BEGIN
+V_GRAPHICS_NS_BEGIN
 
-class VI_GRAPHICS_API Scene : public RefObject {
-  VI_OBJECT_META_DECL;
-  VI_DISABLE_COPY_MOVE(Scene);
+class V_GRAPHICS_API Scene : public RefObject {
+    V_OBJECT_META_DECL;
+    V_DISABLE_COPY_MOVE(Scene);
 
-public:
-  Scene();
+  public:
+    Scene();
 
-private:
-  VI_OBJECT_DATA;
+  private:
+    struct Data;
+    Data* const d;
+    ;
 };
 
-VI_GRAPHICS_NS_END
+V_GRAPHICS_NS_END

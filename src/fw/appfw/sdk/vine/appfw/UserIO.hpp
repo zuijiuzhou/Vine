@@ -7,14 +7,14 @@
 #include <vine/String.hpp>
 #include <vine/math/math_global.hpp>
 
-VI_MATH_NS_BEGIN
+V_MATH_NS_BEGIN
 class Point3d;
-VI_MATH_NS_END
+V_MATH_NS_END
 
-VI_APPFW_NS_BEGIN
+V_APPFW_NS_BEGIN
 
-class VI_APPFW_API UserIO : public RefObject {
-    VI_OBJECT_META_DECL;
+class V_APPFW_API UserIO : public RefObject {
+    V_OBJECT_META_DECL;
 
   public:
     UserIO();
@@ -31,9 +31,10 @@ class VI_APPFW_API UserIO : public RefObject {
     virtual bool getDouble(double& val, const String& prompt = {}) const             = 0;
     virtual void getDouble(double& val, double def, const String& prompt = {}) const = 0;
 
-    virtual bool getPoint3d(math::Point3d& val, const String& prompt = {}) const                   = 0;
+    virtual bool getPoint3d(math::Point3d& val, const String& prompt = {}) const                     = 0;
     virtual void getPoint3d(math::Point3d& val, math::Point3d& def, const String& prompt = {}) const = 0;
 };
+
 using UserIOPtr = RefPtr<UserIO>;
 
-VI_APPFW_NS_END
+V_APPFW_NS_END

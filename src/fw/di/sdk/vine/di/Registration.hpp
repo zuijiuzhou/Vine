@@ -8,12 +8,12 @@
 #include "Lifetime.hpp"
 #include "di_global.hpp"
 
-VI_DI_NS_BEGIN
+V_DI_NS_BEGIN
 
 class Container;
 using InstanceFactory = std::function<RefObject*(Type, Container&)>;
 
-class VI_DI_API Registration final {
+class V_DI_API Registration final {
 
   private:
     Registration() = default;
@@ -75,7 +75,7 @@ class VI_DI_API Registration final {
   private:
     Type service_type_{};
     Type service_impl_type_{};
-    VI_PTR(RefObject) inst_;
+    V_PTR(RefObject) inst_;
     InstanceFactory inst_fac_;
     Lifetime        lifetime_ = Lifetime::Transient;
 };
@@ -86,4 +86,4 @@ Registration Registration::create()
     return Registration(T::desc());
 }
 
-VI_DI_NS_END
+V_DI_NS_END

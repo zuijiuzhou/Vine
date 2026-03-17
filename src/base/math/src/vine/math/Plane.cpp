@@ -1,6 +1,6 @@
 ﻿#include <vine/math/Plane.hpp>
 
-VI_MATH_NS_BEGIN
+V_MATH_NS_BEGIN
 
 #define TMPL_PREFIX template <typename T>
 
@@ -121,6 +121,6 @@ bool Plane<T>::intersectWith(const Plane<T>& other, Line<T>& intersection_line, 
     return true;
 }
 
-template class VI_MATH_API Plane<float>;
-template class VI_MATH_API Plane<double>;
-VI_MATH_NS_END
+template class V_MATH_API Plane<float>;
+template class V_MATH_API Plane<double>;
+V_MATH_NS_END

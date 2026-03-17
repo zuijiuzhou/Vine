@@ -7,8 +7,8 @@
 
 #include <vine/appfw/gui/Convert.hpp>
 
-VI_APPFWGUI_NS_BEGIN
-VI_OBJECT_META_IMPL(DockPanel, Widget)
+V_APPFWGUI_NS_BEGIN
+V_OBJECT_META_IMPL(DockPanel, Widget)
 
 namespace
 {
@@ -120,4 +120,4 @@ Widget* DockPanel::getContent() const
     return d->content.get();
 }
 
-VI_APPFWGUI_NS_END
+V_APPFWGUI_NS_END

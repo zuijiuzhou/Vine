@@ -12,7 +12,7 @@
 
 #include <vine/Exception.hpp>
 
-VI_CORE_NS_BEGIN
+V_CORE_NS_BEGIN
 
 namespace
 {
@@ -131,4 +131,4 @@ bool Class::operator!=(const Class& right) const noexcept
     return !(*this == right);
 }
 
-VI_CORE_NS_END
+V_CORE_NS_END

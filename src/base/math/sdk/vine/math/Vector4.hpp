@@ -8,7 +8,7 @@
 
 #include "Math.hpp"
 
-VI_MATH_NS_BEGIN
+V_MATH_NS_BEGIN
 template <typename T>
 class Vector3;
 
@@ -22,9 +22,9 @@ class Vector4 {
     using value_type = T;
 
   public:
-        /**
-         * @brief Construct a zero vector.
-         */
+    /**
+     * @brief Construct a zero vector.
+     */
     constexpr Vector4()
       : x(T())
       , y(T())
@@ -32,11 +32,11 @@ class Vector4 {
       , w(T())
     {}
 
-        /**
-         * @brief Construct a 4D vector from a 3D vector and w component.
-         * @param vec3 Source 3D vector.
-         * @param ww W component.
-         */
+    /**
+     * @brief Construct a 4D vector from a 3D vector and w component.
+     * @param vec3 Source 3D vector.
+     * @param ww W component.
+     */
     constexpr Vector4(const Vector3<T>& vec3, T ww = 1.0)
       : x(vec3.x)
       , y(vec3.y)
@@ -44,13 +44,13 @@ class Vector4 {
       , w(ww)
     {}
 
-        /**
-         * @brief Construct a vector from components.
-         * @param xx X component.
-         * @param yy Y component.
-         * @param zz Z component.
-         * @param ww W component.
-         */
+    /**
+     * @brief Construct a vector from components.
+     * @param xx X component.
+     * @param yy Y component.
+     * @param zz Z component.
+     * @param ww W component.
+     */
     constexpr Vector4(T xx, T yy, T zz, T ww)
       : x(xx)
       , y(yy)
@@ -59,10 +59,10 @@ class Vector4 {
     {}
 
   public:
-        /**
-         * @brief Set x/y/z from a 3D vector.
-         * @param vec3 Source 3D vector.
-         */
+    /**
+     * @brief Set x/y/z from a 3D vector.
+     * @param vec3 Source 3D vector.
+     */
     constexpr void set(const Vector3<T>& vec3)
     {
         x = vec3.x;
@@ -124,11 +124,11 @@ class Vector4 {
     }
 
     /**
-     * @brief dot product
+     * @brief Dot product.
      *        only for real types (floating point and integers) not boolean.
      *        for integer types, overflow is possible.
-        * @param other Right-hand vector.
-        * @return Dot product value.
+     * @param other Right-hand vector.
+     * @return Dot product value.
      */
 
     [[nodiscard]]
@@ -148,9 +148,9 @@ class Vector4 {
     }
 
     /**
-     * @brief length of the vector
+     * @brief Length of the vector.
      *        only for real types (floating point and integers) not boolean.
-        * @return Vector length.
+     * @return Vector length.
      */
     [[nodiscard]]
     constexpr TypeF<T> length() const requires(Real<T>)
@@ -212,9 +212,9 @@ class Vector4 {
     }
 
     /**
-     * @brief normalize the vector to unit length.
+     * @brief Normalize the vector to unit length.
      *        only for floating point types.
-        * @return Original vector length before normalization.
+     * @return Original vector length before normalization.
      */
     [[nodiscard]]
     constexpr T normalize() requires(FP<T>)
@@ -282,11 +282,11 @@ class Vector4 {
     }
 
   public:
-        /**
-         * @brief Equality operator.
-         * @param right Right-hand vector.
-         * @return True when vectors are equal.
-         */
+    /**
+     * @brief Equality operator.
+     * @param right Right-hand vector.
+     * @return True when vectors are equal.
+     */
     [[nodiscard]]
     constexpr bool operator==(const Vector4<T>& right) const
     {
@@ -419,9 +419,9 @@ class Vector4 {
     }
 
     /**
-     * @brief dot product
-        * @param other Right-hand vector.
-        * @return Dot product value.
+     * @brief Dot product.
+     * @param other Right-hand vector.
+     * @return Dot product value.
      */
     [[nodiscard]]
     constexpr T operator*(const Vector4<T>& other) const requires(Real<T>)
@@ -478,4 +478,4 @@ using Vec4ui   = Vec4ui32;
 using Vec4f    = Vector4<float>;
 using Vec4d    = Vector4<double>;
 
-VI_MATH_NS_END
+V_MATH_NS_END

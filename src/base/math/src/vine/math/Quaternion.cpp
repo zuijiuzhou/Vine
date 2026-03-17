@@ -1,6 +1,6 @@
 ﻿#include <vine/math/Quaternion.hpp>
 
-VI_MATH_NS_BEGIN
+V_MATH_NS_BEGIN
 
 #define TMPL_PREFIX template <FP T>
 
@@ -225,7 +225,9 @@ TMPL_PREFIX Quaternion<T> Quaternion<T>::slerp(const Quaternion<T>& from, const 
     }
 
     // Clamp dot product to avoid numerical issues with acos
-    if (dot > T(1)) { dot = T(1); }
+    if (dot > T(1)) {
+        dot = T(1);
+    }
 
     // Threshold for switching to linear interpolation
     // When quaternions are very close, sin(theta) becomes very small
@@ -337,7 +339,7 @@ TMPL_PREFIX Quaternion<T>& Quaternion<T>::operator/=(const Quaternion& right)
 
 #undef TMPL_PREFIX
 
-template class VI_MATH_API Quaternion<float>;
-template class VI_MATH_API Quaternion<double>;
+template class V_MATH_API Quaternion<float>;
+template class V_MATH_API Quaternion<double>;
 
-VI_MATH_NS_END
+V_MATH_NS_END

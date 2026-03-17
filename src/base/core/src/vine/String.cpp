@@ -17,7 +17,7 @@
 
 #include <vine/Exception.hpp>
 
-VI_CORE_NS_BEGIN
+V_CORE_NS_BEGIN
 
 namespace
 {
@@ -470,4 +470,4 @@ std::vector<String> String::split(const String& delimiter, bool keep_empty) cons
     return result;
 }
 
-VI_CORE_NS_END
+V_CORE_NS_END

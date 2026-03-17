@@ -8,7 +8,7 @@
 #include "Vector3.hpp"
 #include "Vector4.hpp"
 
-VI_MATH_NS_BEGIN
+V_MATH_NS_BEGIN
 
 /**
  * @brief A class representing a quaternion for 3D rotations
@@ -20,9 +20,9 @@ class Quaternion {
     using value_type = T;
 
   public:
-        /**
-         * @brief Construct a zero quaternion.
-         */
+    /**
+     * @brief Construct a zero quaternion.
+     */
     constexpr Quaternion()
       : x(T())
       , y(T())
@@ -30,13 +30,13 @@ class Quaternion {
       , w(T())
     {}
 
-        /**
-         * @brief Construct quaternion from components.
-         * @param x X component.
-         * @param y Y component.
-         * @param z Z component.
-         * @param w W component.
-         */
+    /**
+     * @brief Construct quaternion from components.
+     * @param x X component.
+     * @param y Y component.
+     * @param z Z component.
+     * @param w W component.
+     */
     constexpr Quaternion(T x, T y, T z, T w)
       : x(x)
       , y(y)
@@ -44,31 +44,31 @@ class Quaternion {
       , w(w)
     {}
 
-        /**
-         * @brief Construct quaternion from axis-angle rotation.
-         * @param angle Rotation angle in radians.
-         * @param axis Rotation axis.
-         */
+    /**
+     * @brief Construct quaternion from axis-angle rotation.
+     * @param angle Rotation angle in radians.
+     * @param axis Rotation axis.
+     */
     Quaternion(T angle, const Vector3<T>& axis)
     {
         makeRotate(angle, axis);
     }
 
-        /**
-         * @brief Construct quaternion rotating one direction to another.
-         * @param from Source direction.
-         * @param to Target direction.
-         */
+    /**
+     * @brief Construct quaternion rotating one direction to another.
+     * @param from Source direction.
+     * @param to Target direction.
+     */
     Quaternion(const Vector3<T>& from, const Vector3<T>& to)
     {
         makeRotate(from, to);
     }
 
   public:
-        /**
-         * @brief Convert quaternion to 4D vector.
-         * @return Vector containing x/y/z/w.
-         */
+    /**
+     * @brief Convert quaternion to 4D vector.
+     * @return Vector containing x/y/z/w.
+     */
     [[nodiscard]]
     constexpr Vector4<T> toVector() const
     {
@@ -87,6 +87,16 @@ class Quaternion {
         static_assert(std::is_standard_layout_v<Vector4<T>>);
 
         return reinterpret_cast<const Vector4<T>&>(*this);
+    }
+
+    /**
+     * @brief Check if this quaternion is an identity rotation.
+     * @param eps Tolerance used for comparison.
+     */
+    [[nodiscard]]
+    constexpr bool isIdentity(T eps = EPS<T>()) const
+    {
+        return math::isZero(x, eps) && math::isZero(y, eps) && math::isZero(z, eps) && math::isEqual(w, T(1), eps);
     }
 
     /**
@@ -167,21 +177,21 @@ class Quaternion {
     // Vector3<T> toEuler() const;
     // void       fromEuler(const Vector3<T>& euler);
 
-        /**
-         * @brief Spherical linear interpolation between two quaternions.
-         * @param from Start quaternion.
-         * @param to End quaternion.
-         * @param t Interpolation factor in [0, 1].
-         * @return Interpolated quaternion.
-         */
+    /**
+     * @brief Spherical linear interpolation between two quaternions.
+     * @param from Start quaternion.
+     * @param to End quaternion.
+     * @param t Interpolation factor in [0, 1].
+     * @return Interpolated quaternion.
+     */
     static Quaternion<T> slerp(const Quaternion<T>& from, const Quaternion<T>& to, T t);
 
   public:
-        /**
-         * @brief Equality operator.
-         * @param right Right-hand quaternion.
-         * @return True when components are equal.
-         */
+    /**
+     * @brief Equality operator.
+     * @param right Right-hand quaternion.
+     * @return True when components are equal.
+     */
     [[nodiscard]]
     constexpr bool operator==(const Quaternion& right) const
     {
@@ -326,7 +336,7 @@ class Quaternion {
      * @return Product quaternion.
      */
     [[nodiscard]]
-    Quaternion<T>  operator*(const Quaternion& right) const;
+    Quaternion<T> operator*(const Quaternion& right) const;
     /**
      * @brief Quaternion multiplication assignment.
      * @param right Right-hand quaternion.
@@ -340,7 +350,7 @@ class Quaternion {
      * @return Quotient quaternion.
      */
     [[nodiscard]]
-    Quaternion<T>  operator/(const Quaternion& right) const;
+    Quaternion<T> operator/(const Quaternion& right) const;
     /**
      * @brief Quaternion division assignment.
      * @param right Right-hand quaternion.
@@ -397,4 +407,4 @@ using Quatd = Quaternion<double>;
 template <typename T>
 Vector3<T> operator*(const Quaternion<T>& left, const Vector3<T>& right);
 
-VI_MATH_NS_END
+V_MATH_NS_END

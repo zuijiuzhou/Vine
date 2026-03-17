@@ -4,10 +4,10 @@
 
 #include "Widget.hpp"
 
-VI_APPFWGUI_NS_BEGIN
+V_APPFWGUI_NS_BEGIN
 
-class VI_APPFW_API DockPanel : public Widget {
-    VI_OBJECT_META_DECL;
+class V_APPFW_API DockPanel : public Widget {
+    V_OBJECT_META_DECL;
 
   public:
   public:
@@ -24,12 +24,13 @@ class VI_APPFW_API DockPanel : public Widget {
     void   setTitle(const String& title);
     String getTitle() const;
 
-    void     setContent(Widget* content);
+    void    setContent(Widget* content);
     Widget* getContent() const;
 
   public:
   private:
-    VI_OBJECT_DATA;
+    struct Data;
+    Data* const d;
 };
 
-VI_APPFWGUI_NS_END
+V_APPFWGUI_NS_END

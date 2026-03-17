@@ -9,7 +9,7 @@
 
 #include "Math.hpp"
 
-VI_MATH_NS_BEGIN
+V_MATH_NS_BEGIN
 template <typename T>
 class Point2;
 
@@ -23,30 +23,30 @@ class Vector2 {
     using value_type = T;
 
   public:
-        /**
-         * @brief Construct a zero vector.
-         */
+    /**
+     * @brief Construct a zero vector.
+     */
     constexpr Vector2()
       : x(T())
       , y(T())
     {}
 
-        /**
-         * @brief Construct a vector from coordinates.
-         * @param xx X component.
-         * @param yy Y component.
-         */
+    /**
+     * @brief Construct a vector from coordinates.
+     * @param xx X component.
+     * @param yy Y component.
+     */
     constexpr Vector2(T xx, T yy)
       : x(xx)
       , y(yy)
     {}
 
   public:
-        /**
-         * @brief Set vector components.
-         * @param xx X component.
-         * @param yy Y component.
-         */
+    /**
+     * @brief Set vector components.
+     * @param xx X component.
+     * @param yy Y component.
+     */
     void set(T xx, T yy)
     {
         x = xx;
@@ -82,11 +82,11 @@ class Vector2 {
     }
 
     /**
-     * @brief dot product
+     * @brief Dot product.
      *        only for real types (floating point and integers) not boolean.
      *        for integer types, overflow is possible.
-        * @param other Right-hand vector.
-        * @return Dot product value.
+     * @param other Right-hand vector.
+     * @return Dot product value.
      */
     [[nodiscard]]
     T dot(const Vector2<T>& other) const requires(Real<T>)
@@ -95,11 +95,11 @@ class Vector2 {
     }
 
     /**
-     * @brief cross product (in 2D, it is a scalar)
+     * @brief Cross product (in 2D, it is a scalar).
      *        only for real types (floating point and integers) not boolean.
      *        for integer types, overflow is possible.
-        * @param other Right-hand vector.
-        * @return Signed scalar cross product.
+     * @param other Right-hand vector.
+     * @return Signed scalar cross product.
      */
     [[nodiscard]]
     T cross(const Vector2<T>& other) const requires(Real<T>)
@@ -108,10 +108,10 @@ class Vector2 {
     }
 
     /**
-     * @brief length squared of the vector
+     * @brief Length squared of the vector.
      *        only for real types (floating point and integers) not boolean.
      *        for integer types, overflow is possible.
-        * @return Squared vector length.
+     * @return Squared vector length.
      */
     [[nodiscard]]
     constexpr TypeF<T> length2() const requires(Real<T>)
@@ -120,9 +120,9 @@ class Vector2 {
     }
 
     /**
-     * @brief length of the vector
+     * @brief Length of the vector.
      *        only for real types (floating point and integers) not boolean.
-        * @return Vector length.
+     * @return Vector length.
      */
     [[nodiscard]]
     constexpr TypeF<T> length() const requires(Real<T>)
@@ -131,9 +131,9 @@ class Vector2 {
     }
 
     /**
-     * @brief calculate the angle between this vector and another vector
-     * @param other the other vector
-     * @return the angle in radians
+     * @brief Calculate the angle between this vector and another vector.
+     * @param other the other vector.
+     * @return the angle in radians.
      *         only for real types (floating point and integers) not boolean.
      */
     [[nodiscard]]
@@ -166,9 +166,9 @@ class Vector2 {
     }
 
     /**
-     * @brief normalize the vector to unit length.
+     * @brief Normalize the vector to unit length.
      *        only for floating point types.
-        * @return Original vector length before normalization.
+     * @return Original vector length before normalization.
      */
     constexpr T normalize() requires(FP<T>)
     {
@@ -230,11 +230,11 @@ class Vector2 {
     }
 
   public:
-        /**
-         * @brief Equality operator.
-         * @param right Right-hand vector.
-         * @return True when vectors are equal.
-         */
+    /**
+     * @brief Equality operator.
+     * @param right Right-hand vector.
+     * @return True when vectors are equal.
+     */
     [[nodiscard]]
     constexpr bool operator==(const Vector2<T>& right) const
     {
@@ -369,9 +369,9 @@ class Vector2 {
     }
 
     /**
-     * @brief dot product
-        * @param other Right-hand vector.
-        * @return Dot product value.
+     * @brief Dot product.
+     * @param other Right-hand vector.
+     * @return Dot product value.
      */
     [[nodiscard]]
     constexpr T operator*(const Vector2<T>& other) const requires(Real<T>)
@@ -380,9 +380,9 @@ class Vector2 {
     }
 
     /**
-     * @brief cross product
-        * @param other Right-hand vector.
-        * @return Signed scalar cross product.
+     * @brief Cross product.
+     * @param other Right-hand vector.
+     * @return Signed scalar cross product.
      */
     [[nodiscard]]
     constexpr T operator^(const Vector2<T>& other) const requires(Real<T>)
@@ -439,4 +439,4 @@ using Vec2ui   = Vec2ui32;
 using Vec2f    = Vector2<float>;
 using Vec2d    = Vector2<double>;
 
-VI_MATH_NS_END
+V_MATH_NS_END

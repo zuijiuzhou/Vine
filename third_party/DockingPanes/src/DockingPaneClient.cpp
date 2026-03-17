@@ -22,13 +22,13 @@
 
 #include "DockingPaneClient.h"
 
-DockingPaneClient::DockingPaneClient(QWidget *parent) :
-    DockingPaneBase(parent)
+DockingPaneClient::DockingPaneClient(QWidget* parent)
+  : DockingPaneBase(parent)
 {
     this->setLayout(new QGridLayout());
 }
 
-void DockingPaneClient::setWidget(QWidget *widget)
+void DockingPaneClient::setWidget(QWidget* widget)
 {
     delete this->layout();
     this->setLayout(new QGridLayout());
@@ -37,9 +37,9 @@ void DockingPaneClient::setWidget(QWidget *widget)
     this->layout()->addWidget(widget);
 }
 
-void DockingPaneClient::saveLayout(QDomNode *parentNode, bool)
+void DockingPaneClient::saveLayout(QDomNode* parentNode, bool)
 {
-    QDomDocument doc = parentNode->ownerDocument();
-    QDomElement domElement = doc.createElement(this->metaObject()->className());
+    QDomDocument doc        = parentNode->ownerDocument();
+    QDomElement  domElement = doc.createElement(this->metaObject()->className());
     parentNode->appendChild(domElement);
 }

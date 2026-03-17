@@ -4,11 +4,12 @@
 
 #include "appfw_global.hpp"
 
-VI_APPFW_NS_BEGIN
+V_APPFW_NS_BEGIN
 
-class VI_APPFW_API AddinLoadContext : public RefObject {
-    VI_OBJECT_META_DECL;
+class V_APPFW_API AddinLoadContext : public RefObject {
+    V_OBJECT_META_DECL;
 };
+
 using AddinLoadContextPtr = RefPtr<AddinLoadContext>;
 
-VI_APPFW_NS_END
+V_APPFW_NS_END

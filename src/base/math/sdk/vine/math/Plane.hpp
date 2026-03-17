@@ -2,7 +2,7 @@
 
 #include "Line.hpp"
 
-VI_MATH_NS_BEGIN
+V_MATH_NS_BEGIN
 
 /**
  * @brief A 3D plane represented by an origin point and a normal vector.
@@ -51,4 +51,4 @@ class Plane {
 
 using Planef = Plane<float>;
 using Planed = Plane<double>;
-VI_MATH_NS_END
+V_MATH_NS_END

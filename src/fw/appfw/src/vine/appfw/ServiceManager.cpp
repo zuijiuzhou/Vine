@@ -2,33 +2,35 @@
 
 #include <vine/di/Container.hpp>
 
-VI_APPFW_NS_BEGIN
-VI_OBJECT_META_IMPL(ServiceManager, RefObject)
+V_APPFW_NS_BEGIN
+V_OBJECT_META_IMPL(ServiceManager, RefObject)
 
-struct ServiceManager::Data
-{
+struct ServiceManager::Data {
     di::Container* container = nullptr;
 };
 
 ServiceManager::ServiceManager()
-    : d(new Data())
+  : d(new Data())
 {
     d->container = new di::Container();
     d->container->strong_ref();
 }
 
-ServiceManager::~ServiceManager(){
+ServiceManager::~ServiceManager()
+{
     d->container->strong_unref();
     delete d;
 }
 
-ServiceManager* ServiceManager::registerService(di::Registration* reg){
+ServiceManager* ServiceManager::registerService(di::Registration* reg)
+{
 
     return this;
 }
 
-RefObject* ServiceManager::getService(Type type) const{
+RefObject* ServiceManager::getService(Type type) const
+{
     return d->container->resolve(type);
 }
 
-VI_APPFW_NS_END
+V_APPFW_NS_END

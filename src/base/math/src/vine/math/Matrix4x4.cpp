@@ -8,7 +8,7 @@
 #include <vine/math/Point3.hpp>
 #include <vine/math/Vector3.hpp>
 
-VI_MATH_NS_BEGIN
+V_MATH_NS_BEGIN
 
 #define TMPL_PREFIX template <typename T>
 
@@ -21,6 +21,17 @@ struct Rotation3x3 {
     T m10, m11, m12;
     T m20, m21, m22;
 };
+
+/**
+  变换连乘顺序说明（列向量约定，点在右侧）：
+
+  1) 若 T1、T2、T3、T4 均在世界坐标系中定义并按顺序作用于点 p，
+      则结果为：p' = T4 * T3 * T2 * T1 * p
+
+  2) 若 C1、C2、C3、C4 表示层级嵌套坐标系（C1 最外层，C4 最内层），
+      则结果为：p' = C1 * C2 * C3 * C4 * p
+ */
+
 
 template <typename T>
 bool buildRotation3x3FromQuat(const Quaternion<T>& quat, Rotation3x3<T>& out)
@@ -37,7 +48,9 @@ bool buildRotation3x3FromQuat(const Quaternion<T>& quat, Rotation3x3<T>& out)
     // otherwise introduce unintended scale into the matrix.
     auto       q      = quat;
     const auto q_len2 = q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w;
-    if (q_len2 == T(0)) { return false; }
+    if (q_len2 == T(0)) {
+        return false;
+    }
 
     if (!math::isEqual(q_len2, T(1), T(1e-12))) {
         const auto inv_q_len = T(1) / std::sqrt(q_len2);
@@ -201,165 +214,6 @@ void Matrix4x4<T>::makeRotation(const Quaternion<T>& quat)
     vecs[3][3] = T(1);
 }
 
-TMPL_PREFIX Matrix4x4<T>& Matrix4x4<T>::preMulti(const Matrix4x4<T>& left)
-{
-    // Pre-multiply: M := left * M.
-    // With column-major storage vecs[col][row], each new column is:
-    // new_col = left * old_col.
-    T old[4][4];
-    std::memcpy(old, vecs, sizeof(old));
-
-    for (size_t col = 0; col < 4; ++col) {
-        for (size_t row = 0; row < 4; ++row) {
-            T v = T(0);
-            for (size_t k = 0; k < 4; ++k) { v += left.vecs[k][row] * old[col][k]; }
-            vecs[col][row] = v;
-        }
-    }
-
-    return *this;
-}
-
-TMPL_PREFIX Matrix4x4<T>& Matrix4x4<T>::postMulti(const Matrix4x4<T>& right)
-{
-    // Post-multiply: M := M * right.
-    // In column-major form, each output column is a linear combination
-    // of old columns weighted by the corresponding column of right.
-    T old[4][4];
-    std::memcpy(old, vecs, sizeof(old));
-
-    for (size_t col = 0; col < 4; ++col) {
-        for (size_t row = 0; row < 4; ++row) {
-            T v = T(0);
-            for (size_t k = 0; k < 4; ++k) { v += old[k][row] * right.vecs[col][k]; }
-            vecs[col][row] = v;
-        }
-    }
-
-    return *this;
-}
-
-TMPL_PREFIX Matrix4x4<T>& Matrix4x4<T>::preRotate(const Vector3<T>& axis, T angle)
-{
-    // Prepend axis-angle rotation: M := R * M.
-    return preRotate(Quaternion<T>(angle, axis));
-}
-
-TMPL_PREFIX Matrix4x4<T>& Matrix4x4<T>::postRotate(const Vector3<T>& axis, T angle)
-{
-    // Append axis-angle rotation: M := M * R.
-    return postRotate(Quaternion<T>(angle, axis));
-}
-
-TMPL_PREFIX Matrix4x4<T>& Matrix4x4<T>::preRotate(const Quaternion<T>& quat)
-{
-    Rotation3x3<T> rotation;
-    if (!buildRotation3x3FromQuat(quat, rotation)) { return *this; }
-
-    // Prepend quaternion rotation: M := R * M.
-    // Left multiplication rotates matrix rows. Equivalent implementation here:
-    // for each column, rotate its xyz triplet by R; row 3 remains unchanged.
-    for (size_t column = 0; column < 4; ++column) {
-        const auto old_x = vecs[column][0];
-        const auto old_y = vecs[column][1];
-        const auto old_z = vecs[column][2];
-
-        vecs[column][0] = rotation.m00 * old_x + rotation.m10 * old_y + rotation.m20 * old_z;
-        vecs[column][1] = rotation.m01 * old_x + rotation.m11 * old_y + rotation.m21 * old_z;
-        vecs[column][2] = rotation.m02 * old_x + rotation.m12 * old_y + rotation.m22 * old_z;
-    }
-
-    return *this;
-}
-
-TMPL_PREFIX Matrix4x4<T>& Matrix4x4<T>::postRotate(const Quaternion<T>& quat)
-{
-    Rotation3x3<T> rotation;
-    if (!buildRotation3x3FromQuat(quat, rotation)) { return *this; }
-
-    // Append quaternion rotation: M := M * R.
-    // Right multiplication rotates basis columns. For each row, update
-    // columns 0..2 as a 3-term linear combination by R.
-    for (size_t row = 0; row < 4; ++row) {
-        const auto old_col0 = vecs[0][row];
-        const auto old_col1 = vecs[1][row];
-        const auto old_col2 = vecs[2][row];
-
-        vecs[0][row] = old_col0 * rotation.m00 + old_col1 * rotation.m01 + old_col2 * rotation.m02;
-        vecs[1][row] = old_col0 * rotation.m10 + old_col1 * rotation.m11 + old_col2 * rotation.m12;
-        vecs[2][row] = old_col0 * rotation.m20 + old_col1 * rotation.m21 + old_col2 * rotation.m22;
-    }
-
-    return *this;
-}
-
-TMPL_PREFIX Matrix4x4<T>& Matrix4x4<T>::preTranslate(const Vector3<T>& offset)
-{
-    const auto tx = offset.x;
-    const auto ty = offset.y;
-    const auto tz = offset.z;
-
-    // Prepend translation: M := T * M.
-    // Left multiply by translation modifies rows 0..2 with row 3 contribution:
-    // row_xyz += offset_xyz * row_w.
-    for (size_t col = 0; col < 4; ++col) {
-        const auto w = vecs[col][3];
-        vecs[col][0] += tx * w;
-        vecs[col][1] += ty * w;
-        vecs[col][2] += tz * w;
-    }
-
-    return *this;
-}
-
-TMPL_PREFIX Matrix4x4<T>& Matrix4x4<T>::postTranslate(const Vector3<T>& offset)
-{
-    const auto tx = offset.x;
-    const auto ty = offset.y;
-    const auto tz = offset.z;
-
-    // Append translation: M := M * T.
-    // Right multiply by translation updates only column 3:
-    // col3 += tx*col0 + ty*col1 + tz*col2.
-    for (size_t row = 0; row < 4; ++row) { vecs[3][row] += vecs[0][row] * tx + vecs[1][row] * ty + vecs[2][row] * tz; }
-
-    return *this;
-}
-
-TMPL_PREFIX Matrix4x4<T>& Matrix4x4<T>::preScale(const Vector3<T>& factor)
-{
-    const auto sx = factor.x;
-    const auto sy = factor.y;
-    const auto sz = factor.z;
-
-    // Prepend scale: M := S * M.
-    // Left multiply by diagonal scale scales rows 0..2.
-    for (size_t col = 0; col < 4; ++col) {
-        vecs[col][0] *= sx;
-        vecs[col][1] *= sy;
-        vecs[col][2] *= sz;
-    }
-
-    return *this;
-}
-
-TMPL_PREFIX Matrix4x4<T>& Matrix4x4<T>::postScale(const Vector3<T>& factor)
-{
-    const auto sx = factor.x;
-    const auto sy = factor.y;
-    const auto sz = factor.z;
-
-    // Append scale: M := M * S.
-    // Right multiply by diagonal scale scales columns 0..2.
-    for (size_t row = 0; row < 4; ++row) {
-        vecs[0][row] *= sx;
-        vecs[1][row] *= sy;
-        vecs[2][row] *= sz;
-    }
-
-    return *this;
-}
-
 TMPL_PREFIX void Matrix4x4<T>::makeLookAt(const Point3<T>& eye, const Point3<T>& target, const Vector3<T>& up)
 {
     // Build camera-to-world basis first, then invert to get the view matrix.
@@ -420,6 +274,212 @@ TMPL_PREFIX void Matrix4x4<T>::makePerspective(double fovy, double aspect_ratio,
     vecs[3][2] = T(2 * z_far * z_near / (z_near - z_far)); // 2*far*near/(near-far)
 }
 
+TMPL_PREFIX void Matrix4x4<T>::makeReflection(const Vector3<T>& plane_normal, T plane_offset)
+{
+    // Build a mirror matrix that reflects across the plane defined by
+    // plane_normal and plane_offset. The plane equation is:
+    // plane_normal.x * x + plane_normal.y * y + plane_normal.z * z + plane_offset = 0.
+    // The resulting matrix can be used to transform points from one side of the
+    // plane to the other, effectively mirroring them across the plane.
+
+    auto n = plane_normal;
+    n.normalize();
+
+    const auto a = n.x;
+    const auto b = n.y;
+    const auto c = n.z;
+    const auto d = plane_offset;
+
+    vecs[0][0] = T(1) - T(2) * a * a;
+    vecs[0][1] = T(-2) * a * b;
+    vecs[0][2] = T(-2) * a * c;
+    vecs[0][3] = T(0);
+
+    vecs[1][0] = T(-2) * a * b;
+    vecs[1][1] = T(1) - T(2) * b * b;
+    vecs[1][2] = T(-2) * b * c;
+    vecs[1][3] = T(0);
+
+    vecs[2][0] = T(-2) * a * c;
+    vecs[2][1] = T(-2) * b * c;
+    vecs[2][2] = T(1) - T(2) * c * c;
+    vecs[2][3] = T(0);
+
+    vecs[3][0] = T(-2) * a * d;
+    vecs[3][1] = T(-2) * b * d;
+    vecs[3][2] = T(-2) * c * d;
+    vecs[3][3] = T(1);
+}
+
+TMPL_PREFIX Matrix4x4<T>& Matrix4x4<T>::preMulti(const Matrix4x4<T>& left)
+{
+    // Pre-multiply: M := left * M.
+    // With column-major storage vecs[col][row], each new column is:
+    // new_col = left * old_col.
+    T old[4][4];
+    std::memcpy(old, vecs, sizeof(old));
+
+    for (size_t col = 0; col < 4; ++col) {
+        for (size_t row = 0; row < 4; ++row) {
+            T v = T(0);
+            for (size_t k = 0; k < 4; ++k) {
+                v += left.vecs[k][row] * old[col][k];
+            }
+            vecs[col][row] = v;
+        }
+    }
+
+    return *this;
+}
+
+TMPL_PREFIX Matrix4x4<T>& Matrix4x4<T>::postMulti(const Matrix4x4<T>& right)
+{
+    // Post-multiply: M := M * right.
+    // In column-major form, each output column is a linear combination
+    // of old columns weighted by the corresponding column of right.
+    T old[4][4];
+    std::memcpy(old, vecs, sizeof(old));
+
+    for (size_t col = 0; col < 4; ++col) {
+        for (size_t row = 0; row < 4; ++row) {
+            T v = T(0);
+            for (size_t k = 0; k < 4; ++k) {
+                v += old[k][row] * right.vecs[col][k];
+            }
+            vecs[col][row] = v;
+        }
+    }
+
+    return *this;
+}
+
+TMPL_PREFIX Matrix4x4<T>& Matrix4x4<T>::preRotate(const Vector3<T>& axis, T angle)
+{
+    // Prepend axis-angle rotation: M := R * M.
+    return preRotate(Quaternion<T>(angle, axis));
+}
+
+TMPL_PREFIX Matrix4x4<T>& Matrix4x4<T>::postRotate(const Vector3<T>& axis, T angle)
+{
+    // Append axis-angle rotation: M := M * R.
+    return postRotate(Quaternion<T>(angle, axis));
+}
+
+TMPL_PREFIX Matrix4x4<T>& Matrix4x4<T>::preRotate(const Quaternion<T>& quat)
+{
+    Rotation3x3<T> rotation;
+    if (!buildRotation3x3FromQuat(quat, rotation)) {
+        return *this;
+    }
+
+    // Prepend quaternion rotation: M := R * M.
+    // Left multiplication rotates matrix rows. Equivalent implementation here:
+    // for each column, rotate its xyz triplet by R; row 3 remains unchanged.
+    for (size_t column = 0; column < 4; ++column) {
+        const auto old_x = vecs[column][0];
+        const auto old_y = vecs[column][1];
+        const auto old_z = vecs[column][2];
+
+        vecs[column][0] = rotation.m00 * old_x + rotation.m10 * old_y + rotation.m20 * old_z;
+        vecs[column][1] = rotation.m01 * old_x + rotation.m11 * old_y + rotation.m21 * old_z;
+        vecs[column][2] = rotation.m02 * old_x + rotation.m12 * old_y + rotation.m22 * old_z;
+    }
+
+    return *this;
+}
+
+TMPL_PREFIX Matrix4x4<T>& Matrix4x4<T>::postRotate(const Quaternion<T>& quat)
+{
+    Rotation3x3<T> rotation;
+    if (!buildRotation3x3FromQuat(quat, rotation)) {
+        return *this;
+    }
+
+    // Append quaternion rotation: M := M * R.
+    // Right multiplication rotates basis columns. For each row, update
+    // columns 0..2 as a 3-term linear combination by R.
+    for (size_t row = 0; row < 4; ++row) {
+        const auto old_col0 = vecs[0][row];
+        const auto old_col1 = vecs[1][row];
+        const auto old_col2 = vecs[2][row];
+
+        vecs[0][row] = old_col0 * rotation.m00 + old_col1 * rotation.m01 + old_col2 * rotation.m02;
+        vecs[1][row] = old_col0 * rotation.m10 + old_col1 * rotation.m11 + old_col2 * rotation.m12;
+        vecs[2][row] = old_col0 * rotation.m20 + old_col1 * rotation.m21 + old_col2 * rotation.m22;
+    }
+
+    return *this;
+}
+
+TMPL_PREFIX Matrix4x4<T>& Matrix4x4<T>::preTranslate(const Vector3<T>& offset)
+{
+    const auto tx = offset.x;
+    const auto ty = offset.y;
+    const auto tz = offset.z;
+
+    // Prepend translation: M := T * M.
+    // Left multiply by translation modifies rows 0..2 with row 3 contribution:
+    // row_xyz += offset_xyz * row_w.
+    for (size_t col = 0; col < 4; ++col) {
+        const auto w = vecs[col][3];
+        vecs[col][0] += tx * w;
+        vecs[col][1] += ty * w;
+        vecs[col][2] += tz * w;
+    }
+
+    return *this;
+}
+
+TMPL_PREFIX Matrix4x4<T>& Matrix4x4<T>::postTranslate(const Vector3<T>& offset)
+{
+    const auto tx = offset.x;
+    const auto ty = offset.y;
+    const auto tz = offset.z;
+
+    // Append translation: M := M * T.
+    // Right multiply by translation updates only column 3:
+    // col3 += tx*col0 + ty*col1 + tz*col2.
+    for (size_t row = 0; row < 4; ++row) {
+        vecs[3][row] += vecs[0][row] * tx + vecs[1][row] * ty + vecs[2][row] * tz;
+    }
+
+    return *this;
+}
+
+TMPL_PREFIX Matrix4x4<T>& Matrix4x4<T>::preScale(const Vector3<T>& factor)
+{
+    const auto sx = factor.x;
+    const auto sy = factor.y;
+    const auto sz = factor.z;
+
+    // Prepend scale: M := S * M.
+    // Left multiply by diagonal scale scales rows 0..2.
+    for (size_t col = 0; col < 4; ++col) {
+        vecs[col][0] *= sx;
+        vecs[col][1] *= sy;
+        vecs[col][2] *= sz;
+    }
+
+    return *this;
+}
+
+TMPL_PREFIX Matrix4x4<T>& Matrix4x4<T>::postScale(const Vector3<T>& factor)
+{
+    const auto sx = factor.x;
+    const auto sy = factor.y;
+    const auto sz = factor.z;
+
+    // Append scale: M := M * S.
+    // Right multiply by diagonal scale scales columns 0..2.
+    for (size_t row = 0; row < 4; ++row) {
+        vecs[0][row] *= sx;
+        vecs[1][row] *= sy;
+        vecs[2][row] *= sz;
+    }
+
+    return *this;
+}
+
 TMPL_PREFIX void Matrix4x4<T>::setBasis(const Point3<T>& origin, const Vector3<T>& x_axis, const Vector3<T>& y_axis, const Vector3<T>& z_axis)
 {
     // Compose an affine transform from basis vectors and origin.
@@ -441,6 +501,26 @@ TMPL_PREFIX void Matrix4x4<T>::getBasis(Point3<T>& o_origin, Vector3<T>& o_x_axi
     o_x_axis = vecs[0].asVector3();
     o_y_axis = vecs[1].asVector3();
     o_z_axis = vecs[2].asVector3();
+}
+
+TMPL_PREFIX T Matrix4x4<T>::determinant() const
+{
+    // Compute the determinant of a 4x4 matrix.
+    // This is needed for inversion and can be used to detect singularity.
+    // The formula is derived from expansion by minors and is optimized
+    // to minimize redundant calculations.
+
+    const auto a2323 = vecs[2][2] * vecs[3][3] - vecs[2][3] * vecs[3][2];
+    const auto a1323 = vecs[2][1] * vecs[3][3] - vecs[2][3] * vecs[3][1];
+    const auto a1223 = vecs[2][1] * vecs[3][2] - vecs[2][2] * vecs[3][1];
+    const auto a0323 = vecs[2][0] * vecs[3][3] - vecs[2][3] * vecs[3][0];
+    const auto a0223 = vecs[2][0] * vecs[3][2] - vecs[2][2] * vecs[3][0];
+    const auto a0123 = vecs[2][0] * vecs[3][1] - vecs[2][1] * vecs[3][0];
+
+    return (vecs[0][0] * (vecs[1][1] * a2323 - vecs[1][2] * a1323 + vecs[1][3] * a1223) -
+            vecs[0][1] * (vecs[1][0] * a2323 - vecs[1][2] * a0323 + vecs[1][3] * a0223) +
+            vecs[0][2] * (vecs[1][0] * a1323 - vecs[1][1] * a0323 + vecs[1][3] * a0123) -
+            vecs[0][3] * (vecs[1][0] * a1223 - vecs[1][1] * a0223 + vecs[1][2] * a0123));
 }
 
 TMPL_PREFIX void Matrix4x4<T>::transpose()
@@ -514,13 +594,129 @@ TMPL_PREFIX void Matrix4x4<T>::invert()
     const T det = vecs[0][0] * adj.vecs[0][0] + vecs[0][1] * adj.vecs[1][0] + vecs[0][2] * adj.vecs[2][0] + vecs[0][3] * adj.vecs[3][0];
 
     // Singular matrix (det == 0): keep original matrix unchanged.
-    if (math::isZero(det, EPS<T>())) { return; }
+    if (math::isZero(det, EPS<T>())) {
+        return;
+    }
 
     // M^(-1) = (1/det) * adj(M)
     const T inv_det = T(1) / det;
     for (int i = 0; i < 4; ++i) {
-        for (int j = 0; j < 4; ++j) { vecs[i][j] = adj.vecs[i][j] * inv_det; }
+        for (int j = 0; j < 4; ++j) {
+            vecs[i][j] = adj.vecs[i][j] * inv_det;
+        }
     }
+}
+
+TMPL_PREFIX Quaternion<T> Matrix4x4<T>::rotation() const
+{
+    // Extract the quaternion from the upper-left 3x3 block.
+    // This implementation matches makeRotation(quat), which stores:
+    // R00 = 1 - 2(y^2 + z^2),  R01 = 2(xy - zw),      R02 = 2(xz + yw)
+    // R10 = 2(xy + zw),        R11 = 1 - 2(x^2 + z^2), R12 = 2(yz - xw)
+    // R20 = 2(xz - yw),        R21 = 2(yz + xw),      R22 = 1 - 2(x^2 + y^2)
+    // Therefore:
+    // R21 - R12 = 4xw, R02 - R20 = 4yw, R10 - R01 = 4zw.
+    // The branch on trace / dominant diagonal keeps the extraction numerically
+    // stable near 180-degree rotations, where one quaternion component dominates.
+    //
+    // If the matrix also contains non-uniform scale, normalize each basis column
+    // first so the extracted quaternion depends only on the rotational part.
+
+    const auto col0_len2 = vecs[0][0] * vecs[0][0] + vecs[0][1] * vecs[0][1] + vecs[0][2] * vecs[0][2];
+    const auto col1_len2 = vecs[1][0] * vecs[1][0] + vecs[1][1] * vecs[1][1] + vecs[1][2] * vecs[1][2];
+    const auto col2_len2 = vecs[2][0] * vecs[2][0] + vecs[2][1] * vecs[2][1] + vecs[2][2] * vecs[2][2];
+
+    Quaternion<T> quat;
+    if (math::isZero(col0_len2, EPS<T>()) || math::isZero(col1_len2, EPS<T>()) || math::isZero(col2_len2, EPS<T>())) {
+        quat.x = T(0);
+        quat.y = T(0);
+        quat.z = T(0);
+        quat.w = T(1);
+        return quat;
+    }
+
+    const auto inv_col0_len = T(1) / std::sqrt(col0_len2);
+    const auto inv_col1_len = T(1) / std::sqrt(col1_len2);
+    const auto inv_col2_len = T(1) / std::sqrt(col2_len2);
+
+    const auto r00 = vecs[0][0] * inv_col0_len;
+    const auto r10 = vecs[0][1] * inv_col0_len;
+    const auto r20 = vecs[0][2] * inv_col0_len;
+    const auto r01 = vecs[1][0] * inv_col1_len;
+    const auto r11 = vecs[1][1] * inv_col1_len;
+    const auto r21 = vecs[1][2] * inv_col1_len;
+    const auto r02 = vecs[2][0] * inv_col2_len;
+    const auto r12 = vecs[2][1] * inv_col2_len;
+    const auto r22 = vecs[2][2] * inv_col2_len;
+
+    const auto trace = r00 + r11 + r22;
+
+    if (trace > T(0)) {
+        const auto s = T(2) * std::sqrt(trace + T(1)); // s = 4 * qw
+        quat.w       = T(0.25) * s;
+        quat.x       = (r21 - r12) / s;
+        quat.y       = (r02 - r20) / s;
+        quat.z       = (r10 - r01) / s;
+    }
+    else if (r00 > r11 && r00 > r22) {
+        const auto s = T(2) * std::sqrt(T(1) + r00 - r11 - r22); // s = 4 * qx
+        quat.w       = (r21 - r12) / s;
+        quat.x       = T(0.25) * s;
+        quat.y       = (r01 + r10) / s;
+        quat.z       = (r02 + r20) / s;
+    }
+    else if (r11 > r22) {
+        const auto s = T(2) * std::sqrt(T(1) + r11 - r00 - r22); // s = 4 * qy
+        quat.w       = (r02 - r20) / s;
+        quat.x       = (r01 + r10) / s;
+        quat.y       = T(0.25) * s;
+        quat.z       = (r12 + r21) / s;
+    }
+    else {
+        const auto s = T(2) * std::sqrt(T(1) + r22 - r00 - r11); // s = 4 * qz
+        quat.w       = (r10 - r01) / s;
+        quat.x       = (r02 + r20) / s;
+        quat.y       = (r12 + r21) / s;
+        quat.z       = T(0.25) * s;
+    }
+
+    const auto quat_len2 = quat.x * quat.x + quat.y * quat.y + quat.z * quat.z + quat.w * quat.w;
+    if (math::isZero(quat_len2, EPS<T>())) {
+        quat.x = T(0);
+        quat.y = T(0);
+        quat.z = T(0);
+        quat.w = T(1);
+        return quat;
+    }
+
+    const auto inv_quat_len = T(1) / std::sqrt(quat_len2);
+    quat.x *= inv_quat_len;
+    quat.y *= inv_quat_len;
+    quat.z *= inv_quat_len;
+    quat.w *= inv_quat_len;
+    return quat;
+}
+
+TMPL_PREFIX Vector3<T> Matrix4x4<T>::scaleFactors() const
+{
+    return Vector3<T>(vecs[0][0], vecs[1][1], vecs[2][2]);
+}
+
+TMPL_PREFIX bool Matrix4x4<T>::isIdentity(T eps) const
+{
+    // Check if matrix is identity within tolerance.
+    // This handles cases like M * M^(-1) which may have slight errors.
+    return math::isEqual(vecs[0][0], T(1), eps) && math::isZero(vecs[0][1], eps) && math::isZero(vecs[0][2], eps) && math::isZero(vecs[0][3], eps) &&
+           math::isZero(vecs[1][0], eps) && math::isEqual(vecs[1][1], T(1), eps) && math::isZero(vecs[1][2], eps) && math::isZero(vecs[1][3], eps) &&
+           math::isZero(vecs[2][0], eps) && math::isZero(vecs[2][1], eps) && math::isEqual(vecs[2][2], T(1), eps) && math::isZero(vecs[2][3], eps) &&
+           math::isZero(vecs[3][0], eps) && math::isZero(vecs[3][1], eps) && math::isZero(vecs[3][2], eps) && math::isEqual(vecs[3][3], T(1), eps);
+}
+
+TMPL_PREFIX bool Matrix4x4<T>::isAffine(T eps) const
+{
+    // Check if bottom row is [0 0 0 1] within tolerance.
+    // Use epsilon to tolerate accumulated floating-point errors.
+    return math::isZero(vecs[0][3], eps) && math::isZero(vecs[1][3], eps) && math::isZero(vecs[2][3], eps) && math::isEqual(vecs[3][3], T(1), eps);
 }
 
 TMPL_PREFIX bool Matrix4x4<T>::isRigid(T eps) const
@@ -539,46 +735,41 @@ TMPL_PREFIX bool Matrix4x4<T>::isRigid(T eps) const
     const Vector3<T>& z = vecs[2].asVector3();
 
     // Unit-length constraints.
-    const auto len_x = x.length();
-    const auto len_y = y.length();
-    const auto len_z = z.length();
+    // Use squared lengths to avoid sqrt. If |l-1| <= eps, then
+    // |l^2-1| = |(l-1)(l+1)| <= eps * (2 + eps) = 2*eps + eps^2.
+    const auto len2_x  = x.length2();
+    const auto len2_y  = y.length2();
+    const auto len2_z  = z.length2();
+    const auto eps_len = T(2) * eps + eps * eps;
 
-    if (!math::isEqual(len_x, T(1), eps) || !math::isEqual(len_y, T(1), eps) || !math::isEqual(len_z, T(1), eps)) { return false; }
+    // Check if each basis vector is unit length within tolerance. This allows for small numerical errors while rejecting significant scale.
+    if (!math::isEqual(len2_x, T(1), eps_len) || !math::isEqual(len2_y, T(1), eps_len) || !math::isEqual(len2_z, T(1), eps_len)) {
+        return false;
+    }
 
     // Orthogonality constraints.
     // x·y = 0, y·z = 0, z·x = 0
-    if (!math::isZero(x.dot(y), eps) || !math::isZero(y.dot(z), eps) || !math::isZero(z.dot(x), eps)) { return false; }
+    if (!math::isZero(x.dot(y), eps) || !math::isZero(y.dot(z), eps) || !math::isZero(z.dot(x), eps)) {
+        return false;
+    }
 
     // Enforce proper rotation (right-handed frame) and reject reflection.
     // For pure rotation basis: x x y = z and det(R) = +1.
     const auto rhs = x.cross(y).dot(z);
-    if (!math::isEqual(rhs, T(1), eps)) { return false; }
+    if (!math::isEqual(rhs, T(1), eps)) {
+        return false;
+    }
 
     return true;
-}
-
-TMPL_PREFIX bool Matrix4x4<T>::isAffine(T eps) const
-{
-    // Check if bottom row is [0 0 0 1] within tolerance.
-    // Use epsilon to tolerate accumulated floating-point errors.
-    return math::isZero(vecs[0][3], eps) && math::isZero(vecs[1][3], eps) && math::isZero(vecs[2][3], eps) && math::isEqual(vecs[3][3], T(1), eps);
-}
-
-TMPL_PREFIX bool Matrix4x4<T>::isIdentity(T eps) const
-{
-    // Check if matrix is identity within tolerance.
-    // This handles cases like M * M^(-1) which may have slight errors.
-    return math::isEqual(vecs[0][0], T(1), eps) && math::isZero(vecs[0][1], eps) && math::isZero(vecs[0][2], eps) && math::isZero(vecs[0][3], eps) &&
-           math::isZero(vecs[1][0], eps) && math::isEqual(vecs[1][1], T(1), eps) && math::isZero(vecs[1][2], eps) && math::isZero(vecs[1][3], eps) &&
-           math::isZero(vecs[2][0], eps) && math::isZero(vecs[2][1], eps) && math::isEqual(vecs[2][2], T(1), eps) && math::isZero(vecs[2][3], eps) &&
-           math::isZero(vecs[3][0], eps) && math::isZero(vecs[3][1], eps) && math::isZero(vecs[3][2], eps) && math::isEqual(vecs[3][3], T(1), eps);
 }
 
 TMPL_PREFIX bool Matrix4x4<T>::isEqual(const Matrix4x4<T>& other, T eps) const
 {
     for (int i = 0; i < 4; ++i) {
         for (int j = 0; j < 4; ++j) {
-            if (!math::isEqual(vecs[i][j], other.vecs[i][j], eps)) { return false; }
+            if (!math::isEqual(vecs[i][j], other.vecs[i][j], eps)) {
+                return false;
+            }
         }
     }
     return true;
@@ -588,7 +779,9 @@ TMPL_PREFIX bool Matrix4x4<T>::isZero(T eps) const
 {
     for (int i = 0; i < 4; ++i) {
         for (int j = 0; j < 4; ++j) {
-            if (!math::isZero(vecs[i][j], eps)) { return false; }
+            if (!math::isZero(vecs[i][j], eps)) {
+                return false;
+            }
         }
     }
     return true;
@@ -687,8 +880,12 @@ TMPL_PREFIX Point3<T> operator*(const Matrix4x4<T>& m, const Point3<T>& p)
 
     // Fast path for affine transform (w == 1), otherwise perspective divide.
     // If w is near zero, skip divide to avoid generating infinities/NaNs.
-    if (math::isEqual(w, T(1), T(1e-12))) { return Point3<T>(x, y, z); }
-    if (math::isZero(w, T(1e-12))) { return Point3<T>(x, y, z); }
+    if (math::isEqual(w, T(1), T(1e-12))) {
+        return Point3<T>(x, y, z);
+    }
+    if (math::isZero(w, T(1e-12))) {
+        return Point3<T>(x, y, z);
+    }
     else {
         return Point3<T>(x / w, y / w, z / w);
     }
@@ -696,11 +893,11 @@ TMPL_PREFIX Point3<T> operator*(const Matrix4x4<T>& m, const Point3<T>& p)
 
 #undef TMPL_PREFIX
 
-template class VI_MATH_API Matrix4x4<float>;
-template class VI_MATH_API Matrix4x4<double>;
-template VI_MATH_API Vector3<float> operator*(const Matrix4x4<float>& m, const Vector3<float>& v);
-template VI_MATH_API Vector3<double> operator*(const Matrix4x4<double>& m, const Vector3<double>& v);
-template VI_MATH_API Point3<float> operator*(const Matrix4x4<float>& m, const Point3<float>& p);
-template VI_MATH_API Point3<double> operator*(const Matrix4x4<double>& m, const Point3<double>& p);
+template class V_MATH_API Matrix4x4<float>;
+template class V_MATH_API Matrix4x4<double>;
+template V_MATH_API Vector3<float> operator*(const Matrix4x4<float>& m, const Vector3<float>& v);
+template V_MATH_API Vector3<double> operator*(const Matrix4x4<double>& m, const Vector3<double>& v);
+template V_MATH_API Point3<float> operator*(const Matrix4x4<float>& m, const Point3<float>& p);
+template V_MATH_API Point3<double> operator*(const Matrix4x4<double>& m, const Point3<double>& p);
 
-VI_MATH_NS_END
+V_MATH_NS_END

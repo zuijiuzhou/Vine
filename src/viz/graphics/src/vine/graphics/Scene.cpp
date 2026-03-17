@@ -1,15 +1,13 @@
 ﻿#include <vine/graphics/Scene.hpp>
 
-VI_GRAPHICS_NS_BEGIN
+V_GRAPHICS_NS_BEGIN
 
-VI_OBJECT_META_IMPL(Scene, RefObject);
+V_OBJECT_META_IMPL(Scene, RefObject);
 
-struct Scene::Data {
+struct Scene::Data {};
 
-};
+Scene::Scene()
+  : d(new Data())
+{}
 
-Scene::Scene() : d(new Data()){
-
-}
-
-VI_GRAPHICS_NS_END
+V_GRAPHICS_NS_END

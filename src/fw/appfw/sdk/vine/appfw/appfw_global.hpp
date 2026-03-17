@@ -2,28 +2,27 @@
 
 #include <vine/core_global.hpp>
 
-#ifdef VI_APPFW_LIB
-#    define VI_APPFW_API __API_EXPORT__
+#ifdef V_APPFW_LIB
+#    define V_APPFW_API __API_EXPORT__
 #else
-#    define VI_APPFW_API __API_IMPORT__
+#    define V_APPFW_API __API_IMPORT__
 #endif
 
-#define VI_APPFW_NS_BEGIN                                                                                              \
-    namespace VI_ROOT_NS                                                                                               \
-    {                                                                                                                  \
-    namespace appfw                                                                                                    \
+#define V_APPFW_NS_BEGIN                                                                                                                                       \
+    namespace V_ROOT_NS                                                                                                                                        \
+    {                                                                                                                                                          \
+    namespace appfw                                                                                                                                            \
     {
 
-#define VI_APPFW_NS_END                                                                                                \
-    }                                                                                                                  \
+#define V_APPFW_NS_END                                                                                                                                         \
+    }                                                                                                                                                          \
     }
 
-#define VI_APPFWGUI_NS_BEGIN                                                                                           \
-    VI_APPFW_NS_BEGIN                                                                                                  \
-    namespace gui                                                                                                      \
+#define V_APPFWGUI_NS_BEGIN                                                                                                                                    \
+    V_APPFW_NS_BEGIN                                                                                                                                           \
+    namespace gui                                                                                                                                              \
     {
 
-#define VI_APPFWGUI_NS_END                                                                                             \
-    VI_APPFW_NS_END                                                                                                    \
+#define V_APPFWGUI_NS_END                                                                                                                                      \
+    V_APPFW_NS_END                                                                                                                                             \
     }
-

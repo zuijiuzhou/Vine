@@ -2,16 +2,16 @@
 #include "di_global.hpp"
 #include <vine/RefObject.hpp>
 
-VI_DI_NS_BEGIN
+V_DI_NS_BEGIN
 
 class Registration;
 
-VI_DECLARE_PIMPL(Container)
-VI_DEFINE_PTR(Container)
+V_DECLARE_PIMPL(Container)
+V_DEFINE_PTR(Container)
 
-class VI_DI_API Container : public RefObject {
-    VI_OBJECT_META_DECL
-    VI_DECLARE_PRIVATE(Container)
+class V_DI_API Container : public RefObject {
+    V_OBJECT_META_DECL
+    V_DECLARE_PRIVATE(Container)
 
   public:
     Container();
@@ -31,4 +31,4 @@ T* Container::resolve() const
     return resolve(T::desc());
 }
 
-VI_DI_NS_END
+V_DI_NS_END

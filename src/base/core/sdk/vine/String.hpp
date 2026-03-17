@@ -7,7 +7,7 @@
 #include <string_view>
 #include <vector>
 
-VI_CORE_NS_BEGIN
+V_CORE_NS_BEGIN
 
 /** Optimized C-style string length function
  *  Supports char, char16_t, and char32_t with platform-specific optimizations.
@@ -22,25 +22,25 @@ size_t cstrlen(const T* data);
  *  Uses optimized std::strlen for maximum performance.
  */
 template <>
-VI_CORE_API size_t cstrlen<char>(const char* data);
+V_CORE_API size_t cstrlen<char>(const char* data);
 
 /** Specialization for char16_t
  *  Platform-optimized: uses wcslen on Windows, pointer traversal on Unix/Linux.
  */
 template <>
-VI_CORE_API size_t cstrlen<char16_t>(const char16_t* data);
+V_CORE_API size_t cstrlen<char16_t>(const char16_t* data);
 
 /** Specialization for char32_t
  *  Platform-optimized: uses wcslen on Unix/Linux, pointer traversal on Windows.
  */
 template <>
-VI_CORE_API size_t cstrlen<char32_t>(const char32_t* data);
+V_CORE_API size_t cstrlen<char32_t>(const char32_t* data);
 
 /** String class that wraps std::string and provides additional functionality
  *  such as encoding conversions, formatting, and splitting.
  *  its a utf-8 string, but the internal storage is std::string for simplicity and performance.
  */
-class VI_CORE_API String final {
+class V_CORE_API String final {
 
   public:
     using impl_type              = std::u8string;
@@ -1656,4 +1656,4 @@ size_t cstrlen(const T* data)
     return p - data;
 }
 
-VI_CORE_NS_END
+V_CORE_NS_END

@@ -6,9 +6,9 @@
 #include "Object.hpp"
 #include "Ptr.hpp"
 
-VI_CORE_NS_BEGIN
+V_CORE_NS_BEGIN
 
-VI_DECLARE_PIMPL(RefObject)
+V_DECLARE_PIMPL(RefObject)
 
 template <typename T>
 concept RefObjectBased = std::is_base_of<RefObject, T>::value;
@@ -19,11 +19,11 @@ concept RefObjectBased = std::is_base_of<RefObject, T>::value;
  * The control block is used to manage the reference counts and ensure proper deletion of the object and control block when necessary.
  * @note: RefObject cannot be moved or copied, otherwise it will cause memory leak or dangling pointer
  */
-class VI_CORE_API RefObject : public Object {
-    VI_OBJECT_META_DECL
-    VI_DECLARE_PRIVATE(RefObject)
-    VI_DECLARE_DPTR(RefObject)
-    VI_DISABLE_COPY_MOVE(RefObject)
+class V_CORE_API RefObject : public Object {
+    V_OBJECT_META_DECL
+    V_DECLARE_PRIVATE(RefObject)
+    V_DECLARE_DPTR(RefObject)
+    V_DISABLE_COPY_MOVE(RefObject)
 
   public:
     RefObject() noexcept;
@@ -40,8 +40,9 @@ class VI_CORE_API RefObject : public Object {
     void strong_ref();
     /**
      * @brief ref count -1, if ref count becomes 0, the object will be deleted, the control block will be deleted when weak ref count becomes 0
+     * @param del_object whether to delete the object when ref count becomes 0, if false, the object will not be deleted
      */
-    void strong_unref();
+    void strong_unref(bool del_object = true);
 
     /**
      * @brief weak ref count +1
@@ -58,9 +59,9 @@ class VI_CORE_API RefObject : public Object {
     PtrControlBlock* const cb_;
 };
 
-class VI_CORE_API RefObjectPrivate {
-    VI_DECLARE_PUBLIC(RefObject)
-    VI_DECLARE_VPTR(RefObject)
+class V_CORE_API RefObjectPrivate {
+    V_DECLARE_PUBLIC(RefObject)
+    V_DECLARE_VPTR(RefObject)
 
   protected:
     RefObjectPrivate()
@@ -70,4 +71,4 @@ class VI_CORE_API RefObjectPrivate {
 
 using RefObjectPtr = RefPtr<RefObject>;
 
-VI_CORE_NS_END
+V_CORE_NS_END

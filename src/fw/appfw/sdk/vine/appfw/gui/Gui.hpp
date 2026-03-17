@@ -6,7 +6,7 @@
 #include <vine/math/Rect2.hpp>
 #include <vine/math/Vector2.hpp>
 
-VI_APPFWGUI_NS_BEGIN
+V_APPFWGUI_NS_BEGIN
 
 using Rect  = math::Rect2i;
 using Point = math::Point2i;
@@ -21,7 +21,7 @@ enum class DockAreas
     Bottom = 8,
     All    = Left | Top | Right | Bottom,
 };
-VI_ENABLE_ENUM_FLAGS(DockAreas);
+V_ENABLE_ENUM_FLAGS(DockAreas);
 
 enum class DockFeatures
 {
@@ -31,7 +31,7 @@ enum class DockFeatures
     Floatable = 4,
     All       = Closable | Movable | Floatable
 };
-VI_ENABLE_ENUM_FLAGS(DockFeatures);
+V_ENABLE_ENUM_FLAGS(DockFeatures);
 
 enum class StartupPosition
 {
@@ -46,4 +46,4 @@ enum class WindowState
     Maximized,
 };
 
-VI_APPFWGUI_NS_END
+V_APPFWGUI_NS_END

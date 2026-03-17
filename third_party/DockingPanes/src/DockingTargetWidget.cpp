@@ -19,10 +19,10 @@
 
 #include "DockingTargetWidget.h"
 
-DockingTargetWidget::DockingTargetWidget(QWidget *parent) :
-    QWidget(parent)
+DockingTargetWidget::DockingTargetWidget(QWidget* parent)
+  : QWidget(parent)
 {
-    setWindowFlags(Qt::ToolTip | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint | Qt::NoDropShadowWindowHint );
+    setWindowFlags(Qt::ToolTip | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint | Qt::NoDropShadowWindowHint);
     setWindowOpacity(0.5);
 
     this->setStyleSheet("background-color:#6dbaf9");

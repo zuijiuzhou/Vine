@@ -5,7 +5,7 @@
 
 #include <vine/appfw/gui/Gui.hpp>
 
-VI_APPFWGUI_NS_BEGIN
+V_APPFWGUI_NS_BEGIN
 
 class Convert {
   public:
@@ -22,4 +22,4 @@ class Convert {
     static DockFeatures                    toDockFeatures(QDockWidget::DockWidgetFeatures qfeatures);
 };
 
-VI_APPFWGUI_NS_END
+V_APPFWGUI_NS_END

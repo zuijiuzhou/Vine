@@ -1,10 +1,7 @@
 ﻿#include "runtime_global.hpp"
 
-VI_RUNTIME_NS_BEGIN
+V_RUNTIME_NS_BEGIN
 
-class VI_RUNTIME_API Runtime 
-{
-    
-};
+class V_RUNTIME_API Runtime {};
 
-VI_RUNTIME_NS_END
+V_RUNTIME_NS_END

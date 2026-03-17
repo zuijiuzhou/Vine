@@ -4,11 +4,12 @@
 #include <vine/RefObject.hpp>
 
 
-VI_APPFW_NS_BEGIN
+V_APPFW_NS_BEGIN
 
 class AddinLoadContext;
-class VI_APPFW_API Addin : public RefObject {
-    VI_OBJECT_META_DECL;
+
+class V_APPFW_API Addin : public RefObject {
+    V_OBJECT_META_DECL;
 
   public:
     void load(AddinLoadContext* context);
@@ -16,8 +17,8 @@ class VI_APPFW_API Addin : public RefObject {
 
   public:
     String getName() const;
-
 };
+
 using AddinPtr = RefPtr<Addin>;
 
-VI_APPFW_NS_END
+V_APPFW_NS_END

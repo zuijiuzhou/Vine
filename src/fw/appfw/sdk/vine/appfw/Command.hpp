@@ -4,22 +4,24 @@
 
 #include <vine/RefObject.hpp>
 
-VI_APPFW_NS_BEGIN
+V_APPFW_NS_BEGIN
 
-class VI_APPFW_API CommandExecutingContext : public RefObject {
-    VI_OBJECT_META_DECL;
+class V_APPFW_API CommandExecutingContext : public RefObject {
+    V_OBJECT_META_DECL;
 
   public:
     String arguments() const;
 
   private:
-    VI_OBJECT_DATA
+    struct Data;
+    Data* const d;
 };
+
 using CommandExecutingContextPtr = RefPtr<CommandExecutingContext>;
 
-class VI_APPFW_API Command : public RefObject {
-    VI_OBJECT_META_DECL;
-    VI_DISABLE_COPY_MOVE(Command);
+class V_APPFW_API Command : public RefObject {
+    V_OBJECT_META_DECL;
+    V_DISABLE_COPY_MOVE(Command);
 
   public:
     virtual String name() const = 0;
@@ -28,6 +30,7 @@ class VI_APPFW_API Command : public RefObject {
 
     virtual void Execute(CommandExecutingContext* context) = 0;
 };
+
 using CommandPtr = RefPtr<Command>;
 
-VI_APPFW_NS_END
+V_APPFW_NS_END

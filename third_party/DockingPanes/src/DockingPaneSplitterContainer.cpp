@@ -17,17 +17,17 @@
  * along with DockingPanes.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <QDomDocument>
 #include <QDebug>
+#include <QDomDocument>
 #include <QGridLayout>
 #include <QSplitter>
 
 #include "DockingPaneSplitterContainer.h"
 
-DockingPaneSplitterContainer::DockingPaneSplitterContainer(QWidget *parent, SplitterDirection direction) :
-    DockingPaneBase(parent)
+DockingPaneSplitterContainer::DockingPaneSplitterContainer(QWidget* parent, SplitterDirection direction)
+  : DockingPaneBase(parent)
 {
-    QGridLayout *layout = new QGridLayout();
+    QGridLayout* layout = new QGridLayout();
 
     m_splitterWidget = new QSplitter();
 
@@ -35,9 +35,10 @@ DockingPaneSplitterContainer::DockingPaneSplitterContainer(QWidget *parent, Spli
     layout->setSpacing(0);
     layout->addWidget(m_splitterWidget);
 
-    if (direction==splitVertical) {
+    if (direction == splitVertical) {
         m_splitterWidget->setOrientation(Qt::Vertical);
-    } else {
+    }
+    else {
         m_splitterWidget->setOrientation(Qt::Horizontal);
     }
 
@@ -48,14 +49,15 @@ DockingPaneSplitterContainer::DockingPaneSplitterContainer(QWidget *parent, Spli
 
 DockingPaneSplitterContainer::SplitterDirection DockingPaneSplitterContainer::direction(void)
 {
-    if (m_splitterWidget->orientation()==Qt::Vertical) {
-        return(splitVertical);
-    } else {
-        return(splitHorizontal);
+    if (m_splitterWidget->orientation() == Qt::Vertical) {
+        return (splitVertical);
+    }
+    else {
+        return (splitHorizontal);
     }
 }
 
-void DockingPaneSplitterContainer::saveLayout(QDomNode *parentNode, bool)
+void DockingPaneSplitterContainer::saveLayout(QDomNode* parentNode, bool)
 {
     QDomDocument doc = parentNode->ownerDocument();
 
@@ -63,8 +65,8 @@ void DockingPaneSplitterContainer::saveLayout(QDomNode *parentNode, bool)
 
     domElement.setAttribute("state", (QString)m_splitterWidget->saveState().toBase64());
 
-    for(int i=0;i<m_splitterWidget->count();i++) {
-        DockingPaneBase *childPane = qobject_cast<DockingPaneBase *>(m_splitterWidget->widget(i));
+    for (int i = 0; i < m_splitterWidget->count(); i++) {
+        DockingPaneBase* childPane = qobject_cast<DockingPaneBase*>(m_splitterWidget->widget(i));
 
         if (childPane) {
             childPane->saveLayout(&domElement);

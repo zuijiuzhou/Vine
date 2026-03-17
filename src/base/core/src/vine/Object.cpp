@@ -4,7 +4,7 @@
 #include <vine/Class.hpp>
 #include <vine/String.hpp>
 
-VI_CORE_NS_BEGIN
+V_CORE_NS_BEGIN
 
 const Class* Object::getClass() const noexcept
 {
@@ -32,4 +32,4 @@ const Class* Object::desc()
     return cls;
 }
 
-VI_CORE_NS_END
+V_CORE_NS_END

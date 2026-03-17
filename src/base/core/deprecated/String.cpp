@@ -15,7 +15,7 @@
 
 // #include <vine/Exception.hpp>
 
-// VI_CORE_NS_BEGIN
+// V_CORE_NS_BEGIN
 
 // namespace
 // {
@@ -1366,4 +1366,4 @@
 //     return result;
 // }
 
-// VI_CORE_NS_END
+// V_CORE_NS_END

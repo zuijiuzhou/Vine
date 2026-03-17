@@ -23,11 +23,11 @@
 
 #include "DockingFrameFrameSticker.h"
 
-DockingFrameFrameSticker::DockingFrameFrameSticker(QString image, QWidget *parent) :
-    QWidget(parent),
-    m_activeImage(QImage(QString(":/img/docking_bitmaps/%1_active.png").arg(image))),
-    m_inactiveImage(QImage(QString(":/img/docking_bitmaps/%1_inactive.png").arg(image))),
-    m_isActive(false)
+DockingFrameFrameSticker::DockingFrameFrameSticker(QString image, QWidget* parent)
+  : QWidget(parent)
+  , m_activeImage(QImage(QString(":/img/docking_bitmaps/%1_active.png").arg(image)))
+  , m_inactiveImage(QImage(QString(":/img/docking_bitmaps/%1_inactive.png").arg(image)))
+  , m_isActive(false)
 {
     setWindowFlags(Qt::ToolTip | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
     setAttribute(Qt::WA_TranslucentBackground, true);
@@ -43,7 +43,8 @@ void DockingFrameFrameSticker::paintEvent(QPaintEvent*)
 
     if (m_isActive) {
         p.drawImage(0, 0, m_activeImage);
-    } else {
+    }
+    else {
         p.drawImage(0, 0, m_inactiveImage);
     }
 }
@@ -54,11 +55,12 @@ void DockingFrameFrameSticker::updateCursorPos(QPoint pos)
 
     if (this->rect().contains(mapFromGlobal(pos))) {
         m_isActive = true;
-    } else {
+    }
+    else {
         m_isActive = false;
     }
 
-    if (oldActive!=m_isActive) {
+    if (oldActive != m_isActive) {
         update();
     }
 }

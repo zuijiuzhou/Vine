@@ -1,7 +1,7 @@
 ﻿#include <vine/Inherit.hpp>
 
-VI_CORE_NS_BEGIN
+V_CORE_NS_BEGIN
 
 
 
-VI_CORE_NS_END
+V_CORE_NS_END

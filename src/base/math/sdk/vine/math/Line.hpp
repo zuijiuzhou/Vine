@@ -2,7 +2,7 @@
 #include "Point3.hpp"
 #include "Vector3.hpp"
 
-VI_MATH_NS_BEGIN
+V_MATH_NS_BEGIN
 
 /**
  * @brief A 3D line represented by an origin point and a direction vector.
@@ -85,4 +85,4 @@ class Line {
 using Linef = Line<float>;
 using Lined = Line<double>;
 
-VI_MATH_NS_END
+V_MATH_NS_END

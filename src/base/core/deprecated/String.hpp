@@ -7,7 +7,7 @@
 
 // #include "Char.hpp"
 
-// VI_CORE_NS_BEGIN
+// V_CORE_NS_BEGIN
 
 // /** Optimized C-style string length function
 //  *  Supports char, char16_t, and char32_t with platform-specific optimizations.
@@ -27,21 +27,21 @@
 //  *  Uses optimized std::strlen for maximum performance.
 //  */
 // template <>
-// VI_CORE_API size_t cstrlen<char>(const char* data);
+// V_CORE_API size_t cstrlen<char>(const char* data);
 
 // /** Specialization for char16_t
 //  *  Platform-optimized: uses wcslen on Windows, pointer traversal on Unix/Linux.
 //  */
 // template <>
-// VI_CORE_API size_t cstrlen<char16_t>(const char16_t* data);
+// V_CORE_API size_t cstrlen<char16_t>(const char16_t* data);
 
 // /** Specialization for char32_t
 //  *  Platform-optimized: uses wcslen on Unix/Linux, pointer traversal on Windows.
 //  */
 // template <>
-// VI_CORE_API size_t cstrlen<char32_t>(const char32_t* data);
+// V_CORE_API size_t cstrlen<char32_t>(const char32_t* data);
 
-// class VI_CORE_API String final {
+// class V_CORE_API String final {
 
 //   public:
 //     using size_type      = size_t;
@@ -660,4 +660,4 @@
 //     size_type capacity_{};
 // };
 
-// VI_CORE_NS_END
+// V_CORE_NS_END

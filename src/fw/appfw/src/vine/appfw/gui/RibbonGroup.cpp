@@ -4,9 +4,9 @@
 
 #include <vine/Exception.hpp>
 
-VI_APPFWGUI_NS_BEGIN
+V_APPFWGUI_NS_BEGIN
 
-VI_OBJECT_META_IMPL(RibbonGroup, Widget)
+V_OBJECT_META_IMPL(RibbonGroup, Widget)
 
 struct RibbonGroup::Data {};
 
@@ -39,4 +39,4 @@ void RibbonGroup::title(const String& ti)
     w->setPanelName(QString::fromUtf8(reinterpret_cast<const char*>(ti.data())));
 }
 
-VI_APPFWGUI_NS_END
+V_APPFWGUI_NS_END

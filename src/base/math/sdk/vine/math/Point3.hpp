@@ -7,7 +7,7 @@
 
 #include "Math.hpp"
 
-VI_MATH_NS_BEGIN
+V_MATH_NS_BEGIN
 
 template <typename T>
 class Vector3;
@@ -24,9 +24,9 @@ class Point3 {
     using value_type = T;
 
   public:
-        /**
-         * @brief Construct a point at the origin.
-         */
+    /**
+     * @brief Construct a point at the origin.
+     */
     constexpr Point3()
     {
         x = T();
@@ -34,23 +34,23 @@ class Point3 {
         z = T();
     }
 
-        /**
-         * @brief Construct a 3D point from a 2D point and z value.
-         * @param pt2 Source 2D point.
-         * @param zz Z coordinate.
-         */
+    /**
+     * @brief Construct a 3D point from a 2D point and z value.
+     * @param pt2 Source 2D point.
+     * @param zz Z coordinate.
+     */
     constexpr Point3(const Point2<T>& pt2, T zz)
       : x(pt2.x)
       , y(pt2.y)
       , z(zz)
     {}
 
-        /**
-         * @brief Construct a point from coordinates.
-         * @param xx X coordinate.
-         * @param yy Y coordinate.
-         * @param zz Z coordinate.
-         */
+    /**
+     * @brief Construct a point from coordinates.
+     * @param xx X coordinate.
+     * @param yy Y coordinate.
+     * @param zz Z coordinate.
+     */
     constexpr Point3(T xx, T yy, T zz)
       : x(xx)
       , y(yy)
@@ -58,10 +58,10 @@ class Point3 {
     {}
 
   public:
-        /**
-         * @brief View this point as a 2D point without copying.
-         * @return Const reference to the x/y part.
-         */
+    /**
+     * @brief View this point as a 2D point without copying.
+     * @return Const reference to the x/y part.
+     */
     [[nodiscard]]
     constexpr const Point2<T>& asPoint2() const
     {
@@ -130,11 +130,11 @@ class Point3 {
     }
 
   public:
-        /**
-         * @brief Equality operator.
-         * @param right Right-hand point.
-         * @return True when coordinates are equal.
-         */
+    /**
+     * @brief Equality operator.
+     * @param right Right-hand point.
+     * @return True when coordinates are equal.
+     */
     [[nodiscard]]
     constexpr bool operator==(const Point3<T>& right) const
     {
@@ -260,4 +260,4 @@ using Point3i    = Point3i32;
 using Point3ui   = Point3ui32;
 using Point3f    = Point3<float>;
 using Point3d    = Point3<double>;
-VI_MATH_NS_END
+V_MATH_NS_END

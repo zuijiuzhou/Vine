@@ -9,7 +9,7 @@
 #include "Math.hpp"
 #include "Types.hpp"
 
-VI_MATH_NS_BEGIN
+V_MATH_NS_BEGIN
 
 template <typename T>
 class Vector2;
@@ -24,29 +24,29 @@ class Point2 {
     using value_type = T;
 
   public:
-        /**
-         * @brief Construct a point at the origin.
-         */
+    /**
+     * @brief Construct a point at the origin.
+     */
     constexpr Point2()
       : x(T())
       , y(T())
     {}
 
-        /**
-         * @brief Construct a point from coordinates.
-         * @param xx X coordinate.
-         * @param yy Y coordinate.
-         */
+    /**
+     * @brief Construct a point from coordinates.
+     * @param xx X coordinate.
+     * @param yy Y coordinate.
+     */
     constexpr Point2(T xx, T yy)
       : x(xx)
       , y(yy)
     {}
 
   public:
-        /**
-         * @brief View this point as a 2D vector without copying.
-         * @return Const reference to the same memory as a vector.
-         */
+    /**
+     * @brief View this point as a 2D vector without copying.
+     * @return Const reference to the same memory as a vector.
+     */
     [[nodiscard]]
     constexpr const Vector2<T>& asVector() const
     {
@@ -119,11 +119,11 @@ class Point2 {
     }
 
   public:
-        /**
-         * @brief Equality operator.
-         * @param right Right-hand point.
-         * @return True when coordinates are equal.
-         */
+    /**
+     * @brief Equality operator.
+     * @param right Right-hand point.
+     * @return True when coordinates are equal.
+     */
     [[nodiscard]]
     constexpr bool operator==(const Point2<T>& right) const
     {
@@ -248,4 +248,4 @@ using Point2ui   = Point2ui32;
 using Point2f    = Point2<float>;
 using Point2d    = Point2<double>;
 
-VI_MATH_NS_END
+V_MATH_NS_END

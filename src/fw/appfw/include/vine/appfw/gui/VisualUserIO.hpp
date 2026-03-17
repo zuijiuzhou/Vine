@@ -2,11 +2,11 @@
 
 #include <vine/appfw/UserIO.hpp>
 
-VI_APPFWGUI_NS_BEGIN
+V_APPFWGUI_NS_BEGIN
 
 class VisualUserIO : public UserIO {
-    VI_OBJECT_META_DECL;
-    VI_DISABLE_COPY_MOVE(VisualUserIO);
+    V_OBJECT_META_DECL;
+    V_DISABLE_COPY_MOVE(VisualUserIO);
 
   public:
     VisualUserIO();
@@ -28,7 +28,9 @@ class VisualUserIO : public UserIO {
     virtual void getPoint3d(math::Point3d& val, math::Point3d& def, const String& prompt = {}) const override;
 
   private:
-    VI_OBJECT_DATA;
+    struct Data;
+    Data* const d;
+    ;
 };
 
-VI_APPFWGUI_NS_END
+V_APPFWGUI_NS_END

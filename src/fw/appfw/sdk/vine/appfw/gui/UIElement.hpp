@@ -8,11 +8,11 @@
 
 class QObject;
 
-VI_APPFWGUI_NS_BEGIN
+V_APPFWGUI_NS_BEGIN
 using UIObject = QObject;
 
-class VI_APPFW_API UIElement : public RefObject {
-    VI_OBJECT_META_DECL
+class V_APPFW_API UIElement : public RefObject {
+    V_OBJECT_META_DECL
 
   protected:
     UIElement(QObject* impl);
@@ -37,7 +37,8 @@ class VI_APPFW_API UIElement : public RefObject {
     }
 
   private:
-    VI_OBJECT_DATA
+    struct Data;
+    Data* const d;
 };
 
-VI_APPFWGUI_NS_END
+V_APPFWGUI_NS_END

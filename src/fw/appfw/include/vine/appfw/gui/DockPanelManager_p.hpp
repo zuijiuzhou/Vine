@@ -2,10 +2,10 @@
 
 #include <DockingPaneManager.h>
 
-VI_APPFWGUI_NS_BEGIN
+V_APPFWGUI_NS_BEGIN
 
 class DockPanelManagerPrivate : public vine::RefObjectPrivate {
-    VI_DECLARE_PUBLIC(DockPanelManager)
+    V_DECLARE_PUBLIC(DockPanelManager)
 
   protected:
     DockPanelManagerPrivate();
@@ -15,4 +15,4 @@ class DockPanelManagerPrivate : public vine::RefObjectPrivate {
     DockingPaneManager* impl_;
 };
 
-VI_APPFWGUI_NS_END
+V_APPFWGUI_NS_END

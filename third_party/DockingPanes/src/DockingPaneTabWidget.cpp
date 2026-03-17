@@ -23,17 +23,18 @@
 #include "DockingPaneContainer.h"
 #include "DockingPaneTabWidget.h"
 
-DockingPaneTabWidget::DockingPaneTabWidget(QWidget *parent) :
-    QWidget(parent), m_stackedWidget(new QStackedWidget())
+DockingPaneTabWidget::DockingPaneTabWidget(QWidget* parent)
+  : QWidget(parent)
+  , m_stackedWidget(new QStackedWidget())
 {
-    QGridLayout *layout = new QGridLayout();
+    QGridLayout* layout = new QGridLayout();
     layout->addWidget(m_stackedWidget);
     layout->setSpacing(0);
     layout->setContentsMargins(0, 0, 0, 0);
     this->setLayout(layout);
 }
 
-void DockingPaneTabWidget::addPane(DockingPaneContainer *pane)
+void DockingPaneTabWidget::addPane(DockingPaneContainer* pane)
 {
     m_stackedWidget->addWidget(pane->clientWidget());
 }

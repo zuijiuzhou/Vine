@@ -2,22 +2,26 @@
 
 #include <vine/RefObject.hpp>
 
-VI_GRAPHICS_NS_BEGIN
+V_GRAPHICS_NS_BEGIN
 
 class Scene;
-class VI_GRAPHICS_API View : public RefObject {
-  VI_OBJECT_META_DECL;
-  VI_DISABLE_MOVE(View);
 
-public:
-  View();
+class V_GRAPHICS_API View : public RefObject {
+    V_OBJECT_META_DECL;
+    V_DISABLE_MOVE(View);
 
-public:
-  void setScene(Scene* scene);
+  public:
+    View();
 
-private:
-  VI_OBJECT_DATA;
+  public:
+    void setScene(Scene* scene);
+
+  private:
+    struct Data;
+    Data* const d;
+    ;
 };
+
 using ViewPtr = RefPtr<View>;
 
-VI_GRAPHICS_NS_END
+V_GRAPHICS_NS_END

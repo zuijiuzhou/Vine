@@ -146,6 +146,49 @@ TEST(Matrix4x4, quaternionRotationMatchesAxisAngle) {
     }
 }
 
+TEST(Matrix4x4, rotationExtractsQuaternionRoundTrip) {
+    constexpr double kTol = 1e-12;
+
+    const Quatd source(0.73, Vec3d(1.0, -2.0, 0.5));
+
+    Mat4d m;
+    m.makeRotation(source);
+
+    const Quatd extracted = m.rotation();
+
+    Mat4d reconstructed;
+    reconstructed.makeRotation(extracted);
+
+    for (int r = 0; r < 3; ++r) {
+        for (int c = 0; c < 3; ++c) {
+            EXPECT_NEAR(reconstructed(r, c), m(r, c), kTol);
+        }
+    }
+}
+
+TEST(Matrix4x4, rotationIgnoresNonUniformScale) {
+    constexpr double kTol = 1e-12;
+
+    const Quatd source(1.1, Vec3d(-1.0, 2.0, 0.25));
+
+    Mat4d pure_rotation;
+    pure_rotation.makeRotation(source);
+
+    Mat4d scaled_rotation = pure_rotation;
+    scaled_rotation.postScale(Vec3d(2.5, 0.5, 3.0));
+
+    const Quatd extracted = scaled_rotation.rotation();
+
+    Mat4d reconstructed;
+    reconstructed.makeRotation(extracted);
+
+    for (int r = 0; r < 3; ++r) {
+        for (int c = 0; c < 3; ++c) {
+            EXPECT_NEAR(reconstructed(r, c), pure_rotation(r, c), kTol);
+        }
+    }
+}
+
 TEST(Matrix4x4, isRigidRejectsScaleAndReflection) {
     Mat4d rigid;
     rigid.makeRotation(Vec3d(0.0, 1.0, 0.0), 0.3);

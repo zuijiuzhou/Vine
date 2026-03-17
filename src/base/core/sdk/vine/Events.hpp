@@ -3,16 +3,16 @@
 #include "Object.hpp"
 #include "Signal.hpp"
 
-VI_CORE_NS_BEGIN
+V_CORE_NS_BEGIN
 
-class VI_CORE_API EventArgs : public Object {
-    VI_OBJECT_META_DECL
+class V_CORE_API EventArgs : public Object {
+    V_OBJECT_META_DECL
   public:
 };
 
 template <typename TVal>
 class PropertyChangedEventArgs : public EventArgs {
-    VI_OBJECT_META_DECL;
+    V_OBJECT_META_DECL;
 
   public:
     // using ValType   = typename std::remove_reference<typename std::remove_const<TVal>::type>::type;
@@ -46,6 +46,6 @@ template <typename TSender, typename TEventArgs = EventArgs>
 requires std::is_base_of_v<EventArgs, TEventArgs>
 using Event = Signal<TSender&, TEventArgs&>;
 
-VI_TMPL_OBJECT_META_IMPL(template <typename TVal>, PropertyChangedEventArgs<TVal>, EventArgs);
+V_TMPL_OBJECT_META_IMPL(template <typename TVal>, PropertyChangedEventArgs<TVal>, EventArgs);
 
-VI_CORE_NS_END
+V_CORE_NS_END

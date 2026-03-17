@@ -4,13 +4,13 @@
 
 #include <vine/RefObject.hpp>
 
-VI_APPFW_NS_BEGIN
+V_APPFW_NS_BEGIN
 class CommandManager;
 class AddinManager;
 class ServiceManager;
 
-class VI_APPFW_API Application : public RefObject {
-    VI_OBJECT_META_DECL;
+class V_APPFW_API Application : public RefObject {
+    V_OBJECT_META_DECL;
 
   public:
     Application(int argc, char** argv);
@@ -39,9 +39,10 @@ class VI_APPFW_API Application : public RefObject {
     static Application* current();
 
   private:
-    VI_OBJECT_DATA
+    struct Data;
+    Data* const d;
 };
+
 using ApplicationPtr = RefPtr<Application>;
 
-VI_APPFW_NS_END
-
+V_APPFW_NS_END

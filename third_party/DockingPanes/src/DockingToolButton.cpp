@@ -19,18 +19,18 @@
 
 #include <QDebug>
 #include <QImage>
-#include <QPainter>
 #include <QPaintEvent>
+#include <QPainter>
 
 #include "DockingToolButton.h"
 
-DockingToolButton::DockingToolButton(DockingToolButton::ButtonType type, QWidget *parent) :
-    QPushButton(parent)
+DockingToolButton::DockingToolButton(DockingToolButton::ButtonType type, QWidget* parent)
+  : QPushButton(parent)
 {
     setMouseTracking(true);
 
     m_buttonType = type;
-    m_highlight = false;
+    m_highlight  = false;
 }
 
 void DockingToolButton::enterEvent(QEnterEvent* event)
@@ -49,58 +49,64 @@ void DockingToolButton::leaveEvent(QEvent* event)
 
 void DockingToolButton::paintEvent(QPaintEvent*)
 {
-    QImage buttonImage;
+    QImage   buttonImage;
     QPainter p(this);
 
-    int centreX = width()/2;
-    int centreY = height()/2;
+    int centreX = width() / 2;
+    int centreY = height() / 2;
 
     p.setRenderHint(QPainter::Antialiasing, true);
     p.setRenderHint(QPainter::Antialiasing, true);
 
-    switch(m_buttonType) {
-        case closeButtonInactive: {
-             buttonImage.load(":/img/tool_button_bitmaps/close_inactive.png");
-             break;
-        }
-
-        case closeButtonActive: {
-             buttonImage.load(":/img/tool_button_bitmaps/close_active.png");
-             break;
-        }
-
-        case pinButtonInactive: {
-             buttonImage.load(":/img/tool_button_bitmaps/pin_inactive.png");
-             break;
-        }
-
-        case pinButtonActive: {
-             buttonImage.load(":/img/tool_button_bitmaps/pin_active.png");
-             break;
-        }
-
-        case unpinButtonInactive: {
-             buttonImage.load(":/img/tool_button_bitmaps/pin_inactive.png");
-             buttonImage = buttonImage.transformed(QTransform().rotate(90));
-             break;
-        }
-
-        case unpinButtonActive: {
-             buttonImage.load(":/img/tool_button_bitmaps/pin_active.png");
-             buttonImage = buttonImage.transformed(QTransform().rotate(90));
-             break;
-        }
+    switch (m_buttonType) {
+    case closeButtonInactive:
+    {
+        buttonImage.load(":/img/tool_button_bitmaps/close_inactive.png");
+        break;
     }
 
-    p.drawImage(centreX-(buttonImage.width()/2), centreY-(buttonImage.height()/2), buttonImage);
+    case closeButtonActive:
+    {
+        buttonImage.load(":/img/tool_button_bitmaps/close_active.png");
+        break;
+    }
+
+    case pinButtonInactive:
+    {
+        buttonImage.load(":/img/tool_button_bitmaps/pin_inactive.png");
+        break;
+    }
+
+    case pinButtonActive:
+    {
+        buttonImage.load(":/img/tool_button_bitmaps/pin_active.png");
+        break;
+    }
+
+    case unpinButtonInactive:
+    {
+        buttonImage.load(":/img/tool_button_bitmaps/pin_inactive.png");
+        buttonImage = buttonImage.transformed(QTransform().rotate(90));
+        break;
+    }
+
+    case unpinButtonActive:
+    {
+        buttonImage.load(":/img/tool_button_bitmaps/pin_active.png");
+        buttonImage = buttonImage.transformed(QTransform().rotate(90));
+        break;
+    }
+    }
+
+    p.drawImage(centreX - (buttonImage.width() / 2), centreY - (buttonImage.height() / 2), buttonImage);
 
     QRect rcHighlight;
 
-    rcHighlight.setLeft(centreX-(buttonImage.width()/2)-2);
-    rcHighlight.setRight(centreX+(buttonImage.width()/2)+2);
+    rcHighlight.setLeft(centreX - (buttonImage.width() / 2) - 2);
+    rcHighlight.setRight(centreX + (buttonImage.width() / 2) + 2);
 
-    rcHighlight.setTop(centreY-(buttonImage.height()/2)-2);
-    rcHighlight.setBottom(centreY+(buttonImage.height()/2)+2);
+    rcHighlight.setTop(centreY - (buttonImage.height() / 2) - 2);
+    rcHighlight.setBottom(centreY + (buttonImage.height() / 2) + 2);
 
     if (m_highlight) {
         p.fillRect(rcHighlight, QColor(0xFF, 0xFF, 0xFF, 0xAA));

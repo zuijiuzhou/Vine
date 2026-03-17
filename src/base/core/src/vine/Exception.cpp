@@ -1,6 +1,6 @@
 ﻿#include <vine/Exception.hpp>
 
-VI_CORE_NS_BEGIN
+V_CORE_NS_BEGIN
 
 Exception::Exception(int code) noexcept
   : code_(code)
@@ -12,4 +12,4 @@ Exception::Exception(int code) noexcept
     }
 }
 
-VI_CORE_NS_END
+V_CORE_NS_END

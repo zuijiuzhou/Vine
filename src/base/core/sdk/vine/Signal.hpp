@@ -6,7 +6,7 @@
 #include <utility>
 #include <vector>
 
-VI_CORE_NS_BEGIN
+V_CORE_NS_BEGIN
 
 template <typename... TArgs>
 class Signal {
@@ -82,4 +82,4 @@ class Signal {
     bool                         is_blocked_{ false };
 };
 
-VI_CORE_NS_END
+V_CORE_NS_END

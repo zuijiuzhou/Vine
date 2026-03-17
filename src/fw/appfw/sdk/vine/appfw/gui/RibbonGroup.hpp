@@ -2,12 +2,12 @@
 
 #include "Widget.hpp"
 
-VI_APPFWGUI_NS_BEGIN
+V_APPFWGUI_NS_BEGIN
 
 class RibbonTab;
 
-class VI_APPFW_API RibbonGroup : public Widget {
-    VI_OBJECT_META_DECL
+class V_APPFW_API RibbonGroup : public Widget {
+    V_OBJECT_META_DECL
 
     friend class RibbonTab;
 
@@ -20,8 +20,8 @@ class VI_APPFW_API RibbonGroup : public Widget {
     void   title(const String& ti);
 
   private:
-    VI_OBJECT_DATA
+    struct Data;
+    Data* const d;
 };
 
-VI_APPFWGUI_NS_END
-
+V_APPFWGUI_NS_END

@@ -21,9 +21,9 @@ class type_info;
 }
 #endif
 
-VI_CORE_NS_BEGIN
+V_CORE_NS_BEGIN
 
-class VI_CORE_API Class final {
+class V_CORE_API Class final {
   public:
     Class(const std::type_info& ti, const Class* parent);
     Class(const Class& cls)            = delete;
@@ -77,4 +77,4 @@ class VI_CORE_API Class final {
 using Type     = const Class*;
 using TypeInfo = const Class*;
 
-VI_CORE_NS_END
+V_CORE_NS_END

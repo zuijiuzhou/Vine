@@ -3,16 +3,16 @@
 #include <vine/RefObject.hpp>
 #include <vine/appfw/appfw_global.hpp>
 
-VI_APPFWGUI_NS_BEGIN
+V_APPFWGUI_NS_BEGIN
 
-VI_DECLARE_PIMPL(DockPanelManager)
+V_DECLARE_PIMPL(DockPanelManager)
 
-class VI_APPFW_API DockPanelManager : public RefObject {
-    VI_OBJECT_META_DECL
-    VI_DECLARE_PRIVATE(DockPanelManager)
+class V_APPFW_API DockPanelManager : public RefObject {
+    V_OBJECT_META_DECL
+    V_DECLARE_PRIVATE(DockPanelManager)
 
   public:
     DockPanelManager();
 };
 
-VI_APPFWGUI_NS_END
+V_APPFWGUI_NS_END

@@ -6,7 +6,7 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
 
-vi_add_library(APPFW_TARGET_NAME Appfw)
+v_add_library(APPFW_TARGET_NAME Appfw)
 
 set_target_properties(${APPFW_TARGET_NAME} PROPERTIES
     AUTOMOC ON

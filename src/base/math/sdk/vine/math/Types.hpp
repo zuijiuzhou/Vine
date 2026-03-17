@@ -6,7 +6,7 @@
 #include <cstdint>
 #include <type_traits>
 
-VI_MATH_NS_BEGIN
+V_MATH_NS_BEGIN
 
 /**
  * @brief floating point concept, includes float and double
@@ -27,10 +27,8 @@ concept Integral = std::integral<T>;
  * @brief Interger concept, includes all integer types (signed and unsigned) but not boolean
  */
 template <typename T>
-concept Integer =
-    std::is_same<T, int8_t>::value || std::is_same<T, uint8_t>::value || std::is_same<T, int16_t>::value ||
-    std::is_same<T, uint16_t>::value || std::is_same<T, int32_t>::value || std::is_same<T, uint32_t>::value ||
-    std::is_same<T, int64_t>::value || std::is_same<T, uint64_t>::value;
+concept Integer = std::is_same<T, int8_t>::value || std::is_same<T, uint8_t>::value || std::is_same<T, int16_t>::value || std::is_same<T, uint16_t>::value ||
+                  std::is_same<T, int32_t>::value || std::is_same<T, uint32_t>::value || std::is_same<T, int64_t>::value || std::is_same<T, uint64_t>::value;
 
 /**
  * @brief Real concept, includes all floating point and integer types (but not boolean)
@@ -50,4 +48,4 @@ concept Arithmetic = FP<T> || Integral<T>;
 template <Arithmetic T>
 using TypeF = std::conditional_t<std::is_integral_v<T>, double, T>;
 
-VI_MATH_NS_END
+V_MATH_NS_END

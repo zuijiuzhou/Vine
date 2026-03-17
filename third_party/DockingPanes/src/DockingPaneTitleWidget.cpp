@@ -25,8 +25,10 @@
 
 #include "DockingPaneTitleWidget.h"
 
-DockingPaneTitleWidget::DockingPaneTitleWidget(QString text, QWidget *parent) :
-    QWidget(parent), m_text(text), m_active(false)
+DockingPaneTitleWidget::DockingPaneTitleWidget(QString text, QWidget* parent)
+  : QWidget(parent)
+  , m_text(text)
+  , m_active(false)
 {
     this->setFont(QFont("Segoe UI", 9));
     this->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
@@ -35,18 +37,18 @@ DockingPaneTitleWidget::DockingPaneTitleWidget(QString text, QWidget *parent) :
 
 void DockingPaneTitleWidget::resizeEvent(QResizeEvent*)
 {
-    this->setMinimumHeight(6+this->fontMetrics().height());
-    this->setMaximumHeight(6+this->fontMetrics().height());
+    this->setMinimumHeight(6 + this->fontMetrics().height());
+    this->setMaximumHeight(6 + this->fontMetrics().height());
 }
 
 void DockingPaneTitleWidget::paintEvent(QPaintEvent*)
 {
     QPainter p(this);
-    QRect drawnRect;
+    QRect    drawnRect;
 
     int leftMargin, rightMargin;
 
-    leftMargin = 5;
+    leftMargin  = 5;
     rightMargin = 5;
 
     p.setRenderHint(QPainter::Antialiasing, true);
@@ -54,18 +56,19 @@ void DockingPaneTitleWidget::paintEvent(QPaintEvent*)
 
     QFontMetrics fm(this->font());
 
-    QString elidedText = fm.elidedText(m_text, Qt::ElideRight, width()-6);
+    QString elidedText = fm.elidedText(m_text, Qt::ElideRight, width() - 6);
 
     if (m_active) {
         p.setPen(QColor(0xFF, 0xFF, 0xFF));
-    } else {
+    }
+    else {
         p.setPen(QColor(0, 0, 0));
     }
 
-    p.drawText(leftMargin, 0, width()-(leftMargin+rightMargin), height(), Qt::AlignVCenter , elidedText, &drawnRect);
+    p.drawText(leftMargin, 0, width() - (leftMargin + rightMargin), height(), Qt::AlignVCenter, elidedText, &drawnRect);
 
-    if ((width()-drawnRect.width()-(leftMargin+rightMargin*2))>0) {
-        drawPattern(&p, drawnRect.width()+(leftMargin*2), 0, width()-drawnRect.width()-((leftMargin*2)+rightMargin), height());
+    if ((width() - drawnRect.width() - (leftMargin + rightMargin * 2)) > 0) {
+        drawPattern(&p, drawnRect.width() + (leftMargin * 2), 0, width() - drawnRect.width() - ((leftMargin * 2) + rightMargin), height());
     }
 }
 
@@ -74,9 +77,9 @@ void DockingPaneTitleWidget::setText(QString text)
     m_text = text;
 }
 
-void DockingPaneTitleWidget::drawPattern(QPainter *p, int x, int y, int w, int h)
+void DockingPaneTitleWidget::drawPattern(QPainter* p, int x, int y, int w, int h)
 {
-    QPixmap pixMap(4,5);
+    QPixmap pixMap(4, 5);
 
     pixMap.fill(Qt::transparent);
 
@@ -84,7 +87,8 @@ void DockingPaneTitleWidget::drawPattern(QPainter *p, int x, int y, int w, int h
 
     if (m_active) {
         pp.setPen(QColor(0x59, 0xa8, 0xde));
-    } else {
+    }
+    else {
         pp.setPen(QColor(0x99, 0x99, 0x99));
     }
 
@@ -92,8 +96,8 @@ void DockingPaneTitleWidget::drawPattern(QPainter *p, int x, int y, int w, int h
     pp.drawPoint(0, 4);
     pp.drawPoint(2, 2);
 
-    p->setBrushOrigin(x, ((y+h)/2)-2);
-    p->fillRect(x,((y+h)/2)-2,w, 5, QBrush(pixMap));
+    p->setBrushOrigin(x, ((y + h) / 2) - 2);
+    p->fillRect(x, ((y + h) / 2) - 2, w, 5, QBrush(pixMap));
 }
 
 void DockingPaneTitleWidget::mouseMoveEvent(QMouseEvent* event)
@@ -124,10 +128,7 @@ void DockingPaneTitleWidget::setActive(bool active)
     update();
 }
 
-void DockingPaneTitleWidget::onFocusChanged(QWidget*, QWidget *now)
+void DockingPaneTitleWidget::onFocusChanged(QWidget*, QWidget* now)
 {
     setActive(this->isAncestorOf(now));
 }
-
-
-

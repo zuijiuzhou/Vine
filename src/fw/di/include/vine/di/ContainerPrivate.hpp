@@ -6,10 +6,10 @@
 #include <vine/di/Container.hpp>
 #include <vine/di/Registration.hpp>
 
-VI_DI_NS_BEGIN
+V_DI_NS_BEGIN
 
 class ContainerPrivate : public RefObjectPrivate {
-    VI_DECLARE_PUBLIC(Container)
+    V_DECLARE_PUBLIC(Container)
 
   public:
     ContainerPrivate();
@@ -18,4 +18,4 @@ class ContainerPrivate : public RefObjectPrivate {
     std::unordered_map<Type, Registration> regs;
 };
 
-VI_DI_NS_END
+V_DI_NS_END

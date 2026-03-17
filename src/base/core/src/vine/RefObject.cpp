@@ -1,8 +1,8 @@
 ﻿#include <vine/RefObject.hpp>
 
-VI_CORE_NS_BEGIN
+V_CORE_NS_BEGIN
 
-VI_OBJECT_META_IMPL(RefObject, Object)
+V_OBJECT_META_IMPL(RefObject, Object)
 
 RefObject::RefObject() noexcept
   : RefObject(new RefObjectPrivate())
@@ -28,7 +28,9 @@ void RefObject::strong_ref()
     cb_->strong_refs.fetch_add(1, std::memory_order_relaxed);
 }
 
-void RefObject::strong_unref()
+void strong_unref(bool del_object = true);
+
+void RefObject::strong_unref(bool del_object)
 {
     if (cb_->strong_refs.fetch_sub(1, std::memory_order_seq_cst) == 1)
         delete this;
@@ -46,4 +48,4 @@ void RefObject::weak_unref()
     }
 }
 
-VI_CORE_NS_END
+V_CORE_NS_END

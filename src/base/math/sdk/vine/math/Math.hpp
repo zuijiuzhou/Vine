@@ -6,7 +6,7 @@
 #
 #include "Types.hpp"
 
-VI_MATH_NS_BEGIN
+V_MATH_NS_BEGIN
 
 constexpr double PI   = 3.14159265358979323846;
 constexpr double PIPI = 6.283185307179586;
@@ -44,7 +44,7 @@ constexpr double RAD_TO_DEG = 180.0 / PI;
 constexpr double DEG_TO_RAD = PI / 180.0;
 
 /*
- * @brief check if a value is zero within a given epsilon
+ * @brief Check if a value is zero within a given epsilon.
  */
 template <Real T>
 [[nodiscard]]
@@ -69,7 +69,7 @@ constexpr bool isZero(T val, T eps)
 }
 
 /*
- * @brief check if two values are equal within a given epsilon
+ * @brief Check if two values are equal within a given epsilon.
  */
 template <Real T>
 [[nodiscard]]
@@ -92,8 +92,8 @@ constexpr bool isEqual(T a, T b, T eps)
 }
 
 /**
- * @brief safe multiplication, for floating point types, it is just normal multiplication,
- *        for integer types, it is promoted to double first, then multiplied
+ * @brief Safe multiplication, for floating point types, it is just normal multiplication,
+ *        for integer types, it is promoted to double first, then multiplied.
  */
 template <Real T>
 [[nodiscard]]
@@ -110,8 +110,8 @@ constexpr TypeF<T> safeMultiply(T first, T second)
 }
 
 /**
- * @brief safe calculation of vector length squared, for floating point types, it is just normal calculation,
- *        for integer types, it is promoted to double first, then calculated
+ * @brief Safe calculation of vector length squared, for floating point types, it is just normal calculation,
+ *        for integer types, it is promoted to double first, then calculated.
  */
 // computeVectorLength2Safe
 template <Real T, Real... Rest>
@@ -132,8 +132,8 @@ constexpr TypeF<T> safeLengthSquared(T first, Rest... rest)
 }
 
 /**
- * @brief safe calculation of vector length, for floating point types, it is just normal calculation,
- *        for integer types, it is promoted to double first, then calculated
+ * @brief Safe calculation of vector length, for floating point types, it is just normal calculation,
+ *        for integer types, it is promoted to double first, then calculated.
  */
 template <Real T, Real... Rest>
 [[nodiscard]]
@@ -218,4 +218,4 @@ constexpr T arithmeticNagate(T left)
     }
 }
 
-VI_MATH_NS_END
+V_MATH_NS_END

@@ -2,12 +2,12 @@
 
 #include "math_global.hpp"
 
-#include <cstdint>
 #include <algorithm>
+#include <cstdint>
 
 #include "Math.hpp"
 
-VI_MATH_NS_BEGIN
+V_MATH_NS_BEGIN
 template <typename T>
 class Point3;
 template <typename T>
@@ -223,4 +223,4 @@ using Rect3i = Rect3<int32_t>;
 using Rect3f = Rect3<float>;
 using Rect3d = Rect3<double>;
 
-VI_MATH_NS_END
+V_MATH_NS_END

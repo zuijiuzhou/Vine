@@ -4,7 +4,7 @@
 
 #include <atomic>
 
-VI_CORE_NS_BEGIN
+V_CORE_NS_BEGIN
 
 struct PtrControlBlock {
     std::atomic<unsigned int> strong_refs{ 0 };
@@ -201,6 +201,6 @@ inline RefPtr<T> const_pointer_cast(const RefPtr<Y>& rp)
     return const_cast<T*>(rp.get());
 }
 
-VI_CORE_NS_END
+V_CORE_NS_END
 
-#define VI_PTR(ClassName) RefPtr<ClassName>
+#define V_PTR(ClassName) RefPtr<ClassName>

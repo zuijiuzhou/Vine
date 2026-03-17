@@ -2,9 +2,9 @@
 
 #include <QAction>
 
-VI_APPFWGUI_NS_BEGIN
+V_APPFWGUI_NS_BEGIN
 
-VI_OBJECT_META_IMPL(UIElement, RefObject)
+V_OBJECT_META_IMPL(UIElement, RefObject)
 
 struct UIElement::Data {
     String                  name;
@@ -57,4 +57,4 @@ QObject* UIElement::impl() const
     return d->impl;
 }
 
-VI_APPFWGUI_NS_END
+V_APPFWGUI_NS_END

@@ -7,7 +7,7 @@
 
 #include "Math.hpp"
 
-VI_MATH_NS_BEGIN
+V_MATH_NS_BEGIN
 
 template <typename T>
 class Point3;
@@ -24,42 +24,42 @@ class Vector3 {
     using value_type = T;
 
   public:
-        /**
-         * @brief Construct a zero vector.
-         */
+    /**
+     * @brief Construct a zero vector.
+     */
     constexpr Vector3()
       : x(T())
       , y(T())
       , z(T())
     {}
 
-        /**
-         * @brief Construct a 3D vector from a 2D vector and z component.
-         * @param vec2 Source 2D vector.
-         * @param zz Z component.
-         */
+    /**
+     * @brief Construct a 3D vector from a 2D vector and z component.
+     * @param vec2 Source 2D vector.
+     * @param zz Z component.
+     */
     constexpr Vector3(const Vector2<T>& vec2, T zz = 0.)
       : x(vec2.x)
       , y(vec2.y)
       , z(zz)
     {}
 
-        /**
-         * @brief Construct a vector from components.
-         * @param xx X component.
-         * @param yy Y component.
-         * @param zz Z component.
-         */
+    /**
+     * @brief Construct a vector from components.
+     * @param xx X component.
+     * @param yy Y component.
+     * @param zz Z component.
+     */
     constexpr Vector3(T xx, T yy, T zz)
       : x(xx)
       , y(yy)
       , z(zz) {};
 
   public:
-        /**
-         * @brief Set x and y from a 2D vector.
-         * @param vec2 Source 2D vector.
-         */
+    /**
+     * @brief Set x and y from a 2D vector.
+     * @param vec2 Source 2D vector.
+     */
     constexpr void set(const Vector2<T>& vec2)
     {
         x = vec2.x;
@@ -132,11 +132,11 @@ class Vector3 {
     }
 
     /**
-     * @brief dot product
+     * @brief Dot product.
      *        only for real types (floating point and integers) not boolean.
      *        for integer types, overflow is possible.
-        * @param other Right-hand vector.
-        * @return Dot product value.
+     * @param other Right-hand vector.
+     * @return Dot product value.
      */
     [[nodiscard]]
     constexpr T dot(const Vector3<T>& other) const requires(Real<T>)
@@ -145,11 +145,11 @@ class Vector3 {
     }
 
     /**
-     * @brief cross product (in 2D, it is a scalar)
+     * @brief Cross product (in 2D, it is a scalar).
      *        only for real types (floating point and integers) not boolean.
      *        for integer types, overflow is possible.
-        * @param other Right-hand vector.
-        * @return Cross product vector.
+     * @param other Right-hand vector.
+     * @return Cross product vector.
      */
     [[nodiscard]]
     constexpr Vector3<T> cross(const Vector3<T>& other) const requires(Real<T>)
@@ -158,9 +158,9 @@ class Vector3 {
     }
 
     /**
-     * @brief length of the vector
+     * @brief Length of the vector.
      *        only for real types (floating point and integers) not boolean.
-        * @return Vector length.
+     * @return Vector length.
      */
     [[nodiscard]]
     constexpr TypeF<T> length() const requires(Real<T>)
@@ -188,17 +188,17 @@ class Vector3 {
     {
         /**
          * Algorithm: θ = atan2(|a||b|sinθ, a·b)
-         * 
+         *
          * Derivation:
          *   cosθ = (a·b) / (|a||b|)
          *   sin²θ = 1 - cos²θ = 1 - (a·b)² / (|a|²|b|²)
          *        = (|a|²|b|² - (a·b)²) / (|a|²|b|²)
-         *   
+         *
          *   Therefore: |a||b|sinθ = sqrt(|a|²|b|² - (a·b)²)
-         *   
+         *
          *   θ = atan2(|a||b|sinθ, |a||b|cosθ)
          *     = atan2(sqrt(|a|²|b|² - (a·b)²), a·b)
-         * 
+         *
          * Note: In 3D, this is equivalent to |a × b| = |a||b|sinθ
          * This approach is numerically stable compared to acos(dot/(|a||b|))
          * which suffers from precision loss when vectors are nearly parallel.
@@ -214,7 +214,7 @@ class Vector3 {
         const ft y2 = static_cast<ft>(other.y);
         const ft z2 = static_cast<ft>(other.z);
 
-        const ft dot = x1 * x2 + y1 * y2 + z1 * z2;
+        const ft dot     = x1 * x2 + y1 * y2 + z1 * z2;
         const ft len1_sq = x1 * x1 + y1 * y1 + z1 * z1;
         const ft len2_sq = x2 * x2 + y2 * y2 + z2 * z2;
 
@@ -225,9 +225,9 @@ class Vector3 {
     }
 
     /**
-     * @brief normalize the vector to unit length.
+     * @brief Normalize the vector to unit length.
      *        only for floating point types.
-        * @return Original vector length before normalization.
+     * @return Original vector length before normalization.
      */
     constexpr T normalize() requires(FP<T>)
     {
@@ -292,11 +292,11 @@ class Vector3 {
     }
 
   public:
-        /**
-         * @brief Equality operator.
-         * @param right Right-hand vector.
-         * @return True when vectors are equal.
-         */
+    /**
+     * @brief Equality operator.
+     * @param right Right-hand vector.
+     * @return True when vectors are equal.
+     */
     [[nodiscard]]
     constexpr bool operator==(const Vector3<T>& right) const
     {
@@ -425,9 +425,9 @@ class Vector3 {
     }
 
     /**
-     * @brief dot product
-        * @param other Right-hand vector.
-        * @return Dot product value.
+     * @brief Dot product.
+     * @param other Right-hand vector.
+     * @return Dot product value.
      */
     [[nodiscard]]
     constexpr T operator*(const Vector3<T>& other) const requires(Real<T>)
@@ -436,9 +436,9 @@ class Vector3 {
     }
 
     /**
-     * @brief cross product
-        * @param other Right-hand vector.
-        * @return Cross product vector.
+     * @brief Cross product.
+     * @param other Right-hand vector.
+     * @return Cross product vector.
      */
     [[nodiscard]]
     constexpr Vector3<T> operator^(const Vector3<T>& other) const requires(Real<T>)
@@ -495,4 +495,4 @@ using Vec3ui   = Vec3ui32;
 using Vec3f    = Vector3<float>;
 using Vec3d    = Vector3<double>;
 
-VI_MATH_NS_END
+V_MATH_NS_END

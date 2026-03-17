@@ -9,7 +9,7 @@
 #include "Vector3.hpp"
 #include "Vector4.hpp"
 
-VI_MATH_NS_BEGIN
+V_MATH_NS_BEGIN
 
 /*
  * COLUMN MAJOR MATRIX
@@ -148,6 +148,57 @@ class Matrix4x4 {
     }
 
     /**
+     * @brief Build a look-at view matrix.
+     * @param eye Camera position.
+     * @param target Camera target point.
+     * @param up Up direction reference.
+     * @note Uses backward-axis convention: backward = eye - target.
+     */
+    void makeLookAt(const Point3<T>& eye, const Point3<T>& target, const Vector3<T>& up);
+    /**
+     * @brief Make an orthographic projection matrix.
+     * @param left the left clipping plane.
+     * @param right the right clipping plane.
+     * @param bottom the bottom clipping plane.
+     * @param top the top clipping plane.
+     * @param z_near the near clipping plane.
+     * @param z_far the far clipping plane.
+     */
+    void makeOrtho(double left, double right, double bottom, double top, double z_near, double z_far);
+    /**
+     * @brief Make a perspective matrix.
+     * @param fovy the field of view angle in the y direction.
+     * @param aspect_ratio the aspect ratio of the viewport.
+     * @param z_near the near clipping plane.
+     * @param z_far the far clipping plane.
+     */
+    void makePerspective(double fovy, double aspect_ratio, double z_near, double z_far);
+
+    /**
+     * @brief Make a reflection matrix across a plane defined by its normal and offset.
+     * @param plane_normal Normal vector of the mirror plane.
+     * @param plane_offset Offset of the mirror plane from the origin.
+     */
+    void makeReflection(const Vector3<T>& plane_normal, T plane_offset);
+
+    /**
+     * @brief Set the coordinate system represented by this matrix.
+     * @param origin the origin point of the coordinate system.
+     * @param xAxis the x axis direction of the coordinate system.
+     * @param yAxis the y axis direction of the coordinate system.
+     * @param zAxis the z axis direction of the coordinate system.
+     */
+    void setBasis(const Point3<T>& origin, const Vector3<T>& x_axis, const Vector3<T>& y_axis, const Vector3<T>& z_axis);
+    /**
+     * @brief Get the coordinate system represented by this matrix.
+     * @param o_origin Output origin point.
+     * @param o_x_axis Output x-axis direction.
+     * @param o_y_axis Output y-axis direction.
+     * @param o_z_axis Output z-axis direction.
+     */
+    void getBasis(Point3<T>& o_origin, Vector3<T>& o_x_axis, Vector3<T>& o_y_axis, Vector3<T>& o_z_axis) const;
+
+    /**
      * @brief Left-multiply this matrix by another matrix.
      * @param left Left matrix in M := left * M.
      * @return Reference to this matrix.
@@ -213,54 +264,18 @@ class Matrix4x4 {
     Matrix4x4<T>& postScale(const Vector3<T>& factor);
 
     /**
-     * @brief Build a look-at view matrix.
-     * @param eye Camera position.
-     * @param target Camera target point.
-     * @param up Up direction reference.
-     * @note Uses backward-axis convention: backward = eye - target.
+     * @brief Calculate the determinant of the matrix.
+     * @return Determinant value.
      */
-    void makeLookAt(const Point3<T>& eye, const Point3<T>& target, const Vector3<T>& up);
+    T determinant() const;
+
     /**
-     * @brief make an orthographic projection matrix
-     * @param left the left clipping plane
-     * @param right the right clipping plane
-     * @param bottom the bottom clipping plane
-     * @param top the top clipping plane
-     * @param z_near the near clipping plane
-     * @param z_far the far clipping plane
-     */
-    void makeOrtho(double left, double right, double bottom, double top, double z_near, double z_far);
-    /**
-     * @brief make a perspective matrix
-     * @param fovy the field of view angle in the y direction
-     * @param aspect_ratio the aspect ratio of the viewport
-     * @param z_near the near clipping plane
-     * @param z_far the far clipping plane
-     */
-    void makePerspective(double fovy, double aspect_ratio, double z_near, double z_far);
-    /**
-     * @brief set the coordinate system represented by this matrix
-     * @param origin the origin point of the coordinate system
-     * @param xAxis the x axis direction of the coordinate system
-     * @param yAxis the y axis direction of the coordinate system
-     * @param zAxis the z axis direction of the coordinate system
-     */
-    void setBasis(const Point3<T>& origin, const Vector3<T>& x_axis, const Vector3<T>& y_axis, const Vector3<T>& z_axis);
-    /**
-     * @brief get the coordinate system represented by this matrix
-     * @param o_origin Output origin point.
-     * @param o_x_axis Output x-axis direction.
-     * @param o_y_axis Output y-axis direction.
-     * @param o_z_axis Output z-axis direction.
-     */
-    void getBasis(Point3<T>& o_origin, Vector3<T>& o_x_axis, Vector3<T>& o_y_axis, Vector3<T>& o_z_axis) const;
-    /**
-     * @brief transpose the matrix
+     * @brief Transpose the matrix.
      */
     void transpose();
 
     /**
-     * @brief return the transposed matrix without modifying the original one
+     * @brief Return the transposed matrix without modifying the original one.
      */
     Matrix4x4<T> transposed() const
     {
@@ -270,12 +285,7 @@ class Matrix4x4 {
     }
 
     /**
-     * @brief invert the matrix
-     */
-    void invert();
-
-    /**
-     * @brief return the inverted matrix without modifying the original one
+     * @brief Invert the matrix.
      * @note Inverse exists only when determinant is non-zero (det(M) != 0).
      * @note Typical invertible cases:
      *       - Rigid transforms (rotation + translation).
@@ -287,6 +297,11 @@ class Matrix4x4 {
      *       - Any transform that collapses 3D space into lower dimension.
      * @note For singular matrices (det(M) == 0), current implementation returns an unchanged copy.
      */
+    void invert();
+
+    /**
+     * @brief Return the inverted matrix without modifying the original one.
+     */
     Matrix4x4<T> inverted() const
     {
         Matrix4x4<T> m(*this);
@@ -295,35 +310,58 @@ class Matrix4x4 {
     }
 
     /**
-     * @brief is this matrix a rigid transformation matrix (only rotation and translation)
-     * @param eps tolerance for floating-point comparisons
+     * @brief Get the translation component of this matrix.
+     * @return Vector3<T>.
      */
-    bool isRigid(T eps = EPS<T>()) const;
-    /**
-     * @brief is this matrix an affine transformation matrix (last row is [0 0 0 1]).
-     *        affine matrix that preserve the parallelism of straight lines, such as translation, scaling, rotation,
-     * shearing, and reflection. non-affine matrix includes projection matrix.
-     * @param eps tolerance for floating-point comparisons
-     */
-    bool isAffine(T eps = EPS<T>()) const;
-    /*
-     * @brief is this matrix an identity matrix
-     * @param eps tolerance for floating-point comparisons
-     */
-    bool isIdentity(T eps = EPS<T>()) const;
+    Vector3<T> translation() const
+    {
+        return Vector3<T>(vecs[3][0], vecs[3][1], vecs[3][2]);
+    }
 
     /**
-     * @brief is this matrix approximately equal to another matrix within a certain tolerance (epsilon).
-     * @param other the matrix to compare with
-     * @param eps tolerance for floating-point comparisons
-     * @return true if the matrices are approximately equal, false otherwise
+     * @brief Get the rotation component of this matrix as a quaternion.
+     * @return Quaternion<T>.
+     */
+    Quaternion<T> rotation() const;
+
+    /*
+     * @brief Get the non-uniform scaling factors of this matrix.
+     * @return Vector3<T> where x/y/z components represent scale along respective axes.
+     * @note If the matrix contains rotation, the extracted scaling factors may not be accurate.
+     *       For pure scale or uniform scale, the returned vector will be correct.
+     */
+    Vector3<T> scaleFactors() const;
+
+    /*
+     * @brief Is this matrix an identity matrix.
+     * @param eps tolerance for floating-point comparisons.
+     */
+    bool isIdentity(T eps = EPS<T>()) const;
+    /**
+     * @brief Is this matrix an affine transformation matrix (last row is [0 0 0 1]).
+     *        affine matrix that preserve the parallelism of straight lines, such as translation, scaling, rotation,
+     *        shearing, and reflection. non-affine matrix includes projection matrix.
+     * @param eps Tolerance for floating-point comparisons.
+     */
+    bool isAffine(T eps = EPS<T>()) const;
+    /**
+     * @brief Is this matrix a rigid transformation matrix (only rotation and translation, no scaling or shearing or reflection).
+     * @param eps Tolerance for floating-point comparisons.
+     */
+    bool isRigid(T eps = EPS<T>()) const;
+
+    /**
+     * @brief Is this matrix approximately equal to another matrix within a certain tolerance (epsilon).
+     * @param other The matrix to compare with.
+     * @param eps Tolerance for floating-point comparisons.
+     * @return True if the matrices are approximately equal, false otherwise.
      */
     bool isEqual(const Matrix4x4<T>& other, T eps = EPS<T>()) const;
 
     /**
-     * @brief check if all elements of the matrix are zero within a certain tolerance (epsilon).
-     * @param eps tolerance for floating-point comparisons
-     * @return true if all elements are approximately zero, false otherwise
+     * @brief Check if all elements of the matrix are zero within a certain tolerance (epsilon).
+     * @param eps tolerance for floating-point comparisons.
+     * @return true if all elements are approximately zero, false otherwise.
      */
     bool isZero(T eps = EPS<T>()) const;
 
@@ -528,14 +566,28 @@ class Matrix4x4 {
         return m;
     }
 
+    /**
+     * @brief Create a reflection matrix across a plane.
+     * @param plane_normal Normal vector of the plane.
+     * @param plane_offset Offset of the plane from the origin.
+     * @return Reflection matrix.
+     */
+    [[nodiscard]]
+    static Matrix4x4<T> reflect(const Vector3<T>& plane_normal, T plane_offset)
+    {
+        Matrix4x4<T> m;
+        m.makeReflection(plane_normal, plane_offset);
+        return m;
+    }
+
   public:
     union
     {
         // struct {
-        //     T m00, m01, m02, m03;
-        //     T m10, m11, m12, m13;
-        //     T m20, m21, m22, m23;
-        //     T m30, m31, m32, m33;
+        //     T m00, m01, m02, m03; vec0
+        //     T m10, m11, m12, m13; vec1
+        //     T m20, m21, m22, m23; vec2
+        //     T m30, m31, m32, m33; vec3
         // };
 
         struct {
@@ -559,4 +611,4 @@ Point3<T> operator*(const Matrix4x4<T>& m, const Point3<T>& p);
 using Mat4f = Matrix4x4<float>;
 using Mat4d = Matrix4x4<double>;
 
-VI_MATH_NS_END
+V_MATH_NS_END

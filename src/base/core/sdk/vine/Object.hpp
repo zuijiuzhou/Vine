@@ -8,7 +8,7 @@
 #include "Class.hpp"
 #include "String.hpp"
 
-VI_CORE_NS_BEGIN
+V_CORE_NS_BEGIN
 
 class Object;
 
@@ -36,7 +36,7 @@ concept Comparable = ObjectBased<T> && requires(const T& t, const Object& obj) {
     } -> std::same_as<int>;
 };
 
-class VI_CORE_API Object {
+class V_CORE_API Object {
   public:
     Object() noexcept {};
     virtual ~Object() noexcept {};
@@ -111,9 +111,9 @@ const T& obj_cast(const Object& obj)
     throw std::bad_cast();
 }
 
-VI_CORE_NS_END
+V_CORE_NS_END
 
-#define VI_OBJECT_META                                                                                                                                         \
+#define V_OBJECT_META                                                                                                                                          \
   public:                                                                                                                                                      \
     virtual const vine::Class* getClass() const noexcept override                                                                                              \
     {                                                                                                                                                          \
@@ -125,12 +125,12 @@ VI_CORE_NS_END
         return cls;                                                                                                                                            \
     }
 
-#define VI_OBJECT_META_DECL                                                                                                                                    \
+#define V_OBJECT_META_DECL                                                                                                                                     \
   public:                                                                                                                                                      \
     virtual const vine::Class* getClass() const noexcept override;                                                                                             \
     static const vine::Class*  desc();
 
-#define VI_OBJECT_META_IMPL(Sub, Parent)                                                                                                                       \
+#define V_OBJECT_META_IMPL(Sub, Parent)                                                                                                                        \
     const vine::Class* Sub::getClass() const noexcept                                                                                                          \
     {                                                                                                                                                          \
         return desc();                                                                                                                                         \
@@ -145,7 +145,7 @@ VI_CORE_NS_END
         return cls;                                                                                                                                            \
     }
 
-#define VI_TMPL_OBJECT_META_IMPL(TmplPrefix, Sub, Parent)                                                                                                      \
+#define V_TMPL_OBJECT_META_IMPL(TmplPrefix, Sub, Parent)                                                                                                       \
     TmplPrefix const vine::Class* Sub::getClass() const noexcept                                                                                               \
     {                                                                                                                                                          \
         return desc();                                                                                                                                         \
@@ -160,12 +160,6 @@ VI_CORE_NS_END
         return cls;                                                                                                                                            \
     }
 
-
-#define VI_OBJECT_DATA                                                                                                                                         \
-    struct Data;                                                                                                                                               \
-    Data* const d;
-
-
-// #define VI_OBJ(Parent) \
+// #define V_OBJ(Parent) \
 // static const Class* desc(); \
 // virtual const Class* getType() const override;

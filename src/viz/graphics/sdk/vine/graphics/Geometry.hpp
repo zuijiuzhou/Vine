@@ -1,18 +1,21 @@
 ﻿#pragma once
-#include "graphics_global.hpp"
 #include "Drawable.hpp"
+#include "graphics_global.hpp"
 
-VI_GRAPHICS_NS_BEGIN
+V_GRAPHICS_NS_BEGIN
 
-class VI_GRAPHICS_API Geometry : public Drawable {
-  VI_OBJECT_META_DECL;
+class V_GRAPHICS_API Geometry : public Drawable {
+    V_OBJECT_META_DECL;
 
-public:
-  Geometry();
+  public:
+    Geometry();
 
-public:
-  VI_OBJECT_DATA;
+  public:
+    struct Data;
+    Data* const d;
+    ;
 };
+
 using GeometryPtr = RefPtr<Geometry>;
 
-VI_GRAPHICS_NS_END
+V_GRAPHICS_NS_END

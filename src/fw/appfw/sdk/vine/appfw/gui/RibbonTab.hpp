@@ -2,13 +2,13 @@
 
 #include "Widget.hpp"
 
-VI_APPFWGUI_NS_BEGIN
+V_APPFWGUI_NS_BEGIN
 
 class RibbonBar;
 class RibbonGroup;
 
-class VI_APPFW_API RibbonTab : public Widget {
-    VI_OBJECT_META_DECL
+class V_APPFW_API RibbonTab : public Widget {
+    V_OBJECT_META_DECL
 
     friend class RibbonBar;
 
@@ -26,8 +26,8 @@ class VI_APPFW_API RibbonTab : public Widget {
     void groupAt(int idx) const;
 
   private:
-    VI_OBJECT_DATA
+    struct Data;
+    Data* const d;
 };
 
-VI_APPFWGUI_NS_END
-
+V_APPFWGUI_NS_END

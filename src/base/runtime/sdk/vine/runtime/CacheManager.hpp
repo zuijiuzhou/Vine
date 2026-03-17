@@ -3,11 +3,11 @@
 
 #include <vine/String.hpp>
 
-VI_RUNTIME_NS_BEGIN
+V_RUNTIME_NS_BEGIN
 
-class VI_RUNTIME_API CacheManager {
+class V_RUNTIME_API CacheManager {
   public:
     virtual void set(const String& key, void* value, size_t timeout) = 0;
 };
 
-VI_RUNTIME_NS_END
+V_RUNTIME_NS_END

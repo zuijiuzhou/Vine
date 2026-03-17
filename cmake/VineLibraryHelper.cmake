@@ -1,4 +1,4 @@
-function(vi_add_library target_name_var short_name)
+function(v_add_library target_name_var short_name)
     # CMAKE_SOURCE_DIR顶级当前CMakeLists.txt文件所在目录
     # CMAKE_CURRENT_SOURCE_DIR 当前CMakeLists.txt所在目录
     # file(RELATIVE_PATH src_rel_dir ${CMAKE_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR})
@@ -45,7 +45,7 @@ function(vi_add_library target_name_var short_name)
     source_group(TREE ${src_dir} PREFIX src FILES ${src_file_list})
     # source_group(res FILES ${rc_file_list})
 
-    string(TOUPPER VI_${short_name}_LIB lib_compile_def)
+    string(TOUPPER V_${short_name}_LIB lib_compile_def)
 
     if(src_file_list)
         target_compile_definitions(${target_name} PRIVATE ${lib_compile_def})

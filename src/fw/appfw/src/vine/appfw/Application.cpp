@@ -8,11 +8,11 @@
 #include <vine/appfw/CommandManager.hpp>
 #include <vine/appfw/ServiceManager.hpp>
 
-VI_APPFW_NS_BEGIN
+V_APPFW_NS_BEGIN
 
 static Application* s_current_app = nullptr;
 
-VI_OBJECT_META_IMPL(Application, RefObject)
+V_OBJECT_META_IMPL(Application, RefObject)
 
 struct Application::Data {
     AddinManagerPtr   addin_manager;
@@ -91,4 +91,4 @@ char** Application::argv() const
     return d->argv;
 }
 
-VI_APPFW_NS_END
+V_APPFW_NS_END

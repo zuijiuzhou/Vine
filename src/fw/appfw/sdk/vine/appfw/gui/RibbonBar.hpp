@@ -2,14 +2,14 @@
 
 #include "Widget.hpp"
 
-VI_APPFWGUI_NS_BEGIN
+V_APPFWGUI_NS_BEGIN
 
 class RibbonTab;
 class RibbonDropDownItem;
 class MainWindow;
 
-class VI_APPFW_API RibbonBar : public Widget {
-    VI_OBJECT_META_DECL
+class V_APPFW_API RibbonBar : public Widget {
+    V_OBJECT_META_DECL
 
     friend class MainWindow;
 
@@ -28,8 +28,8 @@ class VI_APPFW_API RibbonBar : public Widget {
     void appendApplicationMenu(RibbonDropDownItem* mi);
 
   private:
-    VI_OBJECT_DATA
+    struct Data;
+    Data* const d;
 };
 
-VI_APPFWGUI_NS_END
-
+V_APPFWGUI_NS_END

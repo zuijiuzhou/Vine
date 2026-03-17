@@ -6,10 +6,10 @@
 
 class QWidget;
 
-VI_APPFWGUI_NS_BEGIN
+V_APPFWGUI_NS_BEGIN
 
-class VI_APPFW_API Widget : public UIElement {
-    VI_OBJECT_META_DECL
+class V_APPFW_API Widget : public UIElement {
+    V_OBJECT_META_DECL
 
   protected:
     Widget(QWidget* impl);
@@ -28,7 +28,8 @@ class VI_APPFW_API Widget : public UIElement {
     void size(const Size& s);
 
   private:
-    VI_OBJECT_DATA
+    struct Data;
+    Data* const d;
 };
 
-VI_APPFWGUI_NS_END
+V_APPFWGUI_NS_END

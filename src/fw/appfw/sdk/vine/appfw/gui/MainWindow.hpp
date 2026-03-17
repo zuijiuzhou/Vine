@@ -2,14 +2,14 @@
 
 #include "Widget.hpp"
 
-VI_APPFWGUI_NS_BEGIN
+V_APPFWGUI_NS_BEGIN
 
 class RibbonBar;
 class StatusBar;
 class DockPanel;
 
-class VI_APPFW_API MainWindow : public Widget {
-    VI_OBJECT_META_DECL
+class V_APPFW_API MainWindow : public Widget {
+    V_OBJECT_META_DECL
 
     friend class RibbonBar;
     friend class StatusBar;
@@ -41,9 +41,10 @@ class VI_APPFW_API MainWindow : public Widget {
     void addDockPanel(DockPanel* panel, DockAreas area);
 
   private:
-    VI_OBJECT_DATA
+    struct Data;
+    Data* const d;
 };
 
 using MainWindowPtr = RefPtr<MainWindow>;
 
-VI_APPFWGUI_NS_END
+V_APPFWGUI_NS_END

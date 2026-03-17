@@ -12,9 +12,9 @@
 
 #include "vine/appfw/gui/Convert.hpp"
 
-VI_APPFWGUI_NS_BEGIN
+V_APPFWGUI_NS_BEGIN
 
-VI_OBJECT_META_IMPL(MainWindow, Widget)
+V_OBJECT_META_IMPL(MainWindow, Widget)
 
 struct MainWindow::Data {
     RefPtr<RibbonBar> ribbon_bar;
@@ -157,4 +157,4 @@ void MainWindow::addDockPanel(DockPanel* panel, DockAreas area)
     qwnd->addDockWidget((Qt::DockWidgetArea)qarea.toInt(), qdockpanel);
 }
 
-VI_APPFWGUI_NS_END
+V_APPFWGUI_NS_END

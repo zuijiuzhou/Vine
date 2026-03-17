@@ -4,10 +4,10 @@
 #include <vine/RefObject.hpp>
 #include <vine/di/Registration.hpp>
 
-VI_APPFW_NS_BEGIN
+V_APPFW_NS_BEGIN
 
-class VI_APPFW_API ServiceManager : public RefObject {
-    VI_OBJECT_META_DECL;
+class V_APPFW_API ServiceManager : public RefObject {
+    V_OBJECT_META_DECL;
 
   public:
     ServiceManager();
@@ -15,11 +15,13 @@ class VI_APPFW_API ServiceManager : public RefObject {
 
   public:
     ServiceManager* registerService(di::Registration* reg);
-    RefObject*         getService(Type type) const;
+    RefObject*      getService(Type type) const;
 
   private:
-    VI_OBJECT_DATA
+    struct Data;
+    Data* const d;
 };
+
 using ServiceManagerPtr = RefPtr<ServiceManager>;
 
-VI_APPFW_NS_END
+V_APPFW_NS_END

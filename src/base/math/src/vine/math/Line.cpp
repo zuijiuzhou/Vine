@@ -5,7 +5,7 @@
 #include <vine/math/Math.hpp>
 
 
-VI_MATH_NS_BEGIN
+V_MATH_NS_BEGIN
 
 #define TMPL_PREFIX template <typename T>
 
@@ -111,7 +111,7 @@ TMPL_PREFIX Point3<T> Line<T>::closestPoint(const Point3<T>& pt) const
     return origin + direction * t;
 }
 
-template class VI_MATH_API Line<float>;
-template class VI_MATH_API Line<double>;
+template class V_MATH_API Line<float>;
+template class V_MATH_API Line<double>;
 
-VI_MATH_NS_END
+V_MATH_NS_END

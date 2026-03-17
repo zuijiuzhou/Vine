@@ -4,10 +4,10 @@
 
 #include <vine/RefObject.hpp>
 
-VI_GEOMETRY_NS_BEGIN
+V_GEOMETRY_NS_BEGIN
 
-class VI_GEOMETRY_API Shape : public vine::RefObject {
-    VI_OBJECT_META_DECL;
+class V_GEOMETRY_API Shape : public vine::RefObject {
+    V_OBJECT_META_DECL;
 
   public:
     Shape();
@@ -15,4 +15,4 @@ class VI_GEOMETRY_API Shape : public vine::RefObject {
   public:
 };
 
-VI_GEOMETRY_NS_END
+V_GEOMETRY_NS_END

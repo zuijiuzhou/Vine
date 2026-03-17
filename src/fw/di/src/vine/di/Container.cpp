@@ -4,7 +4,7 @@
 #include <vine/di/ContainerPrivate.hpp>
 #include <vine/di/Registration.hpp>
 
-VI_DI_NS_BEGIN
+V_DI_NS_BEGIN
 
 namespace
 {
@@ -19,7 +19,7 @@ bool isValidRegistration(const Registration& reg)
 ContainerPrivate::ContainerPrivate()
 {}
 
-VI_OBJECT_META_IMPL(Container, RefObject)
+V_OBJECT_META_IMPL(Container, RefObject)
 
 Container::Container()
   : RefObject(new ContainerPrivate())
@@ -27,7 +27,7 @@ Container::Container()
 
 void Container::add(const Registration& reg)
 {
-    VI_D(Container);
+    V_D(Container);
 
     if (isValidRegistration(reg)) {
         auto type = reg.serviceType();
@@ -40,7 +40,7 @@ void Container::add(const Registration& reg)
 
 RefObject* Container::resolve(Type type) const
 {
-    VI_D(Container);
+    V_D(Container);
 
     if (d->regs.contains(type)) {
         auto& reg = d->regs.at(type);
@@ -61,4 +61,4 @@ RefObject* Container::resolve(Type type) const
     return nullptr;
 }
 
-VI_DI_NS_END
+V_DI_NS_END

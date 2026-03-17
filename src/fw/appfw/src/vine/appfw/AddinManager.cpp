@@ -3,26 +3,23 @@
 #include <vector>
 
 #ifdef __MSVC__
-#include <Windows.h>
+#    include <Windows.h>
 #endif // __MSVC__
 
 
-VI_APPFW_NS_BEGIN
+V_APPFW_NS_BEGIN
 
-VI_OBJECT_META_IMPL(AddinManager, RefObject)
+V_OBJECT_META_IMPL(AddinManager, RefObject)
 
-struct AddinManager::Data {
-	
-};
+struct AddinManager::Data {};
 
 AddinManager::AddinManager()
-  : d(new Data()) {
+  : d(new Data())
+{}
 
-}
-
-Addin* AddinManager::load(const String& str) {
+Addin* AddinManager::load(const String& str)
+{
     return nullptr;
 }
 
-VI_APPFW_NS_END
-
+V_APPFW_NS_END

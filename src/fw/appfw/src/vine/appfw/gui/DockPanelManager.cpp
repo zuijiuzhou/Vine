@@ -2,9 +2,9 @@
 
 #include <vine/appfw/gui/DockPanelManager_p.hpp>
 
-VI_APPFWGUI_NS_BEGIN
+V_APPFWGUI_NS_BEGIN
 
-VI_OBJECT_META_IMPL(DockPanelManager, RefObject)
+V_OBJECT_META_IMPL(DockPanelManager, RefObject)
 
 DockPanelManagerPrivate::DockPanelManagerPrivate()
   : impl_(new DockingPaneManager())
@@ -19,4 +19,4 @@ DockPanelManager::DockPanelManager()
   : vine::RefObject(new DockPanelManagerPrivate())
 {}
 
-VI_APPFWGUI_NS_END
+V_APPFWGUI_NS_END

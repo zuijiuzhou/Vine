@@ -8,7 +8,7 @@
 #include "Point2.hpp"
 #include "Vector2.hpp"
 
-VI_MATH_NS_BEGIN
+V_MATH_NS_BEGIN
 
 /**
  * @brief A class representing a rectangle in 2D space, defined by its top-left corner and size.
@@ -21,9 +21,9 @@ class Rect2 {
     using value_type = T;
 
   public:
-        /**
-         * @brief Construct a zero-sized rectangle at origin.
-         */
+    /**
+     * @brief Construct a zero-sized rectangle at origin.
+     */
     constexpr Rect2()
       : x(T())
       , y(T())
@@ -31,11 +31,11 @@ class Rect2 {
       , h(T())
     {}
 
-        /**
-         * @brief Construct a rectangle from corner and size.
-         * @param corner Top-left style corner.
-         * @param size Rectangle size vector.
-         */
+    /**
+     * @brief Construct a rectangle from corner and size.
+     * @param corner Top-left style corner.
+     * @param size Rectangle size vector.
+     */
     constexpr Rect2(const Point2<T>& corner, const Vector2<T>& size)
       : x(corner.x)
       , y(corner.y)
@@ -43,13 +43,13 @@ class Rect2 {
       , h(size.y)
     {}
 
-        /**
-         * @brief Construct a rectangle from raw components.
-         * @param xx X coordinate.
-         * @param yy Y coordinate.
-         * @param ww Width.
-         * @param hh Height.
-         */
+    /**
+     * @brief Construct a rectangle from raw components.
+     * @param xx X coordinate.
+     * @param yy Y coordinate.
+     * @param ww Width.
+     * @param hh Height.
+     */
     constexpr Rect2(T xx, T yy, T ww, T hh)
       : x(xx)
       , y(yy)
@@ -58,10 +58,10 @@ class Rect2 {
     {}
 
   public:
-        /**
-         * @brief Get top boundary value.
-         * @return Maximum y boundary.
-         */
+    /**
+     * @brief Get top boundary value.
+     * @return Maximum y boundary.
+     */
     [[nodiscard]]
     constexpr T top() const
     {
@@ -261,4 +261,4 @@ using Rect2i = Rect2<int32_t>;
 using Rect2f = Rect2<float>;
 using Rect2d = Rect2<double>;
 
-VI_MATH_NS_END
+V_MATH_NS_END

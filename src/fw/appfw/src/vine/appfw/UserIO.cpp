@@ -1,11 +1,10 @@
 ﻿#include <vine/appfw/UserIO.hpp>
 
-VI_APPFW_NS_BEGIN
+V_APPFW_NS_BEGIN
 
-VI_OBJECT_META_IMPL(UserIO, RefObject);
+V_OBJECT_META_IMPL(UserIO, RefObject);
 
-UserIO::UserIO() {
+UserIO::UserIO()
+{}
 
-}
-
-VI_APPFW_NS_END
+V_APPFW_NS_END

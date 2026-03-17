@@ -26,27 +26,28 @@
 #include "DockAutoHideButton.h"
 
 DockAutoHideButton::DockAutoHideButton(DockAutoHideButton::Position pos, QWidget* parent)
-: QPushButton(parent), m_pos(pos)
+  : QPushButton(parent)
+  , m_pos(pos)
 {
     init();
 }
 
 DockAutoHideButton::DockAutoHideButton(const QString& text, QWidget* parent)
-: QPushButton(text, parent)
+  : QPushButton(text, parent)
 {
     init();
 }
 
 DockAutoHideButton::DockAutoHideButton(const QIcon& icon, const QString& text, QWidget* parent)
-: QPushButton(icon, text, parent)
+  : QPushButton(icon, text, parent)
 {
     init();
 }
 
 void DockAutoHideButton::init()
 {
-    m_orientation = Qt::Horizontal;
-    m_mirrored = false;
+    m_orientation   = Qt::Horizontal;
+    m_mirrored      = false;
     m_swapDirection = false;
 
     this->setFont(QFont("Segoe UI", 9));
@@ -61,7 +62,7 @@ void DockAutoHideButton::init()
 
     m_hoverTimer->setInterval(1000);
 
-    connect(m_hoverTimer,&QTimer::timeout, this, &DockAutoHideButton::onTimerElapsed);
+    connect(m_hoverTimer, &QTimer::timeout, this, &DockAutoHideButton::onTimerElapsed);
 }
 
 Qt::Orientation DockAutoHideButton::orientation() const
@@ -79,15 +80,17 @@ void DockAutoHideButton::setOrientation(Qt::Orientation orientation)
     m_orientation = orientation;
 
     switch (orientation) {
-        case Qt::Horizontal: {
-            setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Fixed);
-            break;
-        }
+    case Qt::Horizontal:
+    {
+        setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Fixed);
+        break;
+    }
 
-        case Qt::Vertical: {
-            setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Minimum);
-            break;
-        }
+    case Qt::Vertical:
+    {
+        setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Minimum);
+        break;
+    }
     }
 }
 
@@ -103,7 +106,7 @@ void DockAutoHideButton::setMirrored(bool mirrored)
 
 QSize DockAutoHideButton::sizeHint() const
 {
-    QSize size;
+    QSize        size;
     QFontMetrics fm(this->font());
 
     size.setWidth(fm.horizontalAdvance(this->text()));
@@ -116,7 +119,7 @@ QSize DockAutoHideButton::sizeHint() const
     return size;
 }
 
-void DockAutoHideButton::enterEvent(QEnterEvent *event)
+void DockAutoHideButton::enterEvent(QEnterEvent* event)
 {
     m_hoverTimer->start();
 
@@ -127,7 +130,7 @@ void DockAutoHideButton::enterEvent(QEnterEvent *event)
     QWidget::enterEvent(event);
 }
 
-void DockAutoHideButton::leaveEvent(QEvent *event)
+void DockAutoHideButton::leaveEvent(QEvent* event)
 {
     m_hoverTimer->stop();
 
@@ -141,7 +144,7 @@ void DockAutoHideButton::leaveEvent(QEvent *event)
 void DockAutoHideButton::onTimerElapsed(void)
 {
     if (this->rect().contains(mapFromGlobal(QCursor::pos()))) {
-        QTimer *timer = qobject_cast<QTimer *>(this->sender());
+        QTimer* timer = qobject_cast<QTimer*>(this->sender());
 
         timer->stop();
 
@@ -152,59 +155,63 @@ void DockAutoHideButton::onTimerElapsed(void)
 void DockAutoHideButton::paintEvent(QPaintEvent*)
 {
     QStylePainter p(this);
-    QColor color, textColor;
+    QColor        color, textColor;
 
     p.setRenderHint(QPainter::Antialiasing, true);
     p.setRenderHint(QPainter::Antialiasing, true);
 
     if (m_hovered) {
         color = textColor = QColor(0, 122, 204);
-    } else {
+    }
+    else {
         textColor = Qt::black;
-        color = QColor(0xcc, 0xce, 0xdb);
+        color     = QColor(0xcc, 0xce, 0xdb);
     }
 
     p.setPen(textColor);
 
     switch (m_orientation) {
-        case Qt::Horizontal: {
-            if (m_mirrored) {
-                p.rotate(180);
-                p.translate(-width(), -height());
-            }
-
-            if (m_swapDirection) {
-                p.fillRect(0, height()-6, width(), 6, color);
-                p.drawText(0, 0, width(), height()-10, 0, this->text());
-            }
-            else {
-                p.fillRect(0, 0, width(), 6, color);
-                p.drawText(0, 10, width(), height(), 0, this->text());
-
-            }
-
-            break;
+    case Qt::Horizontal:
+    {
+        if (m_mirrored) {
+            p.rotate(180);
+            p.translate(-width(), -height());
         }
 
-        case Qt::Vertical: {
-            if (m_mirrored) {
-                p.rotate(-90);
-                p.translate(-height(), 0);
-            } else {
-                p.rotate(90);
-                p.translate(0, -width());
-            }
-
-            if (m_swapDirection) {
-                p.fillRect(0, 0, height(), 6, color);
-                p.drawText(0, 10, height(), width(), 0, this->text());
-            } else {
-                p.fillRect(0, width()-6, height(), 6, color);
-                p.drawText(0, 0, height(), width()-10, 0, this->text());
-            }
-
-            break;
+        if (m_swapDirection) {
+            p.fillRect(0, height() - 6, width(), 6, color);
+            p.drawText(0, 0, width(), height() - 10, 0, this->text());
         }
+        else {
+            p.fillRect(0, 0, width(), 6, color);
+            p.drawText(0, 10, width(), height(), 0, this->text());
+        }
+
+        break;
+    }
+
+    case Qt::Vertical:
+    {
+        if (m_mirrored) {
+            p.rotate(-90);
+            p.translate(-height(), 0);
+        }
+        else {
+            p.rotate(90);
+            p.translate(0, -width());
+        }
+
+        if (m_swapDirection) {
+            p.fillRect(0, 0, height(), 6, color);
+            p.drawText(0, 10, height(), width(), 0, this->text());
+        }
+        else {
+            p.fillRect(0, width() - 6, height(), 6, color);
+            p.drawText(0, 0, height(), width() - 10, 0, this->text());
+        }
+
+        break;
+    }
     }
 }
 
@@ -224,31 +231,30 @@ QStyleOptionButton* DockAutoHideButton::getStyleOption() const
 
     opt->features = QStyleOptionButton::None;
     opt->features |= QStyleOptionButton::Flat;
-    opt->text = text();
-    opt->icon = icon();
+    opt->text     = text();
+    opt->icon     = icon();
     opt->iconSize = iconSize();
 
     return opt;
 }
 
-void DockAutoHideButton::setPane(DockingPaneContainer *container, DockingPaneBase *pane)
+void DockAutoHideButton::setPane(DockingPaneContainer* container, DockingPaneBase* pane)
 {
     m_paneContainer = container;
-    m_dockingPane = pane;
+    m_dockingPane   = pane;
 }
 
-DockingPaneBase *DockAutoHideButton::pane(void)
+DockingPaneBase* DockAutoHideButton::pane(void)
 {
-    return(m_dockingPane);
+    return (m_dockingPane);
 }
 
-DockingPaneContainer *DockAutoHideButton::container(void)
+DockingPaneContainer* DockAutoHideButton::container(void)
 {
-    return(m_paneContainer);
+    return (m_paneContainer);
 }
 
 DockAutoHideButton::Position DockAutoHideButton::position(void)
 {
-    return(m_pos);
+    return (m_pos);
 }
-

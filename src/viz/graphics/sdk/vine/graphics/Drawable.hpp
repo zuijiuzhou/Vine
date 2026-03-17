@@ -1,18 +1,21 @@
 ﻿#pragma once
-#include <vine/RefObject.hpp>
 #include "graphics_global.hpp"
+#include <vine/RefObject.hpp>
 
-VI_GRAPHICS_NS_BEGIN
+V_GRAPHICS_NS_BEGIN
 
-class VI_GRAPHICS_API Drawable : public RefObject {
-  VI_OBJECT_META_DECL;
+class V_GRAPHICS_API Drawable : public RefObject {
+    V_OBJECT_META_DECL;
 
-public:
-  Drawable();
+  public:
+    Drawable();
 
-public:
-  VI_OBJECT_DATA;
+  public:
+    struct Data;
+    Data* const d;
+    ;
 };
+
 using DrawablePtr = RefPtr<Drawable>;
 
-VI_GRAPHICS_NS_END
+V_GRAPHICS_NS_END

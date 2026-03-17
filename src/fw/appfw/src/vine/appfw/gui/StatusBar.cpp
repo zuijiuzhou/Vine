@@ -2,12 +2,12 @@
 
 #include <QStatusBar>
 
-#include <vine/appfw/gui/MainWindow.hpp>
 #include <vine/Ptr.hpp>
+#include <vine/appfw/gui/MainWindow.hpp>
 
-VI_APPFWGUI_NS_BEGIN
+V_APPFWGUI_NS_BEGIN
 
-VI_OBJECT_META_IMPL(StatusBar, Widget)
+V_OBJECT_META_IMPL(StatusBar, Widget)
 
 struct StatusBar::Data {
     RefPtr<MainWindow> wnd;
@@ -15,12 +15,14 @@ struct StatusBar::Data {
 
 StatusBar::StatusBar(MainWindow* wnd)
   : Widget(new QStatusBar())
-  , d(new Data()) {
+  , d(new Data())
+{
     d->wnd = wnd;
 }
 
-StatusBar::~StatusBar() {
+StatusBar::~StatusBar()
+{
     delete d;
 }
 
-VI_APPFWGUI_NS_END
+V_APPFWGUI_NS_END

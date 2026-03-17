@@ -2,9 +2,9 @@
 
 #include <QAction>
 
-VI_APPFWGUI_NS_BEGIN
+V_APPFWGUI_NS_BEGIN
 
-VI_OBJECT_META_IMPL(RibbonDropDownItem, UIElement);
+V_OBJECT_META_IMPL(RibbonDropDownItem, UIElement);
 
 struct RibbonDropDownItem::Data {};
 
@@ -49,4 +49,4 @@ void RibbonDropDownItem::data(void* v)
     ac->setData(QVariant::fromValue(v));
 }
 
-VI_APPFWGUI_NS_END
+V_APPFWGUI_NS_END

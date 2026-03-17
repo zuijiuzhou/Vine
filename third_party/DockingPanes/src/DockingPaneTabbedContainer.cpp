@@ -17,8 +17,6 @@
  * along with DockingPanes.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <algorithm>
-#include <math.h>
 #include <QApplication>
 #include <QColor>
 #include <QDebug>
@@ -32,6 +30,8 @@
 #include <QStackedWidget>
 #include <QUuid>
 #include <QVBoxLayout>
+#include <algorithm>
+#include <math.h>
 
 #include "DockingPaneFlyoutWidget.h"
 #include "DockingPaneGlow.h"
@@ -40,13 +40,13 @@
 #include "DockingPaneTitleWidget.h"
 #include "DockingToolButton.h"
 
-DockingPaneTabbedContainer::DockingPaneTabbedContainer(QWidget *parent) :
-    DockingPaneContainer(parent)
+DockingPaneTabbedContainer::DockingPaneTabbedContainer(QWidget* parent)
+  : DockingPaneContainer(parent)
 {
-    QVBoxLayout *vLayout;
-    QHBoxLayout *hLayout;
+    QVBoxLayout* vLayout;
+    QHBoxLayout* hLayout;
 
-    m_draggedPane = nullptr;
+    m_draggedPane  = nullptr;
     m_floatingGlow = nullptr;
 
     vLayout = new QVBoxLayout();
@@ -73,7 +73,7 @@ DockingPaneTabbedContainer::DockingPaneTabbedContainer(QWidget *parent) :
     hLayout->addWidget(m_titleWidget);
 
     m_closeButton = new DockingToolButton(DockingToolButton::closeButtonInactive);
-    m_pinButton = new DockingToolButton(DockingToolButton::pinButtonInactive);
+    m_pinButton   = new DockingToolButton(DockingToolButton::pinButtonInactive);
 
     connect(m_closeButton, &DockingToolButton::clicked, this, &DockingPaneTabbedContainer::onCloseButtonClicked);
     connect(m_pinButton, &DockingToolButton::clicked, this, &DockingPaneTabbedContainer::onPinButtonClicked);
@@ -83,7 +83,7 @@ DockingPaneTabbedContainer::DockingPaneTabbedContainer(QWidget *parent) :
 
     hLayout->addWidget(m_pinButton);
     hLayout->addWidget(m_closeButton);
-    hLayout->addSpacerItem(new QSpacerItem(2,0, QSizePolicy::Fixed));
+    hLayout->addSpacerItem(new QSpacerItem(2, 0, QSizePolicy::Fixed));
 
     hLayout->setContentsMargins(0, 0, 0, 0);
     hLayout->setSpacing(0);
@@ -124,48 +124,46 @@ DockingPaneTabbedContainer::DockingPaneTabbedContainer(QWidget *parent) :
 }
 
 DockingPaneTabbedContainer::~DockingPaneTabbedContainer()
-{
-}
+{}
 
 void DockingPaneTabbedContainer::onPinButtonClicked(void)
 {
     m_dockingManager->hidePane(this);
 }
 
-
 void DockingPaneTabbedContainer::restoreChildWidgets(void)
 {
-    int i;
-    QList<QWidget *> widgets;
+    int             i;
+    QList<QWidget*> widgets;
 
-    for (i=0;i<m_stackedWidget->count();i++) {
+    for (i = 0; i < m_stackedWidget->count(); i++) {
         widgets.append(m_stackedWidget->widget(i));
     }
 
-    for (i=0;i<m_paneList.count();i++) {
+    for (i = 0; i < m_paneList.count(); i++) {
         m_paneList.at(i)->setClientWidget(widgets.at(i));
     }
 }
 
-bool DockingPaneTabbedContainer::addPane(DockingPaneContainer *child)
+bool DockingPaneTabbedContainer::addPane(DockingPaneContainer* child)
 {
-    if (DockingPaneTabbedContainer *tabbedPane = qobject_cast<DockingPaneTabbedContainer *>(child)) {
-        int i;
-        QList<DockingPaneContainer *> paneList;
+    if (DockingPaneTabbedContainer* tabbedPane = qobject_cast<DockingPaneTabbedContainer*>(child)) {
+        int                          i;
+        QList<DockingPaneContainer*> paneList;
 
         tabbedPane->restoreChildWidgets();
 
-        for (i=0;i<tabbedPane->m_paneList.count();i++) {
+        for (i = 0; i < tabbedPane->m_paneList.count(); i++) {
             paneList.append(tabbedPane->m_paneList.at(i));
         }
 
-        for (i=0;i<paneList.count();i++) {
+        for (i = 0; i < paneList.count(); i++) {
             addPane(paneList.at(i));
         }
 
         tabbedPane->m_paneList.clear();
 
-        return(true);
+        return (true);
     }
 
     m_paneList.append(child);
@@ -180,7 +178,7 @@ bool DockingPaneTabbedContainer::addPane(DockingPaneContainer *child)
 
     update();
 
-    return(false);
+    return (false);
 }
 
 void DockingPaneTabbedContainer::resizeEvent(QResizeEvent*)
@@ -204,27 +202,27 @@ void DockingPaneTabbedContainer::paintEvent(QPaintEvent*)
 
     QRect clientRect = this->rect();
 
-    if (state()==DockingPaneBase::Floating) {
+    if (state() == DockingPaneBase::Floating) {
         p.setPen(QColor(0xaa, 0xaa, 0xaa));
         p.drawLine(clientRect.topLeft(), clientRect.topRight());
         p.drawLine(clientRect.topLeft(), clientRect.bottomLeft());
         p.drawLine(clientRect.topRight(), clientRect.bottomRight());
         p.drawLine(clientRect.bottomLeft(), clientRect.bottomRight());
 
-        clientRect.adjust(1,1, -1,-1);
+        clientRect.adjust(1, 1, -1, -1);
     }
 
     QRect rc = clientRect;
 
-    if (m_paneList.count()>1) {
-        rc.adjust(0,0,0, -(5+this->fontMetrics().height()));
+    if (m_paneList.count() > 1) {
+        rc.adjust(0, 0, 0, -(5 + this->fontMetrics().height()));
     }
 
     p.drawLine(rc.topLeft(), rc.topRight());
     p.drawLine(rc.topLeft(), rc.bottomLeft());
     p.drawLine(rc.topRight(), rc.bottomRight());
 
-    if (m_paneList.count()<=1) {
+    if (m_paneList.count() <= 1) {
         p.drawLine(rc.bottomLeft(), rc.bottomRight());
 
         return;
@@ -240,12 +238,12 @@ void DockingPaneTabbedContainer::paintEvent(QPaintEvent*)
 
     QRect tr = rc;
 
-    for(i=0;i<m_tabWidths.count();i++) {
+    for (i = 0; i < m_tabWidths.count(); i++) {
         p.setRenderHint(QPainter::Antialiasing, true);
 
         tr.setLeft(x);
         tr.setTop(rc.bottom());
-        tr.setRight(x+m_tabWidths.at(i));
+        tr.setRight(x + m_tabWidths.at(i));
         tr.setBottom(clientRect.bottom());
 
         p.setPen(Qt::black);
@@ -255,11 +253,12 @@ void DockingPaneTabbedContainer::paintEvent(QPaintEvent*)
         p.setRenderHint(QPainter::Antialiasing, false);
         p.setPen(pen);
 
-        if (m_stackedWidget->currentIndex()==i) {
+        if (m_stackedWidget->currentIndex() == i) {
             p.drawLine(tr.topLeft(), tr.bottomLeft());
             p.drawLine(tr.bottomLeft(), tr.bottomRight());
             p.drawLine(tr.bottomRight(), tr.topRight());
-        } else {
+        }
+        else {
             p.drawLine(tr.topLeft(), tr.topRight());
         }
 
@@ -282,56 +281,58 @@ void DockingPaneTabbedContainer::calculateButtonsRectangles(void)
 
     currentIndex = m_stackedWidget->currentIndex();
 
-    if (currentIndex==0) {
-        int selectedWidth = (fm.horizontalAdvance(m_paneList.at(currentIndex)->name())+(tabGap*2));
-        int spaceAfter = availableWidth-selectedWidth;
+    if (currentIndex == 0) {
+        int selectedWidth = (fm.horizontalAdvance(m_paneList.at(currentIndex)->name()) + (tabGap * 2));
+        int spaceAfter    = availableWidth - selectedWidth;
         int requiredSpace = 0;
 
-        for (i=1;i<m_paneList.count();i++) {
-            requiredSpace += fm.horizontalAdvance(m_paneList.at(i)->name())+(tabGap*2);
+        for (i = 1; i < m_paneList.count(); i++) {
+            requiredSpace += fm.horizontalAdvance(m_paneList.at(i)->name()) + (tabGap * 2);
         }
 
         m_tabWidths.append(selectedWidth);
 
-        if (requiredSpace>spaceAfter) {
+        if (requiredSpace > spaceAfter) {
             int itemSpace;
 
-            if (m_paneList.count()>1) {
-                itemSpace = spaceAfter/(m_paneList.count()-1);
+            if (m_paneList.count() > 1) {
+                itemSpace = spaceAfter / (m_paneList.count() - 1);
 
-                for(i=1;i<m_paneList.count();i++) {
+                for (i = 1; i < m_paneList.count(); i++) {
                     m_tabWidths.append(itemSpace);
                 }
             }
-        } else {
-            for(i=1;i<m_paneList.count();i++) {
-                m_tabWidths.append(fm.horizontalAdvance(m_paneList.at(i)->name())+(tabGap*2));
+        }
+        else {
+            for (i = 1; i < m_paneList.count(); i++) {
+                m_tabWidths.append(fm.horizontalAdvance(m_paneList.at(i)->name()) + (tabGap * 2));
             }
         }
 
         return;
     }
 
-    if (m_stackedWidget->currentIndex()==m_stackedWidget->count()-1) {
-        int selectedWidth = (fm.horizontalAdvance(m_paneList.at(currentIndex)->name())+(tabGap*2));
-        int spaceBefore = availableWidth-selectedWidth;
+    if (m_stackedWidget->currentIndex() == m_stackedWidget->count() - 1) {
+        int selectedWidth = (fm.horizontalAdvance(m_paneList.at(currentIndex)->name()) + (tabGap * 2));
+        int spaceBefore   = availableWidth - selectedWidth;
         int requiredSpace = 0;
 
-        for (i=0;i<m_paneList.count()-1;i++) {
-            requiredSpace += fm.horizontalAdvance(m_paneList.at(i)->name())+(tabGap*2);
+        for (i = 0; i < m_paneList.count() - 1; i++) {
+            requiredSpace += fm.horizontalAdvance(m_paneList.at(i)->name()) + (tabGap * 2);
         }
 
-        if (requiredSpace>spaceBefore) {
+        if (requiredSpace > spaceBefore) {
             int itemSpace;
 
-            itemSpace = spaceBefore/(m_paneList.count()-1);
+            itemSpace = spaceBefore / (m_paneList.count() - 1);
 
-            for(i=0;i<m_paneList.count()-1;i++) {
+            for (i = 0; i < m_paneList.count() - 1; i++) {
                 m_tabWidths.append(itemSpace);
             }
-        } else {
-            for(i=0;i<m_paneList.count()-1;i++) {
-                m_tabWidths.append(fm.horizontalAdvance(m_paneList.at(i)->name())+(tabGap*2));
+        }
+        else {
+            for (i = 0; i < m_paneList.count() - 1; i++) {
+                m_tabWidths.append(fm.horizontalAdvance(m_paneList.at(i)->name()) + (tabGap * 2));
             }
         }
 
@@ -340,54 +341,56 @@ void DockingPaneTabbedContainer::calculateButtonsRectangles(void)
         return;
     }
 
-    int selectedWidth = (fm.horizontalAdvance(m_paneList.at(currentIndex)->name())+(tabGap*2));
-    int spaceBeforeAfter = availableWidth-selectedWidth;
-    int requiredSpace = 0;
+    int selectedWidth    = (fm.horizontalAdvance(m_paneList.at(currentIndex)->name()) + (tabGap * 2));
+    int spaceBeforeAfter = availableWidth - selectedWidth;
+    int requiredSpace    = 0;
 
-    for (i=0;i<m_paneList.count();i++) {
-        if (i!=currentIndex) {
-            requiredSpace += fm.horizontalAdvance(m_paneList.at(i)->name())+(tabGap*2);
+    for (i = 0; i < m_paneList.count(); i++) {
+        if (i != currentIndex) {
+            requiredSpace += fm.horizontalAdvance(m_paneList.at(i)->name()) + (tabGap * 2);
         }
     }
 
-    if (requiredSpace>spaceBeforeAfter)
-    {
+    if (requiredSpace > spaceBeforeAfter) {
         int itemSpace;
 
-        itemSpace = spaceBeforeAfter/(m_paneList.count()-1);
+        itemSpace = spaceBeforeAfter / (m_paneList.count() - 1);
 
-        for(i=0;i<m_paneList.count();i++) {
-            if (i==currentIndex) {
+        for (i = 0; i < m_paneList.count(); i++) {
+            if (i == currentIndex) {
                 m_tabWidths.append(selectedWidth);
-            } else {
+            }
+            else {
                 m_tabWidths.append(itemSpace);
             }
         }
-    } else {
-        for(i=0;i<m_paneList.count();i++) {
-            if (i==currentIndex) {
+    }
+    else {
+        for (i = 0; i < m_paneList.count(); i++) {
+            if (i == currentIndex) {
                 m_tabWidths.append(selectedWidth);
-            } else {
-                m_tabWidths.append(fm.horizontalAdvance(m_paneList.at(i)->name())+(tabGap*2));
+            }
+            else {
+                m_tabWidths.append(fm.horizontalAdvance(m_paneList.at(i)->name()) + (tabGap * 2));
             }
         }
     }
 }
 
-void DockingPaneTabbedContainer::mousePressEvent(QMouseEvent *e)
+void DockingPaneTabbedContainer::mousePressEvent(QMouseEvent* e)
 {
     QRect buttonRect;
-    int x = 0, i;
+    int   x = 0, i;
 
     if (e->button() == Qt::LeftButton) {
         calculateButtonsRectangles();
 
-        buttonRect.setTop(this->rect().bottom()-(5+this->fontMetrics().height()));
+        buttonRect.setTop(this->rect().bottom() - (5 + this->fontMetrics().height()));
         buttonRect.setBottom(this->rect().bottom());
 
-        for (i=0;i<m_tabWidths.count();i++) {
+        for (i = 0; i < m_tabWidths.count(); i++) {
             buttonRect.setLeft(x);
-            buttonRect.setRight(x+m_tabWidths.at(i));
+            buttonRect.setRight(x + m_tabWidths.at(i));
 
             if (buttonRect.contains(e->pos())) {
                 m_fromMousePressEvent = true;
@@ -416,7 +419,7 @@ void DockingPaneTabbedContainer::mousePressEvent(QMouseEvent *e)
     }
 }
 
-void DockingPaneTabbedContainer::mouseReleaseEvent(QMouseEvent *e)
+void DockingPaneTabbedContainer::mouseReleaseEvent(QMouseEvent* e)
 {
     m_fromMousePressEvent = false;
 
@@ -431,10 +434,10 @@ void DockingPaneTabbedContainer::mouseReleaseEvent(QMouseEvent *e)
 
         e->accept();
 
-        if (m_paneList.count()<=1) {
+        if (m_paneList.count() <= 1) {
             restoreChildWidgets();
 
-            if (state()==DockingPaneBase::Floating) {
+            if (state() == DockingPaneBase::Floating) {
                 m_paneList.at(0)->move(this->pos());
                 m_paneList.at(0)->resize(this->size());
 
@@ -442,11 +445,12 @@ void DockingPaneTabbedContainer::mouseReleaseEvent(QMouseEvent *e)
                     delete m_floatingGlow;
                     m_floatingGlow = nullptr;
                 }
-            } else {
+            }
+            else {
                 dockingManager()->replacePane(this, m_paneList.at(0));
             }
 
-            if (state()==DockingPaneBase::Floating) {
+            if (state() == DockingPaneBase::Floating) {
                 m_paneList.at(0)->floatPane(m_paneList.at(0)->rect());
             }
 
@@ -468,27 +472,27 @@ void DockingPaneTabbedContainer::mouseReleaseEvent(QMouseEvent *e)
 QRect DockingPaneTabbedContainer::getButtonRect(int pos)
 {
     QRect buttonRect;
-    int i;
-    int x = 0;
+    int   i;
+    int   x = 0;
 
-    buttonRect.setTop(this->rect().bottom()-(5+this->fontMetrics().height()));
+    buttonRect.setTop(this->rect().bottom() - (5 + this->fontMetrics().height()));
     buttonRect.setBottom(this->rect().bottom());
 
-    for (i=0;i<m_tabWidths.count();i++) {
+    for (i = 0; i < m_tabWidths.count(); i++) {
         buttonRect.setLeft(x);
-        buttonRect.setRight(x+m_tabWidths.at(i));
+        buttonRect.setRight(x + m_tabWidths.at(i));
 
-        if (i==pos) {
-            return(buttonRect);
+        if (i == pos) {
+            return (buttonRect);
         }
 
-        x+= m_tabWidths.at(i);
+        x += m_tabWidths.at(i);
     }
 
-    return(QRect());
+    return (QRect());
 }
 
-void DockingPaneTabbedContainer::mouseMoveEvent(QMouseEvent *e)
+void DockingPaneTabbedContainer::mouseMoveEvent(QMouseEvent* e)
 {
     QRect tabRect;
 
@@ -498,13 +502,13 @@ void DockingPaneTabbedContainer::mouseMoveEvent(QMouseEvent *e)
 
     tabRect = this->rect();
 
-    tabRect.setTop(this->rect().bottom()-(5+this->fontMetrics().height()));
+    tabRect.setTop(this->rect().bottom() - (5 + this->fontMetrics().height()));
 
     tabRect.adjust(-10, -10, 10, 10);
 
     if (!m_draggedPane) {
         if (!tabRect.contains(e->pos())) {
-            QWidget *widget;
+            QWidget* widget;
 
             QPoint deltaPos = mapFromGlobal(m_originalClickPos);
 
@@ -536,26 +540,27 @@ void DockingPaneTabbedContainer::mouseMoveEvent(QMouseEvent *e)
             m_initialPos = pos;
 
             dockingManager()->floatingPaneStartMove(m_draggedPane, m_initialPos);
-        } else {
+        }
+        else {
             QRect buttonRect;
-            int i, x=0;
+            int   i, x = 0;
 
             calculateButtonsRectangles();
 
-            buttonRect.setTop(this->rect().bottom()-(5+this->fontMetrics().height()));
+            buttonRect.setTop(this->rect().bottom() - (5 + this->fontMetrics().height()));
             buttonRect.setBottom(this->rect().bottom());
 
-            for (i=0;i<m_tabWidths.count();i++) {
+            for (i = 0; i < m_tabWidths.count(); i++) {
                 buttonRect.setLeft(x);
-                buttonRect.setRight(x+m_tabWidths.at(i));
+                buttonRect.setRight(x + m_tabWidths.at(i));
 
-                buttonRect.adjust(1,0,0,-1);
+                buttonRect.adjust(1, 0, 0, -1);
 
                 if (buttonRect.contains(e->pos())) {
-                    if (i!=m_stackedWidget->currentIndex()) {
+                    if (i != m_stackedWidget->currentIndex()) {
                         if (!m_invalidTabRect.isValid() || (m_invalidTabRect.isValid() && (!m_invalidTabRect.contains(e->pos())))) {
                             QRect newRect;
-                            int oldIndex;
+                            int   oldIndex;
 
                             oldIndex = m_stackedWidget->currentIndex();
 
@@ -572,34 +577,38 @@ void DockingPaneTabbedContainer::mouseMoveEvent(QMouseEvent *e)
 
                             if (newRect.contains(e->pos())) {
                                 m_invalidTabRect = QRect();
-                            } else {
-                                if (i<oldIndex) {
-                                    m_invalidTabRect = getButtonRect(i+1);
+                            }
+                            else {
+                                if (i < oldIndex) {
+                                    m_invalidTabRect = getButtonRect(i + 1);
                                     m_invalidTabRect.setLeft(newRect.right());
-                                } else {
-                                    m_invalidTabRect = getButtonRect(i-1);
+                                }
+                                else {
+                                    m_invalidTabRect = getButtonRect(i - 1);
                                     m_invalidTabRect.setRight(newRect.left());
                                 }
                             }
 
                             return;
                         }
-                    } else {
+                    }
+                    else {
                         m_invalidTabRect = QRect();
                     }
                 }
 
-                x+= m_tabWidths.at(i);
+                x += m_tabWidths.at(i);
             }
         }
-    } else {
+    }
+    else {
         QPoint newPos;
 
         newPos = this->mapToGlobal(e->pos());
 
-        QPoint deltaPos = newPos-m_initialPos;
+        QPoint deltaPos = newPos - m_initialPos;
 
-        m_draggedPane->move(m_draggedPane->pos()+deltaPos);
+        m_draggedPane->move(m_draggedPane->pos() + deltaPos);
 
         if (m_draggedPane->floatingGlow()) {
             m_draggedPane->floatingGlow()->update();
@@ -613,12 +622,12 @@ void DockingPaneTabbedContainer::mouseMoveEvent(QMouseEvent *e)
 
 int DockingPaneTabbedContainer::getPaneCount(void)
 {
-    return(m_paneList.count());
+    return (m_paneList.count());
 }
 
-DockingPaneContainer *DockingPaneTabbedContainer::getPane(int index)
+DockingPaneContainer* DockingPaneTabbedContainer::getPane(int index)
 {
-    return(m_paneList.at(index));
+    return (m_paneList.at(index));
 }
 
 void DockingPaneTabbedContainer::onUnpinContainer(void)
@@ -632,8 +641,8 @@ void DockingPaneTabbedContainer::onUnpinContainer(void)
 
 void DockingPaneTabbedContainer::onCloseContainer(void)
 {
-    QWidget *clientWidget = m_flyoutWidget->clientWidget();
-    DockingPaneContainer *pane;
+    QWidget*              clientWidget = m_flyoutWidget->clientWidget();
+    DockingPaneContainer* pane;
 
     m_flyoutWidget->beginDrag();
 
@@ -652,7 +661,7 @@ void DockingPaneTabbedContainer::onCloseContainer(void)
 
     dockingManager()->removePinnedButton(this, pane);
 
-    if (m_paneList.count()<=1) {
+    if (m_paneList.count() <= 1) {
         restoreChildWidgets();
 
         dockingManager()->updateAutohideButton(this, m_paneList.at(0), m_paneList.at(0), m_paneList.at(0));
@@ -671,7 +680,6 @@ void DockingPaneTabbedContainer::onCloseContainer(void)
     m_flyoutWidget = nullptr;
 }
 
-
 void DockingPaneTabbedContainer::onStartDragTitle(QPoint pos)
 {
     m_dockingManager->floatingPaneStartMove(this, pos);
@@ -686,10 +694,10 @@ void DockingPaneTabbedContainer::onEndDragTitle(QPoint pos)
 
 void DockingPaneTabbedContainer::onMoveDragTitle(QPoint pos)
 {
-    QPoint deltaPos = pos-m_initialPos;
+    QPoint deltaPos = pos - m_initialPos;
 
-    if (state()==DockingPaneBase::Floating) {
-        move(this->pos()+deltaPos);
+    if (state() == DockingPaneBase::Floating) {
+        move(this->pos() + deltaPos);
 
         if (m_floatingGlow) {
             m_floatingGlow->update();
@@ -698,10 +706,11 @@ void DockingPaneTabbedContainer::onMoveDragTitle(QPoint pos)
         m_initialPos = pos;
 
         m_dockingManager->floatingPaneMoved(this, pos);
-    } else {
+    }
+    else {
         double trueLength = sqrt(pow(deltaPos.x(), 2) + pow(deltaPos.y(), 2));
 
-        if (trueLength>5) {
+        if (trueLength > 5) {
             floatPane(deltaPos);
 
             m_initialPos = pos;
@@ -711,9 +720,14 @@ void DockingPaneTabbedContainer::onMoveDragTitle(QPoint pos)
     }
 }
 
-DockingPaneFlyoutWidget *DockingPaneTabbedContainer::openFlyout(bool hasFocus, QWidget *parent, FlyoutPosition pos, DockingPaneContainer *pane)
+DockingPaneFlyoutWidget* DockingPaneTabbedContainer::openFlyout(bool hasFocus, QWidget* parent, FlyoutPosition pos, DockingPaneContainer* pane)
 {
-    m_flyoutWidget = new DockingPaneFlyoutWidget(hasFocus, this, pane, (DockingPaneFlyoutWidget::FlyoutPosition) pos,  m_stackedWidget->widget(m_paneList.indexOf(pane)), parent);
+    m_flyoutWidget = new DockingPaneFlyoutWidget(hasFocus,
+                                                 this,
+                                                 pane,
+                                                 (DockingPaneFlyoutWidget::FlyoutPosition)pos,
+                                                 m_stackedWidget->widget(m_paneList.indexOf(pane)),
+                                                 parent);
 
     connect(m_flyoutWidget, &DockingPaneFlyoutWidget::unpinContainer, this, &DockingPaneTabbedContainer::onUnpinContainer);
     connect(m_flyoutWidget, &DockingPaneFlyoutWidget::closeContainer, this, &DockingPaneTabbedContainer::onCloseContainer);
@@ -723,7 +737,7 @@ DockingPaneFlyoutWidget *DockingPaneTabbedContainer::openFlyout(bool hasFocus, Q
 
     m_flyoutWidget->show();
 
-    return(m_flyoutWidget);
+    return (m_flyoutWidget);
 }
 
 void DockingPaneTabbedContainer::onStartDragFlyoutTitle(QPoint pos)
@@ -741,7 +755,7 @@ void DockingPaneTabbedContainer::onEndDragFlyoutTitle(QPoint pos)
 {
     dockingManager()->floatingPaneEndMove(m_flyoutWidget->pane(), pos);
 
-    if (m_paneList.count()<=1) {
+    if (m_paneList.count() <= 1) {
         restoreChildWidgets();
 
         dockingManager()->updateAutohideButton(this, m_paneList.at(0), m_paneList.at(0), m_paneList.at(0));
@@ -762,10 +776,10 @@ void DockingPaneTabbedContainer::onEndDragFlyoutTitle(QPoint pos)
 
 void DockingPaneTabbedContainer::onMoveDragFlyoutTitle(QPoint pos)
 {
-    QPoint deltaPos = pos-m_initialPos;
+    QPoint deltaPos = pos - m_initialPos;
 
     if (m_draggedPane) {
-        m_draggedPane->move(m_draggedPane->pos()+deltaPos);
+        m_draggedPane->move(m_draggedPane->pos() + deltaPos);
 
         if (m_draggedPane->floatingGlow()) {
             m_draggedPane->floatingGlow()->update();
@@ -774,12 +788,13 @@ void DockingPaneTabbedContainer::onMoveDragFlyoutTitle(QPoint pos)
         m_initialPos = pos;
 
         dockingManager()->floatingPaneMoved(m_draggedPane, pos);
-    } else {
+    }
+    else {
         double trueLength = sqrt(pow(deltaPos.x(), 2) + pow(deltaPos.y(), 2));
 
-        if (trueLength>5) {
-            QWidget *clientWidget = m_flyoutWidget->clientWidget();
-            QSize size = m_flyoutWidget->paneRect().size();
+        if (trueLength > 5) {
+            QWidget* clientWidget = m_flyoutWidget->clientWidget();
+            QSize    size         = m_flyoutWidget->paneRect().size();
 
             deltaPos = m_flyoutWidget->mapFromGlobal(m_initialPos);
 
@@ -815,23 +830,23 @@ void DockingPaneTabbedContainer::onMoveDragFlyoutTitle(QPoint pos)
     }
 }
 
-void DockingPaneTabbedContainer::onFocusChanged(QWidget*, QWidget *now)
+void DockingPaneTabbedContainer::onFocusChanged(QWidget*, QWidget* now)
 {
     this->setActivePane(this->isAncestorOf(now));
 
-    if (now==m_stackedWidget) {
+    if (now == m_stackedWidget) {
         if (m_stackedWidget->currentWidget()) {
             m_stackedWidget->currentWidget()->setFocus();
         }
     }
 }
 
-void DockingPaneTabbedContainer::setClientWidget(QWidget *widget)
+void DockingPaneTabbedContainer::setClientWidget(QWidget* widget)
 {
     int i = 0, insertIndex = -1;
 
-    foreach(DockingPaneContainer *pane, m_paneList) {
-        if (pane->clientWidget()==widget) {
+    foreach (DockingPaneContainer* pane, m_paneList) {
+        if (pane->clientWidget() == widget) {
             insertIndex = i;
             break;
         }
@@ -839,7 +854,7 @@ void DockingPaneTabbedContainer::setClientWidget(QWidget *widget)
         i++;
     }
 
-    if (insertIndex!=-1) {
+    if (insertIndex != -1) {
         m_stackedWidget->insertWidget(insertIndex, widget);
     }
 }
@@ -847,23 +862,23 @@ void DockingPaneTabbedContainer::setClientWidget(QWidget *widget)
 void DockingPaneTabbedContainer::updateMargins(void)
 {
     int framePixels = 1;
-    int tabSize = 0;
+    int tabSize     = 0;
 
-    if (m_paneList.count()>1) {
-        tabSize = 5+this->fontMetrics().height();
+    if (m_paneList.count() > 1) {
+        tabSize = 5 + this->fontMetrics().height();
     }
 
-    if (state()==DockingPaneBase::Floating) {
+    if (state() == DockingPaneBase::Floating) {
         framePixels++;
     }
 
-    this->layout()->setContentsMargins(framePixels, framePixels, framePixels, tabSize+framePixels);
+    this->layout()->setContentsMargins(framePixels, framePixels, framePixels, tabSize + framePixels);
 }
 
 void DockingPaneTabbedContainer::onCloseButtonClicked(void)
 {
-    QWidget *widget;
-    DockingPaneContainer *pane;
+    QWidget*              widget;
+    DockingPaneContainer* pane;
 
     int currentIndex = m_stackedWidget->currentIndex();
 
@@ -883,10 +898,10 @@ void DockingPaneTabbedContainer::onCloseButtonClicked(void)
 
     this->dockingManager()->closePane(pane);
 
-    if (m_paneList.count()<=1) {
+    if (m_paneList.count() <= 1) {
         restoreChildWidgets();
 
-        if (state()==DockingPaneBase::Floating) {
+        if (state() == DockingPaneBase::Floating) {
             m_paneList.at(0)->move(this->pos());
             m_paneList.at(0)->resize(this->size());
 
@@ -894,11 +909,12 @@ void DockingPaneTabbedContainer::onCloseButtonClicked(void)
                 delete m_floatingGlow;
                 m_floatingGlow = nullptr;
             }
-        } else {
+        }
+        else {
             dockingManager()->replacePane(this, m_paneList.at(0));
         }
 
-        if (state()==DockingPaneBase::Floating) {
+        if (state() == DockingPaneBase::Floating) {
             m_paneList.at(0)->floatPane(m_paneList.at(0)->rect());
         }
 
@@ -916,7 +932,7 @@ void DockingPaneTabbedContainer::onCloseButtonClicked(void)
     }
 }
 
-void DockingPaneTabbedContainer::saveLayout(QDomNode *parentNode, bool includeGeometry)
+void DockingPaneTabbedContainer::saveLayout(QDomNode* parentNode, bool includeGeometry)
 {
     QDomDocument doc = parentNode->ownerDocument();
 
@@ -926,14 +942,14 @@ void DockingPaneTabbedContainer::saveLayout(QDomNode *parentNode, bool includeGe
     domElement.setAttribute("selectedTab", this->m_paneList[this->m_stackedWidget->currentIndex()]->id());
 
     if (includeGeometry) {
-        domElement.setAttribute("geometry", (QString) this->saveGeometry().toBase64());
+        domElement.setAttribute("geometry", (QString)this->saveGeometry().toBase64());
     }
 
     QDomElement panesElement = doc.createElement("panes");
 
     domElement.appendChild(panesElement);
 
-    foreach(DockingPaneContainer *pane, m_paneList) {
+    foreach (DockingPaneContainer* pane, m_paneList) {
         QDomElement paneElement = doc.createElement("pane");
 
         paneElement.setAttribute("id", pane->id());
@@ -944,7 +960,7 @@ void DockingPaneTabbedContainer::saveLayout(QDomNode *parentNode, bool includeGe
     parentNode->appendChild(domElement);
 }
 
-void DockingPaneTabbedContainer::setVisiblePane(DockingPaneContainer *pane)
+void DockingPaneTabbedContainer::setVisiblePane(DockingPaneContainer* pane)
 {
     if (m_paneList.contains(pane)) {
         m_stackedWidget->setCurrentIndex(m_paneList.indexOf(pane));
@@ -957,7 +973,7 @@ void DockingPaneTabbedContainer::setVisiblePane(DockingPaneContainer *pane)
     }
 }
 
-bool DockingPaneTabbedContainer::containsPane(DockingPaneContainer *pane)
+bool DockingPaneTabbedContainer::containsPane(DockingPaneContainer* pane)
 {
-    return(m_paneList.contains(pane));
+    return (m_paneList.contains(pane));
 }

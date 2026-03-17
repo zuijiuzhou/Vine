@@ -20,19 +20,19 @@
 #include "DockingPaneBase.h"
 #include <QDebug>
 
-DockingPaneBase::DockingPaneBase(QWidget *parent) :
-    QWidget(parent), m_state(Hidden)
-{
-}
+DockingPaneBase::DockingPaneBase(QWidget* parent)
+  : QWidget(parent)
+  , m_state(Hidden)
+{}
 
 QString DockingPaneBase::name(void)
 {
-    return(m_name);
+    return (m_name);
 }
 
 QString DockingPaneBase::id(void)
 {
-    return(m_id);
+    return (m_id);
 }
 
 void DockingPaneBase::setName(QString name)
@@ -45,14 +45,14 @@ void DockingPaneBase::setId(QString id)
     m_id = id;
 }
 
-DockingPaneManager *DockingPaneBase::dockingManager(void)
+DockingPaneManager* DockingPaneBase::dockingManager(void)
 {
-    return(m_dockingManager);
+    return (m_dockingManager);
 }
 
 DockingPaneBase::State DockingPaneBase::state(void)
 {
-    return(m_state);
+    return (m_state);
 }
 
 void DockingPaneBase::setState(DockingPaneBase::State state)

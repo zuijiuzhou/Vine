@@ -1,12 +1,13 @@
 ﻿#include <vine/graphics/Geometry.hpp>
 
-VI_GRAPHICS_NS_BEGIN
+V_GRAPHICS_NS_BEGIN
 
-VI_OBJECT_META_IMPL(Geometry, RefObject)
+V_OBJECT_META_IMPL(Geometry, RefObject)
 
 struct Geometry::Data {};
 
-Geometry::Geometry() : d(new Data()) {}
+Geometry::Geometry()
+  : d(new Data())
+{}
 
-VI_GRAPHICS_NS_END
-
+V_GRAPHICS_NS_END

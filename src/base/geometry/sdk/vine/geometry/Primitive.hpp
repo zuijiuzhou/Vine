@@ -3,10 +3,10 @@
 #include "geometry_global.hpp"
 
 #include "Shape.hpp"
-VI_GEOMETRY_NS_BEGIN
+V_GEOMETRY_NS_BEGIN
 
-class VI_GEOMETRY_API Primitive : public Shape {
-    VI_OBJECT_META_DECL;
+class V_GEOMETRY_API Primitive : public Shape {
+    V_OBJECT_META_DECL;
 
   public:
     Primitive();
@@ -14,4 +14,4 @@ class VI_GEOMETRY_API Primitive : public Shape {
   public:
 };
 
-VI_GEOMETRY_NS_END
+V_GEOMETRY_NS_END
