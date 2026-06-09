@@ -11,9 +11,7 @@ RefObject::RefObject() noexcept
 RefObject::RefObject(RefObjectPrivate* dptr) noexcept
   : d_ptr(dptr)
   , cb_(new PtrControlBlock())
-{
-    d_ptr->v_ptr = this;
-}
+{ d_ptr->v_ptr = this; }
 
 RefObject::~RefObject() noexcept
 {
@@ -24,28 +22,21 @@ RefObject::~RefObject() noexcept
 }
 
 void RefObject::strong_ref()
-{
-    cb_->strong_refs.fetch_add(1, std::memory_order_relaxed);
-}
-
-void strong_unref(bool del_object = true);
+{ cb_->strong_refs.fetch_add(1, std::memory_order_relaxed); }
 
 void RefObject::strong_unref(bool del_object)
 {
     if (cb_->strong_refs.fetch_sub(1, std::memory_order_seq_cst) == 1)
-        delete this;
+        if (del_object)
+            delete this;
 }
 
 void RefObject::weak_ref()
-{
-    cb_->weak_refs.fetch_add(1, std::memory_order_seq_cst);
-}
+{ cb_->weak_refs.fetch_add(1, std::memory_order_seq_cst); }
 
 void RefObject::weak_unref()
 {
-    if (cb_->weak_refs.fetch_sub(1, std::memory_order_seq_cst) == 1 && cb_->strong_refs.load() == 0) {
-        delete cb_;
-    }
+    if (cb_->weak_refs.fetch_sub(1, std::memory_order_seq_cst) == 1 && cb_->strong_refs.load() == 0) { delete cb_; }
 }
 
 V_CORE_NS_END
