@@ -1,20 +1,18 @@
 ﻿#pragma once
 
-#include <vine/RefObject.hpp>
-
-#include "Widget.hpp"
+#include "UIElement.hpp"
+#include "Gui.hpp"
 
 V_APPFWGUI_NS_BEGIN
 
-class V_APPFW_API DockPanel : public Widget {
+class V_APPFW_API DockPanel : public UIElement {
     V_OBJECT_META_DECL;
 
   public:
-  public:
     DockPanel();
+    DockPanel(UIObject* container);
     virtual ~DockPanel();
 
-  public:
     void      setAllowedAreas(DockAreas areas);
     DockAreas getAllowedAreas() const;
 
@@ -24,10 +22,24 @@ class V_APPFW_API DockPanel : public Widget {
     void   setTitle(const String& title);
     String getTitle() const;
 
-    void    setContent(Widget* content);
-    Widget* getContent() const;
+    void    setContent(UIElement* content);
+    UIElement* getContent() const;
 
-  public:
+    // Attach an existing DockingPanes container (opaque QObject pointer)
+    void attach(UIObject* container);
+
+    // State queries
+    bool isFloating() const;
+    bool isPinned() const;
+    bool isCollapsed() const;
+    DockAreas dockArea() const;
+
+    // State control
+    void setFloating(bool floating);
+    void pin();
+    void unpin();
+    void collapse();
+    void restore();
   private:
     struct Data;
     Data* const d;

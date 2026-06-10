@@ -2,14 +2,15 @@
 
 #include "appfw_global.hpp"
 
-#include <vine/RefObject.hpp>
+#include <vine/Object.hpp>
 
 V_APPFW_NS_BEGIN
+
 class CommandManager;
 class AddinManager;
 class ServiceManager;
 
-class V_APPFW_API Application : public RefObject {
+class V_APPFW_API Application : public Object {
     V_OBJECT_META_DECL;
 
   public:
@@ -42,7 +43,5 @@ class V_APPFW_API Application : public RefObject {
     struct Data;
     Data* const d;
 };
-
-using ApplicationPtr = RefPtr<Application>;
 
 V_APPFW_NS_END

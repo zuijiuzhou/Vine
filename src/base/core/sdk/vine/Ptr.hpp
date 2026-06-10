@@ -3,13 +3,9 @@
 #include "core_global.hpp"
 
 #include <atomic>
+#include "RefObject.hpp"
 
 V_CORE_NS_BEGIN
-
-struct PtrControlBlock {
-    std::atomic<unsigned int> strong_refs{ 0 };
-    std::atomic<unsigned int> weak_refs{ 0 };
-};
 
 template <typename T>
 class RefPtr {
@@ -18,6 +14,22 @@ class RefPtr {
     friend class RefPtr;
 
   public:
+        /**
+         * Construct from raw pointer without modifying the strong refcount.
+         * This is intended for internal use by `WRefPtr::lock()` after it
+         * atomically incremented the strong count.
+         */
+        RefPtr(T* ptr, bool addRef)
+            : ptr_(ptr)
+        {
+            if (ptr_ && addRef) {
+                static_assert(std::is_base_of_v<RefObject, T>, "RefPtr requires RefObject-based T");
+                auto* cb = static_cast<RefObject*>(ptr_)->cb_;
+                if (cb)
+                    cb->strong_refs.fetch_add(1, std::memory_order_relaxed);
+            }
+        }
+
     RefPtr()
       : ptr_(nullptr)
     {}
@@ -26,7 +38,10 @@ class RefPtr {
       : ptr_(ptr)
     {
         if (ptr_) {
-            ptr_->strong_ref();
+            static_assert(std::is_base_of_v<RefObject, T>, "RefPtr requires RefObject-based T");
+            auto* cb = static_cast<RefObject*>(ptr_)->cb_;
+            if (cb)
+                cb->strong_refs.fetch_add(1, std::memory_order_relaxed);
         }
     }
 
@@ -34,7 +49,10 @@ class RefPtr {
       : ptr_(other.ptr_)
     {
         if (ptr_) {
-            ptr_->strong_ref();
+            static_assert(std::is_base_of_v<RefObject, T>, "RefPtr requires RefObject-based T");
+            auto* cb = static_cast<RefObject*>(ptr_)->cb_;
+            if (cb)
+                cb->strong_refs.fetch_add(1, std::memory_order_relaxed);
         }
     }
 
@@ -43,14 +61,26 @@ class RefPtr {
       : ptr_(other.ptr_)
     {
         if (ptr_) {
-            ptr_->strong_ref();
+            static_assert(std::is_base_of_v<RefObject, T>, "RefPtr requires RefObject-based T");
+            auto* cb = static_cast<RefObject*>(ptr_)->cb_;
+            if (cb)
+                cb->strong_refs.fetch_add(1, std::memory_order_relaxed);
         }
     }
 
     ~RefPtr()
     {
         if (ptr_) {
-            ptr_->strong_unref();
+            static_assert(std::is_base_of_v<RefObject, T>, "RefPtr requires RefObject-based T");
+            auto* cb = static_cast<RefObject*>(ptr_)->cb_;
+            if (cb) {
+                if (cb->strong_refs.fetch_sub(1, std::memory_order_acq_rel) == 1) {
+                    std::atomic_thread_fence(std::memory_order_acquire);
+                    delete ptr_;
+                }
+            } else {
+                delete ptr_;
+            }
         }
     }
 
@@ -64,18 +94,37 @@ class RefPtr {
     {
         if (ptr == ptr_)
             return;
-        if (ptr_)
-            ptr_->strong_unref();
+        if (ptr_) {
+            static_assert(std::is_base_of_v<RefObject, T>, "RefPtr requires RefObject-based T");
+            auto* cb = static_cast<RefObject*>(ptr_)->cb_;
+            if (cb) {
+                if (cb->strong_refs.fetch_sub(1, std::memory_order_acq_rel) == 1) {
+                    std::atomic_thread_fence(std::memory_order_acquire);
+                    delete ptr_;
+                }
+            } else {
+                delete ptr_;
+            }
+        }
         ptr_ = ptr;
-        if (ptr_)
-            ptr_->strong_ref();
+        if (ptr_) {
+            static_assert(std::is_base_of_v<RefObject, T>, "RefPtr requires RefObject-based T");
+            auto* cb = static_cast<RefObject*>(ptr_)->cb_;
+            if (cb)
+                cb->strong_refs.fetch_add(1, std::memory_order_relaxed);
+        }
     }
 
     T* release()
     {
         auto temp = ptr_;
-        if (ptr_)
-            ptr_->strong_unref(false);
+        if (ptr_) {
+            static_assert(std::is_base_of_v<RefObject, T>, "RefPtr requires RefObject-based T");
+            auto* cb = static_cast<RefObject*>(ptr_)->cb_;
+            if (cb) {
+                cb->strong_refs.fetch_sub(1, std::memory_order_acq_rel);
+            }
+        }
         ptr_ = nullptr;
         return temp;
     }
@@ -181,7 +230,93 @@ class RefPtr {
 };
 
 template <typename T>
-class WRefPtr {};
+class WRefPtr {
+  private:
+    template <typename TOther>
+    friend class WRefPtr;
+
+  public:
+    WRefPtr()
+      : ptr_(nullptr)
+      , cb_(nullptr)
+    {}
+
+    explicit WRefPtr(T* ptr)
+      : ptr_(ptr)
+      , cb_(ptr ? static_cast<RefObject*>(ptr)->cb_ : nullptr)
+    {
+        if (cb_)
+            cb_->weak_refs.fetch_add(1, std::memory_order_relaxed);
+    }
+
+    WRefPtr(const RefPtr<T>& rp)
+      : ptr_(rp.get())
+      , cb_(ptr_ ? static_cast<RefObject*>(ptr_)->cb_ : nullptr)
+    {
+        if (cb_)
+            cb_->weak_refs.fetch_add(1, std::memory_order_relaxed);
+    }
+
+    WRefPtr(const WRefPtr& other)
+      : ptr_(other.ptr_)
+      , cb_(other.cb_)
+    {
+        if (cb_)
+            cb_->weak_refs.fetch_add(1, std::memory_order_relaxed);
+    }
+
+    ~WRefPtr()
+    {
+        if (cb_) {
+            if (cb_->weak_refs.fetch_sub(1, std::memory_order_acq_rel) == 1) {
+                if (cb_->strong_refs.load(std::memory_order_acquire) == 0) {
+                    std::atomic_thread_fence(std::memory_order_acquire);
+                    delete cb_;
+                }
+            }
+        }
+    }
+
+    WRefPtr& operator=(const WRefPtr& right)
+    {
+        if (this == &right)
+            return *this;
+        if (cb_) {
+            if (cb_->weak_refs.fetch_sub(1, std::memory_order_acq_rel) == 1) {
+                if (cb_->strong_refs.load(std::memory_order_acquire) == 0) {
+                    std::atomic_thread_fence(std::memory_order_acquire);
+                    delete cb_;
+                }
+            }
+        }
+        ptr_ = right.ptr_;
+        cb_ = right.cb_;
+        if (cb_)
+            cb_->weak_refs.fetch_add(1, std::memory_order_relaxed);
+        return *this;
+    }
+
+    RefPtr<T> lock() const
+    {
+        if (!cb_ || !ptr_)
+            return RefPtr<T>();
+
+        unsigned int s = cb_->strong_refs.load(std::memory_order_acquire);
+        while (s != 0) {
+            if (cb_->strong_refs.compare_exchange_weak(
+                    s, s + 1,
+                    std::memory_order_acq_rel,
+                    std::memory_order_acquire)) {
+                return RefPtr<T>(ptr_, false);
+            }
+        }
+        return RefPtr<T>();
+    }
+
+    private:
+        T* ptr_;
+        RefObject::PtrControlBlock* cb_;
+};
 
 template <typename T, typename Y>
 inline RefPtr<T> static_pointer_cast(const RefPtr<Y>& rp)

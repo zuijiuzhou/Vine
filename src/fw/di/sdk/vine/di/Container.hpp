@@ -11,7 +11,6 @@ V_DEFINE_PTR(Container)
 
 class V_DI_API Container : public RefObject {
     V_OBJECT_META_DECL
-    V_DECLARE_PRIVATE(Container)
 
   public:
     Container();
@@ -23,12 +22,14 @@ class V_DI_API Container : public RefObject {
 
     template <RefObjectBased T>
     T* resolve() const;
+
+  private:
+    struct Impl;
+    Impl* const d;
 };
 
 template <RefObjectBased T>
 T* Container::resolve() const
-{
-    return resolve(T::desc());
-}
+{ return resolve(T::desc()); }
 
 V_DI_NS_END

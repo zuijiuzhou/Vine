@@ -1,6 +1,5 @@
 ﻿#pragma once
 
-#include <vine/RefObject.hpp>
 #include <vine/appfw/Application.hpp>
 
 V_APPFWGUI_NS_BEGIN
@@ -21,7 +20,5 @@ class V_APPFW_API GuiApplication : public Application {
     struct Data;
     Data* const d;
 };
-
-using GuiApplicationPtr = RefPtr<GuiApplication>;
 
 V_APPFWGUI_NS_END

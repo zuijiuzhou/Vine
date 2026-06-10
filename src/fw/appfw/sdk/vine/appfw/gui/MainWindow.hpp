@@ -1,6 +1,7 @@
 ﻿#pragma once
 
-#include "Widget.hpp"
+#include "UIElement.hpp"
+#include "Gui.hpp"
 
 V_APPFWGUI_NS_BEGIN
 
@@ -8,7 +9,7 @@ class RibbonBar;
 class StatusBar;
 class DockPanel;
 
-class V_APPFW_API MainWindow : public Widget {
+class V_APPFW_API MainWindow : public UIElement {
     V_OBJECT_META_DECL
 
     friend class RibbonBar;
@@ -44,7 +45,5 @@ class V_APPFW_API MainWindow : public Widget {
     struct Data;
     Data* const d;
 };
-
-using MainWindowPtr = RefPtr<MainWindow>;
 
 V_APPFWGUI_NS_END

@@ -1,23 +1,23 @@
-﻿#pragma once
+#pragma once
 
-#include "Widget.hpp"
+#include "UIElement.hpp"
 
 V_APPFWGUI_NS_BEGIN
 
-class RibbonTab;
+class RibbonButton;
 
-class V_APPFW_API RibbonGroup : public Widget {
+class V_APPFW_API RibbonGroup : public UIElement {
     V_OBJECT_META_DECL
-
-    friend class RibbonTab;
 
   public:
     RibbonGroup();
     virtual ~RibbonGroup();
 
-  public:
+    void title(const String& t);
     String title() const;
-    void   title(const String& ti);
+
+    void addButton(RibbonButton* b);
+    void removeButton(RibbonButton* b);
 
   private:
     struct Data;

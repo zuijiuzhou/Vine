@@ -1,24 +1,22 @@
 ﻿#include <vine/appfw/ServiceManager.hpp>
 
 #include <vine/di/Container.hpp>
+#include <vine/Ptr.hpp>
 
 V_APPFW_NS_BEGIN
-V_OBJECT_META_IMPL(ServiceManager, RefObject)
 
 struct ServiceManager::Data {
-    di::Container* container = nullptr;
+    RefPtr<di::Container> container;
 };
 
 ServiceManager::ServiceManager()
   : d(new Data())
 {
-    d->container = new di::Container();
-    d->container->strong_ref();
+    d->container = RefPtr<di::Container>(new di::Container());
 }
 
 ServiceManager::~ServiceManager()
 {
-    d->container->strong_unref();
     delete d;
 }
 

@@ -6,8 +6,7 @@
 
 V_APPFW_NS_BEGIN
 
-class V_APPFW_API ServiceManager : public RefObject {
-    V_OBJECT_META_DECL;
+class V_APPFW_API ServiceManager {
 
   public:
     ServiceManager();
@@ -21,7 +20,5 @@ class V_APPFW_API ServiceManager : public RefObject {
     struct Data;
     Data* const d;
 };
-
-using ServiceManagerPtr = RefPtr<ServiceManager>;
 
 V_APPFW_NS_END

@@ -1,77 +1,56 @@
-﻿#include <vine/appfw/gui/RibbonTab.hpp>
+#include <vine/appfw/gui/RibbonTab.hpp>
 
 #include <SARibbon.h>
-
-#include <vine/Exception.hpp>
-#include <vine/Ptr.hpp>
 #include <vine/appfw/gui/RibbonGroup.hpp>
 
 V_APPFWGUI_NS_BEGIN
 
-V_OBJECT_META_IMPL(RibbonTab, Widget)
+V_OBJECT_META_IMPL(RibbonTab, UIElement)
 
 struct RibbonTab::Data {
-    std::vector<RefPtr<RibbonGroup>> groups;
+    SARibbonCategory* cat = nullptr;
+    String            title;
 };
 
-namespace
-{
-
-using itype = SARibbonCategory;
-
-}
-
 RibbonTab::RibbonTab()
-  : Widget(new SARibbonCategory())
-  , d(new Data())
-{}
+  : UIElement(new SARibbonCategory(QString()))
+  , d(new Data)
+{
+    d->cat = impl<SARibbonCategory>();
+}
 
 RibbonTab::~RibbonTab()
 {
     delete d;
 }
 
+void RibbonTab::title(const String& t)
+{
+    d->title = t;
+}
+
 String RibbonTab::title() const
 {
-    auto w = impl<itype>();
-    return String::fromUtf16(reinterpret_cast<const char16_t*>(w->categoryName().constData()));
+    return d->title;
 }
 
-void RibbonTab::title(const String& ti)
+void RibbonTab::addGroup(RibbonGroup* g)
 {
-    auto w = impl<itype>();
-    w->setCategoryName(QString::fromUtf8(reinterpret_cast<const char*>(ti.data())));
-}
-
-void RibbonTab::addGroup(RibbonGroup* group)
-{
-    V_CHECK_NULL_THROW(group)
-    if (std::any_of(d->groups.begin(), d->groups.end(), [group](RefPtr<RibbonGroup>& g) { return g == group; }))
+    if (!g)
         return;
-    auto w = impl<itype>();
-    w->addPanel(group->impl<SARibbonPanel>());
-    d->groups.push_back(group);
-    this;
+    // SARibbonCategory::addPanel expects SARibbonPanel*
+    auto p = g->impl<SARibbonPanel>();
+    if (p)
+        d->cat->addPanel(p);
 }
 
-void RibbonTab::removeGroup(RibbonGroup* group)
+void RibbonTab::removeGroup(RibbonGroup* g)
 {
-    V_CHECK_NULL_THROW(group)
-    if (std::none_of(d->groups.begin(), d->groups.end(), [group](RefPtr<RibbonGroup>& g) { return g == group; }))
+    if (!g)
         return;
-    auto w = impl<itype>();
-    w->removePanel(group->impl<SARibbonPanel>());
-    this;
-}
-
-int RibbonTab::numGroups() const
-{
-    return d->groups.size();
-}
-
-void RibbonTab::groupAt(int idx) const
-{
-    d->groups.at(idx).get();
+    auto p = g->impl<SARibbonPanel>();
+    if (p)
+        d->cat->removePanel(p);
 }
 
 V_APPFWGUI_NS_END

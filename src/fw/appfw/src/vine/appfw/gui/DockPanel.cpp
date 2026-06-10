@@ -1,73 +1,31 @@
-﻿#include <vine/appfw/gui/DockPanel.hpp>
-
-#include <QDockWidget>
-#include <QEvent>
-#include <QHBoxLayout>
-#include <QLabel>
+#include <vine/appfw/gui/DockPanel.hpp>
 
 #include <vine/appfw/gui/Convert.hpp>
+#include "../../../../third_party/DockingPanes/src/DockingPaneContainer.h"
 
 V_APPFWGUI_NS_BEGIN
-V_OBJECT_META_IMPL(DockPanel, Widget)
 
-namespace
-{
-
-using itype = QDockWidget;
-
-struct DockPanelTitleBar : public QWidget {
-    DockPanelTitleBar()
-    {}
-
-    QHBoxLayout* layout = nullptr;
-};
-
-struct QDockWidgetEx : public QDockWidget {
-    QDockWidgetEx()
-    {
-        auto c = new QWidget();
-        c->setStyleSheet("border:1px solid red");
-        c->setAttribute(Qt::WA_TransparentForMouseEvents, true);
-        setWidget(c);
-        setAllowedAreas(Qt::DockWidgetArea::AllDockWidgetAreas);
-
-        auto t = new QWidget();
-        t->setStyleSheet("border:1px solid green");
-
-        auto t_l   = new QHBoxLayout();
-        auto t_lbl = new QLabel("123");
-        t_l->addWidget(t_lbl);
-        t->setLayout(t_l);
-        setTitleBarWidget(t);
-        this->c = c;
-    }
-
-    virtual bool event(QEvent* event) override
-    {
-        /* if (event->type() == QEvent::Resize) {
-             c->setMaximumWidth(width());
-             c->setMaximumHeight(height());
-         }*/
-        return QDockWidget::event(event);
-    }
-
-    QWidget* c;
-};
-
-} // namespace
+V_OBJECT_META_IMPL(DockPanel, UIElement)
 
 struct DockPanel::Data {
-    RefPtr<Widget> content;
-
-    QDockWidget*       impl     = nullptr;
-    DockPanelTitleBar* titlebar = nullptr;
+    DockingPaneContainer* container = nullptr;
+    DockAreas             allowed   = DockAreas::None;
+    DockFeatures          features  = DockFeatures::None;
+    String                title;
 };
 
 DockPanel::DockPanel()
-  : Widget(new QDockWidgetEx())
-  , d(new Data())
+  : UIElement(new DockingPaneContainer())
+  , d(new Data)
 {
-    d->impl = impl<QDockWidget>();
+    d->container = impl<DockingPaneContainer>();
+}
+
+DockPanel::DockPanel(UIObject* container)
+    : UIElement(container)
+    , d(new Data)
+{
+        d->container = static_cast<DockingPaneContainer*>(container);
 }
 
 DockPanel::~DockPanel()
@@ -77,47 +35,107 @@ DockPanel::~DockPanel()
 
 void DockPanel::setAllowedAreas(DockAreas areas)
 {
-    auto qareas = Convert::toQDockAreas(areas);
-    d->impl->setAllowedAreas(qareas);
+    d->allowed = areas;
 }
 
 DockAreas DockPanel::getAllowedAreas() const
 {
-    auto areas = Convert::toDockAreas(impl<itype>()->allowedAreas());
-    return areas;
+    return d->allowed;
 }
 
 void DockPanel::setFeatures(DockFeatures features)
 {
-    auto qfeatures = Convert::toQDockFeatures(features);
-    d->impl->setFeatures(qfeatures);
+    d->features = features;
+    // DockingPanes controls behaviour via state; feature mapping omitted
 }
 
 DockFeatures DockPanel::getFeatures() const
 {
-    auto features = Convert::toDockFeatures(impl<itype>()->features());
-    return features;
+    return d->features;
 }
 
 void DockPanel::setTitle(const String& title)
 {
-    impl<itype>()->setWindowTitle(QString::fromUtf8(reinterpret_cast<const char*>(title.data())));
+    d->title = title;
 }
 
 String DockPanel::getTitle() const
 {
-    return String::fromUtf16(reinterpret_cast<const char16_t*>(impl<itype>()->windowTitle().constData()));
+    return d->title;
 }
 
-void DockPanel::setContent(Widget* content)
+void DockPanel::setContent(UIElement* content)
 {
-    d->impl->setWidget(content->impl<QWidget>());
-    d->content = content;
+    if (!content) {
+        d->container->setClientWidget(nullptr);
+    } else {
+        d->container->setClientWidget(static_cast<QWidget*>(content->impl()));
+    }
 }
 
-Widget* DockPanel::getContent() const
+UIElement* DockPanel::getContent() const
 {
-    return d->content.get();
+    QWidget* w = d->container->clientWidget();
+    if (!w)
+        return nullptr;
+    // cannot recover wrapper for client widget here
+    return nullptr;
+}
+
+void DockPanel::attach(UIObject* container)
+{
+    if (!container)
+        return;
+    d->container = static_cast<DockingPaneContainer*>(container);
+    d->allowed = DockAreas::None;
+}
+
+bool DockPanel::isFloating() const
+{
+    return d->container->state() == DockingPaneBase::Floating;
+}
+
+bool DockPanel::isPinned() const
+{
+    return d->container->state() == DockingPaneBase::Pinned;
+}
+
+bool DockPanel::isCollapsed() const
+{
+    return d->container->state() == DockingPaneBase::Hidden;
+}
+
+DockAreas DockPanel::dockArea() const
+{
+    return d->allowed;
+}
+
+void DockPanel::setFloating(bool floating)
+{
+    if (floating)
+        d->container->setState(DockingPaneBase::Floating);
+    else
+        d->container->setState(DockingPaneBase::Docked);
+}
+
+void DockPanel::pin()
+{
+    d->container->setState(DockingPaneBase::Pinned);
+}
+
+void DockPanel::unpin()
+{
+    d->container->setState(DockingPaneBase::Docked);
+}
+
+void DockPanel::collapse()
+{
+    d->container->setState(DockingPaneBase::Hidden);
+}
+
+void DockPanel::restore()
+{
+    d->container->setState(DockingPaneBase::Docked);
 }
 
 V_APPFWGUI_NS_END

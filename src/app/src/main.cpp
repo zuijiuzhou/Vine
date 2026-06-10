@@ -31,47 +31,43 @@ namespace di    = vine::di;
 
 int main(int argc, char** argv)
 {
+    // guifw::GuiApplicationPtr app = new guifw::GuiApplication(argc, argv);
+    // app->init();
 
-    printf("-------");
-    guifw::GuiApplicationPtr app = new guifw::GuiApplication(argc, argv);
-    app->init();
+    // guifw::MainWindowPtr wnd = new guifw::MainWindow();
+    // wnd->show();
 
-    QDialog dialog;
-    dialog.exec();
+    // auto reg = di::Registration::create<vine::RefObject>().impl(fw::AddinManager::desc()).lifetime(di::Lifetime::Singleton);
 
-    guifw::MainWindowPtr wnd = new guifw::MainWindow();
-    wnd->show();
+    // di::Container c;
+    // c.add(reg);
 
-    auto reg = di::Registration::create<vine::RefObject>().impl(fw::AddinManager::desc()).lifetime(di::Lifetime::Singleton);
+    // auto bar  = wnd->ribbonBar();
+    // auto rtab = new guifw::RibbonTab();
+    // rtab->title(u8"Tab1");
+    // bar->addTab(rtab);
+    // auto rgroup = new guifw::RibbonGroup();
+    // rgroup->title(u8"Group1");
+    // rtab->addGroup(rgroup);
 
-    di::Container c;
-    c.add(reg);
+    // auto mi1 = new guifw::RibbonDropDownItem();
+    // mi1->text(u8"Open");
+    // mi1->data((void*)123);
+    // bar->appendApplicationMenu(mi1);
 
-    auto bar  = wnd->ribbonBar();
-    auto rtab = new guifw::RibbonTab();
-    rtab->title(u8"Tab1");
-    bar->addTab(rtab);
-    auto rgroup = new guifw::RibbonGroup();
-    rgroup->title(u8"Group1");
-    rtab->addGroup(rgroup);
+    // auto panel_left = new guifw::DockPanel();
+    // panel_left->setTitle(u8"Left");
+    // wnd->addDockPanel(panel_left, guifw::DockAreas::Left);
+    // auto panel_top = new guifw::DockPanel();
+    // panel_top->setTitle(u8"Top");
+    // wnd->addDockPanel(panel_top, guifw::DockAreas::Top);
+    // auto panel_right = new guifw::DockPanel();
+    // panel_right->setTitle(u8"Right");
+    // wnd->addDockPanel(panel_right, guifw::DockAreas::Right);
+    // auto panel_bottom = new guifw::DockPanel();
+    // panel_bottom->setTitle(u8"Bottom");
+    // wnd->addDockPanel(panel_bottom, guifw::DockAreas::Bottom);
 
-    auto mi1 = new guifw::RibbonDropDownItem();
-    mi1->text(u8"Open");
-    mi1->data((void*)123);
-    bar->appendApplicationMenu(mi1);
-
-    auto panel_left = new guifw::DockPanel();
-    panel_left->setTitle(u8"Left");
-    wnd->addDockPanel(panel_left, guifw::DockAreas::Left);
-    auto panel_top = new guifw::DockPanel();
-    panel_top->setTitle(u8"Top");
-    wnd->addDockPanel(panel_top, guifw::DockAreas::Top);
-    auto panel_right = new guifw::DockPanel();
-    panel_right->setTitle(u8"Right");
-    wnd->addDockPanel(panel_right, guifw::DockAreas::Right);
-    auto panel_bottom = new guifw::DockPanel();
-    panel_bottom->setTitle(u8"Bottom");
-    wnd->addDockPanel(panel_bottom, guifw::DockAreas::Bottom);
-
-    return app->run();
+    // return app->run();
+    return 0;
 }

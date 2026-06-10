@@ -1,42 +1,50 @@
-﻿#include <vine/appfw/gui/RibbonGroup.hpp>
+#include <vine/appfw/gui/RibbonGroup.hpp>
 
 #include <SARibbon.h>
-
-#include <vine/Exception.hpp>
+#include <vine/appfw/gui/RibbonButton.hpp>
 
 V_APPFWGUI_NS_BEGIN
 
-V_OBJECT_META_IMPL(RibbonGroup, Widget)
+V_OBJECT_META_IMPL(RibbonGroup, UIElement)
 
-struct RibbonGroup::Data {};
-
-namespace
-{
-
-using itype = SARibbonPanel;
-
-}
+struct RibbonGroup::Data {
+        SARibbonPanel* pannel = nullptr;
+    String         title;
+};
 
 RibbonGroup::RibbonGroup()
-  : Widget(new SARibbonPanel())
-  , d(new Data())
-{}
+    : UIElement(new SARibbonPanel())
+  , d(new Data)
+{
+        d->pannel = impl<SARibbonPanel>();
+}
 
 RibbonGroup::~RibbonGroup()
 {
     delete d;
 }
 
-String RibbonGroup::title() const
+void RibbonGroup::title(const String& t)
 {
-    auto w = impl<itype>();
-    return String::fromUtf16(reinterpret_cast<const char16_t*>(w->panelName().constData()));
+    d->title = t;
 }
 
-void RibbonGroup::title(const String& ti)
+String RibbonGroup::title() const
 {
-    auto w = impl<itype>();
-    w->setPanelName(QString::fromUtf8(reinterpret_cast<const char*>(ti.data())));
+    return d->title;
+}
+
+void RibbonGroup::addButton(RibbonButton* b)
+{
+    if (!b)
+        return;
+    auto w = b->impl<QWidget>();
+    (void)w; // TODO: integrate with SARibbonPanel API
+}
+
+void RibbonGroup::removeButton(RibbonButton* b)
+{
+    // SARibbonPanel doesn't expose removeWidget in public API reliably; keep no-op
 }
 
 V_APPFWGUI_NS_END

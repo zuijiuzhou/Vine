@@ -5,13 +5,10 @@
 
 V_APPFW_NS_BEGIN
 
-class V_APPFW_API CommandManager : public RefObject {
-    V_OBJECT_META_DECL;
+class V_APPFW_API CommandManager  { 
 
   public:
     CommandManager();
 };
-
-using CommandManagerPtr = RefPtr<CommandManager>;
 
 V_APPFW_NS_END

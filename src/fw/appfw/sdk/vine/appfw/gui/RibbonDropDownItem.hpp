@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "UIElement.hpp"
 
@@ -6,18 +6,16 @@ V_APPFWGUI_NS_BEGIN
 
 class V_APPFW_API RibbonDropDownItem : public UIElement {
     V_OBJECT_META_DECL
-    friend class RibbonBar;
 
   public:
     RibbonDropDownItem();
     virtual ~RibbonDropDownItem();
 
-  public:
+    void text(const String& t);
     String text() const;
-    void   text(const String& txt);
 
+    void setData(void* dptr);
     void* data() const;
-    void  data(void* v);
 
   private:
     struct Data;

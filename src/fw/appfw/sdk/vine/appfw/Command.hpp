@@ -6,8 +6,7 @@
 
 V_APPFW_NS_BEGIN
 
-class V_APPFW_API CommandExecutingContext : public RefObject {
-    V_OBJECT_META_DECL;
+class V_APPFW_API CommandExecutingContext {
 
   public:
     String arguments() const;
@@ -17,9 +16,7 @@ class V_APPFW_API CommandExecutingContext : public RefObject {
     Data* const d;
 };
 
-using CommandExecutingContextPtr = RefPtr<CommandExecutingContext>;
-
-class V_APPFW_API Command : public RefObject {
+class V_APPFW_API Command : public Object {
     V_OBJECT_META_DECL;
     V_DISABLE_COPY_MOVE(Command);
 
@@ -30,7 +27,5 @@ class V_APPFW_API Command : public RefObject {
 
     virtual void Execute(CommandExecutingContext* context) = 0;
 };
-
-using CommandPtr = RefPtr<Command>;
 
 V_APPFW_NS_END

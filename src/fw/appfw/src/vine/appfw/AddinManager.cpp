@@ -9,7 +9,6 @@
 
 V_APPFW_NS_BEGIN
 
-V_OBJECT_META_IMPL(AddinManager, RefObject)
 
 struct AddinManager::Data {};
 

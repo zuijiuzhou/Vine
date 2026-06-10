@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#include "Widget.hpp"
+#include "UIElement.hpp"
 
 V_APPFWGUI_NS_BEGIN
 
@@ -8,7 +8,7 @@ class RibbonTab;
 class RibbonDropDownItem;
 class MainWindow;
 
-class V_APPFW_API RibbonBar : public Widget {
+class V_APPFW_API RibbonBar : public UIElement {
     V_OBJECT_META_DECL
 
     friend class MainWindow;
@@ -26,7 +26,6 @@ class V_APPFW_API RibbonBar : public Widget {
     void       currentIndex(int idx);
 
     void appendApplicationMenu(RibbonDropDownItem* mi);
-
   private:
     struct Data;
     Data* const d;

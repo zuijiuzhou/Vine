@@ -1,21 +1,18 @@
-﻿#pragma once
+#pragma once
 
-#include <vine/appfw/appfw_global.hpp>
-
-#include "Widget.hpp"
+#include "UIElement.hpp"
 
 V_APPFWGUI_NS_BEGIN
 
-class MainWindow;
-
-class V_APPFW_API StatusBar : public Widget {
+class V_APPFW_API StatusBar : public UIElement {
     V_OBJECT_META_DECL
 
-    friend class MainWindow;
-
   public:
-    StatusBar(MainWindow* wnd);
+    StatusBar();
+    StatusBar(UIElement* parent);
     virtual ~StatusBar();
+
+    void showMessage(const String& msg, int timeout_ms = 0);
 
   private:
     struct Data;

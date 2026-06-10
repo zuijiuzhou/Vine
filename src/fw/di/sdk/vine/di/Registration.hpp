@@ -3,7 +3,7 @@
 #include <functional>
 
 #include <vine/Class.hpp>
-#include <vine/RefObject.hpp>
+#include <vine/Ptr.hpp>
 
 #include "Lifetime.hpp"
 #include "di_global.hpp"
@@ -23,9 +23,7 @@ class V_DI_API Registration final {
     Registration& instance(RefObject* inst);
 
     RefObject* instance() const
-    {
-        return inst_.get();
-    }
+    { return inst_.get(); }
 
     Registration& instanceFactory(InstanceFactory fac)
     {
@@ -34,9 +32,7 @@ class V_DI_API Registration final {
     }
 
     InstanceFactory instanceFactory() const
-    {
-        return inst_fac_;
-    }
+    { return inst_fac_; }
 
     Registration& impl(Type type)
     {
@@ -45,9 +41,7 @@ class V_DI_API Registration final {
     }
 
     Type impl()
-    {
-        return service_impl_type_;
-    }
+    { return service_impl_type_; }
 
     Registration& lifetime(Lifetime lt)
     {
@@ -56,14 +50,10 @@ class V_DI_API Registration final {
     }
 
     Lifetime lifetime() const
-    {
-        return lifetime_;
-    }
+    { return lifetime_; }
 
     Type serviceType() const
-    {
-        return service_type_;
-    }
+    { return service_type_; }
 
   public:
     Registration& operator=(const Registration& reg);
@@ -73,17 +63,15 @@ class V_DI_API Registration final {
     static Registration create();
 
   private:
-    Type service_type_{};
-    Type service_impl_type_{};
-    V_PTR(RefObject) inst_;
-    InstanceFactory inst_fac_;
-    Lifetime        lifetime_ = Lifetime::Transient;
+    Type              service_type_{};
+    Type              service_impl_type_{};
+    RefPtr<RefObject> inst_;
+    InstanceFactory   inst_fac_;
+    Lifetime          lifetime_ = Lifetime::Transient;
 };
 
 template <ObjectBased T>
 Registration Registration::create()
-{
-    return Registration(T::desc());
-}
+{ return Registration(T::desc()); }
 
 V_DI_NS_END

@@ -2,35 +2,36 @@
 
 #include <QAction>
 
+#include <vine/appfw/gui/UIElementData.hpp>
+
+
 V_APPFWGUI_NS_BEGIN
 
-V_OBJECT_META_IMPL(UIElement, RefObject)
-
-struct UIElement::Data {
-    String                  name;
-    QObject*                impl         = nullptr;
-    bool                    impl_deleted = false;
-    QMetaObject::Connection impl_destroyed_connection;
-};
+V_OBJECT_META_IMPL(UIElement, Object)
 
 namespace
-{
+{} // namespace
 
-void ImplDestroyed(QObject* obj)
-{}
-
-} // namespace
-
-UIElement::UIElement(QObject* impl)
-  : d(new Data())
+UIElement::UIElement(UIElementData* data, QObject* impl)
+  : d(data)
 {
     d->impl    = impl;
-    Data* dptr = d;
 
-    d->impl_destroyed_connection = QObject::connect(impl, &QObject::destroyed, [this, dptr](QObject* obj) {
-        dptr->impl         = nullptr;
-        dptr->impl_deleted = true;
+    d->impl_destroyed_connection = QObject::connect(impl, &QObject::destroyed, [this, data](QObject* obj) {
+        data->impl         = nullptr;
+        data->impl_deleted = true;
     });
+}
+
+UIElement::UIElement(UIObject* impl)
+    : d(new UIElementData())
+{
+        d->impl = impl;
+        UIElementData* dptr = d;
+        d->impl_destroyed_connection = QObject::connect(impl, &QObject::destroyed, [this, dptr](QObject* obj) {
+                dptr->impl         = nullptr;
+                dptr->impl_deleted = true;
+        });
 }
 
 UIElement::~UIElement()
@@ -42,19 +43,13 @@ UIElement::~UIElement()
     delete d;
 }
 
-String UIElement::name() const
-{
-    return d->name;
-}
+String UIElement::getName() const
+{ return d->name; }
 
-void UIElement::name(const String& name)
-{
-    d->name = name;
-}
+void UIElement::setName(const String& name)
+{ d->name = name; }
 
 QObject* UIElement::impl() const
-{
-    return d->impl;
-}
+{ return d->impl; }
 
 V_APPFWGUI_NS_END

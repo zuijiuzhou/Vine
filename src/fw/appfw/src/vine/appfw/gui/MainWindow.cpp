@@ -3,6 +3,9 @@
 #include <QDockWidget>
 #include <QTabWidget>
 #include <SARibbon.h>
+#include "../../../../third_party/DockingPanes/src/DockingPaneManager.h"
+#include <QUuid>
+#include <QSize>
 
 #include <vine/Ptr.hpp>
 #include <vine/appfw/gui/DockPanel.hpp>
@@ -14,14 +17,15 @@
 
 V_APPFWGUI_NS_BEGIN
 
-V_OBJECT_META_IMPL(MainWindow, Widget)
+V_OBJECT_META_IMPL(MainWindow, UIElement)
 
 struct MainWindow::Data {
-    RefPtr<RibbonBar> ribbon_bar;
-    RefPtr<StatusBar> status_bar;
+    RibbonBar* ribbon_bar = nullptr;
+    StatusBar* status_bar = nullptr;
     StartupPosition   startup_posi;
     WindowState       wnd_state;
     bool              is_first_time_displayed = true;
+    DockingPaneManager* docking_manager = nullptr;
 };
 
 namespace
@@ -32,10 +36,10 @@ using itype = SARibbonMainWindow;
 } // namespace
 
 MainWindow::MainWindow()
-  : Widget(new SARibbonMainWindow(nullptr))
-  , d(new Data)
+    : UIElement(new SARibbonMainWindow(nullptr))
+    , d(new Data)
 {
-    size(Size(600, 400));
+    // size(Size(600, 400));
     d->ribbon_bar = new RibbonBar(this);
     d->status_bar = new StatusBar(this);
 
@@ -54,10 +58,20 @@ MainWindow::MainWindow()
     auto central_widget = new QTabWidget();
     auto wnd            = impl<itype>();
     wnd->setCentralWidget(central_widget);
+
+    // initialize docking panes manager and attach to main window
+    d->docking_manager = new DockingPaneManager();
+    d->docking_manager->setMainWindow(impl<itype>());
 }
 
 MainWindow::~MainWindow()
 {
+    if (d->docking_manager) {
+        delete d->docking_manager;
+        d->docking_manager = nullptr;
+    }
+    delete d->ribbon_bar;
+    delete d->status_bar;
     delete d;
 }
 
@@ -140,21 +154,56 @@ void MainWindow::close()
 
 RibbonBar* MainWindow::ribbonBar() const
 {
-    return d->ribbon_bar.get();
+    return d->ribbon_bar;
 }
 
 StatusBar* MainWindow::statusBar() const
 {
-    return d->status_bar.get();
+    return d->status_bar;
 }
 
 void MainWindow::addDockPanel(DockPanel* panel, DockAreas area)
 {
+    // if panel wraps DockingPanes, use DockingPaneManager to dock it
+    if (d->docking_manager) {
+        auto dp = panel->impl<DockingPaneBase>();
+        if (!dp) {
+            // create a pane via DockingPaneManager and attach it to the wrapper
+            QString id = QUuid::createUuid().toString();
+            auto title = panel->getTitle();
+            auto utf16 = title.toUtf16();
+            QString qtitle = QString::fromUtf16(reinterpret_cast<const ushort*>(utf16.data()), (int)utf16.size());
+            QWidget* client = nullptr;
+            if (auto content = panel->getContent())
+                client = static_cast<QWidget*>(content->impl());
+            auto newPane = d->docking_manager->createPane(id, qtitle, client, QSize(200, 200), DockingPaneManager::dockLeft, nullptr);
+            panel->attach(newPane);
+            dp = newPane;
+        }
+        if (dp) {
+            // map DockAreas to DockPosition
+            DockingPaneManager::DockPosition pos = DockingPaneManager::dockLeft;
+            if (testFlag(area, DockAreas::Left))
+                pos = DockingPaneManager::dockLeft;
+            else if (testFlag(area, DockAreas::Right))
+                pos = DockingPaneManager::dockRight;
+            else if (testFlag(area, DockAreas::Top))
+                pos = DockingPaneManager::dockTop;
+            else if (testFlag(area, DockAreas::Bottom))
+                pos = DockingPaneManager::dockBottom;
+            d->docking_manager->dockPane(dp, pos, nullptr);
+            return;
+        }
+    }
+
+    // fallback to QDockWidget approach if present
     auto qdockpanel = panel->impl<QDockWidget>();
-    auto qwnd       = impl<itype>();
-    auto qarea      = Convert::toQDockAreas(area);
-    qdockpanel->setAllowedAreas(qarea);
-    qwnd->addDockWidget((Qt::DockWidgetArea)qarea.toInt(), qdockpanel);
+    if (qdockpanel) {
+        auto qwnd  = impl<itype>();
+        auto qarea = Convert::toQDockAreas(area);
+        qdockpanel->setAllowedAreas(qarea);
+        qwnd->addDockWidget((Qt::DockWidgetArea)qarea.toInt(), qdockpanel);
+    }
 }
 
 V_APPFWGUI_NS_END
