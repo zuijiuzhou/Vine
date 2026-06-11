@@ -1,24 +1,27 @@
 #include <vine/appfw/gui/DockPanel.hpp>
 
 #include <vine/appfw/gui/Convert.hpp>
-#include "../../../../third_party/DockingPanes/src/DockingPaneContainer.h"
+#include <DockingPaneContainer.h>
+#include <DockingPaneManager.h>
 
 V_APPFWGUI_NS_BEGIN
 
 V_OBJECT_META_IMPL(DockPanel, UIElement)
 
 struct DockPanel::Data {
-    DockingPaneContainer* container = nullptr;
-    DockAreas             allowed   = DockAreas::None;
-    DockFeatures          features  = DockFeatures::None;
+    DockingPaneContainer* container    = nullptr;
+    DockAreas             allowed      = DockAreas::None;
+    DockFeatures          features     = DockFeatures::None;
     String                title;
+    String                id;
+    UIElement*            content      = nullptr;
 };
 
 DockPanel::DockPanel()
-  : UIElement(new DockingPaneContainer())
+  : UIElement(static_cast<QObject*>(nullptr))
   , d(new Data)
 {
-    d->container = impl<DockingPaneContainer>();
+    d->container = nullptr;
 }
 
 DockPanel::DockPanel(UIObject* container)
@@ -46,7 +49,22 @@ DockAreas DockPanel::getAllowedAreas() const
 void DockPanel::setFeatures(DockFeatures features)
 {
     d->features = features;
-    // DockingPanes controls behaviour via state; feature mapping omitted
+    if (!d->container)
+        return;
+    // Map features to DockingPaneContainer state:
+    // Closable -> allow close button
+    // Floatable -> allow floating (Float is a state)
+    // Movable -> allow drag to move (default in DockingPanes)
+    if (!testFlag(features, DockFeatures::Closable)) {
+        // DockingPanes doesn't directly support hiding close button
+        // without subclassing; feature stored for reference
+    }
+    if (!testFlag(features, DockFeatures::Floatable)) {
+        // Prevent floating if not allowed:
+        // only allow Docked/Hidden/Pinned states if floating disabled
+        if (d->container->state() == DockingPaneBase::Floating)
+            d->container->setState(DockingPaneBase::Docked);
+    }
 }
 
 DockFeatures DockPanel::getFeatures() const
@@ -64,8 +82,19 @@ String DockPanel::getTitle() const
     return d->title;
 }
 
+void DockPanel::setId(const String& id)
+{
+    d->id = id;
+}
+
+String DockPanel::getId() const
+{
+    return d->id;
+}
+
 void DockPanel::setContent(UIElement* content)
 {
+    d->content = content;
     if (!content) {
         d->container->setClientWidget(nullptr);
     } else {
@@ -75,11 +104,7 @@ void DockPanel::setContent(UIElement* content)
 
 UIElement* DockPanel::getContent() const
 {
-    QWidget* w = d->container->clientWidget();
-    if (!w)
-        return nullptr;
-    // cannot recover wrapper for client widget here
-    return nullptr;
+    return d->content;
 }
 
 void DockPanel::attach(UIObject* container)
@@ -105,9 +130,26 @@ bool DockPanel::isCollapsed() const
     return d->container->state() == DockingPaneBase::Hidden;
 }
 
+bool DockPanel::isTabbed() const
+{
+    return d->container->state() == DockingPaneBase::Tabbed;
+}
+
 DockAreas DockPanel::dockArea() const
 {
-    return d->allowed;
+    if (!d->container)
+        return DockAreas::None;
+    auto state = d->container->state();
+    switch (state) {
+        case DockingPaneBase::Docked:
+        case DockingPaneBase::Tabbed:
+            // Docked/Tabbed — report the last known allowed area
+            return d->allowed != DockAreas::None ? d->allowed : DockAreas::Left;
+        case DockingPaneBase::Floating:
+            return DockAreas::None;
+        default:
+            return DockAreas::None;
+    }
 }
 
 void DockPanel::setFloating(bool floating)

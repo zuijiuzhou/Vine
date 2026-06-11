@@ -27,6 +27,10 @@ RibbonTab::~RibbonTab()
 void RibbonTab::title(const String& t)
 {
     d->title = t;
+    if (d->cat) {
+        auto utf16 = t.toUtf16();
+        d->cat->setCategoryName(QString::fromUtf16(reinterpret_cast<const ushort*>(utf16.data()), (int)utf16.size()));
+    }
 }
 
 String RibbonTab::title() const

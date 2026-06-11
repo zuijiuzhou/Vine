@@ -1,21 +1,21 @@
 #include <vine/appfw/gui/RibbonButton.hpp>
 
-#include <QToolButton>
+#include <SARibbon.h>
 
 V_APPFWGUI_NS_BEGIN
 
 V_OBJECT_META_IMPL(RibbonButton, UIElement)
 
 struct RibbonButton::Data {
-    QToolButton* btn = nullptr;
-    void*        user = nullptr;
+    SARibbonToolButton* btn  = nullptr;
+    void*               user = nullptr;
 };
 
 RibbonButton::RibbonButton()
-  : UIElement(new QToolButton())
+  : UIElement(new SARibbonToolButton(static_cast<QWidget*>(nullptr)))
   , d(new Data)
 {
-    d->btn = impl<QToolButton>();
+    d->btn = impl<SARibbonToolButton>();
 }
 
 RibbonButton::~RibbonButton()

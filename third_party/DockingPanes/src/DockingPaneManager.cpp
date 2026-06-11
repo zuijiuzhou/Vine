@@ -1579,7 +1579,7 @@ QWidget* DockingPaneManager::mainWindow(void)
 
 void DockingPaneManager::dumpPaneList(void)
 {
-    /*Q_D(DockingPaneManager);
+    Q_D(DockingPaneManager);
 
     foreach(DockingPaneBase *searchPane, d->m_dockingPaneList) {
         DockingPaneContainer *currentPane = qobject_cast<DockingPaneContainer *>(searchPane);
@@ -1587,5 +1587,21 @@ void DockingPaneManager::dumpPaneList(void)
         if (currentPane) {
             qDebug() << "pane" << currentPane << currentPane->state();
         }
-    }*/
+    }
+}
+
+DockingPaneBase* DockingPaneManager::pane(int index) const
+{
+    Q_D(const DockingPaneManager);
+
+    if (index >= 0 && index < d->m_dockingPaneList.size())
+        return d->m_dockingPaneList.at(index);
+    return nullptr;
+}
+
+int DockingPaneManager::paneCount() const
+{
+    Q_D(const DockingPaneManager);
+
+    return d->m_dockingPaneList.size();
 }

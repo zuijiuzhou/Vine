@@ -22,6 +22,12 @@ StatusBar::StatusBar(UIElement* parent)
   , d(new Data)
 {
     d->sb = impl<QStatusBar>();
+    // Attach to the parent widget's impl as Qt child
+    if (parent) {
+        auto* pw = static_cast<QWidget*>(parent->impl());
+        if (pw)
+            d->sb->setParent(pw);
+    }
 }
 
 StatusBar::~StatusBar()

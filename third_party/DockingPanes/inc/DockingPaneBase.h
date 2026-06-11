@@ -50,6 +50,9 @@ class DockingPaneBase : public QWidget
 
         DockingPaneManager *dockingManager(void);
 
+        void setUserData(void* data) { m_userData = data; }
+        void* userData() const { return m_userData; }
+
         virtual State state(void);
         virtual void setState(DockingPaneBase::State state);
         virtual void saveLayout(QDomNode *parentNode, bool includeGeometry=false) = 0;
@@ -63,6 +66,7 @@ class DockingPaneBase : public QWidget
         State m_state;
         QString m_name;
         QString m_id;
+        void* m_userData = nullptr;
 };
 
 #endif // DOCKINGPANEBASE_H

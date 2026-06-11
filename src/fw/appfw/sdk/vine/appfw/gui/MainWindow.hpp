@@ -1,5 +1,7 @@
 ﻿#pragma once
 
+#include <vector>
+
 #include "UIElement.hpp"
 #include "Gui.hpp"
 
@@ -7,7 +9,7 @@ V_APPFWGUI_NS_BEGIN
 
 class RibbonBar;
 class StatusBar;
-class DockPanel;
+class DockPanelManager;
 
 class V_APPFW_API MainWindow : public UIElement {
     V_OBJECT_META_DECL
@@ -38,8 +40,7 @@ class V_APPFW_API MainWindow : public UIElement {
 
     RibbonBar* ribbonBar() const;
     StatusBar* statusBar() const;
-
-    void addDockPanel(DockPanel* panel, DockAreas area);
+    DockPanelManager* dockPanelManager() const;
 
   private:
     struct Data;

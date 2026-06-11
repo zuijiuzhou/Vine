@@ -79,6 +79,9 @@ class DockingPaneManager : QObject
 
         void dumpPaneList(void);
 
+        DockingPaneBase* pane(int index) const;
+        int paneCount() const;
+
     public:
         void floatingPaneMoved(DockingPaneBase *pane, QPoint cursorPos);
         void floatingPaneEndMove(DockingPaneBase *pane, QPoint cursorPos);

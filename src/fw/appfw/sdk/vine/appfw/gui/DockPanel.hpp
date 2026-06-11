@@ -6,7 +6,7 @@
 V_APPFWGUI_NS_BEGIN
 
 class V_APPFW_API DockPanel : public UIElement {
-    V_OBJECT_META_DECL;
+    V_OBJECT_META_DECL
 
   public:
     DockPanel();
@@ -22,6 +22,9 @@ class V_APPFW_API DockPanel : public UIElement {
     void   setTitle(const String& title);
     String getTitle() const;
 
+    void   setId(const String& id);
+    String getId() const;
+
     void    setContent(UIElement* content);
     UIElement* getContent() const;
 
@@ -32,6 +35,7 @@ class V_APPFW_API DockPanel : public UIElement {
     bool isFloating() const;
     bool isPinned() const;
     bool isCollapsed() const;
+    bool isTabbed() const;
     DockAreas dockArea() const;
 
     // State control

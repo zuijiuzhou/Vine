@@ -27,6 +27,10 @@ RibbonGroup::~RibbonGroup()
 void RibbonGroup::title(const String& t)
 {
     d->title = t;
+    if (d->pannel) {
+        auto utf16 = t.toUtf16();
+        d->pannel->setPanelName(QString::fromUtf16(reinterpret_cast<const ushort*>(utf16.data()), (int)utf16.size()));
+    }
 }
 
 String RibbonGroup::title() const
@@ -39,12 +43,19 @@ void RibbonGroup::addButton(RibbonButton* b)
     if (!b)
         return;
     auto w = b->impl<QWidget>();
-    (void)w; // TODO: integrate with SARibbonPanel API
+    if (w && d->pannel)
+        d->pannel->addWidget(w, SARibbonPanelItem::Small);
 }
 
 void RibbonGroup::removeButton(RibbonButton* b)
 {
-    // SARibbonPanel doesn't expose removeWidget in public API reliably; keep no-op
+    if (!b)
+        return;
+    auto w = b->impl<QWidget>();
+    if (w) {
+        // Detach the widget from its parent panel
+        w->setParent(nullptr);
+    }
 }
 
 V_APPFWGUI_NS_END

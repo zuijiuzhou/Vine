@@ -20,6 +20,7 @@ set_target_properties(DockingPanes PROPERTIES
 
 target_include_directories(DockingPanes
     PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/inc>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/src>
 )
 
