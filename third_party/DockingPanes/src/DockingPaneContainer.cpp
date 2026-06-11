@@ -302,8 +302,45 @@ DockingPaneFlyoutWidget* DockingPaneContainer::openFlyout(bool hasFocus, QWidget
     return (m_flyoutWidget);
 }
 
+void DockingPaneContainer::setClosable(bool closable)
+{
+    m_closable = closable;
+    m_closeButton->setVisible(closable);
+}
+
+bool DockingPaneContainer::isClosable() const
+{
+    return m_closable;
+}
+
+void DockingPaneContainer::setMovable(bool movable)
+{
+    m_movable = movable;
+}
+
+bool DockingPaneContainer::isMovable() const
+{
+    return m_movable;
+}
+
+void DockingPaneContainer::setFloatable(bool floatable)
+{
+    m_floatable = floatable;
+    // If currently floating and floatable is disabled, dock it back
+    if (!floatable && state() == DockingPaneBase::Floating) {
+        setState(DockingPaneBase::Docked);
+    }
+}
+
+bool DockingPaneContainer::isFloatable() const
+{
+    return m_floatable;
+}
+
 void DockingPaneContainer::onStartDragTitle(QPoint pos)
 {
+    if (!m_movable)
+        return;
     m_dockingManager->floatingPaneStartMove(this, pos);
 
     m_initialPos = pos;
@@ -311,11 +348,15 @@ void DockingPaneContainer::onStartDragTitle(QPoint pos)
 
 void DockingPaneContainer::onEndDragTitle(QPoint pos)
 {
+    if (!m_movable)
+        return;
     m_dockingManager->floatingPaneEndMove(this, pos);
 }
 
 void DockingPaneContainer::onMoveDragTitle(QPoint pos)
 {
+    if (!m_movable)
+        return;
     QPoint deltaPos = pos - m_initialPos;
 
     if (state() == DockingPaneBase::Floating) {
@@ -330,6 +371,8 @@ void DockingPaneContainer::onMoveDragTitle(QPoint pos)
         m_dockingManager->floatingPaneMoved(this, pos);
     }
     else {
+        if (!m_floatable)
+            return;
         double trueLength = sqrt(pow(deltaPos.x(), 2) + pow(deltaPos.y(), 2));
 
         if (trueLength > 5) {
@@ -375,6 +418,8 @@ void DockingPaneContainer::onMoveDragFlyoutTitle(QPoint pos)
         dockingManager()->floatingPaneMoved(this, pos);
     }
     else {
+        if (!m_floatable)
+            return;
         double trueLength = sqrt(pow(deltaPos.x(), 2) + pow(deltaPos.y(), 2));
 
         if (trueLength > 5) {

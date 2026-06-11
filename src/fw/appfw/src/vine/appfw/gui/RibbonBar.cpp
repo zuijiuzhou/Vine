@@ -16,6 +16,11 @@ struct RibbonBar::Data : public UIElementData {
     std::vector<RibbonTab*> tabs;
     MainWindow*             wnd;
     QMenu*                  application_menu = nullptr;
+
+    ~Data()
+    {
+        delete application_menu;
+    }
 };
 
 namespace
@@ -29,14 +34,17 @@ RibbonBar::RibbonBar(MainWindow* wnd)
     : UIElement(new RibbonBar::Data(), static_cast<SARibbonMainWindow*>(wnd->impl())->ribbonBar())
     , d(static_cast<Data*>(UIElement::d))
 {
-    d->wnd              = wnd;
+    d->owns_impl = false;             // SARibbonBar is owned by SARibbonMainWindow
+    d->wnd       = wnd;
     d->application_menu = new QMenu();
     auto app_btn        = qobject_cast<SARibbonApplicationButton*>(impl<itype>()->applicationButton());
     app_btn->setMenu(d->application_menu);
 }
 
 RibbonBar::~RibbonBar()
-{ delete d; }
+{
+    // d is deleted by UIElement::~UIElement(), do NOT delete here
+}
 
 int RibbonBar::numTabs() const
 { return (int)d->tabs.size(); }

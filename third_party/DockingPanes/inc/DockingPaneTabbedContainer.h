@@ -81,6 +81,7 @@ class DockingPaneTabbedContainer : public DockingPaneContainer
         void onUnpinContainer(void);
         void onCloseContainer(void);
         void onFocusChanged(QWidget *old, QWidget *now);
+        void syncFeaturesFromCurrentPane();
 };
 
 #endif // DOCKINGPANETABBEDCONTAINER_H

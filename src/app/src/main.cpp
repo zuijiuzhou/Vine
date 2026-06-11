@@ -25,6 +25,8 @@
 #include <vine/appfw/gui/RibbonGroup.hpp>
 #include <vine/appfw/gui/RibbonTab.hpp>
 
+#include <QLabel>
+
 namespace fw    = vine::appfw;
 namespace guifw = fw::gui;
 
@@ -90,25 +92,60 @@ int main(int argc, char** argv)
     // ---- Dock panels ----
     auto* mgr = wnd.dockPanelManager();
 
+    // 中央客户区
+    struct CentralWidget : UIElement {
+        QLabel* label;
+        CentralWidget()
+            : UIElement(new QLabel())
+            , label(impl<QLabel>())
+        {
+            label->setText(u8"Welcome to Vine\n中央工作区");
+            label->setAlignment(Qt::AlignCenter);
+            label->setStyleSheet("font-size: 18px; color: #888;");
+        }
+    };
+    mgr->setCentralWidget(new CentralWidget());
+
+    // 左侧面板：不允许关闭（无关闭按钮）
     auto* panelLeft = mgr->createDockPanel(DockAreas::Left);
     panelLeft->setTitle(u8"Project");
     panelLeft->setId(u8"dock_project");
+    panelLeft->setFeatures(DockFeatures::Movable | DockFeatures::Floatable);  // 无 Closable
 
+    // 右侧面板：不允许浮动（拖拽不会脱离停靠）
     auto* panelRight = mgr->createDockPanel(DockAreas::Right);
     panelRight->setTitle(u8"Properties");
     panelRight->setId(u8"dock_properties");
+    panelRight->setFeatures(DockFeatures::Closable | DockFeatures::Movable);  // 无 Floatable
 
+    // 底部面板：不允许拖动（固定在原位）
     auto* panelBottom = mgr->createDockPanel(DockAreas::Bottom);
     panelBottom->setTitle(u8"Output");
     panelBottom->setId(u8"dock_output");
+    panelBottom->setFeatures(DockFeatures::Closable | DockFeatures::Floatable);  // 无 Movable
+
+    // 顶部面板：全部特性启用（默认行为）
+    auto* panelTop = mgr->createDockPanel(DockAreas::Top);
+    panelTop->setTitle(u8"Toolbox");
+    panelTop->setId(u8"dock_toolbox");
+    panelTop->setFeatures(DockFeatures::All);
+
+    // 另一个底部面板：完全锁定
+    auto* panelBottom2 = mgr->createDockPanel(DockAreas::Bottom);
+    panelBottom2->setTitle(u8"Log");
+    panelBottom2->setId(u8"dock_log");
+    panelBottom2->setFeatures(DockFeatures::None);  // 不可关闭、不可拖动、不可浮动
 
     // Exercise queries
     std::cout << "Dock panel count: " << mgr->count() << std::endl;
-    auto* found = mgr->findById(u8"dock_output");
-    if (found) {
-        auto utf16 = found->getTitle().toUtf16();
+    for (auto* p : mgr->panels()) {
+        auto  utf16  = p->getTitle().toUtf16();
         std::string title(utf16.begin(), utf16.end());
-        std::cout << "Found output panel, title=" << title << std::endl;
+        std::cout << "  - " << title
+                  << "  closable=" << vine::testFlag(p->getFeatures(), DockFeatures::Closable)
+                  << "  movable=" << vine::testFlag(p->getFeatures(), DockFeatures::Movable)
+                  << "  floatable=" << vine::testFlag(p->getFeatures(), DockFeatures::Floatable)
+                  << std::endl;
     }
 
     // Test floating

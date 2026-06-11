@@ -1,6 +1,7 @@
 #include <vine/appfw/gui/RibbonGroup.hpp>
 
 #include <SARibbon.h>
+#include <QToolButton>
 #include <vine/appfw/gui/RibbonButton.hpp>
 
 V_APPFWGUI_NS_BEGIN
@@ -49,12 +50,24 @@ void RibbonGroup::addButton(RibbonButton* b)
 
 void RibbonGroup::removeButton(RibbonButton* b)
 {
-    if (!b)
+    if (!b || !d->pannel)
         return;
-    auto w = b->impl<QWidget>();
+    auto* w = b->impl<QWidget>();
     if (w) {
-        // Detach the widget from its parent panel
+        // Remove the action from the panel's layout
+        // SARibbonPanel manages buttons through QActions; find and remove
+        auto* action = w->findChild<QAction*>(QString(), Qt::FindDirectChildrenOnly);
+        if (!action) {
+            // Try to get the default action if it's a tool button
+            auto* tb = qobject_cast<QToolButton*>(w);
+            if (tb)
+                action = tb->defaultAction();
+        }
+        if (action) {
+            d->pannel->removeAction(action);
+        }
         w->setParent(nullptr);
+        w->deleteLater();
     }
 }
 

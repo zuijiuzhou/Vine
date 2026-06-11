@@ -38,7 +38,9 @@ UIElement::~UIElement()
 {
     if (d->impl) {
         QObject::disconnect(d->impl_destroyed_connection);
-        delete d->impl;
+        if (d->owns_impl) {
+            delete d->impl;
+        }
     }
     delete d;
 }
@@ -51,5 +53,10 @@ void UIElement::setName(const String& name)
 
 QObject* UIElement::impl() const
 { return d->impl; }
+
+void UIElement::setOwnsImpl(bool owns)
+{
+    d->owns_impl = owns;
+}
 
 V_APPFWGUI_NS_END

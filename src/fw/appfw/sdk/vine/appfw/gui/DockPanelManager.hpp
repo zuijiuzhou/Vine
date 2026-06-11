@@ -11,6 +11,7 @@ V_APPFWGUI_NS_BEGIN
 
 class DockPanel;
 class MainWindow;
+class UIElement;
 
 /**
  * @brief Manages the lifecycle and organization of DockPanel instances.
@@ -26,6 +27,9 @@ class V_APPFW_API DockPanelManager {
 
     /** Attach this manager to a MainWindow (must be called once before docking) */
     void attachToWindow(MainWindow* wnd);
+
+    /** Set the central working-area widget (replaces the default placeholder) */
+    void setCentralWidget(UIElement* widget);
 
     // ---- Factory ----
 

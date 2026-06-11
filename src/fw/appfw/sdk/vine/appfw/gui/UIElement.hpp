@@ -37,6 +37,8 @@ class V_APPFW_API UIElement : public Object {
     TImpl* impl() const
     { return (TImpl*)impl(); }
 
+    void setOwnsImpl(bool owns);
+
   protected:
     UIElementData* const d;
 };

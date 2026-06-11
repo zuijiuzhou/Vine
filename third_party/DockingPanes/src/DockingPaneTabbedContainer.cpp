@@ -174,6 +174,8 @@ bool DockingPaneTabbedContainer::addPane(DockingPaneContainer* child)
 
     setName(child->name());
 
+    syncFeaturesFromCurrentPane();
+
     updateMargins();
 
     update();
@@ -682,6 +684,8 @@ void DockingPaneTabbedContainer::onCloseContainer(void)
 
 void DockingPaneTabbedContainer::onStartDragTitle(QPoint pos)
 {
+    if (!m_movable)
+        return;
     m_dockingManager->floatingPaneStartMove(this, pos);
 
     m_initialPos = pos;
@@ -689,11 +693,16 @@ void DockingPaneTabbedContainer::onStartDragTitle(QPoint pos)
 
 void DockingPaneTabbedContainer::onEndDragTitle(QPoint pos)
 {
+    if (!m_movable)
+        return;
     m_dockingManager->floatingPaneEndMove(this, pos);
 }
 
 void DockingPaneTabbedContainer::onMoveDragTitle(QPoint pos)
 {
+    if (!m_movable)
+        return;
+
     QPoint deltaPos = pos - m_initialPos;
 
     if (state() == DockingPaneBase::Floating) {
@@ -708,6 +717,8 @@ void DockingPaneTabbedContainer::onMoveDragTitle(QPoint pos)
         m_dockingManager->floatingPaneMoved(this, pos);
     }
     else {
+        if (!m_floatable)
+            return;
         double trueLength = sqrt(pow(deltaPos.x(), 2) + pow(deltaPos.y(), 2));
 
         if (trueLength > 5) {
@@ -790,6 +801,8 @@ void DockingPaneTabbedContainer::onMoveDragFlyoutTitle(QPoint pos)
         dockingManager()->floatingPaneMoved(m_draggedPane, pos);
     }
     else {
+        if (!m_floatable)
+            return;
         double trueLength = sqrt(pow(deltaPos.x(), 2) + pow(deltaPos.y(), 2));
 
         if (trueLength > 5) {
@@ -967,6 +980,8 @@ void DockingPaneTabbedContainer::setVisiblePane(DockingPaneContainer* pane)
 
         setName(m_paneList.at(m_paneList.indexOf(pane))->name());
 
+        syncFeaturesFromCurrentPane();
+
         update();
 
         m_stackedWidget->currentWidget()->setFocus();
@@ -976,4 +991,16 @@ void DockingPaneTabbedContainer::setVisiblePane(DockingPaneContainer* pane)
 bool DockingPaneTabbedContainer::containsPane(DockingPaneContainer* pane)
 {
     return (m_paneList.contains(pane));
+}
+
+void DockingPaneTabbedContainer::syncFeaturesFromCurrentPane()
+{
+    int idx = m_stackedWidget->currentIndex();
+    if (idx < 0 || idx >= m_paneList.count())
+        return;
+
+    DockingPaneContainer* child = m_paneList.at(idx);
+    setClosable(child->isClosable());
+    setMovable(child->isMovable());
+    setFloatable(child->isFloatable());
 }

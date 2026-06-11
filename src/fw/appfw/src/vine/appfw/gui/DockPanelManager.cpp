@@ -5,6 +5,7 @@
 #include <algorithm>
 
 #include <QDockWidget>
+#include <QMainWindow>
 #include <QUuid>
 #include <QSize>
 #include <DockingPaneManager.h>
@@ -35,6 +36,23 @@ void DockPanelManager::attachToWindow(MainWindow* wnd)
         return;
     d->dockingMgr = new DockingPaneManager();
     d->dockingMgr->setMainWindow(static_cast<QWidget*>(wnd->impl()));
+
+    // Set up a default client widget so the docking framework has a
+    // central area to anchor dock panels around.
+    auto* clientWidget = new QWidget();
+    d->dockingMgr->setClientWidget(clientWidget);
+
+    // Replace the main window's central widget with the docking manager's
+    // widget, which contains the client area and all docked panels.
+    auto* mainWindow = static_cast<QMainWindow*>(wnd->impl());
+    mainWindow->setCentralWidget(d->dockingMgr->widget());
+}
+
+void DockPanelManager::setCentralWidget(UIElement* widget)
+{
+    if (!d->dockingMgr || !widget)
+        return;
+    d->dockingMgr->setClientWidget(static_cast<QWidget*>(widget->impl()));
 }
 
 DockPanel* DockPanelManager::createDockPanel()
@@ -70,10 +88,10 @@ void DockPanelManager::addDockPanel(DockPanel* panel, DockAreas area)
     auto* dp = panel->impl<DockingPaneBase>();
     if (!dp) {
         QString panelId = QUuid::createUuid().toString();
-        panel->setId(String::fromUtf16(reinterpret_cast<const char16_t*>(panelId.utf16()), panelId.size()));
+        auto    q8      = panelId.toUtf8();
+        panel->setId(String(reinterpret_cast<const String::value_type*>(q8.constData()), q8.size()));
         auto  title  = panel->getTitle();
-        auto  utf16  = title.toUtf16();
-        QString qtitle = QString::fromUtf16(reinterpret_cast<const ushort*>(utf16.data()), static_cast<int>(utf16.size()));
+        QString qtitle = QString::fromUtf8(title.data(), static_cast<int>(title.size()));
         // Qt Debug asserts on addWidget(nullptr), so pass a temporary placeholder
         QWidget* placeholder = new QWidget();
         auto* newPane = mgr->createPane(panelId, qtitle, placeholder, QSize(200, 200), DockingPaneManager::dockFloat, nullptr);
@@ -81,7 +99,7 @@ void DockPanelManager::addDockPanel(DockPanel* panel, DockAreas area)
         // Tag for later lookup via DockPanelManager::panels()
         auto* dpc = qobject_cast<DockingPaneContainer*>(newPane);
         if (dpc) {
-            dpc->setUserData(static_cast<void*>(panel));
+            dpc->setProperty("_vine_dockpanel", QVariant::fromValue(static_cast<void*>(panel)));
             // Replace placeholder with actual content if set
             if (auto* content = panel->getContent()) {
                 auto* w = static_cast<QWidget*>(content->impl());
@@ -128,7 +146,7 @@ DockPanel* DockPanelManager::findById(const String& id) const
         auto* dpc  = qobject_cast<DockingPaneContainer*>(pane);
         if (!dpc)
             continue;
-        auto* wrapper = static_cast<DockPanel*>(dpc->userData());
+        auto* wrapper = static_cast<DockPanel*>(dpc->property("_vine_dockpanel").value<void*>());
         if (wrapper && wrapper->getId() == id)
             return wrapper;
     }
@@ -144,7 +162,7 @@ DockPanel* DockPanelManager::findByTitle(const String& title) const
         auto* dpc  = qobject_cast<DockingPaneContainer*>(pane);
         if (!dpc)
             continue;
-        auto* wrapper = static_cast<DockPanel*>(dpc->userData());
+        auto* wrapper = static_cast<DockPanel*>(dpc->property("_vine_dockpanel").value<void*>());
         if (wrapper && wrapper->getTitle() == title)
             return wrapper;
     }
@@ -168,7 +186,7 @@ std::vector<DockPanel*> DockPanelManager::panels() const
         auto* dpc  = qobject_cast<DockingPaneContainer*>(pane);
         if (!dpc)
             continue;
-        auto* wrapper = static_cast<DockPanel*>(dpc->userData());
+        auto* wrapper = static_cast<DockPanel*>(dpc->property("_vine_dockpanel").value<void*>());
         if (wrapper)
             result.push_back(wrapper);
     }

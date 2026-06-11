@@ -47,16 +47,13 @@ MainWindow::MainWindow()
     impl<itype>()->setWindowTitle("Vine");
 
     impl<itype>()->setStatusBar(d->status_bar->impl<QStatusBar>());
+    d->status_bar->setOwnsImpl(false);  // QMainWindow takes ownership of status bar
 
     auto ribbon = impl<itype>()->ribbonBar();
     // 通过setContentsMargins设置ribbon四周的间距
     ribbon->setContentsMargins(5, 0, 5, 0);
     // 设置applicationButton
     ribbon->applicationButton()->setText("File");
-
-    auto central_widget = new QWidget();
-    auto wnd            = impl<itype>();
-    wnd->setCentralWidget(central_widget);
 }
 
 MainWindow::~MainWindow()

@@ -64,6 +64,16 @@ class DockingPaneContainer : public DockingPaneBase
         DockingPaneGlow *floatingGlow(void);
         virtual void setState(DockingPaneBase::State state) override;
 
+        // --- Feature toggles ---
+        void setClosable(bool closable);
+        bool isClosable() const;
+
+        void setMovable(bool movable);
+        bool isMovable() const;
+
+        void setFloatable(bool floatable);
+        bool isFloatable() const;
+
     protected:
         virtual void setName(QString name) override;
         void setActivePane(bool active);
@@ -95,6 +105,10 @@ class DockingPaneContainer : public DockingPaneBase
         DockingPaneGlow *m_floatingGlow;
 
         bool m_draggingFlyout;
+
+        bool m_closable  = true;
+        bool m_movable   = true;
+        bool m_floatable = true;
 
      private:
         void onCloseButtonClicked(void);
