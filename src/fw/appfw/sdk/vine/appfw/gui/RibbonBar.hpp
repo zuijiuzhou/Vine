@@ -26,9 +26,11 @@ class V_APPFW_API RibbonBar : public UIElement {
     void       currentIndex(int idx);
 
     void appendApplicationMenu(RibbonDropDownItem* mi);
+
   private:
     struct Data;
-    Data* const d;
+    Data*       dptr();
+    const Data* dptr() const;
 };
 
 V_APPFWGUI_NS_END

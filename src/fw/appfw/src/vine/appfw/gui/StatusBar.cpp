@@ -1,44 +1,45 @@
 #include <vine/appfw/gui/StatusBar.hpp>
 
 #include <QStatusBar>
+#include <vine/appfw/gui/UIElementData.hpp>
 
 V_APPFWGUI_NS_BEGIN
 
 V_OBJECT_META_IMPL(StatusBar, UIElement)
 
-struct StatusBar::Data {
-    QStatusBar* sb = nullptr;
-};
+struct StatusBar::Data : public UIElementData {};
+
+inline auto StatusBar::dptr() -> Data* { return static_cast<Data*>(UIElement::d); }
+inline auto StatusBar::dptr() const -> const Data* { return static_cast<const Data*>(UIElement::d); }
 
 StatusBar::StatusBar()
-  : UIElement(new QStatusBar())
-  , d(new Data)
+    : UIElement(new Data(), new QStatusBar())
 {
-    d->sb = impl<QStatusBar>();
 }
 
 StatusBar::StatusBar(UIElement* parent)
-  : UIElement(new QStatusBar())
-  , d(new Data)
+    : UIElement(new Data(), new QStatusBar())
 {
-    d->sb = impl<QStatusBar>();
-    // Attach to the parent widget's impl as Qt child
+    // Attach to the parent widget if provided
     if (parent) {
         auto* pw = static_cast<QWidget*>(parent->impl());
-        if (pw)
-            d->sb->setParent(pw);
+        auto* sb = impl<QStatusBar>();
+        if (pw && sb)
+            sb->setParent(pw);
     }
 }
 
 StatusBar::~StatusBar()
 {
-    delete d;
+    // d is deleted by UIElement
 }
 
 void StatusBar::showMessage(const String& msg, int timeout_ms)
 {
+    auto* sb = impl<QStatusBar>();
+    if (!sb) return;
     auto utf16 = msg.toUtf16();
-    d->sb->showMessage(QString::fromUtf16(reinterpret_cast<const ushort*>(utf16.data()), (int)utf16.size()), timeout_ms);
+    sb->showMessage(QString::fromUtf16(reinterpret_cast<const ushort*>(utf16.data()), (int)utf16.size()), timeout_ms);
 }
 
 V_APPFWGUI_NS_END

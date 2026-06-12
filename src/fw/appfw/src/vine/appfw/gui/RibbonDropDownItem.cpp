@@ -1,48 +1,53 @@
 #include <vine/appfw/gui/RibbonDropDownItem.hpp>
 
 #include <QAction>
+#include <vine/appfw/gui/UIElementData.hpp>
 
 V_APPFWGUI_NS_BEGIN
 
 V_OBJECT_META_IMPL(RibbonDropDownItem, UIElement)
 
-struct RibbonDropDownItem::Data {
-    QAction* act = nullptr;
-    void*    user = nullptr;
+struct RibbonDropDownItem::Data : public UIElementData {
+    void* user = nullptr;
 };
 
+inline auto RibbonDropDownItem::dptr() -> Data* { return static_cast<Data*>(UIElement::d); }
+inline auto RibbonDropDownItem::dptr() const -> const Data* { return static_cast<const Data*>(UIElement::d); }
+
 RibbonDropDownItem::RibbonDropDownItem()
-  : UIElement(new QAction(nullptr))
-  , d(new Data)
+    : UIElement(new Data(), new QAction(nullptr))
 {
-    d->act = impl<QAction>();
 }
 
 RibbonDropDownItem::~RibbonDropDownItem()
 {
-    delete d;
+    // d is deleted by UIElement
 }
 
 void RibbonDropDownItem::text(const String& t)
 {
+    auto* act = impl<QAction>();
+    if (!act) return;
     auto utf16 = t.toUtf16();
-    d->act->setText(QString::fromUtf16(reinterpret_cast<const ushort*>(utf16.data()), (int)utf16.size()));
+    act->setText(QString::fromUtf16(reinterpret_cast<const ushort*>(utf16.data()), (int)utf16.size()));
 }
 
 String RibbonDropDownItem::text() const
 {
-    auto qs = d->act->text();
+    auto* act = impl<QAction>();
+    if (!act) return {};
+    auto qs = act->text();
     return String::fromUtf16((const char16_t*)qs.utf16(), qs.size());
 }
 
-void RibbonDropDownItem::setData(void* dptr)
+void RibbonDropDownItem::setData(void* data)
 {
-    d->user = dptr;
+    dptr()->user = data;
 }
 
 void* RibbonDropDownItem::data() const
 {
-    return d->user;
+    return dptr()->user;
 }
 
 V_APPFWGUI_NS_END

@@ -85,7 +85,7 @@ void DockPanelManager::addDockPanel(DockPanel* panel, DockAreas area)
 
     auto* mgr = d->dockingMgr;
 
-    auto* dp = panel->impl<DockingPaneBase>();
+    auto* dp = panel->impl<DockingPaneContainer>();
     if (!dp) {
         QString panelId = QUuid::createUuid().toString();
         auto    q8      = panelId.toUtf8();
@@ -109,7 +109,7 @@ void DockPanelManager::addDockPanel(DockPanel* panel, DockAreas area)
                 }
             }
         }
-        dp = newPane;
+        dp = dpc;
     }
     if (dp) {
         DockingPaneManager::DockPosition pos;
@@ -130,7 +130,7 @@ void DockPanelManager::removeDockPanel(DockPanel* panel)
     if (!panel)
         return;
     if (d->dockingMgr) {
-        auto* dpc = panel->impl<DockingPaneBase>();
+        auto* dpc = panel->impl<DockingPaneContainer>();
         if (dpc)
             d->dockingMgr->closePane(dpc);
     }

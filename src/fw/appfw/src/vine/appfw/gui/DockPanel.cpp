@@ -1,6 +1,7 @@
 #include <vine/appfw/gui/DockPanel.hpp>
 
 #include <vine/appfw/gui/Convert.hpp>
+#include <vine/appfw/gui/UIElementData.hpp>
 #include <DockingPaneContainer.h>
 #include <DockingPaneManager.h>
 
@@ -12,8 +13,6 @@ namespace
 {
 
 // Helper to access protected setName / setId on DockingPaneContainer.
-// DockingPaneContainer exposes no public API to change the title after creation,
-// but we need to sync title/id set after attach. This is a well-known C++ idiom.
 struct DPC : DockingPaneContainer {
     static void setContainerName(DockingPaneContainer* c, const QString& n) {
         reinterpret_cast<DPC*>(c)->setName(n);
@@ -28,98 +27,97 @@ inline QString toQString(const String& s)
     return QString::fromUtf8(s.data(), static_cast<int>(s.size()));
 }
 
+using itype = DockingPaneContainer;
+
 } // namespace
 
-struct DockPanel::Data {
-    DockingPaneContainer* container    = nullptr;
-    DockAreas             allowed      = DockAreas::None;
-    DockFeatures          features     = DockFeatures::None;
-    String                title;
-    String                id;
-    UIElement*            content      = nullptr;
+struct DockPanel::Data : public UIElementData {
+    DockAreas    allowed  = DockAreas::None;
+    DockFeatures features = DockFeatures::None;
+    String       title;
+    String       id;
+    UIElement*   content  = nullptr;
 };
 
-DockPanel::DockPanel()
-  : UIElement(static_cast<QObject*>(nullptr))
-  , d(new Data)
-{
-    d->container = nullptr;
-}
+inline auto DockPanel::dptr() -> Data* { return static_cast<Data*>(UIElement::d); }
+inline auto DockPanel::dptr() const -> const Data* { return static_cast<const Data*>(UIElement::d); }
 
-DockPanel::DockPanel(UIObject* container)
-    : UIElement(container)
-    , d(new Data)
+DockPanel::DockPanel()
+    : UIElement(new Data(), nullptr)
 {
-        d->container = static_cast<DockingPaneContainer*>(container);
 }
 
 DockPanel::~DockPanel()
 {
-    delete d;
+    // UIElement::~UIElement() deletes d (Data)
 }
+
+// ---- Features / Areas ----
 
 void DockPanel::setAllowedAreas(DockAreas areas)
 {
-    d->allowed = areas;
+    dptr()->allowed = areas;
 }
 
 DockAreas DockPanel::getAllowedAreas() const
 {
-    return d->allowed;
+    return dptr()->allowed;
 }
 
 void DockPanel::setFeatures(DockFeatures features)
 {
-    d->features = features;
-    if (!d->container)
-        return;
-
-    d->container->setClosable(testFlag(features, DockFeatures::Closable));
-    d->container->setMovable(testFlag(features, DockFeatures::Movable));
-    d->container->setFloatable(testFlag(features, DockFeatures::Floatable));
+    dptr()->features = features;
+    auto* c = impl<itype>();
+    if (c)
+        c->setClosable(testFlag(features, DockFeatures::Closable));
 }
 
 DockFeatures DockPanel::getFeatures() const
 {
-    return d->features;
+    return dptr()->features;
 }
+
+// ---- Title / Id ----
 
 void DockPanel::setTitle(const String& title)
 {
-    d->title = title;
-    if (d->container) {
-        DPC::setContainerName(d->container, toQString(title));
-    }
+    dptr()->title = title;
+    auto* c = impl<itype>();
+    if (c)
+        DPC::setContainerName(c, toQString(title));
 }
 
 String DockPanel::getTitle() const
 {
-    return d->title;
+    return dptr()->title;
 }
 
 void DockPanel::setId(const String& id)
 {
-    d->id = id;
-    if (d->container) {
-        DPC::setContainerId(d->container, toQString(id));
-    }
+    dptr()->id = id;
+    auto* c = impl<itype>();
+    if (c)
+        DPC::setContainerId(c, toQString(id));
 }
 
 String DockPanel::getId() const
 {
-    return d->id;
+    return dptr()->id;
 }
+
+// ---- Content ----
 
 void DockPanel::setContent(UIElement* content)
 {
-    d->content = content;
-    if (!d->container) return;
-    // Delete the old client widget if it was a placeholder (not managed by user)
-    auto* oldClient = d->container->clientWidget();
+    dptr()->content = content;
+    auto* c = impl<itype>();
+    if (!c) return;
+
+    auto* oldClient = c->clientWidget();
     if (!content) {
-        d->container->setClientWidget(nullptr);
+        c->setClientWidget(nullptr);
     } else {
-        d->container->setClientWidget(static_cast<QWidget*>(content->impl()));
+        c->setClientWidget(static_cast<QWidget*>(content->impl()));
     }
     if (oldClient && oldClient != static_cast<QWidget*>(content ? content->impl() : nullptr)) {
         oldClient->deleteLater();
@@ -128,54 +126,60 @@ void DockPanel::setContent(UIElement* content)
 
 UIElement* DockPanel::getContent() const
 {
-    return d->content;
+    return dptr()->content;
 }
+
+// ---- Attach ----
 
 void DockPanel::attach(UIObject* container)
 {
-    if (!container)
-        return;
-    d->container = static_cast<DockingPaneContainer*>(container);
+    if (!container) return;
 
-    // Sync previously-set title and id to the container
-    if (!d->title.empty()) {
-        DPC::setContainerName(d->container, toQString(d->title));
-    }
-    if (!d->id.empty()) {
-        DPC::setContainerId(d->container, toQString(d->id));
-    }
+    auto* dpc = static_cast<DockingPaneContainer*>(container);
+    UIElement::d->impl = container;
+
+    // Sync previously-set title and id
+    if (!dptr()->title.empty())
+        DPC::setContainerName(dpc, toQString(dptr()->title));
+    if (!dptr()->id.empty())
+        DPC::setContainerId(dpc, toQString(dptr()->id));
 }
+
+// ---- State queries ----
 
 bool DockPanel::isFloating() const
 {
-    return d->container && d->container->state() == DockingPaneBase::Floating;
+    auto* c = impl<itype>();
+    return c && c->state() == DockingPaneBase::Floating;
 }
 
 bool DockPanel::isPinned() const
 {
-    return d->container && d->container->state() == DockingPaneBase::Pinned;
+    auto* c = impl<itype>();
+    return c && c->state() == DockingPaneBase::Pinned;
 }
 
 bool DockPanel::isCollapsed() const
 {
-    return d->container && d->container->state() == DockingPaneBase::Hidden;
+    auto* c = impl<itype>();
+    return c && c->state() == DockingPaneBase::Hidden;
 }
 
 bool DockPanel::isTabbed() const
 {
-    return d->container && d->container->state() == DockingPaneBase::Tabbed;
+    auto* c = impl<itype>();
+    return c && c->state() == DockingPaneBase::Tabbed;
 }
 
 DockAreas DockPanel::dockArea() const
 {
-    if (!d->container)
-        return DockAreas::None;
-    auto state = d->container->state();
+    auto* c = impl<itype>();
+    if (!c) return DockAreas::None;
+    auto state = c->state();
     switch (state) {
         case DockingPaneBase::Docked:
         case DockingPaneBase::Tabbed:
-            // Docked/Tabbed — report the last known allowed area
-            return d->allowed != DockAreas::None ? d->allowed : DockAreas::Left;
+            return dptr()->allowed != DockAreas::None ? dptr()->allowed : DockAreas::Left;
         case DockingPaneBase::Floating:
             return DockAreas::None;
         default:
@@ -183,37 +187,41 @@ DockAreas DockPanel::dockArea() const
     }
 }
 
+// ---- State control ----
+
 void DockPanel::setFloating(bool floating)
 {
-    if (!d->container) return;
-    if (floating)
-        d->container->setState(DockingPaneBase::Floating);
-    else
-        d->container->setState(DockingPaneBase::Docked);
+    auto* c = impl<itype>();
+    if (c)
+        c->setState(floating ? DockingPaneBase::Floating : DockingPaneBase::Docked);
 }
 
 void DockPanel::pin()
 {
-    if (!d->container) return;
-    d->container->setState(DockingPaneBase::Pinned);
+    auto* c = impl<itype>();
+    if (c)
+        c->setState(DockingPaneBase::Pinned);
 }
 
 void DockPanel::unpin()
 {
-    if (!d->container) return;
-    d->container->setState(DockingPaneBase::Docked);
+    auto* c = impl<itype>();
+    if (c)
+        c->setState(DockingPaneBase::Docked);
 }
 
 void DockPanel::collapse()
 {
-    if (!d->container) return;
-    d->container->setState(DockingPaneBase::Hidden);
+    auto* c = impl<itype>();
+    if (c)
+        c->setState(DockingPaneBase::Hidden);
 }
 
 void DockPanel::restore()
 {
-    if (!d->container) return;
-    d->container->setState(DockingPaneBase::Docked);
+    auto* c = impl<itype>();
+    if (c)
+        c->setState(DockingPaneBase::Docked);
 }
 
 V_APPFWGUI_NS_END

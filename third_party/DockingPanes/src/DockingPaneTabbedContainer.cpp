@@ -644,24 +644,30 @@ void DockingPaneTabbedContainer::onUnpinContainer(void)
 void DockingPaneTabbedContainer::onCloseContainer(void)
 {
     QWidget*              clientWidget = m_flyoutWidget->clientWidget();
-    DockingPaneContainer* pane;
+    DockingPaneContainer* pane = m_flyoutWidget->pane();
 
     m_flyoutWidget->beginDrag();
-
-    pane = m_flyoutWidget->pane();
 
     pane->setClientWidget(clientWidget);
 
     m_paneList.removeOne(pane);
     m_stackedWidget->removeWidget(pane->clientWidget());
 
-    updateMargins();
+    dockingManager()->removePinnedButton(this, pane);
 
+    if (m_paneList.isEmpty()) {
+        // All panes closed — delete this tabbed container
+        m_flyoutWidget->endDrag();
+        m_flyoutWidget = nullptr;
+        hide();
+        dockingManager()->deletePane(this);
+        return;
+    }
+
+    updateMargins();
     update();
 
     setName(m_paneList.at(m_stackedWidget->currentIndex())->name());
-
-    dockingManager()->removePinnedButton(this, pane);
 
     if (m_paneList.count() <= 1) {
         restoreChildWidgets();
@@ -675,17 +681,18 @@ void DockingPaneTabbedContainer::onCloseContainer(void)
         hide();
 
         dockingManager()->deletePane(this);
+
+        // Note: deletePane(this) destroys this object;
+        // flyout cleanup was handled before the delete
+        return;
     }
 
     m_flyoutWidget->endDrag();
-
     m_flyoutWidget = nullptr;
 }
 
 void DockingPaneTabbedContainer::onStartDragTitle(QPoint pos)
 {
-    if (!m_movable)
-        return;
     m_dockingManager->floatingPaneStartMove(this, pos);
 
     m_initialPos = pos;
@@ -693,16 +700,11 @@ void DockingPaneTabbedContainer::onStartDragTitle(QPoint pos)
 
 void DockingPaneTabbedContainer::onEndDragTitle(QPoint pos)
 {
-    if (!m_movable)
-        return;
     m_dockingManager->floatingPaneEndMove(this, pos);
 }
 
 void DockingPaneTabbedContainer::onMoveDragTitle(QPoint pos)
 {
-    if (!m_movable)
-        return;
-
     QPoint deltaPos = pos - m_initialPos;
 
     if (state() == DockingPaneBase::Floating) {
@@ -717,8 +719,6 @@ void DockingPaneTabbedContainer::onMoveDragTitle(QPoint pos)
         m_dockingManager->floatingPaneMoved(this, pos);
     }
     else {
-        if (!m_floatable)
-            return;
         double trueLength = sqrt(pow(deltaPos.x(), 2) + pow(deltaPos.y(), 2));
 
         if (trueLength > 5) {
@@ -801,8 +801,6 @@ void DockingPaneTabbedContainer::onMoveDragFlyoutTitle(QPoint pos)
         dockingManager()->floatingPaneMoved(m_draggedPane, pos);
     }
     else {
-        if (!m_floatable)
-            return;
         double trueLength = sqrt(pow(deltaPos.x(), 2) + pow(deltaPos.y(), 2));
 
         if (trueLength > 5) {
@@ -890,26 +888,27 @@ void DockingPaneTabbedContainer::updateMargins(void)
 
 void DockingPaneTabbedContainer::onCloseButtonClicked(void)
 {
-    QWidget*              widget;
-    DockingPaneContainer* pane;
-
     int currentIndex = m_stackedWidget->currentIndex();
+    DockingPaneContainer* pane = m_paneList.at(currentIndex);
 
-    pane = m_paneList.at(currentIndex);
-
-    widget = m_stackedWidget->currentWidget();
+    QWidget* widget = m_stackedWidget->currentWidget();
 
     pane->setClientWidget(widget);
     m_paneList.removeAt(currentIndex);
     m_stackedWidget->removeWidget(widget);
 
-    updateMargins();
+    this->dockingManager()->closePane(pane);
 
+    if (m_paneList.isEmpty()) {
+        hide();
+        dockingManager()->deletePane(this);
+        return;
+    }
+
+    updateMargins();
     update();
 
     setName(m_paneList.at(m_stackedWidget->currentIndex())->name());
-
-    this->dockingManager()->closePane(pane);
 
     if (m_paneList.count() <= 1) {
         restoreChildWidgets();
@@ -1001,6 +1000,4 @@ void DockingPaneTabbedContainer::syncFeaturesFromCurrentPane()
 
     DockingPaneContainer* child = m_paneList.at(idx);
     setClosable(child->isClosable());
-    setMovable(child->isMovable());
-    setFloatable(child->isFloatable());
 }

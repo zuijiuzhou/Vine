@@ -65,12 +65,6 @@ QDockWidget::DockWidgetFeatures Convert::toQDockFeatures(DockFeatures features)
     if (testFlag(features, DockFeatures::Closable)) {
         qfeatures |= QDockWidget::DockWidgetFeature::DockWidgetClosable;
     }
-    if (testFlag(features, DockFeatures::Floatable)) {
-        qfeatures |= QDockWidget::DockWidgetFeature::DockWidgetFloatable;
-    }
-    if (testFlag(features, DockFeatures::Movable)) {
-        qfeatures |= QDockWidget::DockWidgetFeature::DockWidgetMovable;
-    }
     return qfeatures;
 }
 
@@ -79,12 +73,6 @@ DockFeatures Convert::toDockFeatures(QDockWidget::DockWidgetFeatures qfeatures)
     DockFeatures features = DockFeatures::None;
     if (qfeatures.testFlag(QDockWidget::DockWidgetFeature::DockWidgetClosable)) {
         features |= DockFeatures::Closable;
-    }
-    if (qfeatures.testFlag(QDockWidget::DockWidgetFeature::DockWidgetFloatable)) {
-        features |= DockFeatures::Floatable;
-    }
-    if (qfeatures.testFlag(QDockWidget::DockWidgetFeature::DockWidgetMovable)) {
-        features |= DockFeatures::Movable;
     }
     return features;
 }

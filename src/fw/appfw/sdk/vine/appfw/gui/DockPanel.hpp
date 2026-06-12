@@ -10,7 +10,6 @@ class V_APPFW_API DockPanel : public UIElement {
 
   public:
     DockPanel();
-    DockPanel(UIObject* container);
     virtual ~DockPanel();
 
     void      setAllowedAreas(DockAreas areas);
@@ -44,9 +43,11 @@ class V_APPFW_API DockPanel : public UIElement {
     void unpin();
     void collapse();
     void restore();
+
   private:
     struct Data;
-    Data* const d;
+    Data*       dptr();
+    const Data* dptr() const;
 };
 
 V_APPFWGUI_NS_END

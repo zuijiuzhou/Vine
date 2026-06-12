@@ -13,7 +13,7 @@ V_MATH_NS_END
 
 V_APPFW_NS_BEGIN
 
-class V_APPFW_API UserIO : public RefObject {
+class V_APPFW_API UserIO : public Object {
     V_OBJECT_META_DECL;
 
   public:

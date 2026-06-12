@@ -2,7 +2,7 @@
 
 V_APPFW_NS_BEGIN
 
-V_OBJECT_META_IMPL(UserIO, RefObject);
+V_OBJECT_META_IMPL(UserIO, Object);
 
 UserIO::UserIO()
 {}

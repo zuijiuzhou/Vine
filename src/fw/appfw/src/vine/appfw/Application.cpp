@@ -14,66 +14,63 @@ static Application* s_current_app = nullptr;
 
 V_OBJECT_META_IMPL(Application, Object)
 
-struct Application::Data {
-    AddinManager*     addin_manager;
-    ServiceManager*   service_manager;
-    CommandManager*   command_manager;
-    QCoreApplication* app = nullptr;
-
-    int    argc{};
-    char** argv{};
-};
+inline auto Application::dptr() -> ApplicationData* { return static_cast<ApplicationData*>(d); }
+inline auto Application::dptr() const -> const ApplicationData* { return static_cast<const ApplicationData*>(d); }
 
 Application::Application(int argc, char** argv)
-  : d(new Data())
+    : Application(new ApplicationData(), argc, argv)
+{}
+
+Application::Application(ApplicationData* data, int argc, char** argv)
+  : d(data)
 {
     if (s_current_app) { throw Exception(-1); }
 
     s_current_app = this;
 
-    d->addin_manager   = new AddinManager;
-    d->service_manager = new ServiceManager;
-    d->command_manager = new CommandManager;
-    d->argc            = argc;
-    d->argv            = argv;
+    dptr()->addin_manager   = new AddinManager;
+    dptr()->service_manager = new ServiceManager;
+    dptr()->command_manager = new CommandManager;
+    dptr()->argc            = argc;
+    dptr()->argv            = argv;
 }
 
 Application::~Application()
 {
-    delete d->addin_manager;
-    delete d->service_manager;
-    delete d->command_manager;
+    delete dptr()->addin_manager;
+    delete dptr()->service_manager;
+    delete dptr()->command_manager;
     delete d;
     s_current_app = nullptr;
 }
 
 void Application::init()
 {
-    if (d->app == nullptr) { d->app = new QCoreApplication(d->argc, d->argv); }
+    if (dptr()->app == nullptr) { dptr()->app = new QCoreApplication(dptr()->argc, dptr()->argv); }
 }
 
 int Application::run()
-{ return d->app->exec(); }
+{ return dptr()->app->exec(); }
 
 void Application::exit(int code)
 { QCoreApplication::exit(code); }
 
 CommandManager* Application::commandManager() const
-{ return d->command_manager; }
+{ return dptr()->command_manager; }
 
 AddinManager* Application::addinManager() const
-{ return d->addin_manager; }
+{ return dptr()->addin_manager; }
 
 ServiceManager* Application::serviceManager() const
-{ return d->service_manager; }
+{ return dptr()->service_manager; }
 
 Application* Application::current()
 { return s_current_app; }
 
 int Application::argc() const
-{ return d->argc; }
+{ return dptr()->argc; }
 
 char** Application::argv() const
-{ return d->argv; }
+{ return dptr()->argv; }
 
 V_APPFW_NS_END

@@ -27,9 +27,7 @@ enum class DockFeatures
 {
     None      = 0,
     Closable  = 1,
-    Movable   = 2,
-    Floatable = 4,
-    All       = Closable | Movable | Floatable
+    All       = Closable
 };
 V_ENABLE_ENUM_FLAGS(DockFeatures);
 

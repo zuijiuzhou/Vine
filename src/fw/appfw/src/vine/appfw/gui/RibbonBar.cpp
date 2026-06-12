@@ -30,15 +30,17 @@ using itype = SARibbonBar;
 
 }
 
+inline auto RibbonBar::dptr() -> Data* { return static_cast<Data*>(UIElement::d); }
+inline auto RibbonBar::dptr() const -> const Data* { return static_cast<const Data*>(UIElement::d); }
+
 RibbonBar::RibbonBar(MainWindow* wnd)
     : UIElement(new RibbonBar::Data(), static_cast<SARibbonMainWindow*>(wnd->impl())->ribbonBar())
-    , d(static_cast<Data*>(UIElement::d))
 {
-    d->owns_impl = false;             // SARibbonBar is owned by SARibbonMainWindow
-    d->wnd       = wnd;
-    d->application_menu = new QMenu();
-    auto app_btn        = qobject_cast<SARibbonApplicationButton*>(impl<itype>()->applicationButton());
-    app_btn->setMenu(d->application_menu);
+    dptr()->owns_impl = false;             // SARibbonBar is owned by SARibbonMainWindow
+    dptr()->wnd       = wnd;
+    dptr()->application_menu = new QMenu();
+    auto app_btn = qobject_cast<SARibbonApplicationButton*>(impl<itype>()->applicationButton());
+    app_btn->setMenu(dptr()->application_menu);
 }
 
 RibbonBar::~RibbonBar()
@@ -47,29 +49,29 @@ RibbonBar::~RibbonBar()
 }
 
 int RibbonBar::numTabs() const
-{ return (int)d->tabs.size(); }
+{ return (int)dptr()->tabs.size(); }
 
 RibbonTab* RibbonBar::tabAt(int idx) const
-{ return d->tabs.at(idx); }
+{ return dptr()->tabs.at(idx); }
 
 void RibbonBar::addTab(RibbonTab* tab)
 {
     V_CHECK_NULL_THROW(tab)
-    if (std::any_of(d->tabs.begin(), d->tabs.end(), [tab](RibbonTab* t) { return tab == t; }))
+    if (std::any_of(dptr()->tabs.begin(), dptr()->tabs.end(), [tab](RibbonTab* t) { return tab == t; }))
         return;
     auto w = impl<itype>();
     w->addCategoryPage(tab->impl<SARibbonCategory>());
-    d->tabs.push_back(tab);
+    dptr()->tabs.push_back(tab);
 }
 
 void RibbonBar::removeTab(RibbonTab* tab)
 {
     V_CHECK_NULL_THROW(tab)
-    if (std::none_of(d->tabs.begin(), d->tabs.end(), [tab](RibbonTab* t) { return t == tab; }))
+    if (std::none_of(dptr()->tabs.begin(), dptr()->tabs.end(), [tab](RibbonTab* t) { return t == tab; }))
         return;
     auto w = impl<itype>();
     w->removeCategory(tab->impl<SARibbonCategory>());
-    d->tabs.erase(std::remove(d->tabs.begin(), d->tabs.end(), tab), d->tabs.end());
+    dptr()->tabs.erase(std::remove(dptr()->tabs.begin(), dptr()->tabs.end(), tab), dptr()->tabs.end());
 }
 
 int RibbonBar::currentIndex()
@@ -85,6 +87,6 @@ void RibbonBar::currentIndex(int idx)
 }
 
 void RibbonBar::appendApplicationMenu(RibbonDropDownItem* mi)
-{ d->application_menu->addAction(mi->impl<QAction>()); }
+{ dptr()->application_menu->addAction(mi->impl<QAction>()); }
 
 V_APPFWGUI_NS_END

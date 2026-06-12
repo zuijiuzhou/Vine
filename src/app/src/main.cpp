@@ -110,19 +110,19 @@ int main(int argc, char** argv)
     auto* panelLeft = mgr->createDockPanel(DockAreas::Left);
     panelLeft->setTitle(u8"Project");
     panelLeft->setId(u8"dock_project");
-    panelLeft->setFeatures(DockFeatures::Movable | DockFeatures::Floatable);  // 无 Closable
+    panelLeft->setFeatures(DockFeatures::None);  // 无 Closable
 
     // 右侧面板：不允许浮动（拖拽不会脱离停靠）
     auto* panelRight = mgr->createDockPanel(DockAreas::Right);
     panelRight->setTitle(u8"Properties");
     panelRight->setId(u8"dock_properties");
-    panelRight->setFeatures(DockFeatures::Closable | DockFeatures::Movable);  // 无 Floatable
+    panelRight->setFeatures(DockFeatures::Closable);  // 无 Floatable
 
     // 底部面板：不允许拖动（固定在原位）
     auto* panelBottom = mgr->createDockPanel(DockAreas::Bottom);
     panelBottom->setTitle(u8"Output");
     panelBottom->setId(u8"dock_output");
-    panelBottom->setFeatures(DockFeatures::Closable | DockFeatures::Floatable);  // 无 Movable
+    panelBottom->setFeatures(DockFeatures::Closable);  // 无 Movable
 
     // 顶部面板：全部特性启用（默认行为）
     auto* panelTop = mgr->createDockPanel(DockAreas::Top);
@@ -143,8 +143,6 @@ int main(int argc, char** argv)
         std::string title(utf16.begin(), utf16.end());
         std::cout << "  - " << title
                   << "  closable=" << vine::testFlag(p->getFeatures(), DockFeatures::Closable)
-                  << "  movable=" << vine::testFlag(p->getFeatures(), DockFeatures::Movable)
-                  << "  floatable=" << vine::testFlag(p->getFeatures(), DockFeatures::Floatable)
                   << std::endl;
     }
 

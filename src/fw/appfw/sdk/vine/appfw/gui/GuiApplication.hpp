@@ -15,10 +15,6 @@ class V_APPFW_API GuiApplication : public Application {
 
   public:
     virtual int run() override;
-
-  private:
-    struct Data;
-    Data* const d;
 };
 
 V_APPFWGUI_NS_END

@@ -1,6 +1,7 @@
 #include <vine/appfw/gui/DockArea.hpp>
 
 #include <vine/appfw/gui/DockPanel.hpp>
+#include <vine/appfw/gui/UIElementData.hpp>
 #include <DockingPaneContainer.h>
 #include <DockingPaneTabbedContainer.h>
 #include <DockingPaneManager.h>
@@ -9,83 +10,77 @@ V_APPFWGUI_NS_BEGIN
 
 V_OBJECT_META_IMPL(DockArea, UIElement)
 
-struct DockArea::Data {
-    DockAreas                           pos = DockAreas::Left;
-    DockingPaneTabbedContainer*         container = nullptr;
+struct DockArea::Data : public UIElementData {
+    DockAreas   pos = DockAreas::Left;
 };
 
+inline auto DockArea::dptr() -> Data* { return static_cast<Data*>(UIElement::d); }
+inline auto DockArea::dptr() const -> const Data* { return static_cast<const Data*>(UIElement::d); }
+
 DockArea::DockArea(DockAreas position)
-    : UIElement(new DockingPaneTabbedContainer(nullptr))
-    , d(new Data)
+    : UIElement(new Data(), new DockingPaneTabbedContainer(nullptr))
 {
-    d->pos       = position;
-    d->container = impl<DockingPaneTabbedContainer>();
+    dptr()->pos = position;
 }
 
 DockArea::~DockArea()
 {
-    delete d;
+    // d is deleted by UIElement
 }
 
 DockAreas DockArea::position() const
 {
-    return d->pos;
+    return dptr()->pos;
 }
 
 int DockArea::dockPanelCount() const
 {
-    if (!d->container)
-        return 0;
-    return d->container->getPaneCount();
+    auto* c = impl<DockingPaneTabbedContainer>();
+    return c ? c->getPaneCount() : 0;
 }
 
 DockPanel* DockArea::dockPanelAt(int index) const
 {
-    if (!d->container)
-        return nullptr;
-    auto* dpc = d->container->getPane(index);
-    if (!dpc)
-        return nullptr;
-    // Recover the DockPanel wrapper from the DockingPaneContainer
+    auto* c = impl<DockingPaneTabbedContainer>();
+    if (!c) return nullptr;
+    auto* dpc = c->getPane(index);
+    if (!dpc) return nullptr;
     return static_cast<DockPanel*>(dpc->userData());
 }
 
 void DockArea::addDockPanel(DockPanel* panel)
 {
-    if (!panel)
-        return;
+    if (!panel) return;
     auto* dpc = panel->impl<DockingPaneContainer>();
-    if (dpc && d->container) {
+    auto* c   = impl<DockingPaneTabbedContainer>();
+    if (dpc && c) {
         dpc->setUserData(static_cast<void*>(panel));
-        d->container->addPane(dpc);
+        c->addPane(dpc);
     }
 }
 
 void DockArea::removeDockPanel(DockPanel* panel)
 {
-    if (!panel)
-        return;
-    if (d->container) {
-        auto* mgr = d->container->dockingManager();
+    if (!panel) return;
+    auto* c = impl<DockingPaneTabbedContainer>();
+    if (c) {
+        auto* mgr = c->dockingManager();
         if (mgr) {
             auto* dpc = panel->impl<DockingPaneContainer>();
-            if (dpc)
-                mgr->closePane(dpc);
+            if (dpc) mgr->closePane(dpc);
         }
     }
 }
 
 bool DockArea::containsDockPanel(DockPanel* panel) const
 {
-    if (!panel || !d->container)
-        return false;
+    if (!panel) return false;
     auto* dpc = panel->impl<DockingPaneContainer>();
-    if (!dpc)
-        return false;
-    // Query the container directly
-    for (int i = 0; i < d->container->getPaneCount(); ++i) {
-        if (d->container->getPane(i) == dpc)
-            return true;
+    if (!dpc) return false;
+    auto* c = impl<DockingPaneTabbedContainer>();
+    if (!c) return false;
+    for (int i = 0; i < c->getPaneCount(); ++i) {
+        if (c->getPane(i) == dpc) return true;
     }
     return false;
 }

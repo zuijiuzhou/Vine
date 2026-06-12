@@ -1,48 +1,53 @@
 #include <vine/appfw/gui/RibbonButton.hpp>
 
 #include <SARibbon.h>
+#include <vine/appfw/gui/UIElementData.hpp>
 
 V_APPFWGUI_NS_BEGIN
 
 V_OBJECT_META_IMPL(RibbonButton, UIElement)
 
-struct RibbonButton::Data {
-    SARibbonToolButton* btn  = nullptr;
-    void*               user = nullptr;
+struct RibbonButton::Data : public UIElementData {
+    void* user = nullptr;
 };
 
+inline auto RibbonButton::dptr() -> Data* { return static_cast<Data*>(UIElement::d); }
+inline auto RibbonButton::dptr() const -> const Data* { return static_cast<const Data*>(UIElement::d); }
+
 RibbonButton::RibbonButton()
-  : UIElement(new SARibbonToolButton(static_cast<QWidget*>(nullptr)))
-  , d(new Data)
+    : UIElement(new Data(), new SARibbonToolButton(static_cast<QWidget*>(nullptr)))
 {
-    d->btn = impl<SARibbonToolButton>();
 }
 
 RibbonButton::~RibbonButton()
 {
-    delete d;
+    // d is deleted by UIElement
 }
 
 void RibbonButton::text(const String& t)
 {
+    auto* btn = impl<SARibbonToolButton>();
+    if (!btn) return;
     auto utf16 = t.toUtf16();
-    d->btn->setText(QString::fromUtf16(reinterpret_cast<const ushort*>(utf16.data()), (int)utf16.size()));
+    btn->setText(QString::fromUtf16(reinterpret_cast<const ushort*>(utf16.data()), (int)utf16.size()));
 }
 
 String RibbonButton::text() const
 {
-    auto qs = d->btn->text();
+    auto* btn = impl<SARibbonToolButton>();
+    if (!btn) return {};
+    auto qs = btn->text();
     return String::fromUtf16((const char16_t*)qs.utf16(), qs.size());
 }
 
-void RibbonButton::setData(void* dptr)
+void RibbonButton::setData(void* data)
 {
-    d->user = dptr;
+    dptr()->user = data;
 }
 
 void* RibbonButton::data() const
 {
-    return d->user;
+    return dptr()->user;
 }
 
 V_APPFWGUI_NS_END

@@ -3,6 +3,7 @@
 #include "appfw_global.hpp"
 
 #include <vine/Object.hpp>
+#include <vine/appfw/ApplicationData.hpp>
 
 V_APPFW_NS_BEGIN
 
@@ -13,10 +14,21 @@ class ServiceManager;
 class V_APPFW_API Application : public Object {
     V_OBJECT_META_DECL;
 
+  protected:
+    ApplicationData*       dptr();
+    const ApplicationData* dptr() const;
+
+    struct Data;
+    ApplicationData* const d;
+
   public:
     Application(int argc, char** argv);
-    virtual ~Application();
 
+  protected:
+    Application(ApplicationData* data, int argc, char** argv);
+
+  public:
+    virtual ~Application();
 
   public:
     virtual void init();
@@ -38,10 +50,6 @@ class V_APPFW_API Application : public Object {
 
   public:
     static Application* current();
-
-  private:
-    struct Data;
-    Data* const d;
 };
 
 V_APPFW_NS_END

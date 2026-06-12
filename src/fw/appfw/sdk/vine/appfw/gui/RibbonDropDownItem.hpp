@@ -19,7 +19,8 @@ class V_APPFW_API RibbonDropDownItem : public UIElement {
 
   private:
     struct Data;
-    Data* const d;
+    Data*       dptr();
+    const Data* dptr() const;
 };
 
 V_APPFWGUI_NS_END
