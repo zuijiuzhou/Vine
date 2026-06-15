@@ -1,35 +1,26 @@
 #include <vine/appfw/gui/DockPanel.hpp>
 
+#include <DockingPaneContainer.h>
 #include <vine/appfw/gui/Convert.hpp>
 #include <vine/appfw/gui/UIElementData.hpp>
-#include <DockingPaneContainer.h>
-#include <DockingPaneManager.h>
 
 V_APPFWGUI_NS_BEGIN
 
 V_OBJECT_META_IMPL(DockPanel, UIElement)
 
-namespace
-{
-
-// Helper to access protected setName / setId on DockingPaneContainer.
+// Helper to access protected members of DockingPaneContainer.
 struct DPC : DockingPaneContainer {
-    static void setContainerName(DockingPaneContainer* c, const QString& n) {
-        reinterpret_cast<DPC*>(c)->setName(n);
-    }
-    static void setContainerId(DockingPaneContainer* c, const QString& i) {
-        reinterpret_cast<DPC*>(c)->setId(i);
-    }
+    static void setContainerName(DockingPaneContainer* c, const QString& n)
+    { reinterpret_cast<DPC*>(c)->setName(n); }
+
+    static void setContainerId(DockingPaneContainer* c, const QString& i)
+    { reinterpret_cast<DPC*>(c)->setId(i); }
 };
 
 inline QString toQString(const String& s)
-{
-    return QString::fromUtf8(s.data(), static_cast<int>(s.size()));
-}
+{ return QString::fromUtf8(s.data(), static_cast<int>(s.size())); }
 
 using itype = DockingPaneContainer;
-
-} // namespace
 
 struct DockPanel::Data : public UIElementData {
     DockFeatures features = DockFeatures::None;
@@ -38,17 +29,26 @@ struct DockPanel::Data : public UIElementData {
     UIElement*   content  = nullptr;
 };
 
-inline auto DockPanel::dptr() -> Data* { return static_cast<Data*>(UIElement::d); }
-inline auto DockPanel::dptr() const -> const Data* { return static_cast<const Data*>(UIElement::d); }
+inline auto DockPanel::dptr() -> Data*
+{ return static_cast<Data*>(UIElement::d); }
+
+inline auto DockPanel::dptr() const -> const Data*
+{ return static_cast<const Data*>(UIElement::d); }
 
 DockPanel::DockPanel()
-    : UIElement(new Data(), nullptr)
-{
-}
+  : UIElement(new Data(), nullptr)
+{}
 
 DockPanel::~DockPanel()
 {
     // UIElement::~UIElement() deletes d (Data)
+}
+
+// ---- Close interception ----
+
+bool DockPanel::onClosing()
+{
+    return true; // default: allow close
 }
 
 // ---- Features ----
@@ -62,9 +62,7 @@ void DockPanel::setFeatures(DockFeatures features)
 }
 
 DockFeatures DockPanel::getFeatures() const
-{
-    return dptr()->features;
-}
+{ return dptr()->features; }
 
 // ---- Title / Id ----
 
@@ -77,9 +75,7 @@ void DockPanel::setTitle(const String& title)
 }
 
 String DockPanel::getTitle() const
-{
-    return dptr()->title;
-}
+{ return dptr()->title; }
 
 void DockPanel::setId(const String& id)
 {
@@ -90,9 +86,7 @@ void DockPanel::setId(const String& id)
 }
 
 String DockPanel::getId() const
-{
-    return dptr()->id;
-}
+{ return dptr()->id; }
 
 // ---- Content ----
 
@@ -101,22 +95,15 @@ void DockPanel::setContent(UIElement* content)
     dptr()->content = content;
     auto* c = impl<itype>();
     if (!c) return;
-
     auto* oldClient = c->clientWidget();
-    if (!content) {
-        c->setClientWidget(nullptr);
-    } else {
-        c->setClientWidget(static_cast<QWidget*>(content->impl()));
-    }
-    if (oldClient && oldClient != static_cast<QWidget*>(content ? content->impl() : nullptr)) {
+    if (!content) { c->setClientWidget(nullptr); }
+    else { c->setClientWidget(static_cast<QWidget*>(content->impl())); }
+    if (oldClient && oldClient != static_cast<QWidget*>(content ? content->impl() : nullptr))
         oldClient->deleteLater();
-    }
 }
 
 UIElement* DockPanel::getContent() const
-{
-    return dptr()->content;
-}
+{ return dptr()->content; }
 
 // ---- Attach ----
 
@@ -126,13 +113,19 @@ void DockPanel::attach(UIObject* container)
 
     auto* dpc = static_cast<DockingPaneContainer*>(container);
     UIElement::d->impl = container;
-    setOwnsImpl(true);   // DockingPanes owns the container lifetime
+    setOwnsImpl(true); // DockingPanes owns the container lifetime
 
     // Sync previously-set title and id
     if (!dptr()->title.empty())
         DPC::setContainerName(dpc, toQString(dptr()->title));
     if (!dptr()->id.empty())
         DPC::setContainerId(dpc, toQString(dptr()->id));
+
+    // Install close callback via lambda — captures 'this' directly, no trampoline needed
+    dpc->setCloseCallback([](DockingPaneContainer* c) -> bool {
+        auto* panel = static_cast<DockPanel*>(c->userData());
+        return panel ? panel->onClosing() : true;
+    });
 }
 
 // ---- State queries ----
@@ -167,17 +160,15 @@ DockAreas DockPanel::dockArea() const
     if (!c) return DockAreas::None;
     auto state = c->state();
     switch (state) {
-        case DockingPaneBase::Docked:
-        case DockingPaneBase::Tabbed: {
-            auto var = c->property("_vine_dockarea");
-            if (var.isValid())
-                return static_cast<DockAreas>(var.toInt());
-            return DockAreas::Left;
-        }
-        case DockingPaneBase::Floating:
-            return DockAreas::None;
-        default:
-            return DockAreas::None;
+    case DockingPaneBase::Docked:
+    case DockingPaneBase::Tabbed: {
+        auto var = c->property("_vine_dockarea");
+        if (var.isValid())
+            return static_cast<DockAreas>(var.toInt());
+        return DockAreas::Left;
+    }
+    case DockingPaneBase::Floating: return DockAreas::None;
+    default: return DockAreas::None;
     }
 }
 
@@ -193,29 +184,25 @@ void DockPanel::setFloating(bool floating)
 void DockPanel::pin()
 {
     auto* c = impl<itype>();
-    if (c)
-        c->setState(DockingPaneBase::Pinned);
+    if (c) c->setState(DockingPaneBase::Pinned);
 }
 
 void DockPanel::unpin()
 {
     auto* c = impl<itype>();
-    if (c)
-        c->setState(DockingPaneBase::Docked);
+    if (c) c->setState(DockingPaneBase::Docked);
 }
 
 void DockPanel::collapse()
 {
     auto* c = impl<itype>();
-    if (c)
-        c->setState(DockingPaneBase::Hidden);
+    if (c) c->setState(DockingPaneBase::Hidden);
 }
 
 void DockPanel::restore()
 {
     auto* c = impl<itype>();
-    if (c)
-        c->setState(DockingPaneBase::Docked);
+    if (c) c->setState(DockingPaneBase::Docked);
 }
 
 V_APPFWGUI_NS_END

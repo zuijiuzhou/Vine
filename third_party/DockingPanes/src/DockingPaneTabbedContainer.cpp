@@ -900,6 +900,10 @@ void DockingPaneTabbedContainer::onCloseButtonClicked(void)
     int currentIndex = m_stackedWidget->currentIndex();
     DockingPaneContainer* pane = m_paneList.at(currentIndex);
 
+    // Check close callback on the pane being closed
+    if (!pane->invokeCloseCallback())
+        return;
+
     QWidget* widget = m_stackedWidget->currentWidget();
 
     pane->setClientWidget(widget);

@@ -2,7 +2,7 @@
 
 V_APPFW_NS_BEGIN
 
-V_OBJECT_META_IMPL(Addin, RefObject)
+V_OBJECT_META_IMPL(Addin, Object)
 
 void Addin::load(AddinLoadContext* context)
 {}

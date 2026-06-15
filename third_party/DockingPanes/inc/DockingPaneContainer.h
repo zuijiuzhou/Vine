@@ -68,6 +68,11 @@ class DockingPaneContainer : public DockingPaneBase
         void setClosable(bool closable);
         bool isClosable() const;
 
+        // --- Close callback ---
+        using CloseCallback = bool (*)(DockingPaneContainer*);
+        void setCloseCallback(CloseCallback cb) { m_closeCallback = cb; }
+        bool invokeCloseCallback() { return m_closeCallback ? m_closeCallback(this) : true; }
+
     protected:
         virtual void setName(QString name) override;
         void setActivePane(bool active);
@@ -101,6 +106,8 @@ class DockingPaneContainer : public DockingPaneBase
         bool m_draggingFlyout;
 
         bool m_closable  = true;
+
+        CloseCallback m_closeCallback = nullptr;
 
      private:
         void onCloseButtonClicked(void);

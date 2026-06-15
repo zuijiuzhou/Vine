@@ -11,6 +11,8 @@ class RefPtr;
 template <typename>
 class WRefPtr;
 
+class RefObject;
+
 template <typename T>
 concept RefObjectBased = std::is_base_of<RefObject, T>::value;
 
@@ -64,7 +66,5 @@ class V_CORE_API RefObject : public Object {
 //       : v_ptr(nullptr)
 //     {}
 // };
-
-using RefObjectPtr = RefPtr<RefObject>;
 
 V_CORE_NS_END

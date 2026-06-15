@@ -8,7 +8,7 @@ V_APPFW_NS_BEGIN
 
 class AddinLoadContext;
 
-class V_APPFW_API Addin : public RefObject {
+class V_APPFW_API Addin : public Object {
     V_OBJECT_META_DECL;
 
   public:
@@ -18,7 +18,5 @@ class V_APPFW_API Addin : public RefObject {
   public:
     String getName() const;
 };
-
-using AddinPtr = RefPtr<Addin>;
 
 V_APPFW_NS_END

@@ -25,14 +25,14 @@ class V_APPFW_API DockPanel : public UIElement {
     void   setId(const String& id);
     String getId() const;
 
-    void    setContent(UIElement* content);
+    void       setContent(UIElement* content);
     UIElement* getContent() const;
 
     // State queries
-    bool isFloating() const;
-    bool isPinned() const;
-    bool isCollapsed() const;
-    bool isTabbed() const;
+    bool      isFloating() const;
+    bool      isPinned() const;
+    bool      isCollapsed() const;
+    bool      isTabbed() const;
     DockAreas dockArea() const;
 
     // State control
@@ -42,8 +42,12 @@ class V_APPFW_API DockPanel : public UIElement {
     void collapse();
     void restore();
 
+  protected:
+    /// Override to intercept close. Return false to veto.
+    virtual bool onClosing();
+
   private:
-    void attach(UIObject* container);   // only DockPanelManager may call
+    void attach(UIObject* container); // only DockPanelManager may call
 
     struct Data;
     Data*       dptr();

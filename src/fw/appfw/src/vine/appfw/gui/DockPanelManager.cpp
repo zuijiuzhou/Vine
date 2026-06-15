@@ -114,7 +114,7 @@ void DockPanelManager::addDockPanel(DockPanel* panel, DockAreas area)
         // Tag for later lookup via DockPanelManager::panels()
         auto* dpc = qobject_cast<DockingPaneContainer*>(newPane);
         if (dpc) {
-            dpc->setProperty("_vine_dockpanel", QVariant::fromValue(static_cast<void*>(panel)));
+            dpc->setUserData(static_cast<void*>(panel));
             // Replace placeholder with actual content if set
             if (auto* content = panel->getContent()) {
                 auto* w = static_cast<QWidget*>(content->impl());
@@ -195,7 +195,7 @@ DockPanel* DockPanelManager::findById(const String& id) const
         auto* dpc  = qobject_cast<DockingPaneContainer*>(pane);
         if (!dpc)
             continue;
-        auto* wrapper = static_cast<DockPanel*>(dpc->property("_vine_dockpanel").value<void*>());
+        auto* wrapper = static_cast<DockPanel*>(dpc->userData());
         if (wrapper && wrapper->getId() == id)
             return wrapper;
     }
@@ -211,7 +211,7 @@ DockPanel* DockPanelManager::findByTitle(const String& title) const
         auto* dpc  = qobject_cast<DockingPaneContainer*>(pane);
         if (!dpc)
             continue;
-        auto* wrapper = static_cast<DockPanel*>(dpc->property("_vine_dockpanel").value<void*>());
+        auto* wrapper = static_cast<DockPanel*>(dpc->userData());
         if (wrapper && wrapper->getTitle() == title)
             return wrapper;
     }
@@ -235,7 +235,7 @@ std::vector<DockPanel*> DockPanelManager::panels() const
         auto* dpc  = qobject_cast<DockingPaneContainer*>(pane);
         if (!dpc)
             continue;
-        auto* wrapper = static_cast<DockPanel*>(dpc->property("_vine_dockpanel").value<void*>());
+        auto* wrapper = static_cast<DockPanel*>(dpc->userData());
         if (wrapper)
             result.push_back(wrapper);
     }

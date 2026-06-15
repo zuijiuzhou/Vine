@@ -144,6 +144,8 @@ void DockingPaneContainer::paintEvent(QPaintEvent*)
 
 void DockingPaneContainer::onCloseButtonClicked(void)
 {
+    if (m_closeCallback && !m_closeCallback(this))
+        return; // callback vetoed
     m_dockingManager->closePane(this);
 }
 
