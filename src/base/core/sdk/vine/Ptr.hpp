@@ -74,10 +74,8 @@ class RefPtr {
             static_assert(std::is_base_of_v<RefObject, T>, "RefPtr requires RefObject-based T");
             auto* cb = static_cast<RefObject*>(ptr_)->cb_;
             if (cb) {
-                if (cb->strong_refs.fetch_sub(1, std::memory_order_acq_rel) == 1) {
-                    std::atomic_thread_fence(std::memory_order_acquire);
+                if (cb->strong_refs.fetch_sub(1, std::memory_order_acq_rel) == 1)
                     delete ptr_;
-                }
             } else {
                 delete ptr_;
             }
@@ -98,10 +96,8 @@ class RefPtr {
             static_assert(std::is_base_of_v<RefObject, T>, "RefPtr requires RefObject-based T");
             auto* cb = static_cast<RefObject*>(ptr_)->cb_;
             if (cb) {
-                if (cb->strong_refs.fetch_sub(1, std::memory_order_acq_rel) == 1) {
-                    std::atomic_thread_fence(std::memory_order_acquire);
+                if (cb->strong_refs.fetch_sub(1, std::memory_order_acq_rel) == 1)
                     delete ptr_;
-                }
             } else {
                 delete ptr_;
             }
@@ -267,30 +263,18 @@ class WRefPtr {
 
     ~WRefPtr()
     {
-        if (cb_) {
-            if (cb_->weak_refs.fetch_sub(1, std::memory_order_acq_rel) == 1) {
-                if (cb_->strong_refs.load(std::memory_order_acquire) == 0) {
-                    std::atomic_thread_fence(std::memory_order_acquire);
-                    delete cb_;
-                }
-            }
-        }
+        if (cb_ && cb_->weak_refs.fetch_sub(1, std::memory_order_acq_rel) == 1)
+            delete cb_;
     }
 
     WRefPtr& operator=(const WRefPtr& right)
     {
-        if (this == &right)
+        if (*this == right)
             return *this;
-        if (cb_) {
-            if (cb_->weak_refs.fetch_sub(1, std::memory_order_acq_rel) == 1) {
-                if (cb_->strong_refs.load(std::memory_order_acquire) == 0) {
-                    std::atomic_thread_fence(std::memory_order_acquire);
-                    delete cb_;
-                }
-            }
-        }
+        if (cb_ && cb_->weak_refs.fetch_sub(1, std::memory_order_acq_rel) == 1)
+            delete cb_;
         ptr_ = right.ptr_;
-        cb_ = right.cb_;
+        cb_  = right.cb_;
         if (cb_)
             cb_->weak_refs.fetch_add(1, std::memory_order_relaxed);
         return *this;
@@ -316,6 +300,16 @@ class WRefPtr {
     private:
         T* ptr_;
         RefObject::PtrControlBlock* cb_;
+
+  public:
+    bool operator==(const WRefPtr& right) const { return ptr_ == right.ptr_ && cb_ == right.cb_; }
+    bool operator!=(const WRefPtr& right) const { return ptr_ != right.ptr_ || cb_ != right.cb_; }
+    bool operator==(const T* right) const { return ptr_ == right; }
+    bool operator!=(const T* right) const { return ptr_ != right; }
+    friend bool operator==(const T* left, const WRefPtr& right) { return left == right.ptr_; }
+    friend bool operator!=(const T* left, const WRefPtr& right) { return left != right.ptr_; }
+    bool hasValue() const { return ptr_ != nullptr; }
+    T* get() const { return ptr_; }
 };
 
 template <typename T, typename Y>

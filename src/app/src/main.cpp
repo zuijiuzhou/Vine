@@ -107,34 +107,39 @@ int main(int argc, char** argv)
     mgr->setCentralWidget(new CentralWidget());
 
     // 左侧面板：不允许关闭（无关闭按钮）
-    auto* panelLeft = mgr->createDockPanel(DockAreas::Left);
+    auto* panelLeft = new DockPanel();
     panelLeft->setTitle(u8"Project");
     panelLeft->setId(u8"dock_project");
     panelLeft->setFeatures(DockFeatures::None);  // 无 Closable
+    mgr->addDockPanel(panelLeft, DockAreas::Left);
 
     // 右侧面板：不允许浮动（拖拽不会脱离停靠）
-    auto* panelRight = mgr->createDockPanel(DockAreas::Right);
+    auto* panelRight = new DockPanel();
     panelRight->setTitle(u8"Properties");
     panelRight->setId(u8"dock_properties");
     panelRight->setFeatures(DockFeatures::Closable);  // 无 Floatable
+    mgr->addDockPanel(panelRight, DockAreas::Right);
 
     // 底部面板：不允许拖动（固定在原位）
-    auto* panelBottom = mgr->createDockPanel(DockAreas::Bottom);
+    auto* panelBottom = new DockPanel();
     panelBottom->setTitle(u8"Output");
     panelBottom->setId(u8"dock_output");
     panelBottom->setFeatures(DockFeatures::Closable);  // 无 Movable
+    mgr->addDockPanel(panelBottom, DockAreas::Bottom);
 
     // 顶部面板：全部特性启用（默认行为）
-    auto* panelTop = mgr->createDockPanel(DockAreas::Top);
+    auto* panelTop = new DockPanel();
     panelTop->setTitle(u8"Toolbox");
     panelTop->setId(u8"dock_toolbox");
     panelTop->setFeatures(DockFeatures::All);
+    mgr->addDockPanel(panelTop, DockAreas::Top);
 
     // 另一个底部面板：完全锁定
-    auto* panelBottom2 = mgr->createDockPanel(DockAreas::Bottom);
+    auto* panelBottom2 = new DockPanel();
     panelBottom2->setTitle(u8"Log");
     panelBottom2->setId(u8"dock_log");
     panelBottom2->setFeatures(DockFeatures::None);  // 不可关闭、不可拖动、不可浮动
+    mgr->addDockPanel(panelBottom2, DockAreas::Bottom);
 
     // Exercise queries
     std::cout << "Dock panel count: " << mgr->count() << std::endl;

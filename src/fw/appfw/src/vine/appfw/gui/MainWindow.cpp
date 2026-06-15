@@ -1,8 +1,9 @@
 ﻿#include <vine/appfw/gui/MainWindow.hpp>
 
 #include <QDockWidget>
-#include <SARibbon.h>
 #include <QSize>
+#include <SARibbon.h>
+
 
 #include <vine/Ptr.hpp>
 #include <vine/appfw/gui/DockPanel.hpp>
@@ -19,8 +20,8 @@ V_APPFWGUI_NS_BEGIN
 V_OBJECT_META_IMPL(MainWindow, UIElement)
 
 struct MainWindow::Data : public UIElementData {
-    RibbonBar*        ribbon_bar    = nullptr;
-    StatusBar*        status_bar    = nullptr;
+    RibbonBar*        ribbon_bar = nullptr;
+    StatusBar*        status_bar = nullptr;
     StartupPosition   startup_posi;
     WindowState       wnd_state;
     DockPanelManager* dock_panel_mgr = nullptr;
@@ -33,21 +34,27 @@ using itype = SARibbonMainWindow;
 
 } // namespace
 
-inline auto MainWindow::dptr() -> Data* { return static_cast<Data*>(UIElement::d); }
-inline auto MainWindow::dptr() const -> const Data* { return static_cast<const Data*>(UIElement::d); }
+inline auto MainWindow::dptr() -> Data*
+{ return static_cast<Data*>(UIElement::d); }
+
+inline auto MainWindow::dptr() const -> const Data*
+{ return static_cast<const Data*>(UIElement::d); }
 
 MainWindow::MainWindow()
-    : UIElement(new Data(), new SARibbonMainWindow(nullptr))
+  : UIElement(new Data(), new SARibbonMainWindow(nullptr))
 {
-    dptr()->ribbon_bar    = new RibbonBar(this);
-    dptr()->status_bar    = new StatusBar(this);
+    dptr()->ribbon_bar     = new RibbonBar(this);
+    dptr()->status_bar     = new StatusBar(this);
     dptr()->dock_panel_mgr = new DockPanelManager();
-    dptr()->dock_panel_mgr->attachToWindow(this);
+    dptr()->dock_panel_mgr->setWindow(this);
 
     impl<itype>()->setWindowTitle("Vine");
-
+    impl<itype>()->setMinimumSize(QSize(800, 600));
+    impl<itype>()->setCentralWidget(
+        static_cast<QWidget*>(dptr()->dock_panel_mgr->root()->impl()));
     impl<itype>()->setStatusBar(dptr()->status_bar->impl<QStatusBar>());
-    dptr()->status_bar->setOwnsImpl(false);  // QMainWindow takes ownership of status bar
+
+    dptr()->status_bar->setOwnsImpl(true); // QMainWindow takes ownership of status bar
 
     auto ribbon = impl<itype>()->ribbonBar();
     ribbon->setContentsMargins(5, 0, 5, 0);
@@ -63,14 +70,10 @@ MainWindow::~MainWindow()
 }
 
 void MainWindow::startupPosition(StartupPosition position)
-{
-    dptr()->startup_posi = position;
-}
+{ dptr()->startup_posi = position; }
 
 StartupPosition MainWindow::startupPosition() const
-{
-    return dptr()->startup_posi;
-}
+{ return dptr()->startup_posi; }
 
 void MainWindow::windowState(WindowState state)
 {
@@ -101,53 +104,33 @@ WindowState MainWindow::windowState() const
 }
 
 void MainWindow::activate()
-{
-    impl<itype>()->activateWindow();
-}
+{ impl<itype>()->activateWindow(); }
 
 void MainWindow::setEnabled()
-{
-    impl<itype>()->setEnabled(true);
-}
+{ impl<itype>()->setEnabled(true); }
 
 void MainWindow::setDisabled()
-{
-    impl<itype>()->setEnabled(false);
-}
+{ impl<itype>()->setEnabled(false); }
 
 bool MainWindow::isActive() const
-{
-    return impl<itype>()->isActiveWindow();
-}
+{ return impl<itype>()->isActiveWindow(); }
 
 bool MainWindow::isEnabled() const
-{
-    return impl<itype>()->isEnabled();
-}
+{ return impl<itype>()->isEnabled(); }
 
 void MainWindow::show()
-{
-    impl<itype>()->show();
-}
+{ impl<itype>()->show(); }
 
 void MainWindow::close()
-{
-    impl<itype>()->close();
-}
+{ impl<itype>()->close(); }
 
 RibbonBar* MainWindow::ribbonBar() const
-{
-    return dptr()->ribbon_bar;
-}
+{ return dptr()->ribbon_bar; }
 
 StatusBar* MainWindow::statusBar() const
-{
-    return dptr()->status_bar;
-}
+{ return dptr()->status_bar; }
 
 DockPanelManager* MainWindow::dockPanelManager() const
-{
-    return dptr()->dock_panel_mgr;
-}
+{ return dptr()->dock_panel_mgr; }
 
 V_APPFWGUI_NS_END

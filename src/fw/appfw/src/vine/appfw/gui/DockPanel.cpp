@@ -32,7 +32,6 @@ using itype = DockingPaneContainer;
 } // namespace
 
 struct DockPanel::Data : public UIElementData {
-    DockAreas    allowed  = DockAreas::None;
     DockFeatures features = DockFeatures::None;
     String       title;
     String       id;
@@ -52,17 +51,7 @@ DockPanel::~DockPanel()
     // UIElement::~UIElement() deletes d (Data)
 }
 
-// ---- Features / Areas ----
-
-void DockPanel::setAllowedAreas(DockAreas areas)
-{
-    dptr()->allowed = areas;
-}
-
-DockAreas DockPanel::getAllowedAreas() const
-{
-    return dptr()->allowed;
-}
+// ---- Features ----
 
 void DockPanel::setFeatures(DockFeatures features)
 {
@@ -137,6 +126,7 @@ void DockPanel::attach(UIObject* container)
 
     auto* dpc = static_cast<DockingPaneContainer*>(container);
     UIElement::d->impl = container;
+    setOwnsImpl(true);   // DockingPanes owns the container lifetime
 
     // Sync previously-set title and id
     if (!dptr()->title.empty())
@@ -178,8 +168,12 @@ DockAreas DockPanel::dockArea() const
     auto state = c->state();
     switch (state) {
         case DockingPaneBase::Docked:
-        case DockingPaneBase::Tabbed:
-            return dptr()->allowed != DockAreas::None ? dptr()->allowed : DockAreas::Left;
+        case DockingPaneBase::Tabbed: {
+            auto var = c->property("_vine_dockarea");
+            if (var.isValid())
+                return static_cast<DockAreas>(var.toInt());
+            return DockAreas::Left;
+        }
         case DockingPaneBase::Floating:
             return DockAreas::None;
         default:

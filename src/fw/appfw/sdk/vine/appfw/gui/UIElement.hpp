@@ -17,7 +17,7 @@ class V_APPFW_API UIElement : public Object {
     V_OBJECT_META_DECL
 
   protected:
-    UIElement(UIElementData* data, QObject* impl);
+    UIElement(UIElementData* data, UIObject* impl);
     UIElement(UIObject* impl);
 
   public:

@@ -539,7 +539,16 @@ void DockingPaneTabbedContainer::mouseMoveEvent(QMouseEvent* e)
             m_draggedPane->move(pos);
             m_draggedPane->floatPane(QPoint(-deltaPos.x(), -10));
 
-            m_initialPos = pos;
+            // Reposition the floating pane under the mouse cursor.
+            // floatPane(QPoint) internally calls mapToGlobal(0,0)→translate,
+            // which places the panel at 'pos' offset by -deltaPos.  For the
+            // second (and subsequent) tabs this offset is different because
+            // deltaPos contains the tab-label's local X.  We correct that
+            // here by moving the panel so its title bar sits at the cursor.
+            QPoint grabGlobal = mapToGlobal(e->pos());
+            m_draggedPane->move(grabGlobal - QPoint(0, 10));
+
+            m_initialPos = grabGlobal;
 
             dockingManager()->floatingPaneStartMove(m_draggedPane, m_initialPos);
         }

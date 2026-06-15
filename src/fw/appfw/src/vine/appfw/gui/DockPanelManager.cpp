@@ -1,51 +1,57 @@
-#include <vine/appfw/gui/DockPanelManager.hpp>
 #include <vine/appfw/gui/DockPanel.hpp>
+#include <vine/appfw/gui/DockPanelManager.hpp>
 #include <vine/appfw/gui/MainWindow.hpp>
+
 
 #include <algorithm>
 
-#include <QDockWidget>
-#include <QMainWindow>
-#include <QUuid>
-#include <QSize>
-#include <DockingPaneManager.h>
 #include <DockingPaneBase.h>
 #include <DockingPaneContainer.h>
+#include <DockingPaneManager.h>
+#include <QDockWidget>
+#include <QMainWindow>
+#include <QSize>
+#include <QUuid>
 #include <vine/appfw/gui/Convert.hpp>
+#include <vine/appfw/gui/UIElement.hpp>
+
 
 V_APPFWGUI_NS_BEGIN
 
+namespace
+{
+
+/// Minimal UIElement wrapper around the docking manager's root QWidget.
+class DockRootWidget final : public UIElement {
+  public:
+    explicit DockRootWidget(UIObject* impl)
+      : UIElement(impl)
+    {}
+};
+
+} // namespace
+
 struct DockPanelManager::Data {
-    DockingPaneManager*     dockingMgr = nullptr;
+    DockingPaneManager* dockingMgr  = nullptr;
+    UIElement*          rootElement = nullptr;
 };
 
 DockPanelManager::DockPanelManager()
   : d(new Data)
-{
-}
+{ d->dockingMgr = new DockingPaneManager(); }
 
 DockPanelManager::~DockPanelManager()
 {
     delete d->dockingMgr;
+    delete d->rootElement;
     delete d;
 }
 
-void DockPanelManager::attachToWindow(MainWindow* wnd)
+void DockPanelManager::setWindow(UIElement* wnd)
 {
     if (!wnd || d->dockingMgr)
         return;
-    d->dockingMgr = new DockingPaneManager();
     d->dockingMgr->setMainWindow(static_cast<QWidget*>(wnd->impl()));
-
-    // Set up a default client widget so the docking framework has a
-    // central area to anchor dock panels around.
-    auto* clientWidget = new QWidget();
-    d->dockingMgr->setClientWidget(clientWidget);
-
-    // Replace the main window's central widget with the docking manager's
-    // widget, which contains the client area and all docked panels.
-    auto* mainWindow = static_cast<QMainWindow*>(wnd->impl());
-    mainWindow->setCentralWidget(d->dockingMgr->widget());
 }
 
 void DockPanelManager::setCentralWidget(UIElement* widget)
@@ -55,24 +61,33 @@ void DockPanelManager::setCentralWidget(UIElement* widget)
     d->dockingMgr->setClientWidget(static_cast<QWidget*>(widget->impl()));
 }
 
-DockPanel* DockPanelManager::createDockPanel()
+UIElement* DockPanelManager::root() const
 {
-    auto p = new DockPanel();
-    return p;
+    if (!d->dockingMgr)
+        return nullptr;
+    if (!d->rootElement)
+        d->rootElement = new DockRootWidget(d->dockingMgr->widget());
+    return d->rootElement;
 }
 
-DockPanel* DockPanelManager::createDockPanel(DockAreas area)
+DockPanel* DockPanelManager::createDockPanel(const String& title, DockAreas area)
 {
-    auto* p = createDockPanel();
-    addDockPanel(p, area);
-    return p;
+    auto* panel = new DockPanel();
+    if (!title.empty())
+        panel->setTitle(title);
+    addDockPanel(panel, area);
+    return panel;
 }
 
-void DockPanelManager::addDockPanel(DockPanel* panel)
+DockPanel* DockPanelManager::createDockPanel(const String& title, UIElement* content, DockAreas area)
 {
-    if (!panel)
-        return;
-    // No local list — DockingPaneManager tracks panes
+    auto* panel = new DockPanel();
+    if (!title.empty())
+        panel->setTitle(title);
+    if (content)
+        panel->setContent(content);
+    addDockPanel(panel, area);
+    return panel;
 }
 
 void DockPanelManager::addDockPanel(DockPanel* panel, DockAreas area)
@@ -90,11 +105,11 @@ void DockPanelManager::addDockPanel(DockPanel* panel, DockAreas area)
         QString panelId = QUuid::createUuid().toString();
         auto    q8      = panelId.toUtf8();
         panel->setId(String(reinterpret_cast<const String::value_type*>(q8.constData()), q8.size()));
-        auto  title  = panel->getTitle();
-        QString qtitle = QString::fromUtf8(title.data(), static_cast<int>(title.size()));
+        auto    title        = panel->getTitle();
+        QString qtitle       = QString::fromUtf8(title.data(), static_cast<int>(title.size()));
         // Qt Debug asserts on addWidget(nullptr), so pass a temporary placeholder
         QWidget* placeholder = new QWidget();
-        auto* newPane = mgr->createPane(panelId, qtitle, placeholder, QSize(200, 200), DockingPaneManager::dockFloat, nullptr);
+        auto*    newPane     = mgr->createPane(panelId, qtitle, placeholder, QSize(200, 200), DockingPaneManager::dockFloat, nullptr);
         panel->attach(reinterpret_cast<UIObject*>(newPane));
         // Tag for later lookup via DockPanelManager::panels()
         auto* dpc = qobject_cast<DockingPaneContainer*>(newPane);
@@ -111,18 +126,52 @@ void DockPanelManager::addDockPanel(DockPanel* panel, DockAreas area)
         }
         dp = dpc;
     }
-    if (dp) {
-        DockingPaneManager::DockPosition pos;
-        if (testFlag(area, DockAreas::Right))
-            pos = DockingPaneManager::dockRight;
-        else if (testFlag(area, DockAreas::Top))
-            pos = DockingPaneManager::dockTop;
-        else if (testFlag(area, DockAreas::Bottom))
-            pos = DockingPaneManager::dockBottom;
-        else
-            pos = DockingPaneManager::dockLeft;
-        mgr->dockPane(dp, pos, nullptr);
+    if (!dp)
+        return;
+
+    // ---- auto-tab: merge into tab group when same area already has panels ----
+    DockingPaneManager::DockPosition pos;
+    DockingPaneBase*                 neighbor = nullptr;
+
+    // Convert DockAreas → DockingPaneManager::DockPosition
+    if (testFlag(area, DockAreas::Right))
+        pos = DockingPaneManager::dockRight;
+    else if (testFlag(area, DockAreas::Top))
+        pos = DockingPaneManager::dockTop;
+    else if (testFlag(area, DockAreas::Bottom))
+        pos = DockingPaneManager::dockBottom;
+    else
+        pos = DockingPaneManager::dockLeft;
+
+    // Count existing panels in the same area
+    int sameAreaCount = 0;
+    for (int i = 0; i < mgr->paneCount(); ++i) {
+        auto* other = mgr->pane(i);
+        if (other == dp)
+            continue;
+        auto* oc = qobject_cast<DockingPaneContainer*>(other);
+        if (!oc)
+            continue;
+        auto st = oc->state();
+        if (st == DockingPaneBase::Docked || st == DockingPaneBase::Tabbed) {
+            // Check if this panel is in the same target area via stored property
+            auto areaVar = oc->property("_vine_dockarea");
+            if (areaVar.isValid() && areaVar.toInt() == static_cast<int>(area)) {
+                ++sameAreaCount;
+                if (!neighbor)
+                    neighbor = other; // first match = tab neighbour
+            }
+        }
     }
+
+    if (neighbor)
+        pos = DockingPaneManager::dockTab;
+
+    mgr->dockPane(dp, pos, neighbor);
+
+    // Remember which area this panel belongs to
+    if (auto* dpc = qobject_cast<DockingPaneContainer*>(dp))
+        dpc->setProperty("_vine_dockarea", static_cast<int>(area));
 }
 
 void DockPanelManager::removeDockPanel(DockPanel* panel)

@@ -25,26 +25,27 @@ class V_APPFW_API DockPanelManager final {
     DockPanelManager();
     ~DockPanelManager();
 
-    /** Attach this manager to a MainWindow (must be called once before docking) */
-    void attachToWindow(MainWindow* wnd);
+    /** Set the target window and initialize the docking manager.
+     *  Must be called once before any docking operation. */
+    void setWindow(UIElement* wnd);
 
     /** Set the central working-area widget (replaces the default placeholder) */
     void setCentralWidget(UIElement* widget);
 
+    /** Get the root widget to embed in a window's central area */
+    UIElement* root() const;
+
     // ---- Factory ----
 
-    /** Create a new DockPanel and add it to the managed list */
-    DockPanel* createDockPanel();
+    /** Create and dock a DockPanel with title and content at the given area. */
+    DockPanel* createDockPanel(const String& title, DockAreas area);
 
-    /** Create a new DockPanel and dock it at the given area */
-    DockPanel* createDockPanel(DockAreas area);
+    /** Create and dock a DockPanel with title, content widget, and area. */
+    DockPanel* createDockPanel(const String& title, UIElement* content, DockAreas area);
 
     // ---- Registration ----
 
-    /** Add an externally-created DockPanel to the managed list */
-    void addDockPanel(DockPanel* panel);
-
-    /** Add and dock a DockPanel at the given area */
+    /** Add and dock a DockPanel at the given area (area is always required). */
     void addDockPanel(DockPanel* panel, DockAreas area);
 
     /** Remove and delete a DockPanel from the managed list */

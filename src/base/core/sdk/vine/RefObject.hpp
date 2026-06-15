@@ -6,8 +6,6 @@
 #include "Object.hpp"
 V_CORE_NS_BEGIN
 
-V_DECLARE_PIMPL(RefObject)
-
 template <typename>
 class RefPtr;
 template <typename>

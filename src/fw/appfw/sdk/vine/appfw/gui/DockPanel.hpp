@@ -5,15 +5,16 @@
 
 V_APPFWGUI_NS_BEGIN
 
+class DockPanelManager; // forward-declare for friend access
+
 class V_APPFW_API DockPanel : public UIElement {
     V_OBJECT_META_DECL
+
+    friend class DockPanelManager;
 
   public:
     DockPanel();
     virtual ~DockPanel();
-
-    void      setAllowedAreas(DockAreas areas);
-    DockAreas getAllowedAreas() const;
 
     void         setFeatures(DockFeatures features);
     DockFeatures getFeatures() const;
@@ -26,9 +27,6 @@ class V_APPFW_API DockPanel : public UIElement {
 
     void    setContent(UIElement* content);
     UIElement* getContent() const;
-
-    // Attach an existing DockingPanes container (opaque QObject pointer)
-    void attach(UIObject* container);
 
     // State queries
     bool isFloating() const;
@@ -45,6 +43,8 @@ class V_APPFW_API DockPanel : public UIElement {
     void restore();
 
   private:
+    void attach(UIObject* container);   // only DockPanelManager may call
+
     struct Data;
     Data*       dptr();
     const Data* dptr() const;
