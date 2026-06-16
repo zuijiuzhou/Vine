@@ -8,6 +8,8 @@
 #include <vine/appfw/CommandManager.hpp>
 #include <vine/appfw/ServiceManager.hpp>
 
+#include "ApplicationData.hpp"
+
 V_APPFW_NS_BEGIN
 
 static Application* s_current_app = nullptr;

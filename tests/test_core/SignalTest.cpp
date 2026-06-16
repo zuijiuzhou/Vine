@@ -19,7 +19,7 @@ TEST(Signal, RvalueEmitDeliveredToAllHandlers)
         second = value;
     });
 
-    signal.emit(std::string("payload"));
+    signal.trigger(std::string("payload"));
 
     EXPECT_EQ(first, "payload");
     EXPECT_EQ(second, "payload");
@@ -40,8 +40,8 @@ TEST(Signal, RemoveSelfDuringEmitIsSafe)
         called.push_back(value);
     });
 
-    signal.emit(3);
-    signal.emit(4);
+    signal.trigger(3);
+    signal.trigger(4);
 
     const std::vector<int> expected{ 30, 3, 4 };
     EXPECT_EQ(called, expected);
@@ -59,8 +59,8 @@ TEST(Signal, AddDuringEmitTakesEffectNextEmit)
         });
     });
 
-    signal.emit(1);
-    signal.emit(2);
+    signal.trigger(1);
+    signal.trigger(2);
 
     const std::vector<int> expected{ 1, 2, 200 };
     EXPECT_EQ(called, expected);
@@ -76,13 +76,13 @@ TEST(Signal, BlockedSignalDoesNotEmit)
     });
 
     signal.setBlocked(true);
-    signal.emit(42);
+    signal.trigger(42);
 
     EXPECT_EQ(called_count, 0);
     EXPECT_TRUE(signal.isBlocked());
 
     signal.setBlocked(false);
-    signal.emit(42);
+    signal.trigger(42);
 
     EXPECT_EQ(called_count, 1);
 }

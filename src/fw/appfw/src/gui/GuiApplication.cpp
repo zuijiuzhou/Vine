@@ -3,7 +3,7 @@
 #include <QApplication>
 #include <QStyleHints>
 
-#include <vine/appfw/gui/GuiApplicationData.hpp>
+#include "GuiApplicationData.hpp"
 
 V_APPFWGUI_NS_BEGIN
 

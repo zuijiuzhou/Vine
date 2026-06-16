@@ -49,13 +49,13 @@ class Signal {
         return is_blocked_;
     }
 
-    void emit(TArgs... args)
+    void trigger(TArgs... args)
     {
         if (is_blocked_) {
             return;
         }
 
-        // copy handlers to avoid issues with handlers being added/removed during emit
+        // copy handlers to avoid issues with handlers being added/removed during trigger
         std::vector<HandlerId> snapshot_ids;
         snapshot_ids.reserve(handlers_.size());
 

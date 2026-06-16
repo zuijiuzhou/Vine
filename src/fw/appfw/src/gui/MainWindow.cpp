@@ -4,7 +4,6 @@
 #include <QSize>
 #include <SARibbon.h>
 
-
 #include <vine/Ptr.hpp>
 #include <vine/appfw/gui/DockPanel.hpp>
 #include <vine/appfw/gui/DockPanelManager.hpp>
@@ -12,8 +11,8 @@
 #include <vine/appfw/gui/RibbonBar.hpp>
 #include <vine/appfw/gui/StatusBar.hpp>
 
-#include "vine/appfw/gui/Convert.hpp"
-#include "vine/appfw/gui/UIElementData.hpp"
+#include "Convert.hpp"
+#include "UIElementData.hpp"
 
 V_APPFWGUI_NS_BEGIN
 

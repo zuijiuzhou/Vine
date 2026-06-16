@@ -26,7 +26,7 @@ bool parse_type_info_vc(const std::type_info& c_type, String& name, String& ns, 
     auto n    = c_type.name();
     full_name = String::fromLocal8Bit(n);
     full_name = full_name.substr(6);
-    auto idx  = full_name.rfind("::");
+    auto idx  = full_name.rfind(u8"::");
     name      = full_name.substr(idx + 2);
     ns        = full_name.substr(0, idx);
     return true;
@@ -45,7 +45,7 @@ bool parse_type_info_gcc(const std::type_info& c_type, String& name, String& ns,
     full_name = reinterpret_cast<char8_t*>(demangled);
     free(demangled);
 
-    size_t pos = full_name.rfind("::");
+    size_t pos = full_name.rfind(u8"::");
 
     if (pos == -1) {
         name = full_name;

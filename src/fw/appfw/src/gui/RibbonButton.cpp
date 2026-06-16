@@ -1,7 +1,7 @@
 #include <vine/appfw/gui/RibbonButton.hpp>
 
 #include <SARibbon.h>
-#include <vine/appfw/gui/UIElementData.hpp>
+#include "UIElementData.hpp"
 
 V_APPFWGUI_NS_BEGIN
 

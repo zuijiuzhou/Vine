@@ -77,6 +77,7 @@ include(CMakePackageConfigHelpers)
 message(${CMAKE_CURRENT_BINARY_DIR})
 message(${CMAKE_BINARY_DIR})
 
+# configure VineConfig.cmake
 configure_package_config_file(${CMAKE_SOURCE_DIR}/cmake/VineConfig.cmake.in
     "${CMAKE_BINARY_DIR}/VineConfig.cmake" # The output file
     INSTALL_DESTINATION lib/cmake/vine # The install location for the generated config file, relative to CMAKE_INSTALL_PREFIX

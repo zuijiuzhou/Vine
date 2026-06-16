@@ -2,8 +2,8 @@
 
 #include <SARibbon.h>
 #include <vine/appfw/gui/RibbonGroup.hpp>
-#include <vine/appfw/gui/UIElementData.hpp>
 
+#include "UIElementData.hpp"
 V_APPFWGUI_NS_BEGIN
 
 V_OBJECT_META_IMPL(RibbonTab, UIElement)

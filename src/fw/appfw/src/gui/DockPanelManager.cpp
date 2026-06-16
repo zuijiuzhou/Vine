@@ -1,7 +1,4 @@
-#include <vine/appfw/gui/DockPanel.hpp>
 #include <vine/appfw/gui/DockPanelManager.hpp>
-#include <vine/appfw/gui/MainWindow.hpp>
-
 
 #include <algorithm>
 
@@ -12,8 +9,12 @@
 #include <QMainWindow>
 #include <QSize>
 #include <QUuid>
-#include <vine/appfw/gui/Convert.hpp>
+
+#include <vine/appfw/gui/MainWindow.hpp>
 #include <vine/appfw/gui/UIElement.hpp>
+#include <vine/appfw/gui/DockPanel.hpp>
+
+#include "Convert.hpp"
 
 
 V_APPFWGUI_NS_BEGIN

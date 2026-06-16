@@ -1,6 +1,6 @@
 #pragma once
 
-#include <vine/appfw/ApplicationData.hpp>
+#include "../ApplicationData.hpp"
 
 class QApplication;
 

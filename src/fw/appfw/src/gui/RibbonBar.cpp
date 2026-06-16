@@ -6,7 +6,8 @@
 #include <vine/appfw/gui/MainWindow.hpp>
 #include <vine/appfw/gui/RibbonDropDownItem.hpp>
 #include <vine/appfw/gui/RibbonTab.hpp>
-#include <vine/appfw/gui/UIElementData.hpp>
+
+#include "UIElementData.hpp"
 
 V_APPFWGUI_NS_BEGIN
 

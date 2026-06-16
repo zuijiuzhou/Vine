@@ -31,7 +31,7 @@ function(v_add_library target_name_var short_name)
     else()
         add_library(${target_name} INTERFACE ${sdk_file_list} ${header_file_list} ${src_file_list} ${rc_file_list})
     endif()
-    # 设置目标别名
+    # 设置目标别名，仅影响build阶段，不影响install
     add_library(${target_alias} ALIAS ${target_name})
     # 设置输出文件名
     set_target_properties(${target_name} PROPERTIES OUTPUT_NAME ${lib_file_name})
@@ -91,9 +91,9 @@ function(v_add_library target_name_var short_name)
     install(
         TARGETS ${target_name}
         EXPORT ${CMAKE_PROJECT_NAME}Targets
-        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} # for executables(including .dll on Windows)
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} # for shared libraries(.so for Linux)
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}) # for static libraries(.a .lib)(including dll import library)
 
 
 

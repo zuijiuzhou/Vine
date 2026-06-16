@@ -3,13 +3,13 @@
 #include "appfw_global.hpp"
 
 #include <vine/Object.hpp>
-#include <vine/appfw/ApplicationData.hpp>
 
 V_APPFW_NS_BEGIN
 
 class CommandManager;
 class AddinManager;
 class ServiceManager;
+class ApplicationData;
 
 class V_APPFW_API Application : public Object {
     V_OBJECT_META_DECL;
