@@ -118,7 +118,8 @@ class RefPtr {
             static_assert(std::is_base_of_v<RefObject, T>, "RefPtr requires RefObject-based T");
             auto* cb = static_cast<RefObject*>(ptr_)->cb_;
             if (cb) {
-                cb->strong_refs.fetch_sub(1, std::memory_order_acq_rel);
+                if (cb->strong_refs.fetch_sub(1, std::memory_order_acq_rel) == 1)
+                    delete ptr_;
             }
         }
         ptr_ = nullptr;

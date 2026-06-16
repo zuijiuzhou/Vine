@@ -17,8 +17,8 @@ V_CORE_NS_BEGIN
 namespace
 {
 
-// todo:: thread safety
 std::set<Class*> s_classes;
+std::mutex       s_classes_mutex;
 
 #ifdef __MSVC__
 bool parse_type_info_vc(const std::type_info& c_type, String& name, String& ns, String& full_name)
@@ -26,9 +26,9 @@ bool parse_type_info_vc(const std::type_info& c_type, String& name, String& ns, 
     auto n    = c_type.name();
     full_name = String::fromLocal8Bit(n);
     full_name = full_name.substr(6);
-    auto idx  = full_name.rfind(u8':');
-    name      = full_name.substr(idx + 1);
-    ns        = full_name.substr(0, idx - 1);
+    auto idx  = full_name.rfind("::");
+    name      = full_name.substr(idx + 2);
+    ns        = full_name.substr(0, idx);
     return true;
 }
 #endif
@@ -45,14 +45,14 @@ bool parse_type_info_gcc(const std::type_info& c_type, String& name, String& ns,
     full_name = reinterpret_cast<char8_t*>(demangled);
     free(demangled);
 
-    size_t pos = full_name.rfind(u8':');
+    size_t pos = full_name.rfind("::");
 
     if (pos == -1) {
         name = full_name;
     }
     else {
-        ns   = full_name.substr(0, pos - 1);
-        name = full_name.substr(pos + 1);
+        ns   = full_name.substr(0, pos);
+        name = full_name.substr(pos + 2);
     }
 
     return true;
@@ -82,12 +82,18 @@ Class::Class(const std::type_info& c_type, const Class* parent)
         throw std::runtime_error("Runtime error.");
     }
 
-    s_classes.insert(this);
+    {
+        std::lock_guard<std::mutex> lock(s_classes_mutex);
+        s_classes.insert(this);
+    }
 }
 
 Class::~Class()
 {
-    s_classes.erase(this);
+    {
+        std::lock_guard<std::mutex> lock(s_classes_mutex);
+        s_classes.erase(this);
+    }
 }
 
 bool Class::isSubclassOf(const Class* cls) const noexcept
@@ -107,6 +113,7 @@ bool Class::isSubclassOf(const Class* cls) const noexcept
 
 Class* Class::getClass(const std::type_info& c_type)
 {
+    std::lock_guard<std::mutex> lock(s_classes_mutex);
     auto it = std::find_if(s_classes.begin(), s_classes.end(), [&c_type](Class* c) { return c->c_type_ == c_type; });
     if (it == s_classes.end())
         return nullptr;
@@ -115,6 +122,7 @@ Class* Class::getClass(const std::type_info& c_type)
 
 Class* Class::getClass(const String& full_name)
 {
+    std::lock_guard<std::mutex> lock(s_classes_mutex);
     auto it = std::find_if(s_classes.begin(), s_classes.end(), [&full_name](Class* c) { return c->full_name_ == full_name; });
     if (it == s_classes.end())
         return nullptr;
