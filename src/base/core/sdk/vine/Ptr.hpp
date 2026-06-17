@@ -2,8 +2,8 @@
 
 #include "core_global.hpp"
 
-#include <atomic>
 #include "RefObject.hpp"
+#include <atomic>
 
 V_CORE_NS_BEGIN
 
@@ -14,21 +14,21 @@ class RefPtr {
     friend class RefPtr;
 
   public:
-        /**
-         * Construct from raw pointer without modifying the strong refcount.
-         * This is intended for internal use by `WRefPtr::lock()` after it
-         * atomically incremented the strong count.
-         */
-        RefPtr(T* ptr, bool addRef)
-            : ptr_(ptr)
-        {
-            if (ptr_ && addRef) {
-                static_assert(std::is_base_of_v<RefObject, T>, "RefPtr requires RefObject-based T");
-                auto* cb = static_cast<RefObject*>(ptr_)->cb_;
-                if (cb)
-                    cb->strong_refs.fetch_add(1, std::memory_order_relaxed);
-            }
+    /**
+     * Construct from raw pointer without modifying the strong refcount.
+     * This is intended for internal use by `WRefPtr::lock()` after it
+     * atomically incremented the strong count.
+     */
+    RefPtr(T* ptr, bool addRef)
+      : ptr_(ptr)
+    {
+        if (ptr_ && addRef) {
+            static_assert(std::is_base_of_v<RefObject, T>, "RefPtr requires RefObject-based T");
+            auto* cb = static_cast<RefObject*>(ptr_)->cb_;
+            if (cb)
+                cb->strong_refs.fetch_add(1, std::memory_order_relaxed);
         }
+    }
 
     RefPtr()
       : ptr_(nullptr)
@@ -76,7 +76,8 @@ class RefPtr {
             if (cb) {
                 if (cb->strong_refs.fetch_sub(1, std::memory_order_acq_rel) == 1)
                     delete ptr_;
-            } else {
+            }
+            else {
                 delete ptr_;
             }
         }
@@ -84,9 +85,7 @@ class RefPtr {
 
   public:
     T* get() const
-    {
-        return ptr_;
-    }
+    { return ptr_; }
 
     void set(T* ptr)
     {
@@ -98,7 +97,8 @@ class RefPtr {
             if (cb) {
                 if (cb->strong_refs.fetch_sub(1, std::memory_order_acq_rel) == 1)
                     delete ptr_;
-            } else {
+            }
+            else {
                 delete ptr_;
             }
         }
@@ -118,8 +118,7 @@ class RefPtr {
             static_assert(std::is_base_of_v<RefObject, T>, "RefPtr requires RefObject-based T");
             auto* cb = static_cast<RefObject*>(ptr_)->cb_;
             if (cb) {
-                if (cb->strong_refs.fetch_sub(1, std::memory_order_acq_rel) == 1)
-                    delete ptr_;
+                cb->strong_refs.fetch_sub(1, std::memory_order_acq_rel);
             }
         }
         ptr_ = nullptr;
@@ -127,25 +126,17 @@ class RefPtr {
     }
 
     void swap(RefPtr& other)
-    {
-        std::swap(ptr_, other.ptr_);
-    }
+    { std::swap(ptr_, other.ptr_); }
 
   public:
     bool operator!() const
-    {
-        return !ptr_;
-    }
+    { return !ptr_; }
 
     T* operator->() const
-    {
-        return ptr_;
-    }
+    { return ptr_; }
 
     T& operator*() const
-    {
-        return *ptr_;
-    }
+    { return *ptr_; }
 
     RefPtr& operator=(const RefPtr& right)
     {
@@ -168,59 +159,37 @@ class RefPtr {
     }
 
     bool operator==(const RefPtr& right) const
-    {
-        return ptr_ == right.ptr_;
-    }
+    { return ptr_ == right.ptr_; }
 
     bool operator==(const T* right) const
-    {
-        return ptr_ == right;
-    }
+    { return ptr_ == right; }
 
     friend bool operator==(const T* left, const RefPtr& right)
-    {
-        return left == right.ptr_;
-    }
+    { return left == right.ptr_; }
 
     bool operator!=(const RefPtr& right) const
-    {
-        return ptr_ != right.ptr_;
-    }
+    { return ptr_ != right.ptr_; }
 
     bool operator!=(const T* right) const
-    {
-        return ptr_ != right;
-    }
+    { return ptr_ != right; }
 
     friend bool operator!=(const T* left, const RefPtr& right)
-    {
-        return left != right.ptr_;
-    }
+    { return left != right.ptr_; }
 
     bool operator<(const RefPtr<T>& right) const
-    {
-        return ptr_ < right.ptr_;
-    }
+    { return ptr_ < right.ptr_; }
 
     bool operator<(const T* right) const
-    {
-        return ptr_ < right;
-    }
+    { return ptr_ < right; }
 
     bool operator>(const RefPtr<T>& right) const
-    {
-        return ptr_ > right.ptr_;
-    }
+    { return ptr_ > right.ptr_; }
 
     bool operator>(const T* right) const
-    {
-        return ptr_ > right;
-    }
+    { return ptr_ > right; }
 
     bool hasValue() const
-    {
-        return ptr_ != nullptr;
-    }
+    { return ptr_ != nullptr; }
 
   private:
     T* ptr_;
@@ -288,48 +257,52 @@ class WRefPtr {
 
         unsigned int s = cb_->strong_refs.load(std::memory_order_acquire);
         while (s != 0) {
-            if (cb_->strong_refs.compare_exchange_weak(
-                    s, s + 1,
-                    std::memory_order_acq_rel,
-                    std::memory_order_acquire)) {
-                return RefPtr<T>(ptr_, false);
-            }
+            if (cb_->strong_refs.compare_exchange_weak(s, s + 1, std::memory_order_acq_rel, std::memory_order_acquire)) { return RefPtr<T>(ptr_, false); }
         }
         return RefPtr<T>();
     }
 
-    private:
-        T* ptr_;
-        RefObject::PtrControlBlock* cb_;
+  private:
+    T*                          ptr_;
+    RefObject::PtrControlBlock* cb_;
 
   public:
-    bool operator==(const WRefPtr& right) const { return ptr_ == right.ptr_ && cb_ == right.cb_; }
-    bool operator!=(const WRefPtr& right) const { return ptr_ != right.ptr_ || cb_ != right.cb_; }
-    bool operator==(const T* right) const { return ptr_ == right; }
-    bool operator!=(const T* right) const { return ptr_ != right; }
-    friend bool operator==(const T* left, const WRefPtr& right) { return left == right.ptr_; }
-    friend bool operator!=(const T* left, const WRefPtr& right) { return left != right.ptr_; }
-    bool hasValue() const { return ptr_ != nullptr; }
-    T* get() const { return ptr_; }
+    bool operator==(const WRefPtr& right) const
+    { return ptr_ == right.ptr_ && cb_ == right.cb_; }
+
+    bool operator!=(const WRefPtr& right) const
+    { return ptr_ != right.ptr_ || cb_ != right.cb_; }
+
+    bool operator==(const T* right) const
+    { return ptr_ == right; }
+
+    bool operator!=(const T* right) const
+    { return ptr_ != right; }
+
+    friend bool operator==(const T* left, const WRefPtr& right)
+    { return left == right.ptr_; }
+
+    friend bool operator!=(const T* left, const WRefPtr& right)
+    { return left != right.ptr_; }
+
+    bool hasValue() const
+    { return ptr_ != nullptr; }
+
+    T* get() const
+    { return ptr_; }
 };
 
 template <typename T, typename Y>
 inline RefPtr<T> static_pointer_cast(const RefPtr<Y>& rp)
-{
-    return static_cast<T*>(rp.get());
-}
+{ return static_cast<T*>(rp.get()); }
 
 template <typename T, typename Y>
 inline RefPtr<T> dynamic_pointer_cast(const RefPtr<Y>& rp)
-{
-    return dynamic_cast<T*>(rp.get());
-}
+{ return dynamic_cast<T*>(rp.get()); }
 
 template <typename T, typename Y>
 inline RefPtr<T> const_pointer_cast(const RefPtr<Y>& rp)
-{
-    return const_cast<T*>(rp.get());
-}
+{ return const_cast<T*>(rp.get()); }
 
 V_CORE_NS_END
 
