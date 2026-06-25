@@ -2,10 +2,10 @@
 
 #include <type_traits>
 
-#ifdef __GNUC__
-#    define __GCC__
-#elif defined(__clang__)
+#ifdef __clang__
 #    define __CLANG__
+#elif defined(__GNUC__)
+#    define __GCC__
 #elif defined(_MSC_VER)
 #    define __MSVC__
 #elif defined(__INTEL_COMPILER)

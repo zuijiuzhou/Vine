@@ -24,7 +24,9 @@ void GuiApplication::init()
     if (d->app == nullptr) {
         int c  = this->argc();
         d->app = new QApplication(c, argv());
+#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
         QApplication::styleHints()->setColorScheme(Qt::ColorScheme::Light);
+#endif
     }
 }
 
