@@ -3,9 +3,9 @@
 #include <vine/vi_global.hpp>
 
 #ifdef V_RUNTIME_LIB
-#    define V_RUNTIME_API __API_EXPORT__
+#    define V_RUNTIME_API V_EXPORT
 #else
-#    define V_RUNTIME_API __API_IMPORT__
+#    define V_RUNTIME_API V_IMPORT
 #endif
 
 #define V_RUNTIME_NS_BEGIN                                                                                                                                     \

@@ -3,9 +3,9 @@
 #include <vine/core_global.hpp>
 
 #ifdef V_APPFW_LIB
-#    define V_APPFW_API __API_EXPORT__
+#    define V_APPFW_API V_EXPORT
 #else
-#    define V_APPFW_API __API_IMPORT__
+#    define V_APPFW_API V_IMPORT
 #endif
 
 #define V_APPFW_NS_BEGIN                                                                                                                                       \

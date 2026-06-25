@@ -3,9 +3,9 @@
 #include <vine/vi_global.hpp>
 
 #ifdef V_MATH_LIB
-#    define V_MATH_API __API_EXPORT__
+#    define V_MATH_API V_EXPORT
 #else
-#    define V_MATH_API __API_IMPORT__
+#    define V_MATH_API V_IMPORT
 #endif
 
 #define V_MATH_NS_BEGIN                                                                                                                                        \

@@ -3,9 +3,9 @@
 #include <vine/vi_global.hpp>
 
 #ifdef V_CORE_LIB
-#    define V_CORE_API __API_EXPORT__
+#    define V_CORE_API V_EXPORT
 #else
-#    define V_CORE_API __API_IMPORT__
+#    define V_CORE_API V_IMPORT
 #endif
 
 #define V_CORE_NS_BEGIN V_ROOT_NS_BEGIN
