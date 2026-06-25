@@ -6,7 +6,7 @@
 #include <stdexcept>
 #include <typeinfo>
 
-#if defined(__GCC__) || defined(__CLANG__)
+#if defined(V_CC_GUN) || defined(V_CC_CLANG)
 #    include <cxxabi.h>
 #endif
 
@@ -20,7 +20,7 @@ namespace
 std::set<Class*> s_classes;
 std::mutex       s_classes_mutex;
 
-#ifdef __MSVC__
+#ifdef V_CC_MSVC
 bool parse_type_info_vc(const std::type_info& c_type, String& name, String& ns, String& full_name)
 {
     auto n    = c_type.name();
@@ -33,7 +33,7 @@ bool parse_type_info_vc(const std::type_info& c_type, String& name, String& ns, 
 }
 #endif
 
-#ifdef __GCC__
+#ifdef V_CC_GUN
 bool parse_type_info_gcc(const std::type_info& c_type, String& name, String& ns, String& full_name)
 {
     int   status;
@@ -59,7 +59,7 @@ bool parse_type_info_gcc(const std::type_info& c_type, String& name, String& ns,
 }
 #endif
 
-#ifdef __CLANG__
+#ifdef V_CC_CLANG
 bool parse_type_info_clang(const std::type_info& c_type, String& name, String& ns, String& full_name)
 {
     int   status;
@@ -96,11 +96,11 @@ Class::Class(const std::type_info& c_type, const Class* parent)
 
     auto is_ok = false;
 
-#if defined(__MSVC__)
+#if defined(V_CC_MSVC)
     is_ok = parse_type_info_vc(c_type, name_, ns_, full_name_);
-#elif defined(__GCC__)
+#elif defined(V_CC_GUN)
     is_ok = parse_type_info_gcc(c_type, name_, ns_, full_name_);
-#elif defined (__CLANG__)
+#elif defined (V_CC_CLANG)
     is_ok = parse_type_info_clang(c_type, name_, ns_, full_name_);
 #else
 #    error "Unsupported compiler"

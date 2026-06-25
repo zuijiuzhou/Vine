@@ -1,10 +1,8 @@
 ﻿#include <vine/appfw/AddinManager.hpp>
 
-#include <vector>
-
-#ifdef __MSVC__
+#ifdef V_CC_MSVC
 #    include <Windows.h>
-#endif // __MSVC__
+#endif // V_CC_MSVC
 
 
 V_APPFW_NS_BEGIN

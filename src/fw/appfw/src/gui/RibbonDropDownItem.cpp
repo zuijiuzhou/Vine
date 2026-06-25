@@ -29,7 +29,7 @@ void RibbonDropDownItem::text(const String& t)
     auto* act = impl<QAction>();
     if (!act) return;
     auto utf16 = t.toUtf16();
-    act->setText(QString::fromUtf16(reinterpret_cast<const ushort*>(utf16.data()), (int)utf16.size()));
+    act->setText(QString::fromStdU16String(utf16));
 }
 
 String RibbonDropDownItem::text() const

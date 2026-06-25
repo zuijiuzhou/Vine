@@ -3,18 +3,18 @@
 #include <type_traits>
 
 #ifdef __clang__
-#    define __CLANG__
+#    define V_CC_CLANG
 #elif defined(__GNUC__)
-#    define __GCC__
+#    define V_CC_GUN
 #elif defined(_MSC_VER)
-#    define __MSVC__
+#    define V_CC_MSVC
 #elif defined(__INTEL_COMPILER)
 #    define __INTELC__
 #else
 #    error Unknown compiler.
 #endif
 
-#if defined(__MSVC__) || defined(_WIN32) || defined(_WINDOWS)
+#if defined(V_CC_MSVC) || defined(_WIN32) || defined(_WINDOWS)
 #    define __API_EXPORT__ __declspec(dllexport)
 #    define __API_IMPORT__ __declspec(dllimport)
 #else

@@ -29,7 +29,7 @@ void RibbonButton::text(const String& t)
     auto* btn = impl<SARibbonToolButton>();
     if (!btn) return;
     auto utf16 = t.toUtf16();
-    btn->setText(QString::fromUtf16(reinterpret_cast<const ushort*>(utf16.data()), (int)utf16.size()));
+    btn->setText(QString::fromStdU16String(utf16));
 }
 
 String RibbonButton::text() const

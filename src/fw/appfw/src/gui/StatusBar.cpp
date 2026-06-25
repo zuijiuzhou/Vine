@@ -39,7 +39,7 @@ void StatusBar::showMessage(const String& msg, int timeout_ms)
     auto* sb = impl<QStatusBar>();
     if (!sb) return;
     auto utf16 = msg.toUtf16();
-    sb->showMessage(QString::fromUtf16(reinterpret_cast<const ushort*>(utf16.data()), (int)utf16.size()), timeout_ms);
+    sb->showMessage(QString::fromStdU16String(utf16));
 }
 
 V_APPFWGUI_NS_END

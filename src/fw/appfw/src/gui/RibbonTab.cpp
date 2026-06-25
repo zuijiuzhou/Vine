@@ -31,7 +31,7 @@ void RibbonTab::title(const String& t)
     auto* cat = impl<SARibbonCategory>();
     if (cat) {
         auto utf16 = t.toUtf16();
-        cat->setCategoryName(QString::fromUtf16(reinterpret_cast<const ushort*>(utf16.data()), (int)utf16.size()));
+        cat->setCategoryName(QString::fromStdU16String(utf16));
     }
 }
 

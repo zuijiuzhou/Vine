@@ -33,7 +33,7 @@ void RibbonGroup::title(const String& t)
     auto* pnl = impl<SARibbonPanel>();
     if (pnl) {
         auto utf16 = t.toUtf16();
-        pnl->setPanelName(QString::fromUtf16(reinterpret_cast<const ushort*>(utf16.data()), (int)utf16.size()));
+        pnl->setPanelName(QString::fromStdU16String(utf16));
     }
 }
 
