@@ -16,8 +16,8 @@ static Application* s_current_app = nullptr;
 
 V_OBJECT_META_IMPL(Application, Object)
 
-inline auto Application::dptr() -> ApplicationData* { return static_cast<ApplicationData*>(d); }
-inline auto Application::dptr() const -> const ApplicationData* { return static_cast<const ApplicationData*>(d); }
+auto Application::dptr() -> ApplicationData* { return static_cast<ApplicationData*>(d); }
+auto Application::dptr() const -> const ApplicationData* { return static_cast<const ApplicationData*>(d); }
 
 Application::Application(int argc, char** argv)
     : Application(new ApplicationData(), argc, argv)
