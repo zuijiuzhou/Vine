@@ -6,7 +6,7 @@
 #include <stdexcept>
 #include <typeinfo>
 
-#if defined(V_CC_GUN) || defined(V_CC_CLANG)
+#if defined(__GNUC__)
 #    include <cxxabi.h>
 #endif
 
@@ -20,8 +20,8 @@ namespace
 std::set<Class*> s_classes;
 std::mutex       s_classes_mutex;
 
-#ifdef V_CC_MSVC
-bool parse_type_info_vc(const std::type_info& c_type, String& name, String& ns, String& full_name)
+#if defined(_MSC_VER)
+bool parse_type_info_msvc(const std::type_info& c_type, String& name, String& ns, String& full_name)
 {
     auto n    = c_type.name();
     full_name = String::fromLocal8Bit(n);
@@ -33,8 +33,8 @@ bool parse_type_info_vc(const std::type_info& c_type, String& name, String& ns, 
 }
 #endif
 
-#ifdef V_CC_GUN
-bool parse_type_info_gcc(const std::type_info& c_type, String& name, String& ns, String& full_name)
+#if defined(__GNUC__)
+bool parse_type_info_gnuc(const std::type_info& c_type, String& name, String& ns, String& full_name)
 {
     int   status;
     char* demangled = abi::__cxa_demangle(c_type.name(), nullptr, nullptr, &status);
@@ -59,32 +59,6 @@ bool parse_type_info_gcc(const std::type_info& c_type, String& name, String& ns,
 }
 #endif
 
-#ifdef V_CC_CLANG
-bool parse_type_info_clang(const std::type_info& c_type, String& name, String& ns, String& full_name)
-{
-    int   status;
-    char* demangled = abi::__cxa_demangle(c_type.name(), nullptr, nullptr, &status);
-
-    if (status != 0)
-        return false;
-
-    full_name = reinterpret_cast<char8_t*>(demangled);
-    free(demangled);
-
-    size_t pos = full_name.rfind(u8"::");
-
-    if (pos == String::npos) {
-        name = full_name;
-    }
-    else {
-        ns   = full_name.substr(0, pos);
-        name = full_name.substr(pos + 2);
-    }
-
-    return true;
-}
-#endif
-
 } // namespace
 
 Class::Class(const std::type_info& c_type, const Class* parent)
@@ -96,12 +70,10 @@ Class::Class(const std::type_info& c_type, const Class* parent)
 
     auto is_ok = false;
 
-#if defined(V_CC_MSVC)
-    is_ok = parse_type_info_vc(c_type, name_, ns_, full_name_);
-#elif defined(V_CC_GUN)
-    is_ok = parse_type_info_gcc(c_type, name_, ns_, full_name_);
-#elif defined (V_CC_CLANG)
-    is_ok = parse_type_info_clang(c_type, name_, ns_, full_name_);
+#if defined(_MSC_VER)
+    is_ok = parse_type_info_msvc(c_type, name_, ns_, full_name_);
+#elif defined(__GNUC__)
+    is_ok = parse_type_info_gnuc(c_type, name_, ns_, full_name_);
 #else
 #    error "Unsupported compiler"
 #endif
