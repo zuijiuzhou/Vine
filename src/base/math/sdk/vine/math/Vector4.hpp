@@ -144,7 +144,10 @@ class Vector4 {
     [[nodiscard]]
     constexpr TypeF<T> length2() const requires(Real<T>)
     {
-        return safeLengthSquared(x, y, z, w);
+        if constexpr (Real<T>) {
+            return safeLengthSquared(x, y, z, w);
+        }
+        return {};
     }
 
     /**
@@ -155,7 +158,10 @@ class Vector4 {
     [[nodiscard]]
     constexpr TypeF<T> length() const requires(Real<T>)
     {
-        return safeLength(x, y, z, w);
+        if constexpr (Real<T>) {
+            return safeLength(x, y, z, w);
+        }
+        return {};
     }
 
     /**
@@ -219,22 +225,25 @@ class Vector4 {
     [[nodiscard]]
     constexpr T normalize() requires(FP<T>)
     {
-        auto len = length();
+        if constexpr (FP<T>) {
+            auto len = length();
 
-        if (len == T(0)) {
-            x = T(0);
-            y = T(0);
-            z = T(0);
-            w = T(0);
-        }
-        else {
-            x /= len;
-            y /= len;
-            z /= len;
-            w /= len;
-        }
+            if (len == T(0)) {
+                x = T(0);
+                y = T(0);
+                z = T(0);
+                w = T(0);
+            }
+            else {
+                x /= len;
+                y /= len;
+                z /= len;
+                w /= len;
+            }
 
-        return len;
+            return len;
+        }
+        return {};
     }
 
     /**
@@ -255,7 +264,10 @@ class Vector4 {
     [[nodiscard]]
     constexpr bool isZero(T eps) const requires(Real<T>)
     {
-        return math::isZero<T>(x, eps) && math::isZero<T>(y, eps) && math::isZero<T>(z, eps) && math::isZero<T>(w, eps);
+        if constexpr (Real<T>) {
+            return math::isZero<T>(x, eps) && math::isZero<T>(y, eps) && math::isZero<T>(z, eps) && math::isZero<T>(w, eps);
+        }
+        return {};
     }
 
     /**
@@ -278,7 +290,10 @@ class Vector4 {
     [[nodiscard]]
     constexpr bool isEqual(const Vector4<T>& other, T eps) const requires(Real<T>)
     {
-        return math::isEqual<T>(x, other.x, eps) && math::isEqual<T>(y, other.y, eps) && math::isEqual<T>(z, other.z, eps) && math::isEqual<T>(w, other.w, eps);
+        if constexpr (Real<T>) {
+            return math::isEqual<T>(x, other.x, eps) && math::isEqual<T>(y, other.y, eps) && math::isEqual<T>(z, other.z, eps) && math::isEqual<T>(w, other.w, eps);
+        }
+        return {};
     }
 
   public:
@@ -426,7 +441,10 @@ class Vector4 {
     [[nodiscard]]
     constexpr T operator*(const Vector4<T>& other) const requires(Real<T>)
     {
-        return dot(other);
+        if constexpr (Real<T>) {
+            return dot(other);
+        }
+        return {};
     }
 
     /**

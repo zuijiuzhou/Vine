@@ -103,7 +103,10 @@ class Point3 {
     [[nodiscard]]
     constexpr bool isZero(T eps) const requires(Real<T>)
     {
-        return math::isZero<T>(x, eps) && math::isZero<T>(y, eps) && math::isZero<T>(z, eps);
+        if constexpr (Real<T>) {
+            return math::isZero<T>(x, eps) && math::isZero<T>(y, eps) && math::isZero<T>(z, eps);
+        }
+        return {};
     }
 
     /**
@@ -126,7 +129,10 @@ class Point3 {
     [[nodiscard]]
     constexpr bool isEqual(const Point3<T>& other, T eps) const requires(Real<T>)
     {
-        return math::isEqual<T>(x, other.x, eps) && math::isEqual<T>(y, other.y, eps) && math::isEqual<T>(z, other.z, eps);
+        if constexpr (Real<T>) {
+            return math::isEqual<T>(x, other.x, eps) && math::isEqual<T>(y, other.y, eps) && math::isEqual<T>(z, other.z, eps);
+        }
+        return {};
     }
 
   public:

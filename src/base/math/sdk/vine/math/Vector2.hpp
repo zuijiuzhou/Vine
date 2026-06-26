@@ -116,7 +116,10 @@ class Vector2 {
     [[nodiscard]]
     constexpr TypeF<T> length2() const requires(Real<T>)
     {
-        return safeLengthSquared(x, y);
+        if constexpr (Real<T>) {
+            return safeLengthSquared(x, y);
+        }
+        return {};
     }
 
     /**
@@ -127,7 +130,10 @@ class Vector2 {
     [[nodiscard]]
     constexpr TypeF<T> length() const requires(Real<T>)
     {
-        return safeLength(x, y);
+        if constexpr (Real<T>) {
+            return safeLength(x, y);
+        }
+        return {};
     }
 
     /**
@@ -172,17 +178,20 @@ class Vector2 {
      */
     constexpr T normalize() requires(FP<T>)
     {
-        auto len = length();
+        if constexpr (FP<T>) {
+            auto len = length();
 
-        if (len == T(0)) {
-            x = T(0);
-            y = T(0);
+            if (len == T(0)) {
+                x = T(0);
+                y = T(0);
+            }
+            else {
+                x /= len;
+                y /= len;
+            }
+            return len;
         }
-        else {
-            x /= len;
-            y /= len;
-        }
-        return len;
+        return {};
     }
 
     /**
@@ -203,7 +212,10 @@ class Vector2 {
     [[nodiscard]]
     constexpr bool isZero(T eps) const requires(Real<T>)
     {
-        return math::isZero<T>(x, eps) && math::isZero<T>(y, eps);
+        if constexpr (Real<T>) {
+            return math::isZero<T>(x, eps) && math::isZero<T>(y, eps);
+        }
+        return {};
     }
 
     /**
@@ -226,7 +238,10 @@ class Vector2 {
     [[nodiscard]]
     constexpr bool isEqual(const Vector2<T>& other, T eps) const requires(Real<T>)
     {
-        return math::isEqual<T>(x, other.x, eps) && math::isEqual<T>(y, other.y, eps);
+        if constexpr (Real<T>) {
+            return math::isEqual<T>(x, other.x, eps) && math::isEqual<T>(y, other.y, eps);
+        }
+        return {};
     }
 
   public:
@@ -376,7 +391,10 @@ class Vector2 {
     [[nodiscard]]
     constexpr T operator*(const Vector2<T>& other) const requires(Real<T>)
     {
-        return dot(other);
+        if constexpr (Real<T>) {
+            return dot(other);
+        }
+        return {};
     }
 
     /**
@@ -387,7 +405,10 @@ class Vector2 {
     [[nodiscard]]
     constexpr T operator^(const Vector2<T>& other) const requires(Real<T>)
     {
-        return cross(other);
+        if constexpr (Real<T>) {
+            return cross(other);
+        }
+        return {};
     }
 
     /**

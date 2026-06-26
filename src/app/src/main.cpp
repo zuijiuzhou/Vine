@@ -33,7 +33,7 @@ namespace guifw = fw::gui;
 int main(int argc, char** argv)
 {
     using namespace guifw;
-
+GuiApplication::desc();
     GuiApplication app(argc, argv);
     app.init();
 

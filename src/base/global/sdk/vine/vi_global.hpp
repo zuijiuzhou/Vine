@@ -5,7 +5,7 @@
 #ifdef __clang__
 #    define V_CC_CLANG
 #elif defined(__GNUC__)
-#    define V_CC_GUN
+#    define V_CC_GNU
 #elif defined(_MSC_VER)
 #    define V_CC_MSVC
 #elif defined(__INTEL_COMPILER)
@@ -14,7 +14,7 @@
 #    error Unknown compiler.
 #endif
 
-#if defined(V_CC_MSVC) || defined(_WIN32) || defined(_WINDOWS)
+#if defined(_MSC_VER) || defined(_WIN32) || defined(_WINDOWS)
 #    define V_EXPORT __declspec(dllexport)
 #    define V_IMPORT __declspec(dllimport)
 #else

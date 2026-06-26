@@ -114,7 +114,7 @@ constexpr TypeF<T> safeMultiply(T first, T second)
  *        for integer types, it is promoted to double first, then calculated.
  */
 // computeVectorLength2Safe
-template <Real T, Real... Rest>
+template <Arithmetic T, Arithmetic... Rest>
 [[nodiscard]]
 constexpr TypeF<T> safeLengthSquared(T first, Rest... rest)
 {
@@ -135,7 +135,7 @@ constexpr TypeF<T> safeLengthSquared(T first, Rest... rest)
  * @brief Safe calculation of vector length, for floating point types, it is just normal calculation,
  *        for integer types, it is promoted to double first, then calculated.
  */
-template <Real T, Real... Rest>
+template <Arithmetic T, Arithmetic... Rest>
 [[nodiscard]]
 constexpr TypeF<T> safeLength(T first, Rest... rest)
 {
