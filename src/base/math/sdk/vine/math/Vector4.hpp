@@ -119,9 +119,7 @@ class Vector4 {
      */
     [[nodiscard]]
     constexpr const Vector3<T>& asVector3() const
-    {
-        return reinterpret_cast<const Vector3<T>&>(*this);
-    }
+    { return reinterpret_cast<const Vector3<T>&>(*this); }
 
     /**
      * @brief Dot product.
@@ -133,9 +131,7 @@ class Vector4 {
 
     [[nodiscard]]
     constexpr T dot(const Vector4<T>& other) const requires(Real<T>)
-    {
-        return static_cast<T>(x * other.x + y * other.y + z * other.z + w * other.w);
-    }
+    { return static_cast<T>(x * other.x + y * other.y + z * other.z + w * other.w); }
 
     /**
      * @brief Compute squared vector length.
@@ -143,12 +139,7 @@ class Vector4 {
      */
     [[nodiscard]]
     constexpr TypeF<T> length2() const requires(Real<T>)
-    {
-        if constexpr (Real<T>) {
-            return safeLengthSquared(x, y, z, w);
-        }
-        return {};
-    }
+    { return safeLengthSquared(x, y, z, w); }
 
     /**
      * @brief Length of the vector.
@@ -157,12 +148,7 @@ class Vector4 {
      */
     [[nodiscard]]
     constexpr TypeF<T> length() const requires(Real<T>)
-    {
-        if constexpr (Real<T>) {
-            return safeLength(x, y, z, w);
-        }
-        return {};
-    }
+    { return safeLength(x, y, z, w); }
 
     /**
      * @brief Compute angle to another vector.
@@ -225,25 +211,22 @@ class Vector4 {
     [[nodiscard]]
     constexpr T normalize() requires(FP<T>)
     {
-        if constexpr (FP<T>) {
-            auto len = length();
+        auto len = length();
 
-            if (len == T(0)) {
-                x = T(0);
-                y = T(0);
-                z = T(0);
-                w = T(0);
-            }
-            else {
-                x /= len;
-                y /= len;
-                z /= len;
-                w /= len;
-            }
-
-            return len;
+        if (len == T(0)) {
+            x = T(0);
+            y = T(0);
+            z = T(0);
+            w = T(0);
         }
-        return {};
+        else {
+            x /= len;
+            y /= len;
+            z /= len;
+            w /= len;
+        }
+
+        return len;
     }
 
     /**
@@ -252,9 +235,7 @@ class Vector4 {
      */
     [[nodiscard]]
     constexpr bool isZero() const
-    {
-        return x == T() && y == T() && z == T() && w == T();
-    }
+    { return x == T() && y == T() && z == T() && w == T(); }
 
     /**
      * @brief Check whether all components are near zero.
@@ -263,12 +244,7 @@ class Vector4 {
      */
     [[nodiscard]]
     constexpr bool isZero(T eps) const requires(Real<T>)
-    {
-        if constexpr (Real<T>) {
-            return math::isZero<T>(x, eps) && math::isZero<T>(y, eps) && math::isZero<T>(z, eps) && math::isZero<T>(w, eps);
-        }
-        return {};
-    }
+    { return math::isZero<T>(x, eps) && math::isZero<T>(y, eps) && math::isZero<T>(z, eps) && math::isZero<T>(w, eps); }
 
     /**
      * @brief Compare with another vector using exact equality.
@@ -277,9 +253,7 @@ class Vector4 {
      */
     [[nodiscard]]
     constexpr bool isEqual(const Vector4<T>& other) const
-    {
-        return x == other.x && y == other.y && z == other.z && w == other.w;
-    }
+    { return x == other.x && y == other.y && z == other.z && w == other.w; }
 
     /**
      * @brief Compare with another vector using tolerance.
@@ -289,12 +263,7 @@ class Vector4 {
      */
     [[nodiscard]]
     constexpr bool isEqual(const Vector4<T>& other, T eps) const requires(Real<T>)
-    {
-        if constexpr (Real<T>) {
-            return math::isEqual<T>(x, other.x, eps) && math::isEqual<T>(y, other.y, eps) && math::isEqual<T>(z, other.z, eps) && math::isEqual<T>(w, other.w, eps);
-        }
-        return {};
-    }
+    { return math::isEqual<T>(x, other.x, eps) && math::isEqual<T>(y, other.y, eps) && math::isEqual<T>(z, other.z, eps) && math::isEqual<T>(w, other.w, eps); }
 
   public:
     /**
@@ -304,9 +273,7 @@ class Vector4 {
      */
     [[nodiscard]]
     constexpr bool operator==(const Vector4<T>& right) const
-    {
-        return x == right.x && y == right.y && z == right.z && w == right.w;
-    }
+    { return x == right.x && y == right.y && z == right.z && w == right.w; }
 
     /**
      * @brief Inequality operator.
@@ -315,9 +282,7 @@ class Vector4 {
      */
     [[nodiscard]]
     constexpr bool operator!=(const Vector4<T>& right) const
-    {
-        return !(*this == right);
-    }
+    { return !(*this == right); }
 
     /**
      * @brief Vector addition.
@@ -326,9 +291,7 @@ class Vector4 {
      */
     [[nodiscard]]
     constexpr Vector4<T> operator+(const Vector4<T>& right) const
-    {
-        return Vector4<T>(arithmeticAdd(x, right.x), arithmeticAdd(y, right.y), arithmeticAdd(z, right.z), arithmeticAdd(w, right.w));
-    }
+    { return Vector4<T>(arithmeticAdd(x, right.x), arithmeticAdd(y, right.y), arithmeticAdd(z, right.z), arithmeticAdd(w, right.w)); }
 
     /**
      * @brief Vector subtraction.
@@ -337,9 +300,7 @@ class Vector4 {
      */
     [[nodiscard]]
     constexpr Vector4<T> operator-(const Vector4<T>& right) const
-    {
-        return Vector4<T>(arithmeticSub(x, right.x), arithmeticSub(y, right.y), arithmeticSub(z, right.z), arithmeticSub(w, right.w));
-    }
+    { return Vector4<T>(arithmeticSub(x, right.x), arithmeticSub(y, right.y), arithmeticSub(z, right.z), arithmeticSub(w, right.w)); }
 
     /**
      * @brief Scale this vector.
@@ -348,9 +309,7 @@ class Vector4 {
      */
     [[nodiscard]]
     constexpr Vector4<T> operator*(T scale) const
-    {
-        return Vector4<T>(arithmeticMultiply(x, scale), arithmeticMultiply(y, scale), arithmeticMultiply(z, scale), arithmeticMultiply(w, scale));
-    }
+    { return Vector4<T>(arithmeticMultiply(x, scale), arithmeticMultiply(y, scale), arithmeticMultiply(z, scale), arithmeticMultiply(w, scale)); }
 
     /**
      * @brief Divide this vector by a scalar.
@@ -359,9 +318,7 @@ class Vector4 {
      */
     [[nodiscard]]
     constexpr Vector4<T> operator/(T scale) const
-    {
-        return Vector4<T>(arithmeticDivision(x, scale), arithmeticDivision(y, scale), arithmeticDivision(z, scale), arithmeticDivision(w, scale));
-    }
+    { return Vector4<T>(arithmeticDivision(x, scale), arithmeticDivision(y, scale), arithmeticDivision(z, scale), arithmeticDivision(w, scale)); }
 
     /**
      * @brief Add another vector in-place.
@@ -429,9 +386,7 @@ class Vector4 {
      */
     [[nodiscard]]
     constexpr Vector4<T> operator-() const
-    {
-        return Vector4<T>(arithmeticNagate(x), arithmeticNagate(y), arithmeticNagate(z), arithmeticNagate(w));
-    }
+    { return Vector4<T>(arithmeticNagate(x), arithmeticNagate(y), arithmeticNagate(z), arithmeticNagate(w)); }
 
     /**
      * @brief Dot product.
@@ -440,12 +395,7 @@ class Vector4 {
      */
     [[nodiscard]]
     constexpr T operator*(const Vector4<T>& other) const requires(Real<T>)
-    {
-        if constexpr (Real<T>) {
-            return dot(other);
-        }
-        return {};
-    }
+    { return dot(other); }
 
     /**
      * @brief Access component by index.

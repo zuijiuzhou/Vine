@@ -117,9 +117,7 @@ class Vector3 {
      */
     [[nodiscard]]
     constexpr const Point3<T>& asPoint() const
-    {
-        return reinterpret_cast<const Point3<T>&>(*this);
-    }
+    { return reinterpret_cast<const Point3<T>&>(*this); }
 
     /**
      * @brief View this vector as a 2D vector without copying.
@@ -127,9 +125,7 @@ class Vector3 {
      */
     [[nodiscard]]
     constexpr const Vector2<T>& asVector2() const
-    {
-        return reinterpret_cast<const Vector2<T>&>(*this);
-    }
+    { return reinterpret_cast<const Vector2<T>&>(*this); }
 
     /**
      * @brief Dot product.
@@ -140,9 +136,7 @@ class Vector3 {
      */
     [[nodiscard]]
     constexpr T dot(const Vector3<T>& other) const requires(Real<T>)
-    {
-        return static_cast<T>(x * other.x + y * other.y + z * other.z);
-    }
+    { return static_cast<T>(x * other.x + y * other.y + z * other.z); }
 
     /**
      * @brief Cross product (in 2D, it is a scalar).
@@ -153,9 +147,7 @@ class Vector3 {
      */
     [[nodiscard]]
     constexpr Vector3<T> cross(const Vector3<T>& other) const requires(Real<T>)
-    {
-        return Vector3<T>(y * other.z - z * other.y, z * other.x - x * other.z, x * other.y - y * other.x);
-    }
+    { return Vector3<T>(y * other.z - z * other.y, z * other.x - x * other.z, x * other.y - y * other.x); }
 
     /**
      * @brief Length of the vector.
@@ -164,12 +156,7 @@ class Vector3 {
      */
     [[nodiscard]]
     constexpr TypeF<T> length() const requires(Real<T>)
-    {
-        if constexpr (Real<T>) {
-            return safeLength(x, y, z);
-        }
-        return {};
-    }
+    { return safeLength(x, y, z); }
 
     /**
      * @brief Compute squared vector length.
@@ -177,12 +164,7 @@ class Vector3 {
      */
     [[nodiscard]]
     constexpr TypeF<T> length2() const requires(Real<T>)
-    {
-        if constexpr (Real<T>) {
-            return safeLengthSquared(x, y, z);
-        }
-        return {};
-    }
+    { return safeLengthSquared(x, y, z); }
 
     /**
      * @brief Compute angle to another vector.
@@ -237,23 +219,20 @@ class Vector3 {
      */
     constexpr T normalize() requires(FP<T>)
     {
-        if constexpr (FP<T>) {
-            auto len = length();
+        auto len = length();
 
-            if (len == T(0)) {
-                x = T(0);
-                y = T(0);
-                z = T(0);
-            }
-            else {
-                x /= len;
-                y /= len;
-                z /= len;
-            }
-
-            return len;
+        if (len == T(0)) {
+            x = T(0);
+            y = T(0);
+            z = T(0);
         }
-        return {};
+        else {
+            x /= len;
+            y /= len;
+            z /= len;
+        }
+
+        return len;
     }
 
     /**
@@ -262,9 +241,7 @@ class Vector3 {
      */
     [[nodiscard]]
     constexpr bool isZero() const
-    {
-        return x == T() && y == T() && z == T();
-    }
+    { return x == T() && y == T() && z == T(); }
 
     /**
      * @brief Check whether all components are near zero.
@@ -273,12 +250,7 @@ class Vector3 {
      */
     [[nodiscard]]
     constexpr bool isZero(T eps) const requires(Real<T>)
-    {
-        if constexpr (Real<T>) {
-            return math::isZero<T>(x, eps) && math::isZero<T>(y, eps) && math::isZero<T>(z, eps);
-        }
-        return {};
-    }
+    { return math::isZero<T>(x, eps) && math::isZero<T>(y, eps) && math::isZero<T>(z, eps); }
 
     /**
      * @brief Compare with another vector using exact equality.
@@ -287,9 +259,7 @@ class Vector3 {
      */
     [[nodiscard]]
     constexpr bool isEqual(const Vector3<T>& other) const
-    {
-        return x == other.x && y == other.y && z == other.z;
-    }
+    { return x == other.x && y == other.y && z == other.z; }
 
     /**
      * @brief Compare with another vector using tolerance.
@@ -299,12 +269,7 @@ class Vector3 {
      */
     [[nodiscard]]
     constexpr bool isEqual(const Vector3<T>& other, T eps) const requires(Real<T>)
-    {
-        if constexpr (Real<T>) {
-            return math::isEqual<T>(x, other.x, eps) && math::isEqual<T>(y, other.y, eps) && math::isEqual<T>(z, other.z, eps);
-        }
-        return {};
-    }
+    { return math::isEqual<T>(x, other.x, eps) && math::isEqual<T>(y, other.y, eps) && math::isEqual<T>(z, other.z, eps); }
 
   public:
     /**
@@ -314,9 +279,7 @@ class Vector3 {
      */
     [[nodiscard]]
     constexpr bool operator==(const Vector3<T>& right) const
-    {
-        return x == right.x && y == right.y && z == right.z;
-    }
+    { return x == right.x && y == right.y && z == right.z; }
 
     /**
      * @brief Inequality operator.
@@ -325,9 +288,7 @@ class Vector3 {
      */
     [[nodiscard]]
     constexpr bool operator!=(const Vector3<T>& right) const
-    {
-        return !(*this == right);
-    }
+    { return !(*this == right); }
 
     /**
      * @brief Vector addition.
@@ -336,9 +297,7 @@ class Vector3 {
      */
     [[nodiscard]]
     constexpr Vector3<T> operator+(const Vector3<T>& right) const
-    {
-        return Vector3<T>(arithmeticAdd(x, right.x), arithmeticAdd(y, right.y), arithmeticAdd(z, right.z));
-    }
+    { return Vector3<T>(arithmeticAdd(x, right.x), arithmeticAdd(y, right.y), arithmeticAdd(z, right.z)); }
 
     /**
      * @brief Vector subtraction.
@@ -347,9 +306,7 @@ class Vector3 {
      */
     [[nodiscard]]
     constexpr Vector3<T> operator-(const Vector3<T>& right) const
-    {
-        return Vector3<T>(arithmeticSub(x, right.x), arithmeticSub(y, right.y), arithmeticSub(z, right.z));
-    }
+    { return Vector3<T>(arithmeticSub(x, right.x), arithmeticSub(y, right.y), arithmeticSub(z, right.z)); }
 
     /**
      * @brief Scale this vector.
@@ -358,9 +315,7 @@ class Vector3 {
      */
     [[nodiscard]]
     constexpr Vector3<T> operator*(T scale) const
-    {
-        return Vector3<T>(arithmeticMultiply(x, scale), arithmeticMultiply(y, scale), arithmeticMultiply(z, scale));
-    }
+    { return Vector3<T>(arithmeticMultiply(x, scale), arithmeticMultiply(y, scale), arithmeticMultiply(z, scale)); }
 
     /**
      * @brief Divide this vector by a scalar.
@@ -369,9 +324,7 @@ class Vector3 {
      */
     [[nodiscard]]
     constexpr Vector3<T> operator/(T scale) const
-    {
-        return Vector3<T>(arithmeticDivision(x, scale), arithmeticDivision(y, scale), arithmeticDivision(z, scale));
-    }
+    { return Vector3<T>(arithmeticDivision(x, scale), arithmeticDivision(y, scale), arithmeticDivision(z, scale)); }
 
     /**
      * @brief Add another vector in-place.
@@ -435,9 +388,7 @@ class Vector3 {
      */
     [[nodiscard]]
     constexpr Vector3<T> operator-() const
-    {
-        return Vector3<T>(arithmeticNagate(x), arithmeticNagate(y), arithmeticNagate(z));
-    }
+    { return Vector3<T>(arithmeticNagate(x), arithmeticNagate(y), arithmeticNagate(z)); }
 
     /**
      * @brief Dot product.
@@ -446,12 +397,7 @@ class Vector3 {
      */
     [[nodiscard]]
     constexpr T operator*(const Vector3<T>& other) const requires(Real<T>)
-    {
-        if constexpr (Real<T>) {
-            return dot(other);
-        }
-        return {};
-    }
+    { return dot(other); }
 
     /**
      * @brief Cross product.
@@ -460,12 +406,7 @@ class Vector3 {
      */
     [[nodiscard]]
     constexpr Vector3<T> operator^(const Vector3<T>& other) const requires(Real<T>)
-    {
-        if constexpr (Real<T>) {
-            return cross(other);
-        }
-        return {};
-    }
+    { return cross(other); }
 
     /**
      * @brief Access component by index.

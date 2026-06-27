@@ -64,9 +64,7 @@ class Point3 {
      */
     [[nodiscard]]
     constexpr const Point2<T>& asPoint2() const
-    {
-        return reinterpret_cast<const Point2<T>&>(*this);
-    }
+    { return reinterpret_cast<const Point2<T>&>(*this); }
 
     /**
      * @brief View this point as a 3D vector without copying.
@@ -74,9 +72,7 @@ class Point3 {
      */
     [[nodiscard]]
     constexpr const Vector3<T>& asVector() const
-    {
-        return reinterpret_cast<const Vector3<T>&>(*this);
-    }
+    { return reinterpret_cast<const Vector3<T>&>(*this); }
 
     /**
      * @brief Convert this point to a 3D vector.
@@ -91,9 +87,7 @@ class Point3 {
      */
     [[nodiscard]]
     constexpr bool isZero() const
-    {
-        return x == T() && y == T() && z == T();
-    }
+    { return x == T() && y == T() && z == T(); }
 
     /**
      * @brief Check whether all coordinates are near zero.
@@ -102,12 +96,7 @@ class Point3 {
      */
     [[nodiscard]]
     constexpr bool isZero(T eps) const requires(Real<T>)
-    {
-        if constexpr (Real<T>) {
-            return math::isZero<T>(x, eps) && math::isZero<T>(y, eps) && math::isZero<T>(z, eps);
-        }
-        return {};
-    }
+    { return math::isZero<T>(x, eps) && math::isZero<T>(y, eps) && math::isZero<T>(z, eps); }
 
     /**
      * @brief Compare with another point using exact equality.
@@ -116,9 +105,7 @@ class Point3 {
      */
     [[nodiscard]]
     constexpr bool isEqual(const Point3<T>& other) const
-    {
-        return *this == other;
-    }
+    { return *this == other; }
 
     /**
      * @brief Compare with another point using tolerance.
@@ -128,12 +115,7 @@ class Point3 {
      */
     [[nodiscard]]
     constexpr bool isEqual(const Point3<T>& other, T eps) const requires(Real<T>)
-    {
-        if constexpr (Real<T>) {
-            return math::isEqual<T>(x, other.x, eps) && math::isEqual<T>(y, other.y, eps) && math::isEqual<T>(z, other.z, eps);
-        }
-        return {};
-    }
+    { return math::isEqual<T>(x, other.x, eps) && math::isEqual<T>(y, other.y, eps) && math::isEqual<T>(z, other.z, eps); }
 
   public:
     /**
@@ -143,9 +125,7 @@ class Point3 {
      */
     [[nodiscard]]
     constexpr bool operator==(const Point3<T>& right) const
-    {
-        return x == right.x && y == right.y && z == right.z;
-    }
+    { return x == right.x && y == right.y && z == right.z; }
 
     /**
      * @brief Inequality operator.
@@ -154,9 +134,7 @@ class Point3 {
      */
     [[nodiscard]]
     constexpr bool operator!=(const Point3<T>& right) const
-    {
-        return !(*this == right);
-    }
+    { return !(*this == right); }
 
     /**
      * @brief Subtract two points to get a displacement vector.
@@ -165,9 +143,7 @@ class Point3 {
      */
     [[nodiscard]]
     constexpr Vector3<T> operator-(const Point3<T>& right) const
-    {
-        return Vector3<T>(arithmeticSub(x, right.x), arithmeticSub(y, right.y), arithmeticSub(z, right.z));
-    }
+    { return Vector3<T>(arithmeticSub(x, right.x), arithmeticSub(y, right.y), arithmeticSub(z, right.z)); }
 
     /**
      * @brief Translate this point by a vector.
@@ -176,9 +152,7 @@ class Point3 {
      */
     [[nodiscard]]
     constexpr Point3<T> operator+(const Vector3<T>& right) const
-    {
-        return Point3<T>(arithmeticAdd(x, right.x), arithmeticAdd(y, right.y), arithmeticAdd(z, right.z));
-    }
+    { return Point3<T>(arithmeticAdd(x, right.x), arithmeticAdd(y, right.y), arithmeticAdd(z, right.z)); }
 
     /**
      * @brief Translate this point in-place.
@@ -214,9 +188,7 @@ class Point3 {
      */
     [[nodiscard]]
     constexpr Point3<T> operator-() const
-    {
-        return Point3<T>(arithmeticNagate(x), arithmeticNagate(y), arithmeticNagate(z));
-    }
+    { return Point3<T>(arithmeticNagate(x), arithmeticNagate(y), arithmeticNagate(z)); }
 
     /**
      * @brief Access coordinate by index.
