@@ -6,21 +6,12 @@
 
 #include <vine/math/Math.hpp>
 #include <vine/math/Point3.hpp>
+#include <vine/math/Rotation3.hpp>
 #include <vine/math/Vector3.hpp>
 
 V_MATH_NS_BEGIN
 
 #define TMPL_PREFIX template <typename T>
-
-namespace
-{
-
-template <typename T>
-struct Rotation3x3 {
-    T m00, m01, m02;
-    T m10, m11, m12;
-    T m20, m21, m22;
-};
 
 /**
   变换连乘顺序说明（列向量约定，点在右侧）：
@@ -32,68 +23,14 @@ struct Rotation3x3 {
       则结果为：p' = C1 * C2 * C3 * C4 * p
  */
 
-
-template <typename T>
-bool buildRotation3x3FromQuat(const Quaternion<T>& quat, Rotation3x3<T>& out)
-{
-    // Quaternion -> rotation matrix (3x3) conversion.
-    // Principle:
-    // 1) A unit quaternion q = (x, y, z, w) represents a pure rotation.
-    // 2) Rotating a vector v can be written as v' = q * v * q^{-1}.
-    // 3) Expanding that product yields a linear map v' = R * v, where R is:
-    //    [1-2(y^2+z^2), 2(xy+zw),   2(xz-yw)]
-    //    [2(xy-zw),     1-2(x^2+z^2), 2(yz+xw)]
-    //    [2(xz+yw),     2(yz-xw),   1-2(x^2+y^2)]
-    // The input is normalized defensively, because non-unit quaternions would
-    // otherwise introduce unintended scale into the matrix.
-    auto       q      = quat;
-    const auto q_len2 = q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w;
-    if (q_len2 == T(0)) {
-        return false;
-    }
-
-    if (!math::isEqual(q_len2, T(1), T(1e-12))) {
-        const auto inv_q_len = T(1) / std::sqrt(q_len2);
-        q.x *= inv_q_len;
-        q.y *= inv_q_len;
-        q.z *= inv_q_len;
-        q.w *= inv_q_len;
-    }
-
-    const auto x = q.x;
-    const auto y = q.y;
-    const auto z = q.z;
-    const auto w = q.w;
-
-    const auto xx = x * x;
-    const auto yy = y * y;
-    const auto zz = z * z;
-    const auto xy = x * y;
-    const auto zw = z * w;
-    const auto xz = x * z;
-    const auto yw = y * w;
-    const auto yz = y * z;
-    const auto xw = x * w;
-
-    out.m00 = T(1) - T(2) * (yy + zz);
-    out.m01 = T(2) * (xy + zw);
-    out.m02 = T(2) * (xz - yw);
-    out.m10 = T(2) * (xy - zw);
-    out.m11 = T(1) - T(2) * (xx + zz);
-    out.m12 = T(2) * (yz + xw);
-    out.m20 = T(2) * (xz + yw);
-    out.m21 = T(2) * (yz - xw);
-    out.m22 = T(1) - T(2) * (xx + yy);
-    return true;
-}
-
-} // namespace
+// Row/column vector conversion:
+// (V * M)ᵀ = Mᵀ * Vᵀ
 
 TMPL_PREFIX void Matrix4x4<T>::makeRotation(const Vector3<T>& start, const Vector3<T>& end)
 {
     // Build a shortest-arc rotation from start to end via quaternion.
-    // Quaternion::makeRotate handles parallel and anti-parallel edge cases.
-    Quaternion<T> quat;
+    // Quaternion3::makeRotate handles parallel and anti-parallel edge cases.
+    Quaternion3<T> quat;
     quat.makeRotate(start, end);
     makeRotation(quat);
 }
@@ -149,9 +86,9 @@ TMPL_PREFIX void Matrix4x4<T>::makeRotation(const Vector3<T>& axis, T angle)
 }
 
 template <typename T>
-void Matrix4x4<T>::makeRotation(const Quaternion<T>& quat)
+void Matrix4x4<T>::makeRotation(const Quaternion3<T>& quat)
 {
-    // Quaternion-to-matrix conversion.
+    // Quaternion3-to-matrix conversion.
     // q = (x, y, z, w) is expected to be a unit quaternion.
     // Convert to a 3x3 rotation block and extend to homogeneous 4x4.
     // R = | 1 - 2*(y*y + z*z)      2*(x*y - z*w)        2*(x*z + y*w)     |
@@ -220,12 +157,23 @@ TMPL_PREFIX void Matrix4x4<T>::makeLookAt(const Point3<T>& eye, const Point3<T>&
     // f is the camera backward axis (+Z) in this convention.
     // backward = eye - target = -forward, so f points from target to eye.
     // Final matrix maps world coordinates into camera space.
+
     auto f = eye - target;
-    auto s = up.cross(f);
-    auto u = f.cross(s);
     f.normalize();
+
+    // Handle up parallel to f (camera looking straight up/down).
+    // In that case up × f is zero, so pick an alternative right vector.
+    auto s = up.cross(f);
+    if (math::isZero(s.length2(), EPS<T>())) {
+        // up is parallel to f; construct a right vector from a world axis.
+        const auto ref = (std::abs(f.x) < std::abs(f.y)) ? Vector3<T>(T(1), T(0), T(0)) : Vector3<T>(T(0), T(1), T(0));
+        s              = ref.cross(f);
+    }
     s.normalize();
-    u.normalize();
+
+    auto u = f.cross(s);
+    u.normalize(); // already unit-length, but normalize defensively
+
     setBasis(eye, s, u, f);
     invert();
 }
@@ -356,56 +304,50 @@ TMPL_PREFIX Matrix4x4<T>& Matrix4x4<T>::postMulti(const Matrix4x4<T>& right)
 TMPL_PREFIX Matrix4x4<T>& Matrix4x4<T>::preRotate(const Vector3<T>& axis, T angle)
 {
     // Prepend axis-angle rotation: M := R * M.
-    return preRotate(Quaternion<T>(angle, axis));
+    return preRotate(Quaternion3<T>(angle, axis));
 }
 
 TMPL_PREFIX Matrix4x4<T>& Matrix4x4<T>::postRotate(const Vector3<T>& axis, T angle)
 {
     // Append axis-angle rotation: M := M * R.
-    return postRotate(Quaternion<T>(angle, axis));
+    return postRotate(Quaternion3<T>(angle, axis));
 }
 
-TMPL_PREFIX Matrix4x4<T>& Matrix4x4<T>::preRotate(const Quaternion<T>& quat)
+TMPL_PREFIX Matrix4x4<T>& Matrix4x4<T>::preRotate(const Quaternion3<T>& quat)
 {
-    Rotation3x3<T> rotation;
-    if (!buildRotation3x3FromQuat(quat, rotation)) {
-        return *this;
-    }
-
     // Prepend quaternion rotation: M := R * M.
-    // Left multiplication rotates matrix rows. Equivalent implementation here:
-    // for each column, rotate its xyz triplet by R; row 3 remains unchanged.
+    // Left-multiplication rotates each column's xyz components by R.
+    // R * v = v.x * col0(R) + v.y * col1(R) + v.z * col2(R)
+    Rotation3<T> rotation(quat);
+
     for (size_t column = 0; column < 4; ++column) {
         const auto old_x = vecs[column][0];
         const auto old_y = vecs[column][1];
         const auto old_z = vecs[column][2];
 
-        vecs[column][0] = rotation.m00 * old_x + rotation.m10 * old_y + rotation.m20 * old_z;
-        vecs[column][1] = rotation.m01 * old_x + rotation.m11 * old_y + rotation.m21 * old_z;
-        vecs[column][2] = rotation.m02 * old_x + rotation.m12 * old_y + rotation.m22 * old_z;
+        vecs[column][0] = rotation.m00 * old_x + rotation.m01 * old_y + rotation.m02 * old_z;
+        vecs[column][1] = rotation.m10 * old_x + rotation.m11 * old_y + rotation.m12 * old_z;
+        vecs[column][2] = rotation.m20 * old_x + rotation.m21 * old_y + rotation.m22 * old_z;
     }
 
     return *this;
 }
 
-TMPL_PREFIX Matrix4x4<T>& Matrix4x4<T>::postRotate(const Quaternion<T>& quat)
+TMPL_PREFIX Matrix4x4<T>& Matrix4x4<T>::postRotate(const Quaternion3<T>& quat)
 {
-    Rotation3x3<T> rotation;
-    if (!buildRotation3x3FromQuat(quat, rotation)) {
-        return *this;
-    }
-
     // Append quaternion rotation: M := M * R.
-    // Right multiplication rotates basis columns. For each row, update
-    // columns 0..2 as a 3-term linear combination by R.
+    // Right-multiplication updates each row's columns 0..2.
+    // M'[r][c] = Σ_k M[r][k] * R[k][c]
+    Rotation3<T> rotation(quat);
+
     for (size_t row = 0; row < 4; ++row) {
         const auto old_col0 = vecs[0][row];
         const auto old_col1 = vecs[1][row];
         const auto old_col2 = vecs[2][row];
 
-        vecs[0][row] = old_col0 * rotation.m00 + old_col1 * rotation.m01 + old_col2 * rotation.m02;
-        vecs[1][row] = old_col0 * rotation.m10 + old_col1 * rotation.m11 + old_col2 * rotation.m12;
-        vecs[2][row] = old_col0 * rotation.m20 + old_col1 * rotation.m21 + old_col2 * rotation.m22;
+        vecs[0][row] = old_col0 * rotation.m00 + old_col1 * rotation.m10 + old_col2 * rotation.m20;
+        vecs[1][row] = old_col0 * rotation.m01 + old_col1 * rotation.m11 + old_col2 * rotation.m21;
+        vecs[2][row] = old_col0 * rotation.m02 + old_col1 * rotation.m12 + old_col2 * rotation.m22;
     }
 
     return *this;
@@ -523,20 +465,6 @@ TMPL_PREFIX T Matrix4x4<T>::determinant() const
             vecs[0][3] * (vecs[1][0] * a1223 - vecs[1][1] * a0223 + vecs[1][2] * a0123));
 }
 
-TMPL_PREFIX void Matrix4x4<T>::transpose()
-{
-    // Transpose swaps row/column indices: M(r,c) <-> M(c,r).
-    // For 4x4, only off-diagonal elements are swapped in-place.
-    std::swap(vecs[0][1], vecs[1][0]);
-    std::swap(vecs[0][2], vecs[2][0]);
-    std::swap(vecs[0][3], vecs[3][0]);
-
-    std::swap(vecs[1][2], vecs[2][1]);
-    std::swap(vecs[1][3], vecs[3][1]);
-
-    std::swap(vecs[2][3], vecs[3][2]);
-}
-
 TMPL_PREFIX void Matrix4x4<T>::invert()
 {
     // Invert with the adjugate method:
@@ -607,7 +535,7 @@ TMPL_PREFIX void Matrix4x4<T>::invert()
     }
 }
 
-TMPL_PREFIX Quaternion<T> Matrix4x4<T>::rotation() const
+TMPL_PREFIX Quaternion3<T> Matrix4x4<T>::rotation() const
 {
     // Extract the quaternion from the upper-left 3x3 block.
     // This implementation matches makeRotation(quat), which stores:
@@ -626,7 +554,7 @@ TMPL_PREFIX Quaternion<T> Matrix4x4<T>::rotation() const
     const auto col1_len2 = vecs[1][0] * vecs[1][0] + vecs[1][1] * vecs[1][1] + vecs[1][2] * vecs[1][2];
     const auto col2_len2 = vecs[2][0] * vecs[2][0] + vecs[2][1] * vecs[2][1] + vecs[2][2] * vecs[2][2];
 
-    Quaternion<T> quat;
+    Quaternion3<T> quat;
     if (math::isZero(col0_len2, EPS<T>()) || math::isZero(col1_len2, EPS<T>()) || math::isZero(col2_len2, EPS<T>())) {
         quat.x = T(0);
         quat.y = T(0);
@@ -695,11 +623,6 @@ TMPL_PREFIX Quaternion<T> Matrix4x4<T>::rotation() const
     quat.z *= inv_quat_len;
     quat.w *= inv_quat_len;
     return quat;
-}
-
-TMPL_PREFIX Vector3<T> Matrix4x4<T>::scaleFactors() const
-{
-    return Vector3<T>(vecs[0][0], vecs[1][1], vecs[2][2]);
 }
 
 TMPL_PREFIX bool Matrix4x4<T>::isIdentity(T eps) const

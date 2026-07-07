@@ -181,7 +181,7 @@ class Rect3 {
      * @return True when all size components are within tolerance of zero.
      */
     [[nodiscard]]
-    constexpr bool isZero(T eps) const
+    constexpr bool isZero(T eps) const requires(Real<T>)
     {
         return math::isZero<T>(l, eps) && math::isZero<T>(w, eps) && math::isZero<T>(h, eps);
     }

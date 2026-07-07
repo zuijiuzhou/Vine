@@ -23,7 +23,7 @@ TMPL_PREFIX bool Rect2<T>::contains(const Point2<T>& pt) const
     return pt.x >= l.x && pt.x <= u.x && pt.y >= l.y && pt.y <= u.y;
 }
 
-TMPL_PREFIX void Rect2<T>::expandBy(const Vector2<T>& pt)
+TMPL_PREFIX void Rect2<T>::expandBy(const Point2<T>& pt)
 {
     auto l = bottomLeft();
     auto u = topRight();

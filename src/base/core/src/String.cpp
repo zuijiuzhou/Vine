@@ -24,7 +24,7 @@ namespace
 
 // The Unicode replacement character U+FFFD is used to replace invalid or unrepresentable code points during encoding/decoding.
 // The character is �.
-constexpr char32_t k_replacement_cp = 0xFFFD;
+constexpr char32_t k_replacement_char = 0xFFFD;
 
 char32_t decode_utf8_one(const std::u8string& src, size_t& index)
 {
@@ -32,7 +32,7 @@ char32_t decode_utf8_one(const std::u8string& src, size_t& index)
     const auto  size  = src.size();
 
     if (index >= size) {
-        return k_replacement_cp;
+        return k_replacement_char;
     }
 
     const unsigned char b0 = bytes[index++];
@@ -64,24 +64,24 @@ char32_t decode_utf8_one(const std::u8string& src, size_t& index)
     // 2-byte sequence (110xxxxx 10xxxxxx)
     if ((b0 & 0xE0 /*0b11100000*/) == 0xC0 /*0b11000000*/) {
         if (!read_next(b1)) {
-            return k_replacement_cp;
+            return k_replacement_char;
         }
         // Decode code point from 2 bytes
         // The first byte contributes 5 bits, the second byte contributes 6 bits, for a total of 11 bits (enough for code points up to U+7FF)
         const char32_t cp = ((b0 & 0x1F) << 6) | (b1 & 0x3F);
-        return cp >= 0x80 ? cp : k_replacement_cp;
+        return cp >= 0x80 ? cp : k_replacement_char;
     }
 
     // 3-byte sequence (1110xxxx 10xxxxxx 10xxxxxx)
     if ((b0 & 0xF0 /*0b11110000*/) == 0xE0 /*0b11100000*/) {
         if (!read_next(b1) || !read_next(b2)) {
-            return k_replacement_cp;
+            return k_replacement_char;
         }
         // Decode code point from 3 bytes
         // The first byte contributes 4 bits, the next two bytes contribute 6 bits each, for a total of 16 bits (enough for code points up to U+FFFF)
         const char32_t cp = ((b0 & 0x0F) << 12) | ((b1 & 0x3F) << 6) | (b2 & 0x3F);
         if (cp < 0x800 || (cp >= 0xD800 && cp <= 0xDFFF)) {
-            return k_replacement_cp;
+            return k_replacement_char;
         }
         return cp;
     }
@@ -89,7 +89,7 @@ char32_t decode_utf8_one(const std::u8string& src, size_t& index)
     // 4-byte sequence (11110xxx 10xxxxxx 10xxxxxx 10xxxxxx)
     if ((b0 & 0xF8 /*0b11111000*/) == 0xF0 /*0b11110000*/) {
         if (!read_next(b1) || !read_next(b2) || !read_next(b3)) {
-            return k_replacement_cp;
+            return k_replacement_char;
         }
         // Decode code point from 4 bytes
         // The first byte contributes 3 bits, the next three bytes contribute 6 bits each, for a total of 21 bits (enough for all Unicode code points)
@@ -97,12 +97,12 @@ char32_t decode_utf8_one(const std::u8string& src, size_t& index)
         // Reject overlong encodings and code points outside the valid Unicode range
         // Valid code points are from U+0000 to U+10FFFF, and must not be encoded in more bytes than necessary
         if (cp < 0x10000 || cp > 0x10FFFF) {
-            return k_replacement_cp;
+            return k_replacement_char;
         }
         return cp;
     }
 
-    return k_replacement_cp;
+    return k_replacement_char;
 }
 
 void append_utf8(std::u8string& out, char32_t cp)
@@ -132,7 +132,7 @@ void append_utf8(std::u8string& out, char32_t cp)
     // For code points U+0800 to U+FFFF
     if (cp <= 0xFFFF) {
         if (cp >= 0xD800 && cp <= 0xDFFF) {
-            cp = k_replacement_cp;
+            cp = k_replacement_char;
         }
         out.push_back(static_cast<char8_t>(0xE0 | ((cp >> 12) & 0x0F)));
         out.push_back(static_cast<char8_t>(0x80 | ((cp >> 6) & 0x3F)));
@@ -142,7 +142,7 @@ void append_utf8(std::u8string& out, char32_t cp)
 
     // invalid code points above U+10FFFF are replaced with the replacement character
     if (cp > 0x10FFFF) {
-        cp = k_replacement_cp;
+        cp = k_replacement_char;
     }
 
     // 4 bytes (11110xxx 10xxxxxx 10xxxxxx 10xxxxxx)
@@ -353,19 +353,19 @@ String String::fromUtf16(const char16_t* data, size_type count)
                 }
                 // invalid low surrogate, unpaired high surrogate (0xD800 to 0xDBFF must be followed by a low surrogate in the range 0xDC00 to 0xDFFF).
                 else {
-                    cp = k_replacement_cp;
+                    cp = k_replacement_char;
                 }
             }
             // missing low surrogate (0xD800 to 0xDBFF must be followed by a low surrogate in the range 0xDC00 to 0xDFFF).
             // Unpaired high surrogates are invalid and replaced with the replacement character.
             else {
-                cp = k_replacement_cp;
+                cp = k_replacement_char;
             }
         }
         // missing high surrogate (0xDC00 to 0xDFFF must precede a low surrogate).
         // Unpaired low surrogates (U+DC00 to U+DFFF) are also invalid and replaced with the replacement character.
         else if (cp >= 0xDC00 /*1101110000000000*/ && cp <= 0xDFFF /*1101111111111111*/) {
-            cp = k_replacement_cp;
+            cp = k_replacement_char;
         }
 
         append_utf8(out, cp);

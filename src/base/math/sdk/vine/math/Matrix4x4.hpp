@@ -5,27 +5,39 @@
 #include <cstring>
 
 #include "Point3.hpp"
-#include "Quaternion.hpp"
+#include "Quaternion3.hpp"
+#include "Transform3.hpp"
 #include "Vector3.hpp"
 #include "Vector4.hpp"
 
 V_MATH_NS_BEGIN
 
-/*
- * COLUMN MAJOR MATRIX
+/**
+ * @brief 4x4 column-major matrix used for 3D transforms and projections.
  *
- * | M00 M01 M02 M03 |
- * | M10 M11 M12 M13 |
- * | M20 M21 M22 M23 |
- * | M30 M31 M32 M33 |
+ * Layout (visualized by rows):
+ * | m00 m01 m02 m03 |
+ * | m10 m11 m12 m13 |
+ * | m20 m21 m22 m23 |
+ * | m30 m31 m32 m33 |
  *
- * | Xx Yx Zx Tx |
- * | Xy Yy Zy Ty |
- * | Xz Yz Zz Tz |
- * |  0  0  0  1 |
+ * Column interpretation (columns contain basis vectors and translation):
+ * - Column 0 = X axis (Xx, Xy, Xz, 0)
+ * - Column 1 = Y axis (Yx, Yy, Yz, 0)
+ * - Column 2 = Z axis (Zx, Zy, Zz, 0)
+ * - Column 3 = Translation (Tx, Ty, Tz, 1)
  *
- * Memory order:
- * M00 M10 M20 M30 M01...
+ * Memory order: M00, M10, M20, M30, M01, ... (column-major contiguous)
+ *
+ * Conventions:
+ * - Right-handed coordinate system is assumed.
+ * - Matrices are column-major and operate on column vectors: p' = M * p.
+ *   For an affine transform M = [R | t; 0 1], this means p' = R * p + t.
+ * - Angles are in radians unless otherwise documented (e.g. rotation and perspective).
+ * - This class supports affine and projection matrices. Rigid-transform helpers
+ *   create/expect no scaling/shearing unless explicitly using the scale APIs.
+ *
+ * @tparam T floating-point type (typically `float` or `double`).
  */
 template <typename T>
 class Matrix4x4 {
@@ -49,20 +61,60 @@ class Matrix4x4 {
      * @brief Construct a rotation matrix from quaternion.
      * @param quat Rotation quaternion.
      */
-    Matrix4x4(const Quaternion<T>& quat)
+    Matrix4x4(const Quaternion3<T>& quat)
     {
         makeRotation(quat);
+    }
+
+    /**
+     * @brief Construct a matrix from basis vectors and origin.
+     * @param origin Coordinate system origin.
+     * @param x_axis X-axis direction.
+     * @param y_axis Y-axis direction.
+     * @param z_axis Z-axis direction.
+     */
+    Matrix4x4(const Point3<T>& origin, const Vector3<T>& x_axis, const Vector3<T>& y_axis, const Vector3<T>& z_axis)
+    {
+        setBasis(origin, x_axis, y_axis, z_axis);
+    }
+
+    /**
+     * @brief Construct a matrix from a Transform3 object.
+     * @param transform Transform3 object containing translation and rotation.
+     */
+    Matrix4x4(const Transform3<T>& transform)
+    {
+        setBasis(transform.translation, transform.rotation.vec0, transform.rotation.vec1, transform.rotation.vec2);
     }
 
   public:
     /**
      * @brief Reset this matrix to identity.
      */
-    void makeIdentity() noexcept
+    constexpr void makeIdentity() noexcept
     {
         // std::fill((T*)vecs, ((T*)vecs)+16, 0.0);
-        std::memset(data, 0, sizeof(data));
-        vec0.x = vec1.y = vec2.z = vec3.w = T(1);
+        // std::memset(data, 0, sizeof(data));
+        // vec0.x = vec1.y = vec2.z = vec3.w = T(1);
+        data[0] = T(1);
+        data[1] = T(0);
+        data[2] = T(0);
+        data[3] = T(0);
+
+        data[4] = T(0);
+        data[5] = T(1);
+        data[6] = T(0);
+        data[7] = T(0);
+
+        data[8]  = T(0);
+        data[9]  = T(0);
+        data[10] = T(1);
+        data[11] = T(0);
+
+        data[12] = T(0);
+        data[13] = T(0);
+        data[14] = T(0);
+        data[15] = T(1);
     }
 
     /**
@@ -81,13 +133,13 @@ class Matrix4x4 {
      * @brief Build rotation matrix from quaternion.
      * @param quat Rotation quaternion.
      */
-    void makeRotation(const Quaternion<T>& quat);
+    void makeRotation(const Quaternion3<T>& quat);
 
     /**
      * @brief Build translation matrix from offset vector.
      * @param offset Translation offset.
      */
-    void makeTranslation(const Vector3<T>& offset) noexcept
+    constexpr void makeTranslation(const Vector3<T>& offset) noexcept
     {
         makeIdentity();
         vecs[3][0] = offset.x;
@@ -101,7 +153,7 @@ class Matrix4x4 {
      * @param y Translation along Y axis.
      * @param z Translation along Z axis.
      */
-    void makeTranslation(T x, T y, T z) noexcept
+    constexpr void makeTranslation(T x, T y, T z) noexcept
     {
         makeIdentity();
         vecs[3][0] = x;
@@ -113,7 +165,7 @@ class Matrix4x4 {
      * @brief Build non-uniform scale matrix from vector.
      * @param vec Scale factors for x/y/z.
      */
-    void makeScale(const Vector3<T>& vec) noexcept
+    constexpr void makeScale(const Vector3<T>& vec) noexcept
     {
         makeIdentity();
         vecs[0][0] = vec.x;
@@ -127,7 +179,7 @@ class Matrix4x4 {
      * @param y Scale factor along Y axis.
      * @param z Scale factor along Z axis.
      */
-    void makeScale(T x, T y, T z) noexcept
+    constexpr void makeScale(T x, T y, T z) noexcept
     {
         makeIdentity();
         vecs[0][0] = x;
@@ -139,7 +191,7 @@ class Matrix4x4 {
      * @brief Build uniform scale matrix.
      * @param factor Uniform scale factor.
      */
-    void makeScale(T factor) noexcept
+    constexpr void makeScale(T factor) noexcept
     {
         makeIdentity();
         vecs[0][0] = factor;
@@ -151,8 +203,10 @@ class Matrix4x4 {
      * @brief Build a look-at view matrix.
      * @param eye Camera position.
      * @param target Camera target point.
-     * @param up Up direction reference.
-     * @note Uses backward-axis convention: backward = eye - target.
+     * @param up Up direction reference (does not need to be orthogonal).
+     * @note Uses backward-axis convention: backward = eye - target. Produces a
+     *       view matrix suitable for right-handed coordinates where the camera
+     *       looks along the negative Z direction in view space.
      */
     void makeLookAt(const Point3<T>& eye, const Point3<T>& target, const Vector3<T>& up);
     /**
@@ -166,11 +220,15 @@ class Matrix4x4 {
      */
     void makeOrtho(double left, double right, double bottom, double top, double z_near, double z_far);
     /**
-     * @brief Make a perspective matrix.
-     * @param fovy the field of view angle in the y direction.
-     * @param aspect_ratio the aspect ratio of the viewport.
-     * @param z_near the near clipping plane.
+     * @brief Make a perspective projection matrix.
+     * @param fovy the vertical field of view angle in radians.
+     * @param aspect_ratio the viewport aspect ratio (width / height).
+     * @param z_near the near clipping plane (positive, > 0).
      * @param z_far the far clipping plane.
+     *
+     * @note Produces a right-handed projection matrix compatible with column-major
+     *       conventions used throughout this class. NDC conventions follow the
+     *       framework's existing usage (check consumer code if unsure).
      */
     void makePerspective(double fovy, double aspect_ratio, double z_near, double z_far);
 
@@ -231,13 +289,13 @@ class Matrix4x4 {
      * @param quat Rotation quaternion.
      * @return Reference to this matrix.
      */
-    Matrix4x4<T>& preRotate(const Quaternion<T>& quat);
+    Matrix4x4<T>& preRotate(const Quaternion3<T>& quat);
     /**
      * @brief Append a quaternion rotation.
      * @param quat Rotation quaternion.
      * @return Reference to this matrix.
      */
-    Matrix4x4<T>& postRotate(const Quaternion<T>& quat);
+    Matrix4x4<T>& postRotate(const Quaternion3<T>& quat);
     /**
      * @brief Prepend a translation.
      * @param offset Translation offset.
@@ -272,12 +330,20 @@ class Matrix4x4 {
     /**
      * @brief Transpose the matrix.
      */
-    void transpose();
+    constexpr void transpose()
+    {
+        std::swap(vecs[0][1], vecs[1][0]);
+        std::swap(vecs[0][2], vecs[2][0]);
+        std::swap(vecs[0][3], vecs[3][0]);
+        std::swap(vecs[1][2], vecs[2][1]);
+        std::swap(vecs[1][3], vecs[3][1]);
+        std::swap(vecs[2][3], vecs[3][2]);
+    }
 
     /**
      * @brief Return the transposed matrix without modifying the original one.
      */
-    Matrix4x4<T> transposed() const
+    constexpr Matrix4x4<T> transposed() const
     {
         Matrix4x4<T> m(*this);
         m.transpose();
@@ -302,7 +368,7 @@ class Matrix4x4 {
     /**
      * @brief Return the inverted matrix without modifying the original one.
      */
-    Matrix4x4<T> inverted() const
+    constexpr Matrix4x4<T> inverted() const
     {
         Matrix4x4<T> m(*this);
         m.invert();
@@ -313,26 +379,29 @@ class Matrix4x4 {
      * @brief Get the translation component of this matrix.
      * @return Vector3<T>.
      */
-    Vector3<T> translation() const
+    constexpr Vector3<T> translation() const
     {
         return Vector3<T>(vecs[3][0], vecs[3][1], vecs[3][2]);
     }
 
     /**
      * @brief Get the rotation component of this matrix as a quaternion.
-     * @return Quaternion<T>.
+     * @return Quaternion3<T>.
      */
-    Quaternion<T> rotation() const;
+    Quaternion3<T> rotation() const;
 
-    /*
+    /**
      * @brief Get the non-uniform scaling factors of this matrix.
      * @return Vector3<T> where x/y/z components represent scale along respective axes.
      * @note If the matrix contains rotation, the extracted scaling factors may not be accurate.
      *       For pure scale or uniform scale, the returned vector will be correct.
      */
-    Vector3<T> scaleFactors() const;
+    constexpr Vector3<T> scaleFactors() const
+    {
+        return Vector3<T>(vecs[0][0], vecs[1][1], vecs[2][2]);
+    }
 
-    /*
+    /**
      * @brief Is this matrix an identity matrix.
      * @param eps tolerance for floating-point comparisons.
      */

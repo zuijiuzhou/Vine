@@ -433,6 +433,35 @@ class Vector3 {
     }
 
   public:
+    /**
+     * @brief Unit vector along the X axis (1, 0, 0).
+     */
+    [[nodiscard]]
+    static constexpr Vector3<T> unitX()
+    { return Vector3<T>(T(1), T(0), T(0)); }
+
+    /**
+     * @brief Unit vector along the Y axis (0, 1, 0).
+     */
+    [[nodiscard]]
+    static constexpr Vector3<T> unitY()
+    { return Vector3<T>(T(0), T(1), T(0)); }
+
+    /**
+     * @brief Unit vector along the Z axis (0, 0, 1).
+     */
+    [[nodiscard]]
+    static constexpr Vector3<T> unitZ()
+    { return Vector3<T>(T(0), T(0), T(1)); }
+
+    /**
+     * @brief Zero vector (0, 0, 0).
+     */
+    [[nodiscard]]
+    static constexpr Vector3<T> zero()
+    { return Vector3<T>(T(0), T(0), T(0)); }
+
+  public:
     union
     {
         struct {

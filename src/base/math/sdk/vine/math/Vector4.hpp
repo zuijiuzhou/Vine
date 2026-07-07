@@ -422,6 +422,42 @@ class Vector4 {
     }
 
   public:
+    /**
+     * @brief Unit vector along the X axis (1, 0, 0, 0).
+     */
+    [[nodiscard]]
+    static constexpr Vector4<T> unitX()
+    { return Vector4<T>(T(1), T(0), T(0), T(0)); }
+
+    /**
+     * @brief Unit vector along the Y axis (0, 1, 0, 0).
+     */
+    [[nodiscard]]
+    static constexpr Vector4<T> unitY()
+    { return Vector4<T>(T(0), T(1), T(0), T(0)); }
+
+    /**
+     * @brief Unit vector along the Z axis (0, 0, 1, 0).
+     */
+    [[nodiscard]]
+    static constexpr Vector4<T> unitZ()
+    { return Vector4<T>(T(0), T(0), T(1), T(0)); }
+
+    /**
+     * @brief Unit vector along the W axis (0, 0, 0, 1).
+     */
+    [[nodiscard]]
+    static constexpr Vector4<T> unitW()
+    { return Vector4<T>(T(0), T(0), T(0), T(1)); }
+
+    /**
+     * @brief Zero vector (0, 0, 0, 0).
+     */
+    [[nodiscard]]
+    static constexpr Vector4<T> zero()
+    { return Vector4<T>(T(0), T(0), T(0), T(0)); }
+
+  public:
     union
     {
         struct {

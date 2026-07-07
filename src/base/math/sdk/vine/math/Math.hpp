@@ -8,10 +8,10 @@
 
 V_MATH_NS_BEGIN
 
-constexpr double PI   = 3.14159265358979323846;
-constexpr double PIPI = 6.283185307179586;
-constexpr double PI_2 = 1.57079632679489661923;
-constexpr double PI_4 = 0.785398163397448309616;
+constexpr double PI         = 3.14159265358979323846;
+constexpr double PI_TWO     = 6.283185307179586;       // PI * 2
+constexpr double PI_HALF    = 1.57079632679489661923;  // PI / 2
+constexpr double PI_QUARTER = 0.785398163397448309616; // PI / 4
 
 constexpr double E      = 2.71828182845904523536;  // e
 constexpr double LOG2E  = 1.44269504088896340736;  // log2(e)

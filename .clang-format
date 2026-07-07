@@ -139,7 +139,7 @@ AllowBreakBeforeNoexceptSpecifier: Never
 # -- Never - Never merge blocks into a single line.
 # -- Empty - Only merge empty blocks.
 # -- Always - Always merge short blocks into a single line.
-AllowShortBlocksOnASingleLine: Always
+AllowShortBlocksOnASingleLine: Empty
 
 # Whether to merge a short switch labeled rule into a single line.
 # true:                               false:

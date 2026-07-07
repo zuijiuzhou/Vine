@@ -1,11 +1,11 @@
 #include <gtest/gtest.h>
 
 #include <vine/math/Math.hpp>
-#include <vine/math/Quaternion.hpp>
+#include <vine/math/Quaternion3.hpp>
 
 using namespace vine::math;
 
-TEST(Quaternion, multiplication)
+TEST(Quaternion3, multiplication)
 {
     constexpr double EPS = 1e-9;
 
@@ -96,7 +96,7 @@ TEST(Quaternion, multiplication)
     }
 }
 
-TEST(Quaternion, makeRotate_from_to)
+TEST(Quaternion3, makeRotate_from_to)
 {
     constexpr double EPS = 1e-6;
     constexpr double PI = 3.14159265358979323846;
@@ -108,7 +108,7 @@ TEST(Quaternion, makeRotate_from_to)
         Quatd q;
         q.makeRotate(from, to);
 
-        // Quaternion should represent 90 deg rotation around Z axis
+        // Quaternion3 should represent 90 deg rotation around Z axis
         // q = (0, 0, sin(45 deg), cos(45 deg))
         EXPECT_NEAR(q.x, 0.0, EPS);
         EXPECT_NEAR(q.y, 0.0, EPS);
@@ -148,7 +148,7 @@ TEST(Quaternion, makeRotate_from_to)
         double dot = q.x * from.x + q.y * from.y + q.z * from.z;
         EXPECT_NEAR(dot, 0.0, EPS);
 
-        // Quaternion should be normalized
+        // Quaternion3 should be normalized
         double len = std::sqrt(q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w);
         EXPECT_NEAR(len, 1.0, EPS);
     }
@@ -201,7 +201,7 @@ TEST(Quaternion, makeRotate_from_to)
     }
 }
 
-TEST(Quaternion, slerp)
+TEST(Quaternion3, slerp)
 {
     constexpr double EPS = 1e-6;
     constexpr double PI = 3.14159265358979323846;

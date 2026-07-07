@@ -324,7 +324,7 @@ class Vector2 {
      * @param scale Scalar divisor.
      * @return Reference to this vector.
      */
-    Vector2<T>& operator/=(T scale)
+    constexpr Vector2<T>& operator/=(T scale)
     {
         x = arithmeticDivision(x, scale);
         y = arithmeticDivision(y, scale);
@@ -381,6 +381,28 @@ class Vector2 {
         // assert(index < 2);
         return data[index];
     }
+
+  public:
+    /**
+     * @brief Unit vector along the X axis (1, 0).
+     */
+    [[nodiscard]]
+    static constexpr Vector2<T> unitX()
+    { return Vector2<T>(T(1), T(0)); }
+
+    /**
+     * @brief Unit vector along the Y axis (0, 1).
+     */
+    [[nodiscard]]
+    static constexpr Vector2<T> unitY()
+    { return Vector2<T>(T(0), T(1)); }
+
+    /**
+     * @brief Zero vector (0, 0).
+     */
+    [[nodiscard]]
+    static constexpr Vector2<T> zero()
+    { return Vector2<T>(T(0), T(0)); }
 
   public:
     union

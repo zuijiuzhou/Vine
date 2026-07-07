@@ -1,10 +1,10 @@
-﻿#include <vine/math/Quaternion.hpp>
+﻿#include <vine/math/Quaternion3.hpp>
 
 V_MATH_NS_BEGIN
 
 #define TMPL_PREFIX template <FP T>
 
-TMPL_PREFIX void Quaternion<T>::makeRotate(T angle, const Vector3<T>& axis)
+TMPL_PREFIX void Quaternion3<T>::makeRotate(T angle, const Vector3<T>& axis)
 {
     // q = axis * sin(angle/2), cos(angle/2)
     if (angle) {
@@ -31,7 +31,7 @@ TMPL_PREFIX void Quaternion<T>::makeRotate(T angle, const Vector3<T>& axis)
     w = T(1);
 }
 
-TMPL_PREFIX void Quaternion<T>::makeRotate(const Vector3<T>& from, const Vector3<T>& to)
+TMPL_PREFIX void Quaternion3<T>::makeRotate(const Vector3<T>& from, const Vector3<T>& to)
 {
     /**
      * Create a quaternion representing rotation from vector 'from' to vector 'to'
@@ -157,7 +157,7 @@ TMPL_PREFIX void Quaternion<T>::makeRotate(const Vector3<T>& from, const Vector3
     }
 }
 
-TMPL_PREFIX void Quaternion<T>::getRotate(T& o_angle, Vector3<T>& o_axis) const
+TMPL_PREFIX void Quaternion3<T>::getRotate(T& o_angle, Vector3<T>& o_axis) const
 {
     // sin^2(θ/2) + cos^2(θ/2) = 1
     // w = cos(θ/2)
@@ -184,7 +184,7 @@ TMPL_PREFIX void Quaternion<T>::getRotate(T& o_angle, Vector3<T>& o_axis) const
     }
 }
 
-TMPL_PREFIX Quaternion<T> Quaternion<T>::slerp(const Quaternion<T>& from, const Quaternion<T>& to, T t)
+TMPL_PREFIX Quaternion3<T> Quaternion3<T>::slerp(const Quaternion3<T>& from, const Quaternion3<T>& to, T t)
 {
     /**
      * Spherical Linear Interpolation (SLERP) between two quaternions
@@ -208,14 +208,14 @@ TMPL_PREFIX Quaternion<T> Quaternion<T>::slerp(const Quaternion<T>& from, const 
      *   For many sequential interpolations, consider using normalized lerp (nlerp) as approximation
      */
 
-    Quaternion<T> result;
+    Quaternion3<T> result;
 
     // Compute dot product (cosine of angle between quaternions)
     T dot = from.x * to.x + from.y * to.y + from.z * to.z + from.w * to.w;
 
     // If dot product is negative, negate one quaternion to take the shorter path
     // This is because q and -q represent the same rotation, but we want the shorter arc
-    Quaternion<T> to_adjusted = to;
+    Quaternion3<T> to_adjusted = to;
     if (dot < T(0)) {
         to_adjusted.x = -to.x;
         to_adjusted.y = -to.y;
@@ -272,12 +272,12 @@ TMPL_PREFIX Quaternion<T> Quaternion<T>::slerp(const Quaternion<T>& from, const 
     return result;
 }
 
-TMPL_PREFIX Quaternion<T> Quaternion<T>::operator*(const Quaternion& right) const
+TMPL_PREFIX Quaternion3<T> Quaternion3<T>::operator*(const Quaternion3& right) const
 {
     /**
      * Hamilton quaternion multiplication: q1 * q2
      *
-     * Quaternion representation: q = xi + yj + zk + w
+     * Quaternion3 representation: q = xi + yj + zk + w
      * where i, j, k are imaginary units satisfying:
      *   i² = j² = k² = ijk = -1
      *   ij = k,  jk = i,  ki = j
@@ -302,7 +302,7 @@ TMPL_PREFIX Quaternion<T> Quaternion<T>::operator*(const Quaternion& right) cons
      *   i * j = k,  j * k = i,  k * i = j
      *   i * i = -1, j * j = -1, k * k = -1
      */
-    Quaternion<T> q;
+    Quaternion3<T> q;
     q.w = w * right.w - x * right.x - y * right.y - z * right.z;
     q.x = w * right.x + x * right.w + y * right.z - z * right.y;
     q.y = w * right.y - x * right.z + y * right.w + z * right.x;
@@ -310,7 +310,7 @@ TMPL_PREFIX Quaternion<T> Quaternion<T>::operator*(const Quaternion& right) cons
     return q;
 }
 
-TMPL_PREFIX Quaternion<T>& Quaternion<T>::operator*=(const Quaternion& right)
+TMPL_PREFIX Quaternion3<T>& Quaternion3<T>::operator*=(const Quaternion3& right)
 {
     auto w2 = w * right.w - x * right.x - y * right.y - z * right.z;
     auto x2 = w * right.x + x * right.w + y * right.z - z * right.y;
@@ -325,13 +325,13 @@ TMPL_PREFIX Quaternion<T>& Quaternion<T>::operator*=(const Quaternion& right)
     return *this;
 }
 
-TMPL_PREFIX Quaternion<T> Quaternion<T>::operator/(const Quaternion& right) const
+TMPL_PREFIX Quaternion3<T> Quaternion3<T>::operator/(const Quaternion3& right) const
 {
     auto q = (*this * right.inverted());
     return q;
 }
 
-TMPL_PREFIX Quaternion<T>& Quaternion<T>::operator/=(const Quaternion& right)
+TMPL_PREFIX Quaternion3<T>& Quaternion3<T>::operator/=(const Quaternion3& right)
 {
     *this = *this * right.inverted();
     return *this;
@@ -339,7 +339,25 @@ TMPL_PREFIX Quaternion<T>& Quaternion<T>::operator/=(const Quaternion& right)
 
 #undef TMPL_PREFIX
 
-template class V_MATH_API Quaternion<float>;
-template class V_MATH_API Quaternion<double>;
+// ---------------------------------------------------------------------------
+// Quaternion-vector rotation (global operator)
+// ---------------------------------------------------------------------------
+
+template <FP T>
+Vector3<T> operator*(const Quaternion3<T>& left, const Vector3<T>& right)
+{
+    // Rotate vector v by unit quaternion q: v' = q * v * q⁻¹
+    // Efficient formula: v' = v + 2 * cross(q_v, cross(q_v, v) + q_w * v)
+    //                     = v + q_w * t + cross(q_v, t)   where t = 2 * cross(q_v, v)
+    const auto qv = Vector3<T>(left.x, left.y, left.z);
+    const auto t  = qv.cross(right) * T(2);
+    return right + t * left.w + qv.cross(t);
+}
+
+template class V_MATH_API Quaternion3<float>;
+template class V_MATH_API Quaternion3<double>;
+
+template V_MATH_API Vector3<float> operator*(const Quaternion3<float>&, const Vector3<float>&);
+template V_MATH_API Vector3<double> operator*(const Quaternion3<double>&, const Vector3<double>&);
 
 V_MATH_NS_END

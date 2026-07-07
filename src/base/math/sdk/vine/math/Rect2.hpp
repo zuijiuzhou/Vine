@@ -185,10 +185,10 @@ class Rect2 {
     bool contains(const Point2<T>& pt) const;
 
     /**
-     * @brief Expand rectangle to include a point offset.
-     * @param pt Point or offset used for expansion.
+     * @brief Expand rectangle to include a point.
+     * @param pt Point to include.
      */
-    void expandBy(const Vector2<T>& pt);
+    void expandBy(const Point2<T>& pt);
     /**
      * @brief Expand rectangle to include another rectangle.
      * @param rect Rectangle to include.
