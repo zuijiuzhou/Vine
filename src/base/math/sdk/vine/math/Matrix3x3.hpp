@@ -237,7 +237,11 @@ class Matrix3x3 {
      * @brief Is this matrix an identity matrix.
      * @param eps tolerance for floating-point comparisons.
      */
-    bool isIdentity(T eps = EPS<T>()) const;
+    bool isIdentity(T eps = EPS<T>()) const{
+        return math::isEqual(vecs[0][0], T(1), eps) && math::isZero(vecs[0][1], eps) && math::isZero(vecs[0][2], eps)
+         && math::isZero(vecs[1][0], eps) && math::isEqual(vecs[1][1], T(1), eps) && math::isZero(vecs[1][2], eps) 
+         && math::isZero(vecs[2][0], eps) && math::isZero(vecs[2][1], eps) && math::isEqual(vecs[2][2], T(1), eps);
+    }
 
     /**
      * @brief Is this matrix an affine transformation matrix (last row is [0 0 1]).
