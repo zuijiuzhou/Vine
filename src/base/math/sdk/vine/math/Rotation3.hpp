@@ -24,7 +24,7 @@ class Rotation3 {
      * @brief Construct an identity rotation.
      */
     constexpr Rotation3() noexcept
-      : data{T(1), T(0), T(0), T(0), T(1), T(0), T(0), T(0), T(1)}
+      : data{ T(1), T(0), T(0), T(0), T(1), T(0), T(0), T(0), T(1) }
     {}
 
     /**
@@ -45,6 +45,32 @@ class Rotation3 {
      * @param quat Rotation quaternion.
      */
     void fromQuaternion(const Quaternion3<T>& quat);
+
+    /**
+     * @brief Transpose this rotation matrix in place.
+     * @return Reference to the transposed rotation matrix.
+     */
+    void transpose();
+
+    /**
+     * @brief Get the transpose of this rotation matrix.
+     * @return Transposed rotation matrix.
+     */
+    Rotation3<T> transposed() const;
+
+    /**
+     * @brief Multiply this rotation matrix with another.
+     * @param other Other rotation matrix.
+     * @return Result of the multiplication.
+     */
+    Rotation3<T> operator*(const Rotation3<T>& other) const;
+
+    /**
+     * @brief Multiply this rotation matrix with another in place.
+     * @param other Other rotation matrix.
+     * @return Reference to the modified rotation matrix.
+     */
+    Rotation3<T>& operator*=(const Rotation3<T>& other);
 
   public:
     union
@@ -67,5 +93,11 @@ class Rotation3 {
         T data[9];
     };
 };
+
+template <typename T>
+Point3<T> operator*(const Rotation3<T>& left, const Point3<T>& p);
+
+template <typename T>
+Vector3<T> operator*(const Rotation3<T>& left, const Vector3<T>& v);
 
 V_MATH_NS_END

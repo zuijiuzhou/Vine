@@ -3,12 +3,16 @@
 #include <cmath>
 
 #include <vine/math/Math.hpp>
+#include <vine/math/Point3.hpp>
+#include <vine/math/Vector3.hpp>
 
 V_MATH_NS_BEGIN
 
 template <typename T>
 Rotation3<T>::Rotation3(const Quaternion3<T>& quat) noexcept
-{ fromQuaternion(quat); }
+{
+    fromQuaternion(quat);
+}
 
 template <typename T>
 Quaternion3<T> Rotation3<T>::toQuaternion() const
@@ -88,6 +92,8 @@ void Rotation3<T>::fromQuaternion(const Quaternion3<T>& quat)
     //       | 2(xy+zw)     1-2(x²+z²)   2(yz-xw) |
     //       | 2(xz-yw)     2(yz+xw)     1-2(x²+y²) |
     //
+    // This form comes from quaternion multiplication and avoids trig calls.
+    //
     // In our column-major layout:
     //   Column 0 (X axis)  = [R₀₀, R₁₀, R₂₀]
     //   Column 1 (Y axis)  = [R₀₁, R₁₁, R₂₁]
@@ -96,10 +102,12 @@ void Rotation3<T>::fromQuaternion(const Quaternion3<T>& quat)
     // Normalize defensively; non-unit quaternions would inject scale.
     auto       q      = quat;
     const auto q_len2 = q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w;
+    // Zero-length quaternion is invalid; treat as identity rotation.
     if (q_len2 == T(0)) {
         *this = Rotation3<T>();
         return;
     }
+    // If the quaternion is not unit-length, normalize it to avoid scaling the rotation.
     if (!math::isEqual(q_len2, T(1), T(1e-12))) {
         const auto inv_q_len = T(1) / std::sqrt(q_len2);
         q.x *= inv_q_len;
@@ -138,8 +146,90 @@ void Rotation3<T>::fromQuaternion(const Quaternion3<T>& quat)
     m22 = T(1) - T(2) * (xx + yy);
 }
 
+template <typename T>
+void Rotation3<T>::transpose()
+{
+    // Rotation matrix convention:
+    //
+    // R maps coordinates from the child frame to the parent frame.
+    // The columns of R are the child frame axes expressed in the parent frame.
+    //
+    // R:
+    //   Column 0 -> child X axis in parent coordinates
+    //   Column 1 -> child Y axis in parent coordinates
+    //   Column 2 -> child Z axis in parent coordinates
+    //
+    // Rᵀ is the inverse rotation:
+    // It maps vectors from the parent frame to the child frame.
+    // Each row of Rᵀ represents the projection direction of a parent axis
+    // onto the child frame.
+
+    std::swap(m01, m10);
+    std::swap(m02, m20);
+    std::swap(m12, m21);
+}
+
+template <typename T>
+Rotation3<T> Rotation3<T>::transposed() const
+{
+    Rotation3<T> result = *this;
+    result.transpose();
+    return result;
+}
+
+template <typename T>
+Rotation3<T> Rotation3<T>::operator*(const Rotation3<T>& other) const
+{
+    // Column-major 3x3 matrix multiplication: C = A * B
+    // Column j of C = A * (column j of B)
+    //              = B[0][j] * A.col0 + B[1][j] * A.col1 + B[2][j] * A.col2
+    Rotation3<T> result;
+    result.vecs[0] = vecs[0] * other.vecs[0].x + vecs[1] * other.vecs[0].y + vecs[2] * other.vecs[0].z;
+    result.vecs[1] = vecs[0] * other.vecs[1].x + vecs[1] * other.vecs[1].y + vecs[2] * other.vecs[1].z;
+    result.vecs[2] = vecs[0] * other.vecs[2].x + vecs[1] * other.vecs[2].y + vecs[2] * other.vecs[2].z;
+    return result;
+}
+
+template <typename T>
+Rotation3<T>& Rotation3<T>::operator*=(const Rotation3<T>& other)
+{
+    // In-place column-major 3x3 multiplication: A = A * B
+    // Save original columns before overwriting, since each column of
+    // the result depends on all three original columns.
+    const Vector3<T> a0 = vecs[0];
+    const Vector3<T> a1 = vecs[1];
+    const Vector3<T> a2 = vecs[2];
+
+    // Column j of result = B[0][j] * A.col0 + B[1][j] * A.col1 + B[2][j] * A.col2
+    vecs[0] = a0 * other.vecs[0].x + a1 * other.vecs[0].y + a2 * other.vecs[0].z;
+    vecs[1] = a0 * other.vecs[1].x + a1 * other.vecs[1].y + a2 * other.vecs[1].z;
+    vecs[2] = a0 * other.vecs[2].x + a1 * other.vecs[2].y + a2 * other.vecs[2].z;
+
+    return *this;
+}
+
+template <typename T>
+Point3<T> operator*(const Rotation3<T>& left, const Point3<T>& p)
+{
+    // p' = R * p = p.x * col0(R) + p.y * col1(R) + p.z * col2(R)
+    const auto rotated = left.vecs[0] * p.x + left.vecs[1] * p.y + left.vecs[2] * p.z;
+    return Point3<T>(rotated.x, rotated.y, rotated.z);
+}
+
+template <typename T>
+Vector3<T> operator*(const Rotation3<T>& left, const Vector3<T>& v)
+{
+    // v' = R * v = v.x * col0(R) + v.y * col1(R) + v.z * col2(R)
+    return left.vecs[0] * v.x + left.vecs[1] * v.y + left.vecs[2] * v.z;
+}
+
 // Explicit template instantiations.
 template class V_MATH_API Rotation3<float>;
 template class V_MATH_API Rotation3<double>;
+
+template V_MATH_API Point3<float> operator*(const Rotation3<float>&, const Point3<float>&);
+template V_MATH_API Point3<double> operator*(const Rotation3<double>&, const Point3<double>&);
+template V_MATH_API Vector3<float> operator*(const Rotation3<float>&, const Vector3<float>&);
+template V_MATH_API Vector3<double> operator*(const Rotation3<double>&, const Vector3<double>&);
 
 V_MATH_NS_END

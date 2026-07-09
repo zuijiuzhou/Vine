@@ -54,15 +54,15 @@ TMPL_PREFIX void Matrix4x4<T>::makeRotation(const Vector3<T>& axis, T angle)
         return;
     }
 
-    auto axis_norm = axis;
-    axis_norm.normalize();
+    auto naxis = axis;
+    naxis.normalize();
 
     const auto c  = std::cos(angle);
     const auto ic = 1.0 - c;
     const auto s  = std::sin(angle);
-    const auto x  = axis_norm.x;
-    const auto y  = axis_norm.y;
-    const auto z  = axis_norm.z;
+    const auto x  = naxis.x;
+    const auto y  = naxis.y;
+    const auto z  = naxis.z;
 
     vecs[0][0] = x * x * ic + c;
     vecs[0][1] = x * y * ic + z * s;
@@ -88,67 +88,24 @@ TMPL_PREFIX void Matrix4x4<T>::makeRotation(const Vector3<T>& axis, T angle)
 template <typename T>
 void Matrix4x4<T>::makeRotation(const Quaternion3<T>& quat)
 {
-    // Quaternion3-to-matrix conversion.
-    // q = (x, y, z, w) is expected to be a unit quaternion.
-    // Convert to a 3x3 rotation block and extend to homogeneous 4x4.
-    // R = | 1 - 2*(y*y + z*z)      2*(x*y - z*w)        2*(x*z + y*w)     |
-    //     | 2*(x*y + z*w)          1 - 2*(x*x + z*z)    2*(y*z - x*w)     |
-    //     | 2*(x*z - y*w)          2*(y*z + x*w)        1 - 2*(x*x + y*y) |
-    // This form comes from quaternion multiplication and avoids trig calls.
-    // Normalize defensively to avoid injecting scale when input is not unit-length.
-    auto       q      = quat;
-    const auto q_len2 = q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w;
-    if (q_len2 == T(0)) {
-        makeIdentity();
-        return;
-    }
-    if (!math::isEqual(q_len2, T(1), T(1e-12))) {
-        const auto inv_q_len = T(1) / std::sqrt(q_len2);
-        q.x *= inv_q_len;
-        q.y *= inv_q_len;
-        q.z *= inv_q_len;
-        q.w *= inv_q_len;
-    }
+    // Build a 4x4 rotation matrix from a unit quaternion.
+    //
+    // The 3x3 rotation block is computed by Rotation3::fromQuaternion(),
+    // which uses the standard formula (see Rotation3.cpp for full derivation):
+    //
+    //   R = | 1-2(y²+z²)   2(xy-zw)     2(xz+yw) |
+    //       | 2(xy+zw)     1-2(x²+z²)   2(yz-xw) |
+    //       | 2(xz-yw)     2(yz+xw)     1-2(x²+y²) |
+    //
+    // Rotation3 also handles normalization of non-unit quaternions and
+    // maps zero-length quaternions to identity.
+    Rotation3<T> r(quat);
 
-    const auto x = q.x;
-    const auto y = q.y;
-    const auto z = q.z;
-    const auto w = q.w;
-
-    // Precompute reused terms.
-    const auto xx = x * x; // x^2
-    const auto yy = y * y; // y^2
-    const auto zz = z * z; // z^2
-    const auto xy = x * y; // xy
-    const auto zw = z * w; // zw
-    const auto xz = x * z; // xz
-    const auto yw = y * w; // yw
-    const auto yz = y * z; // yz
-    const auto xw = x * w; // xw
-
-    // Column 0
-    vecs[0][0] = 1 - 2 * (yy + zz);
-    vecs[0][1] = 2 * (xy + zw);
-    vecs[0][2] = 2 * (xz - yw);
-    vecs[0][3] = T(0);
-
-    // Column 1
-    vecs[1][0] = 2 * (xy - zw);
-    vecs[1][1] = 1 - 2 * (xx + zz);
-    vecs[1][2] = 2 * (yz + xw);
-    vecs[1][3] = T(0);
-
-    // Column 2
-    vecs[2][0] = 2 * (xz + yw);
-    vecs[2][1] = 2 * (yz - xw);
-    vecs[2][2] = 1 - 2 * (xx + yy);
-    vecs[2][3] = T(0);
-
-    // Column 3
-    vecs[3][0] = T(0);
-    vecs[3][1] = T(0);
-    vecs[3][2] = T(0);
-    vecs[3][3] = T(1);
+    // Extend the 3x3 to a homogeneous 4x4 matrix.
+    vecs[0].set(r.vecs[0], T(0));
+    vecs[1].set(r.vecs[1], T(0));
+    vecs[2].set(r.vecs[2], T(0));
+    vecs[3].set(T(0), T(0), T(0), T(1));
 }
 
 TMPL_PREFIX void Matrix4x4<T>::makeLookAt(const Point3<T>& eye, const Point3<T>& target, const Vector3<T>& up)
@@ -537,92 +494,32 @@ TMPL_PREFIX void Matrix4x4<T>::invert()
 
 TMPL_PREFIX Quaternion3<T> Matrix4x4<T>::rotation() const
 {
-    // Extract the quaternion from the upper-left 3x3 block.
-    // This implementation matches makeRotation(quat), which stores:
-    // R00 = 1 - 2(y^2 + z^2),  R01 = 2(xy - zw),      R02 = 2(xz + yw)
-    // R10 = 2(xy + zw),        R11 = 1 - 2(x^2 + z^2), R12 = 2(yz - xw)
-    // R20 = 2(xz - yw),        R21 = 2(yz + xw),      R22 = 1 - 2(x^2 + y^2)
-    // Therefore:
-    // R21 - R12 = 4xw, R02 - R20 = 4yw, R10 - R01 = 4zw.
-    // The branch on trace / dominant diagonal keeps the extraction numerically
-    // stable near 180-degree rotations, where one quaternion component dominates.
+    // Extract rotation as a quaternion from the upper-left 3x3 block.
     //
-    // If the matrix also contains non-uniform scale, normalize each basis column
-    // first so the extracted quaternion depends only on the rotational part.
+    // The 3x3 is first normalized column-wise to factor out non-uniform
+    // scale. Rotation3::toQuaternion() then performs the trace-based
+    // extraction with branching on the dominant diagonal element for
+    // numerical stability near 180° rotations (see Rotation3.cpp).
+    //
+    // Degenerate (zero-length) columns fall back to identity quaternion.
+    const auto col0_len2 = vecs[0].asVector3().length2();
+    const auto col1_len2 = vecs[1].asVector3().length2();
+    const auto col2_len2 = vecs[2].asVector3().length2();
 
-    const auto col0_len2 = vecs[0][0] * vecs[0][0] + vecs[0][1] * vecs[0][1] + vecs[0][2] * vecs[0][2];
-    const auto col1_len2 = vecs[1][0] * vecs[1][0] + vecs[1][1] * vecs[1][1] + vecs[1][2] * vecs[1][2];
-    const auto col2_len2 = vecs[2][0] * vecs[2][0] + vecs[2][1] * vecs[2][1] + vecs[2][2] * vecs[2][2];
-
-    Quaternion3<T> quat;
     if (math::isZero(col0_len2, EPS<T>()) || math::isZero(col1_len2, EPS<T>()) || math::isZero(col2_len2, EPS<T>())) {
-        quat.x = T(0);
-        quat.y = T(0);
-        quat.z = T(0);
-        quat.w = T(1);
-        return quat;
+        return Quaternion3<T>(T(0), T(0), T(0), T(1));
     }
 
     const auto inv_col0_len = T(1) / std::sqrt(col0_len2);
     const auto inv_col1_len = T(1) / std::sqrt(col1_len2);
     const auto inv_col2_len = T(1) / std::sqrt(col2_len2);
 
-    const auto r00 = vecs[0][0] * inv_col0_len;
-    const auto r10 = vecs[0][1] * inv_col0_len;
-    const auto r20 = vecs[0][2] * inv_col0_len;
-    const auto r01 = vecs[1][0] * inv_col1_len;
-    const auto r11 = vecs[1][1] * inv_col1_len;
-    const auto r21 = vecs[1][2] * inv_col1_len;
-    const auto r02 = vecs[2][0] * inv_col2_len;
-    const auto r12 = vecs[2][1] * inv_col2_len;
-    const auto r22 = vecs[2][2] * inv_col2_len;
+    Rotation3<T> r;
+    r.vecs[0].set(vecs[0][0] * inv_col0_len, vecs[0][1] * inv_col0_len, vecs[0][2] * inv_col0_len);
+    r.vecs[1].set(vecs[1][0] * inv_col1_len, vecs[1][1] * inv_col1_len, vecs[1][2] * inv_col1_len);
+    r.vecs[2].set(vecs[2][0] * inv_col2_len, vecs[2][1] * inv_col2_len, vecs[2][2] * inv_col2_len);
 
-    const auto trace = r00 + r11 + r22;
-
-    if (trace > T(0)) {
-        const auto s = T(2) * std::sqrt(trace + T(1)); // s = 4 * qw
-        quat.w       = T(0.25) * s;
-        quat.x       = (r21 - r12) / s;
-        quat.y       = (r02 - r20) / s;
-        quat.z       = (r10 - r01) / s;
-    }
-    else if (r00 > r11 && r00 > r22) {
-        const auto s = T(2) * std::sqrt(T(1) + r00 - r11 - r22); // s = 4 * qx
-        quat.w       = (r21 - r12) / s;
-        quat.x       = T(0.25) * s;
-        quat.y       = (r01 + r10) / s;
-        quat.z       = (r02 + r20) / s;
-    }
-    else if (r11 > r22) {
-        const auto s = T(2) * std::sqrt(T(1) + r11 - r00 - r22); // s = 4 * qy
-        quat.w       = (r02 - r20) / s;
-        quat.x       = (r01 + r10) / s;
-        quat.y       = T(0.25) * s;
-        quat.z       = (r12 + r21) / s;
-    }
-    else {
-        const auto s = T(2) * std::sqrt(T(1) + r22 - r00 - r11); // s = 4 * qz
-        quat.w       = (r10 - r01) / s;
-        quat.x       = (r02 + r20) / s;
-        quat.y       = (r12 + r21) / s;
-        quat.z       = T(0.25) * s;
-    }
-
-    const auto quat_len2 = quat.x * quat.x + quat.y * quat.y + quat.z * quat.z + quat.w * quat.w;
-    if (math::isZero(quat_len2, EPS<T>())) {
-        quat.x = T(0);
-        quat.y = T(0);
-        quat.z = T(0);
-        quat.w = T(1);
-        return quat;
-    }
-
-    const auto inv_quat_len = T(1) / std::sqrt(quat_len2);
-    quat.x *= inv_quat_len;
-    quat.y *= inv_quat_len;
-    quat.z *= inv_quat_len;
-    quat.w *= inv_quat_len;
-    return quat;
+    return r.toQuaternion();
 }
 
 TMPL_PREFIX bool Matrix4x4<T>::isIdentity(T eps) const

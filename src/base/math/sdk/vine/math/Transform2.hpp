@@ -3,6 +3,7 @@
 #include "math_global.hpp"
 
 #include "Point2.hpp"
+#include "Rotation2.hpp"
 #include "Vector2.hpp"
 
 V_MATH_NS_BEGIN
@@ -11,15 +12,15 @@ V_MATH_NS_BEGIN
  * @brief 2D rigid transformation (translation + rotation), no scale.
  * @tparam T floating-point type (typically float or double).
  *
- * Represented as T = (θ, t) where θ is the CCW rotation angle in radians
- * and t is the translation. A point p is transformed as:
+ * Structurally mirrors Transform3: (translation, rotation).
+ * Rotation2 stores (cos θ, sin θ) internally for efficient composition
+ * without repeated trigonometric calls.
  *
- *   p' = R(θ) * p + t
+ * A point p is transformed as:
  *
- * Composition: T₁ * T₂ = (θ₁+θ₂,  R(θ₁)*t₂ + t₁)
+ *   p' = R * p + t
  *
- * This is far more efficient than full 3x3 matrix multiplication for
- * rigid 2D transforms.
+ * Composition: T₁ * T₂ = (R₁ * R₂,  R₁ * t₂ + t₁)
  */
 template <typename T>
 class Transform2 {
@@ -28,19 +29,19 @@ class Transform2 {
 
   public:
     /**
-     * @brief Construct an identity transform (θ=0, t=(0,0)).
+     * @brief Construct an identity transform.
      */
     constexpr Transform2() noexcept
       : translation()
-      , rotation(T(0))
+      , rotation()
     {}
 
     /**
-     * @brief Construct from translation and rotation angle.
+     * @brief Construct from translation and rotation.
      * @param t Translation offset.
-     * @param r Rotation angle in radians (CCW).
+     * @param r Rotation.
      */
-    constexpr Transform2(const Point2<T>& t, T r) noexcept
+    constexpr Transform2(const Point2<T>& t, const Rotation2<T>& r) noexcept
       : translation(t)
       , rotation(r)
     {}
@@ -70,20 +71,16 @@ class Transform2 {
     Transform2<T>& postTranslate(const Vector2<T>& dt);
 
     /**
-     * @brief Pre-multiply a rotation: T := T_rot(angle) * T.
-     * @param angle Rotation angle in radians (CCW) in world space.
+     * @brief Pre-multiply a rotation: T := T_rot(r) * T.
+     * @param r Rotation in world space.
      */
-    Transform2<T>& preRotate(T angle);
+    Transform2<T>& preRotate(const Rotation2<T>& r);
 
     /**
-     * @brief Post-multiply a rotation: T := T * T_rot(angle).
-     * @param angle Rotation angle in radians (CCW) in local space.
+     * @brief Post-multiply a rotation: T := T * T_rot(r).
+     * @param r Rotation in local space.
      */
-    constexpr Transform2<T>& postRotate(T angle)
-    {
-        rotation += angle;
-        return *this;
-    }
+    Transform2<T>& postRotate(const Rotation2<T>& r);
 
     /**
      * @brief Compose two transforms: T₁ * T₂.
@@ -92,8 +89,8 @@ class Transform2 {
     Transform2<T>& operator*=(const Transform2<T>& right);
 
   public:
-    Point2<T> translation; ///< Translation offset.
-    T         rotation;    ///< Rotation angle in radians (CCW).
+    Point2<T>    translation; ///< Translation offset.
+    Rotation2<T> rotation;    ///< Rotation as (cos θ, sin θ).
 };
 
 template <typename T>

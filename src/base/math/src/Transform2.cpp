@@ -5,61 +5,25 @@
 V_MATH_NS_BEGIN
 
 // ---------------------------------------------------------------------------
-// Internal helpers
-// ---------------------------------------------------------------------------
-
-namespace
-{
-
-/// Rotate a 2D vector by angle (radians, CCW).
-template <typename T>
-Point2<T> rotatePoint(T angle, const Point2<T>& p)
-{
-    const auto c = std::cos(angle);
-    const auto s = std::sin(angle);
-    return Point2<T>(c * p.x - s * p.y, s * p.x + c * p.y);
-}
-
-/// Rotate a 2D vector by angle (radians, CCW).
-template <typename T>
-Vector2<T> rotateVector(T angle, const Vector2<T>& v)
-{
-    const auto c = std::cos(angle);
-    const auto s = std::sin(angle);
-    return Vector2<T>(c * v.x - s * v.y, s * v.x + c * v.y);
-}
-
-} // namespace
-
-// ---------------------------------------------------------------------------
 // Inversion
 // ---------------------------------------------------------------------------
 
 template <typename T>
 Transform2<T> Transform2<T>::inverted() const
 {
-    // T = (θ, t)  =>  T⁻¹ = (-θ, -R(-θ) * t)
+    // T = (R, t)  =>  T⁻¹ = (Rᵀ, -Rᵀ * t)
     Transform2<T> inv;
-    inv.rotation = -rotation;
-
-    // R(-θ) * t = R(θ)ᵀ * t
-    const auto c    = std::cos(rotation); // cos(θ) = cos(-θ)
-    const auto s    = std::sin(rotation); // sin(θ)
-    // -R(-θ) * t = -(c·tx + s·ty,  -s·tx + c·ty)
-    inv.translation = Point2<T>(-c * translation.x - s * translation.y, s * translation.x - c * translation.y);
+    inv.rotation    = rotation.transposed();
+    inv.translation = -(inv.rotation * translation);
     return inv;
 }
 
 template <typename T>
 void Transform2<T>::invert()
 {
-    const auto old_t = translation;
-
-    // R(-θ) * old_t
-    const auto c = std::cos(rotation);
-    const auto s = std::sin(rotation);
-    translation  = Point2<T>(-c * old_t.x - s * old_t.y, s * old_t.x - c * old_t.y);
-    rotation     = -rotation;
+    // T = (R, t)  =>  T⁻¹ = (Rᵀ, -Rᵀ * t)
+    rotation.transpose();
+    translation = -(rotation * translation);
 }
 
 // ---------------------------------------------------------------------------
@@ -69,7 +33,7 @@ void Transform2<T>::invert()
 template <typename T>
 Transform2<T>& Transform2<T>::preTranslate(const Vector2<T>& dt)
 {
-    // T_trans * T = (θ, t + dt)
+    // T_trans * T = (R, t + dt)
     translation.x += dt.x;
     translation.y += dt.y;
     return *this;
@@ -78,9 +42,8 @@ Transform2<T>& Transform2<T>::preTranslate(const Vector2<T>& dt)
 template <typename T>
 Transform2<T>& Transform2<T>::postTranslate(const Vector2<T>& dt)
 {
-    // T * T_trans = (θ, R(θ) * dt + t)
-    translation.x += std::cos(rotation) * dt.x - std::sin(rotation) * dt.y;
-    translation.y += std::sin(rotation) * dt.x + std::cos(rotation) * dt.y;
+    // T * T_trans = (R, R * dt + t)
+    translation += rotation * dt;
     return *this;
 }
 
@@ -89,14 +52,19 @@ Transform2<T>& Transform2<T>::postTranslate(const Vector2<T>& dt)
 // ---------------------------------------------------------------------------
 
 template <typename T>
-Transform2<T>& Transform2<T>::preRotate(T angle)
+Transform2<T>& Transform2<T>::preRotate(const Rotation2<T>& r)
 {
-    // T_rot(α) * T = (α + θ, R(α) * t)
-    if (angle == T(0)) {
-        return *this;
-    }
-    translation = rotatePoint(angle, translation);
-    rotation += angle;
+    // T_rot * T = (r * R, r * t)
+    translation = r * translation;
+    rotation    = r * rotation;
+    return *this;
+}
+
+template <typename T>
+Transform2<T>& Transform2<T>::postRotate(const Rotation2<T>& r)
+{
+    // T * T_rot = (R * r, t)
+    rotation = rotation * r;
     return *this;
 }
 
@@ -107,12 +75,11 @@ Transform2<T>& Transform2<T>::preRotate(T angle)
 template <typename T>
 Transform2<T> Transform2<T>::operator*(const Transform2<T>& right) const
 {
-    // (θ₁, t₁) * (θ₂, t₂) = (θ₁+θ₂, R(θ₁)*t₂ + t₁)
+    // (R₁, t₁) * (R₂, t₂) = (R₁ * R₂,  R₁ * t₂ + t₁)
     Transform2<T> result;
-    result.rotation    = rotation + right.rotation;
-    result.translation = rotatePoint(rotation, right.translation);
-    result.translation.x += translation.x;
-    result.translation.y += translation.y;
+    result.rotation    = rotation * right.rotation;
+    result.translation = translation;
+    result.translation += (rotation * right.translation).asVector();
     return result;
 }
 
@@ -130,8 +97,8 @@ Transform2<T>& Transform2<T>::operator*=(const Transform2<T>& right)
 template <typename T>
 Point2<T> operator*(const Transform2<T>& t, const Point2<T>& p)
 {
-    // p' = R(θ) * p + t
-    auto r = rotatePoint(t.rotation, p);
+    // p' = R * p + t
+    auto r = t.rotation * p;
     r.x += t.translation.x;
     r.y += t.translation.y;
     return r;
@@ -140,8 +107,8 @@ Point2<T> operator*(const Transform2<T>& t, const Point2<T>& p)
 template <typename T>
 Vector2<T> operator*(const Transform2<T>& t, const Vector2<T>& v)
 {
-    // v' = R(θ) * v
-    return rotateVector(t.rotation, v);
+    // v' = R * v  (pure rotation, no translation)
+    return t.rotation * v;
 }
 
 // ---------------------------------------------------------------------------
