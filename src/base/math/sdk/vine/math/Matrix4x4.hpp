@@ -58,6 +58,64 @@ class Matrix4x4 {
     {}
 
     /**
+     * @brief Construct a matrix from raw elements in row-major order.
+     *
+     * Parameters follow the logical matrix layout:
+     * | m00 m01 m02 m03 |
+     * | m10 m11 m12 m13 |
+     * | m20 m21 m22 m23 |
+     * | m30 m31 m32 m33 |
+     *
+     * @param _m00 Row 0, col 0. @param _m01 Row 0, col 1. @param _m02 Row 0, col 2. @param _m03 Row 0, col 3.
+     * @param _m10 Row 1, col 0. @param _m11 Row 1, col 1. @param _m12 Row 1, col 2. @param _m13 Row 1, col 3.
+     * @param _m20 Row 2, col 0. @param _m21 Row 2, col 1. @param _m22 Row 2, col 2. @param _m23 Row 2, col 3.
+     * @param _m30 Row 3, col 0. @param _m31 Row 3, col 1. @param _m32 Row 3, col 2. @param _m33 Row 3, col 3.
+     */
+    constexpr Matrix4x4(T _m00, T _m01, T _m02, T _m03,
+                        T _m10, T _m11, T _m12, T _m13,
+                        T _m20, T _m21, T _m22, T _m23,
+                        T _m30, T _m31, T _m32, T _m33) noexcept
+      : vecs{
+          { _m00, _m10, _m20, _m30 },
+          { _m01, _m11, _m21, _m31 },
+          { _m02, _m12, _m22, _m32 },
+          { _m03, _m13, _m23, _m33 }
+    }
+    {}
+
+    /**
+     * @brief Construct a matrix from a 16-element array in column-major order.
+     *
+     * elements[0..15] match the internal data[] layout:
+     * col0: elements[0..3], col1: elements[4..7],
+     * col2: elements[8..11], col3: elements[12..15].
+     *
+     * @warning The pointer is not validated. Passing nullptr or fewer than
+     *          16 elements results in undefined behavior. Prefer the array-
+     *          reference overload `Matrix4x4(const T (&)[16])` when the
+     *          array size is known at compile time.
+     *
+     * @param elements Pointer to 16 T values in column-major layout.
+     */
+    explicit Matrix4x4(const T* elements) noexcept
+      : vecs{
+          { elements[0], elements[1], elements[2],  elements[3]  },
+          { elements[4], elements[5], elements[6],  elements[7]  },
+          { elements[8], elements[9], elements[10], elements[11] },
+          { elements[12], elements[13], elements[14], elements[15] }
+    }
+    {}
+
+    /**
+     * @brief Construct a matrix from a 16-element array in column-major order (compile-time size check).
+     *
+     * @param elements Array of 16 T values in column-major layout.
+     */
+    explicit Matrix4x4(const T (&elements)[16]) noexcept
+      : Matrix4x4(static_cast<const T*>(elements))
+    {}
+
+    /**
      * @brief Construct a rotation matrix from quaternion.
      * @param quat Rotation quaternion.
      */
@@ -257,72 +315,114 @@ class Matrix4x4 {
     void getBasis(Point3<T>& o_origin, Vector3<T>& o_x_axis, Vector3<T>& o_y_axis, Vector3<T>& o_z_axis) const;
 
     /**
-     * @brief Left-multiply this matrix by another matrix.
-     * @param left Left matrix in M := left * M.
+     * @brief Left-multiply this matrix: M := left * M.
+     *
+     * The incoming transform is applied in world space (before the existing
+     * transform), equivalent to transforming around a fixed/world axis.
+     *
+     * @param left The transform to apply on the left side.
      * @return Reference to this matrix.
-     * @note Pre-operations are commonly used for world/fixed-axis composition.
      */
     Matrix4x4<T>& preMulti(const Matrix4x4<T>& left);
     /**
-     * @brief Right-multiply this matrix by another matrix.
-     * @param right Right matrix in M := M * right.
+     * @brief Right-multiply this matrix: M := M * right.
+     *
+     * The incoming transform is applied in local space (after the existing
+     * transform), equivalent to transforming around a local/moving axis.
+     *
+     * @param right The transform to apply on the right side.
      * @return Reference to this matrix.
-     * @note Post-operations are commonly used for local/moving-axis composition.
      */
     Matrix4x4<T>& postMulti(const Matrix4x4<T>& right);
     /**
-     * @brief Prepend an axis-angle rotation.
-     * @param axis Rotation axis.
-     * @param angle Rotation angle in radians.
+     * @brief Apply an axis-angle rotation in world space: M := R * M.
+     *
+     * Equivalent to preMulti() with a pure rotation matrix.
+     *
+     * @param axis   Rotation axis (world-space).
+     * @param angle  Rotation angle in radians.
      * @return Reference to this matrix.
      */
     Matrix4x4<T>& preRotate(const Vector3<T>& axis, T angle);
     /**
-     * @brief Append an axis-angle rotation.
-     * @param axis Rotation axis.
-     * @param angle Rotation angle in radians.
+     * @brief Apply an axis-angle rotation in local space: M := M * R.
+     *
+     * Equivalent to postMulti() with a pure rotation matrix.
+     *
+     * @param axis   Rotation axis (local-space).
+     * @param angle  Rotation angle in radians.
      * @return Reference to this matrix.
      */
     Matrix4x4<T>& postRotate(const Vector3<T>& axis, T angle);
     /**
-     * @brief Prepend a quaternion rotation.
+     * @brief Apply a quaternion rotation in world space: M := R * M.
+     *
+     * Equivalent to preMulti() with a pure rotation matrix.
+     *
      * @param quat Rotation quaternion.
      * @return Reference to this matrix.
      */
     Matrix4x4<T>& preRotate(const Quaternion3<T>& quat);
     /**
-     * @brief Append a quaternion rotation.
+     * @brief Apply a quaternion rotation in local space: M := M * R.
+     *
+     * Equivalent to postMulti() with a pure rotation matrix.
+     *
      * @param quat Rotation quaternion.
      * @return Reference to this matrix.
      */
     Matrix4x4<T>& postRotate(const Quaternion3<T>& quat);
     /**
-     * @brief Prepend a translation.
-     * @param offset Translation offset.
+     * @brief Apply a translation in world space: M := T * M.
+     *
+     * Equivalent to preMulti() with a pure translation matrix.
+     *
+     * @param offset Translation offset (world-space).
      * @return Reference to this matrix.
      */
     Matrix4x4<T>& preTranslate(const Vector3<T>& offset);
     /**
-     * @brief Append a translation.
-     * @param offset Translation offset.
+     * @brief Apply a translation in local space: M := M * T.
+     *
+     * Equivalent to postMulti() with a pure translation matrix.
+     *
+     * @param offset Translation offset (local-space).
      * @return Reference to this matrix.
      */
     Matrix4x4<T>& postTranslate(const Vector3<T>& offset);
     /**
-     * @brief Prepend a non-uniform scale.
-     * @param factor Scale factor per axis.
+     * @brief Apply a non-uniform scale in world space: M := S * M.
+     *
+     * Equivalent to preMulti() with a pure scale matrix.
+     *
+     * @param factor Scale factor per axis (world-space).
      * @return Reference to this matrix.
      */
     Matrix4x4<T>& preScale(const Vector3<T>& factor);
     /**
-     * @brief Append a non-uniform scale.
-     * @param factor Scale factor per axis.
+     * @brief Apply a non-uniform scale in local space: M := M * S.
+     *
+     * Equivalent to postMulti() with a pure scale matrix.
+     *
+     * @param factor Scale factor per axis (local-space).
      * @return Reference to this matrix.
      */
     Matrix4x4<T>& postScale(const Vector3<T>& factor);
 
     /**
-     * @brief Calculate the determinant of the matrix.
+     * @brief Calculate the determinant of this 4x4 matrix.
+     *
+     * For affine matrices (last row = [0 0 0 1]), this equals the
+     * determinant of the upper-left 3x3 submatrix, indicating the
+     * linear part's orientation and volume scaling:
+     *
+     * - det > 0: right-handed, orientation-preserving.
+     * - det < 0: left-handed, contains a reflection (mirror flip).
+     * - det = 0: singular — at least one axis collapsed, non-invertible.
+     *
+     * For projection matrices, the determinant behaves differently and
+     * is generally not interpreted in the same geometric way.
+     *
      * @return Determinant value.
      */
     T determinant() const;
@@ -341,7 +441,8 @@ class Matrix4x4 {
     }
 
     /**
-     * @brief Return the transposed matrix without modifying the original one.
+     * @brief Return a transposed copy without modifying the original matrix.
+     * @return Transposed matrix.
      */
     constexpr Matrix4x4<T> transposed() const
     {
@@ -351,22 +452,28 @@ class Matrix4x4 {
     }
 
     /**
-     * @brief Invert the matrix.
-     * @note Inverse exists only when determinant is non-zero (det(M) != 0).
-     * @note Typical invertible cases:
-     *       - Rigid transforms (rotation + translation).
-     *       - Affine transforms with non-zero scale on all axes.
-     *       - Basis matrix with linearly independent x/y/z axes.
-     * @note Typical non-invertible cases:
-     *       - Any axis scale is zero (matrix squashes dimension).
-     *       - Basis axes are linearly dependent (determinant becomes zero).
-     *       - Any transform that collapses 3D space into lower dimension.
-     * @note For singular matrices (det(M) == 0), current implementation returns an unchanged copy.
+     * @brief Invert the matrix in place.
+     *
+     * Uses the adjugate method: M⁻¹ = adj(M) / det(M).
+     * Inverse exists only when the determinant is non-zero (det(M) != 0).
+     *
+     * Typical invertible cases:
+     * - Rigid transforms (rotation + translation).
+     * - Affine transforms with non-zero scale on all axes.
+     * - Basis matrix with linearly independent x/y/z axes.
+     *
+     * Typical non-invertible cases:
+     * - Any axis scale is zero (matrix squashes dimension).
+     * - Basis axes are linearly dependent (determinant becomes zero).
+     * - Any transform that collapses 3D space into lower dimension.
+     *
+     * @note For singular matrices (det(M) == 0), the matrix is left unchanged.
      */
     void invert();
 
     /**
-     * @brief Return the inverted matrix without modifying the original one.
+     * @brief Return an inverted copy without modifying the original matrix.
+     * @return Inverted matrix.
      */
     constexpr Matrix4x4<T> inverted() const
     {

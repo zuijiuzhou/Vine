@@ -44,9 +44,60 @@ class Rotation2 {
     {
         const auto c = std::cos(angle);
         const auto s = std::sin(angle);
-        m00 = c;  m10 = s;   // col 0 = X axis
-        m01 = -s; m11 = c;   // col 1 = Y axis
+        m00          = c;
+        m10          = s; // col 0 = X axis
+        m01          = -s;
+        m11          = c; // col 1 = Y axis
     }
+
+    /**
+     * @brief Construct a rotation from raw elements in row-major order.
+     *
+     * Parameters follow the logical matrix layout:
+     * | m00 m01 |
+     * | m10 m11 |
+     * Caller must ensure the matrix is orthogonal (det = 1).
+     *
+     * @param _m00 Row 0, col 0. @param _m01 Row 0, col 1.
+     * @param _m10 Row 1, col 0. @param _m11 Row 1, col 1.
+     */
+    // clang-format off
+    constexpr Rotation2(T _m00, T _m01, 
+                        T _m10, T _m11 ) noexcept
+      : m00(_m00) , m01(_m01)
+      , m10(_m10) , m11(_m11)
+    {}
+
+    // clang-format on
+
+    /**
+     * @brief Construct a rotation from a 4-element array in column-major order.
+     *
+     * elements[0..3] match the internal data[] layout:
+     * col0: elements[0..1], col1: elements[2..3].
+     *
+     * @warning The pointer is not validated. Passing nullptr or fewer than
+     *          4 elements results in undefined behavior. Prefer the array-
+     *          reference overload when the array size is known at compile time.
+     *
+     * @param elements Pointer to 4 T values in column-major layout.
+     */
+    explicit Rotation2(const T* elements) noexcept
+      : m00(elements[0])
+      , m10(elements[1])
+      , m01(elements[2])
+      , m11(elements[3])
+    {}
+
+    /**
+     * @brief Construct a rotation from a 4-element array in column-major order
+     *        (compile-time size check).
+     *
+     * @param elements Array of 4 T values in column-major layout.
+     */
+    explicit Rotation2(const T (&elements)[4]) noexcept
+      : Rotation2(static_cast<const T*>(elements))
+    {}
 
   public:
     /**
@@ -54,7 +105,9 @@ class Rotation2 {
      * @return Reference to the transposed rotation matrix.
      */
     void transpose()
-    { std::swap(m01, m10); }
+    {
+        std::swap(m01, m10);
+    }
 
     /**
      * @brief Get the transpose of this rotation matrix.

@@ -66,10 +66,36 @@ class Transform3 {
     Transform3<T>& preRotate(const Rotation3<T>& r);
 
     /**
+     * @brief Pre-multiply a quaternion rotation: T := T_rot(quat) * T.
+     * @param quat Rotation quaternion (world-space).
+     */
+    Transform3<T>& preRotate(const Quaternion3<T>& quat);
+
+    /**
+     * @brief Pre-multiply an axis-angle rotation: T := T_rot(axis, angle) * T.
+     * @param axis  Rotation axis (world-space), should be normalized.
+     * @param angle Rotation angle in radians.
+     */
+    Transform3<T>& preRotate(const Vector3<T>& axis, T angle);
+
+    /**
      * @brief Post-multiply a rotation: T := T * T_rot(r).
      * @param r Rotation in local space.
      */
     Transform3<T>& postRotate(const Rotation3<T>& r);
+
+    /**
+     * @brief Post-multiply a quaternion rotation: T := T * T_rot(quat).
+     * @param quat Rotation quaternion (local-space).
+     */
+    Transform3<T>& postRotate(const Quaternion3<T>& quat);
+
+    /**
+     * @brief Post-multiply an axis-angle rotation: T := T * T_rot(axis, angle).
+     * @param axis  Rotation axis (local-space), should be normalized.
+     * @param angle Rotation angle in radians.
+     */
+    Transform3<T>& postRotate(const Vector3<T>& axis, T angle);
 
     /**
      * @brief Compose two transforms: T₁ * T₂.

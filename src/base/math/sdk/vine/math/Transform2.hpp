@@ -77,10 +77,22 @@ class Transform2 {
     Transform2<T>& preRotate(const Rotation2<T>& r);
 
     /**
+     * @brief Pre-multiply a rotation by angle: T := T_rot(angle) * T.
+     * @param angle Rotation angle in radians (CCW), world space.
+     */
+    Transform2<T>& preRotate(T angle);
+
+    /**
      * @brief Post-multiply a rotation: T := T * T_rot(r).
      * @param r Rotation in local space.
      */
     Transform2<T>& postRotate(const Rotation2<T>& r);
+
+    /**
+     * @brief Post-multiply a rotation by angle: T := T * T_rot(angle).
+     * @param angle Rotation angle in radians (CCW), local space.
+     */
+    Transform2<T>& postRotate(T angle);
 
     /**
      * @brief Compose two transforms: T₁ * T₂.

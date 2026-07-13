@@ -11,8 +11,16 @@
 V_MATH_NS_BEGIN
 
 /**
- * @brief A class representing a quaternion for 3D rotations
- * @tparam T Only accepts float and double
+ * @brief Quaternion for 3D rotations, stored as (x, y, z, w) = (v, s).
+ *
+ * Convention: identity quaternion is (0, 0, 0, 1). Rotation of a vector
+ * v is computed as q * v * q⁻¹ where q is a unit quaternion.
+ *
+ * Components:
+ * - x, y, z: imaginary (vector) part.
+ * - w: real (scalar) part.
+ *
+ * @tparam T Only accepts float and double.
  */
 template <FP T>
 class Quaternion3 {
@@ -45,17 +53,23 @@ class Quaternion3 {
     {}
 
     /**
-     * @brief Construct quaternion from axis-angle rotation.
-     * @param angle Rotation angle in radians.
-     * @param axis Rotation axis.
+     * @brief Construct a unit quaternion from axis-angle rotation.
+     *
+     * q = (sin(θ/2)·axis_x, sin(θ/2)·axis_y, sin(θ/2)·axis_z, cos(θ/2)).
+     *
+     * @param angle Rotation angle θ in radians.
+     * @param axis  Rotation axis (normalized internally, any non-zero vector is safe).
      */
     Quaternion3(T angle, const Vector3<T>& axis)
     { makeRotate(angle, axis); }
 
     /**
-     * @brief Construct quaternion rotating one direction to another.
-     * @param from Source direction.
-     * @param to Target direction.
+     * @brief Construct a unit quaternion that rotates from one direction to another.
+     *
+     * Computes the shortest-arc rotation between two unit vectors.
+     *
+     * @param from Source direction (normalized internally, any non-zero vector is safe).
+     * @param to   Target direction (normalized internally, any non-zero vector is safe).
      */
     Quaternion3(const Vector3<T>& from, const Vector3<T>& to)
     { makeRotate(from, to); }
@@ -108,7 +122,10 @@ class Quaternion3 {
     { return safeLengthSquared(x, y, z, w); }
 
     /**
-     * @brief Compute conjugate quaternion.
+     * @brief Compute the conjugate: q* = (-x, -y, -z, w).
+     *
+     * For a unit quaternion, the conjugate equals the inverse.
+     *
      * @return Conjugated quaternion.
      */
     [[nodiscard]]
@@ -116,8 +133,11 @@ class Quaternion3 {
     { return Quaternion3<T>(-x, -y, -z, w); }
 
     /**
-     * @brief Invert this quaternion in-place.
-     * @note No-op for zero-length quaternion (stays unchanged).
+     * @brief Invert this quaternion in place: q⁻¹ = conj(q) / |q|².
+     *
+     * For a unit quaternion, this is equivalent to conjugation.
+     *
+     * @note For a zero-length quaternion (|q| = 0), the quaternion is left unchanged.
      */
     constexpr void invert()
     {
@@ -135,8 +155,11 @@ class Quaternion3 {
     }
 
     /**
-     * @brief Get inverse quaternion without modifying this instance.
-     * @return Inverted quaternion, or identity if length is zero.
+     * @brief Return an inverted copy without modifying the original quaternion.
+     *
+     * For a zero-length quaternion, returns the identity (0, 0, 0, 1).
+     *
+     * @return Inverted quaternion.
      */
     [[nodiscard]]
     constexpr Quaternion3<T> inverted() const
@@ -149,22 +172,25 @@ class Quaternion3 {
     }
 
     /**
-     * @brief Set quaternion from axis-angle rotation.
-     * @param angle Rotation angle in radians.
-     * @param axis Rotation axis.
+     * @brief Set this quaternion from axis-angle: q = (sin(θ/2)·axis, cos(θ/2)).
+     * @param angle Rotation angle θ in radians.
+     * @param axis  Rotation axis (normalized internally, any non-zero vector is safe).
      */
     void makeRotate(T angle, const Vector3<T>& axis);
     /**
-     * @brief Set quaternion rotating one direction to another.
-     * @param from Source direction.
-     * @param to Target direction.
+     * @brief Set this quaternion to the shortest-arc rotation from one direction to another.
+     * @param from Source direction (normalized internally, any non-zero vector is safe).
+     * @param to   Target direction (normalized internally, any non-zero vector is safe).
      */
     void makeRotate(const Vector3<T>& from, const Vector3<T>& to);
 
     /**
-     * @brief Extract axis-angle rotation from quaternion.
-     * @param o_angle Output rotation angle in radians.
-     * @param o_axis Output rotation axis.
+     * @brief Extract axis-angle representation from this quaternion.
+     *
+     * For the identity quaternion (0,0,0,1), returns angle = 0 and axis = (1,0,0).
+     *
+     * @param o_angle Output rotation angle in radians, in [0, π].
+     * @param o_axis  Output rotation axis, normalized.
      */
     void getRotate(T& o_angle, Vector3<T>& o_axis) const;
 
@@ -172,11 +198,15 @@ class Quaternion3 {
     // void       fromEuler(const Vector3<T>& euler);
 
     /**
-     * @brief Spherical linear interpolation between two quaternions.
-     * @param from Start quaternion.
-     * @param to End quaternion.
-     * @param t Interpolation factor in [0, 1].
-     * @return Interpolated quaternion.
+     * @brief Spherical linear interpolation (slerp) between two unit quaternions.
+     *
+     * Computes the shortest path on the 4D unit sphere:
+     * slerp(q₀, q₁, t) = q₀ * (q₀⁻¹ * q₁)^t.
+     *
+     * @param from Start quaternion (should be unit).
+     * @param to   End quaternion (should be unit).
+     * @param t    Interpolation factor in [0, 1].
+     * @return Interpolated unit quaternion.
      */
     static Quaternion3<T> slerp(const Quaternion3<T>& from, const Quaternion3<T>& to, T t);
 
@@ -200,7 +230,12 @@ class Quaternion3 {
     { return !(*this == right); }
 
     /**
-     * @brief Multiply quaternion by scalar.
+     * @brief Multiply quaternion by scalar: q' = (x·s, y·s, z·s, w·s).
+     *
+     * @note Scalar multiplication does not preserve unit length; the result
+     *       generally does not represent a valid rotation. Used internally
+     *       for normalization and interpolation.
+     *
      * @param right Scalar multiplier.
      * @return Scaled quaternion.
      */
@@ -215,7 +250,10 @@ class Quaternion3 {
     }
 
     /**
-     * @brief Multiply quaternion by scalar in-place.
+     * @brief Multiply quaternion by scalar in place: q = (x·s, y·s, z·s, w·s).
+     *
+     * @note See operator*(T) for caveats about unit length.
+     *
      * @param right Scalar multiplier.
      * @return Reference to this quaternion.
      */
@@ -229,7 +267,12 @@ class Quaternion3 {
     }
 
     /**
-     * @brief Divide quaternion by scalar.
+     * @brief Divide quaternion by scalar: q' = (x/s, y/s, z/s, w/s).
+     *
+     * @note Scalar division does not preserve unit length and has no direct
+     *       rotation meaning. Used internally (e.g. q / |q|² in inversion,
+     *       normalization).
+     *
      * @param right Scalar divisor.
      * @return Scaled quaternion.
      */
@@ -246,7 +289,10 @@ class Quaternion3 {
     }
 
     /**
-     * @brief Divide quaternion by scalar in-place.
+     * @brief Divide quaternion by scalar in place: q = (x/s, y/s, z/s, w/s).
+     *
+     * @note See operator/(T) for caveats about unit length.
+     *
      * @param right Scalar divisor.
      * @return Reference to this quaternion.
      */
@@ -261,7 +307,12 @@ class Quaternion3 {
     }
 
     /**
-     * @brief Quaternion3 addition.
+     * @brief Quaternion addition: component-wise sum.
+     *
+     * @note Addition has no direct geometric (rotation) meaning — the result
+     *       is generally not a unit quaternion. It exists primarily as an
+     *       algebraic utility (e.g. for averaging with subsequent normalization).
+     *
      * @param right Right-hand quaternion.
      * @return Sum quaternion.
      */
@@ -277,7 +328,10 @@ class Quaternion3 {
     }
 
     /**
-     * @brief Quaternion3 addition assignment.
+     * @brief Quaternion addition in place: component-wise sum.
+     *
+     * @note See operator+ for caveats about geometric meaning.
+     *
      * @param right Right-hand quaternion.
      * @return Reference to this quaternion.
      */
@@ -291,7 +345,11 @@ class Quaternion3 {
     }
 
     /**
-     * @brief Quaternion3 subtraction.
+     * @brief Quaternion subtraction: component-wise difference.
+     *
+     * @note Like addition, subtraction has no direct rotation meaning and
+     *       exists as an algebraic utility.
+     *
      * @param right Right-hand quaternion.
      * @return Difference quaternion.
      */
@@ -307,7 +365,10 @@ class Quaternion3 {
     }
 
     /**
-     * @brief Quaternion3 subtraction assignment.
+     * @brief Quaternion subtraction in place: component-wise difference.
+     *
+     * @note See operator- for caveats about geometric meaning.
+     *
      * @param right Right-hand quaternion.
      * @return Reference to this quaternion.
      */
@@ -321,36 +382,59 @@ class Quaternion3 {
     }
 
     /**
-     * @brief Quaternion3 multiplication.
-     * @param right Right-hand quaternion.
+     * @brief Quaternion multiplication: q₁ * q₂.
+     *
+     * Represents rotation composition — applies q₂ first, then q₁:
+     * rotate(v) = q₁ * (q₂ * v * q₂⁻¹) * q₁⁻¹ = (q₁q₂) * v * (q₁q₂)⁻¹.
+     *
+     * @param right Right-hand quaternion (applied first).
      * @return Product quaternion.
      */
     [[nodiscard]]
     Quaternion3<T> operator*(const Quaternion3& right) const;
     /**
-     * @brief Quaternion3 multiplication assignment.
-     * @param right Right-hand quaternion.
+     * @brief Quaternion multiplication in place: q = q * r.
+     *
+     * Represents rotation composition — applies r first, then the original q.
+     *
+     * @param right Right-hand quaternion (applied first).
      * @return Reference to this quaternion.
      */
     Quaternion3<T>& operator*=(const Quaternion3& right);
 
     /**
-     * @brief Quaternion3 division.
-     * @param right Right-hand quaternion.
+     * @brief Quaternion division: q₁ / q₂ = q₁ * q₂⁻¹.
+     *
+     * Represents the "difference" rotation from q₂ to q₁:
+     * if q₁ = q_diff * q₂, then q_diff = q₁ / q₂.
+     *
+     * @param right Divisor quaternion.
      * @return Quotient quaternion.
      */
     [[nodiscard]]
     Quaternion3<T> operator/(const Quaternion3& right) const;
     /**
-     * @brief Quaternion3 division assignment.
-     * @param right Right-hand quaternion.
+     * @brief Quaternion division assignment: q /= r  →  q = q * r⁻¹.
+     *
+     * Replaces q with the "difference" rotation from r to the original q:
+     * after this operation, q * r equals the original q (up to the same
+     * rotation, since q and -q are equivalent).
+     *
+     * @param right Divisor quaternion.
      * @return Reference to this quaternion.
      */
     Quaternion3<T>& operator/=(const Quaternion3& right);
 
     /**
-     * @brief Unary negation.
-     * @return Quaternion3 with negated components.
+     * @brief Unary negation: -q = (-x, -y, -z, -w).
+     *
+     * For unit quaternions, q and -q represent the **same rotation**
+     * (quaternions double-cover SO(3)). This is because the rotation
+     * formula q·v·q⁻¹ is invariant under q → -q.
+     *
+     * For non-unit quaternions, this is simply component-wise negation.
+     *
+     * @return Negated quaternion.
      */
     [[nodiscard]]
     constexpr Quaternion3<T> operator-() const

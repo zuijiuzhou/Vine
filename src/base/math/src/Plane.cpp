@@ -6,18 +6,24 @@ V_MATH_NS_BEGIN
 
 TMPL_PREFIX bool Plane<T>::intersectWith(const Line<T>& line, Point3<T>& intersection_pt, T eps) const
 {
-    // Plane-Line intersection: find the point where a line intersects a plane.
+    // Plane–Line intersection.
     //
-    // Plane equation: normal · (P - origin) = 0
-    // Line parametric form: P(t) = line.origin + t * line.direction
+    //   Plane:  n·(P − o) = 0
+    //   Line:   P = P₀ + t·d
     //
-    // Substituting the line into the plane equation:
-    // normal · (line.origin + t * line.direction - origin) = 0
-    // normal · (line.origin - origin) + t * (normal · line.direction) = 0
+    // Substitute line into plane:
+    //   n·(P₀ + t·d − o) = 0
+    //   n·(P₀ − o) + n·(t·d) = 0
+    //   n·(P₀ − o) + t·(n·d) = 0
     //
-    // Solving for t: denom = normal · line.direction
-    // If |denom| ≤ eps: line is parallel to plane (no intersection or infinite intersections)
-    // Else: t = -normal · (line.origin - origin) / denom
+    // Solve for t:
+    //   t·(n·d) = −n·(P₀ − o)
+    //
+    //         −n·(P₀ − o)
+    //   t = --------------
+    //            n·d
+    //
+    //   |n·d| ≤ eps  →  line ∥ plane, no unique intersection.
 
     Vector3<T> diff  = line.origin - origin;
     T          denom = normal.dot(line.direction);
@@ -37,26 +43,25 @@ TMPL_PREFIX bool Plane<T>::intersectWith(const Line<T>& line, Point3<T>& interse
 TMPL_PREFIX
 bool Plane<T>::intersectWith(const Plane<T>& other, Line<T>& intersection_line, T eps) const
 {
-    // Plane-Plane intersection: find the line where two planes intersect.
+    // Plane–Plane intersection.
     //
-    // Plane 1 equation: normal · (P - origin) = 0      => normal · P = d1, where d1 = normal · origin
-    // Plane 2 equation: other.normal · (P - other.origin) = 0  => other.normal · P = d2
+    //   n₁·(Pₓ − o₁) = 0   →   n₁·Pₓ = d₁   (d₁ = n₁·o₁)
+    //   n₂·(Pₓ − o₂) = 0   →   n₂·Pₓ = d₂   (d₂ = n₂·o₂)
     //
-    // The intersection line has:
-    //   - Direction: normal × other.normal (perpendicular to both normals)
-    //   - A point lying on both planes (found by solving a 2x2 linear system)
-    //
-    // Strategy: Choose which coordinate to fix based on which direction component is largest.
-    // This ensures the 2x2 matrix has the best numerical properties.
+    // Intersection line:
+    //   direction = n₁ × n₂  (⟂ both normals)
+    //   point:     solve the 2×2 subsystem on the plane where the axis with
+    //              the largest |dir| component is fixed to zero.
 
     Vector3<T> dir = normal.cross(other.normal);
 
-    // Check if planes are parallel or coincident
+    // Parallel or coincident?  n₁ × n₂ = 0
     if (isZero(dir.length(), eps)) {
         return false;
     }
 
-    // Determine which coordinate to fix based on the largest component of direction
+    // Pick the axis with the largest |dir| component to fix at 0.
+    // This keeps the remaining 2×2 submatrix well-conditioned.
     int fix_axis = 0;
     T   abs_x    = std::abs(dir.x);
     T   abs_y    = std::abs(dir.y);
@@ -69,49 +74,62 @@ bool Plane<T>::intersectWith(const Plane<T>& other, Line<T>& intersection_line, 
         fix_axis = 2;
     }
 
-    // Compute plane constants: d1 = normal · origin, d2 = other.normal · other.origin
-    T d1 = normal.dot(Vector3<T>{ origin.x, origin.y, origin.z });
-    T d2 = other.normal.dot(Vector3<T>{ other.origin.x, other.origin.y, other.origin.z });
+    // Plane constants:  d₁ = n₁·o₁,  d₂ = n₂·o₂
+    T d1 = normal.dot(origin.asVector());
+    T d2 = other.normal.dot(other.origin.asVector());
 
-    // Lambda to solve a 2x2 system and set pt coordinates
-    // Solves: m11*u + m12*v = d1, m21*u + m22*v = d2 => u, v in pt
-    auto solve_2x2 = [eps](T m11, T m12, T m21, T m22, T d1, T d2, T& u, T& v) -> bool {
-        T det = m11 * m22 - m12 * m21;
+    // Solve 2×2 linear system via Cramer's rule:
+    //   [ a  b ] [ u ]   [ e ]            e = n₁·o₁
+    //                  =            where
+    //   [ c  d ] [ v ]   [ f ]            f = n₂·o₂
+    //
+    //   det = ad − bc
+    //        | e  b |
+    //        | f  d |    ed − bf
+    //   u = --------- = --------
+    //           det        det
+    //
+    //        | a  e |
+    //        | c  f |    af − ec
+    //   v = --------- = --------
+    //           det        det
+    auto solve2x2 = [eps](T a, T b, T c, T d, T e, T f, T& u, T& v) -> bool {
+        T det = a * d - b * c;
         if (isZero(det, eps)) {
             return false;
         }
-        u = (d1 * m22 - d2 * m12) / det;
-        v = (m11 * d2 - m21 * d1) / det;
+        u = (e * d - b * f) / det;
+        v = (a * f - c * e) / det;
         return true;
     };
 
     Point3<T> pt;
 
     if (fix_axis == 0) {
-        // Fix x=0, solve for y,z
+        // Fix x = 0, solve for (y, z)
         pt.x = T(0);
-        if (!solve_2x2(normal.y, normal.z, other.normal.y, other.normal.z, d1, d2, pt.y, pt.z)) {
-            // Fallback: fix y=0, solve for x,z
+        if (!solve2x2(normal.y, normal.z, other.normal.y, other.normal.z, d1, d2, pt.y, pt.z)) {
+            // Fallback: fix y = 0, solve for (x, z)
             pt.y = T(0);
-            solve_2x2(normal.x, normal.z, other.normal.x, other.normal.z, d1, d2, pt.x, pt.z);
+            solve2x2(normal.x, normal.z, other.normal.x, other.normal.z, d1, d2, pt.x, pt.z);
         }
     }
     else if (fix_axis == 1) {
-        // Fix y=0, solve for x,z
+        // Fix y = 0, solve for (x, z)
         pt.y = T(0);
-        if (!solve_2x2(normal.x, normal.z, other.normal.x, other.normal.z, d1, d2, pt.x, pt.z)) {
-            // Fallback: fix z=0, solve for x,y
+        if (!solve2x2(normal.x, normal.z, other.normal.x, other.normal.z, d1, d2, pt.x, pt.z)) {
+            // Fallback: fix z = 0, solve for (x, y)
             pt.z = T(0);
-            solve_2x2(normal.x, normal.y, other.normal.x, other.normal.y, d1, d2, pt.x, pt.y);
+            solve2x2(normal.x, normal.y, other.normal.x, other.normal.y, d1, d2, pt.x, pt.y);
         }
     }
     else {
-        // Fix z=0, solve for x,y
+        // Fix z = 0, solve for (x, y)
         pt.z = T(0);
-        if (!solve_2x2(normal.x, normal.y, other.normal.x, other.normal.y, d1, d2, pt.x, pt.y)) {
-            // Fallback: fix x=0, solve for y,z
+        if (!solve2x2(normal.x, normal.y, other.normal.x, other.normal.y, d1, d2, pt.x, pt.y)) {
+            // Fallback: fix x = 0, solve for (y, z)
             pt.x = T(0);
-            solve_2x2(normal.y, normal.z, other.normal.y, other.normal.z, d1, d2, pt.y, pt.z);
+            solve2x2(normal.y, normal.z, other.normal.y, other.normal.z, d1, d2, pt.y, pt.z);
         }
     }
 

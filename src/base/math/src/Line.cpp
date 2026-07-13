@@ -11,96 +11,100 @@ V_MATH_NS_BEGIN
 
 TMPL_PREFIX Line<T>::Intersection Line<T>::intersectWith(const Line<T>& other, T tol) const
 {
-    Intersection it;
+    Intersection is;
 
-    const Point3<T>&  p1 = origin;
+    const Point3<T>&  o1 = origin;
     const Vector3<T>& d1 = direction;
-    const Point3<T>&  p2 = other.origin;
+    const Point3<T>&  o2 = other.origin;
     const Vector3<T>& d2 = other.direction;
 
-    // 原点连线向量
-    const Vector3<T> r = p2 - p1;
-    // 公共法线
+    // Vector connecting the two origins.
+    const Vector3<T> r = o2 - o1;
+    // Direction cross product — zero when d1 ∥ d2.
     const Vector3<T> c = d1.cross(d2);
 
-    // 平行
+    // Parallel?
     if (c.length2() < tol * tol) {
-        it.is_parallel = true;
+        is.is_parallel = true;
 
-        // 共线
+        // Collinear?  |r × d1|² = 0  means r is parallel to d1 as well.
         if (r.cross(d1).length2() < tol * tol) {
-            it.is_intersected = true;
-            it.is_collinear   = true;
+            is.is_intersected = true;
+            is.is_collinear   = true;
         }
-        // 平行
-        else {
-        }
+        // Parallel but not collinear — no further flags.
+        else {}
 
-        // 已知：d1 与 d2 平行
-        // 固定点：p1（在 L1 上）
-        // 计算 p1 在 L2 上的最近点
-        const auto s = r.dot(d2) / d2.dot(d2);
+        // Anchor at L1's origin o1, project it onto L2:
+        // (o1 − (o2 + t2·d2)) · d2 = 0  →  t2 = (o1−o2)·d2 / |d2|² = −r·d2 / |d2|²
+        const auto t2 = r.dot(d2) / d2.dot(d2);
 
-        it.params.t1       = 0;
-        it.params.t2       = s;
-        it.params.pt1      = origin;
-        it.params.pt2      = p2 + d2 * s;
-        it.params.distance = (it.params.pt2 - it.params.pt1).length();
+        is.params.t1       = 0;
+        is.params.t2       = t2;
+        is.params.pt1      = origin;
+        is.params.pt2      = o2 + d2 * t2;
+        is.params.distance = (is.params.pt2 - is.params.pt1).length();
 
-        return it;
+        return is;
     }
 
-    // 非平行
-    // 解最近点参数
+    // Non-parallel
+    // Solve for closest-point parameters
     const double d1d1 = d1.dot(d1);
     const double d2d2 = d2.dot(d2);
     const double d1d2 = d1.dot(d2);
     const double rd1  = r.dot(d1);
     const double rd2  = r.dot(d2);
 
-    // |d1 - d2|² = |d1|² + |d2|² - 2 * |d1| * |d2| * cosθ
-    // cosθ  = d1·d2 / (|d1| * |d2|)
-    // sin²θ = 1 - cos²θ = 1 - (d1 · d2)² / (|d1|² * |d2|²)
-    // |d1 x d2|  = |d1|  * |d2|  * sinθ
-    // |d1 x d2|² = |d1|² * |d2|² * sin²θ
-    //            = |d1|² * |d2|² * (1 - cos²θ)
-    //            = |d1|² * |d2|² - |d1|² * |d2|² * cos²θ
-    //            = |d1|² * |d2|² − (d1·d2)²
+    // Derivation of |d1 × d2|² via Lagrange's identity:
+    //
+    //   |d1 × d2|  = |d1|·|d2|·sinθ
+    //   |d1 × d2|² = |d1|²·|d2|²·sin²θ
+    //              = |d1|²·|d2|²·(1 − cos²θ)
+    //
+    //   cosθ  = (d1·d2) / (|d1|·|d2|)
+    //   cos²θ = (d1·d2)² / (|d1|²·|d2|²)
+    //
+    //   ∴ |d1 × d2|² = |d1|²·|d2|² − (d1·d2)²
     const double denom = d1d1 * d2d2 - d1d2 * d1d2;
 
-    // f(t1) = p1 + d1 * t1
-    // f(t2) = p2 + d2 * t2
-    // f(t1, t2) = |f(t1) - f(t2)|² = |p1 + d1 * t1 - p2 - d2 * t2|²
-    //                  = |p1 - p2 + d1 * t1 - d2 * t2|²
-    //                  = |r  + d1 * t1 - d2 * t2|²
-    //                  = r·r + 2*t1*(r·d1) - 2*t2*(r·d2) + t1^2*(d1·d1) + t2^2*(d2·d2) - 2*t1*t2*(d1·d2)
-    // 然后对t1、t2求导
+    // f(t1) = o1 + d1 * t1
+    // f(t2) = o2 + d2 * t2
+    // The closest-point connecting line is ⟂ d₁ and ⟂ d₂, simultaneously:
+    //   (1) |d₁|²t₁ − (d₁·d₂)t₂ = r·d₁
+    //   (2) (d₁·d₂)t₁ − |d₂|²t₂ = r·d₂
+    //
+    // Eliminate t₂: (1)×|d₂|² − (2)×(d₁·d₂) → t₁ = ((r·d₁)|d₂|² − (r·d₂)(d₁·d₂)) / denom
+    // Eliminate t₁: (1)×(d₁·d₂) − (2)×|d₁|² → t₂ = ((r·d₁)(d₁·d₂) − (r·d₂)|d₁|²) / denom
 
-    it.params.t1 = (rd1 * d2d2 - rd2 * d1d2) / denom;
-    it.params.t2 = (rd1 * d1d2 - rd2 * d1d1) / denom;
+    is.params.t1 = (rd1 * d2d2 - rd2 * d1d2) / denom;
+    is.params.t2 = (rd1 * d1d2 - rd2 * d1d1) / denom;
 
-    it.params.pt1      = p1 + d1 * it.params.t1;
-    it.params.pt2      = p2 + d2 * it.params.t2;
-    it.params.distance = (it.params.pt1 - it.params.pt2).length();
+    is.params.pt1      = o1 + d1 * is.params.t1;
+    is.params.pt2      = o2 + d2 * is.params.t2;
+    is.params.distance = (is.params.pt1 - is.params.pt2).length();
 
-    // 判断最近点是否重合
-    if (it.params.distance < tol) {
-        it.is_intersected = true;
+    // Check if closest points coincide
+    if (is.params.distance < tol) {
+        is.is_intersected = true;
     }
     // else
     //{
-    //     it.params.t1 = 0;
-    //     it.params.t2 = 0;
-    //     it.params.pt1 = {};
-    //     it.params.pt2 = {};
+    //     is.params.t1 = 0;
+    //     is.params.t2 = 0;
+    //     is.params.pt1 = {};
+    //     is.params.pt2 = {};
     // }
 
-    return it;
+    return is;
 }
 
 TMPL_PREFIX Point3<T> Line<T>::closestPoint(const Point3<T>& pt) const
 {
+    // P(t) = origin + t·direction
+    // (pt − P(t))·direction = 0  →  t = (pt−origin)·direction / |direction|²
     const auto denom = direction.dot(direction);
+    // Zero direction
     if (denom < EPS<T>()) {
         return origin;
     }

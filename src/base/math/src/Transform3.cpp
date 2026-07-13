@@ -61,11 +61,35 @@ Transform3<T>& Transform3<T>::preRotate(const Rotation3<T>& r)
 }
 
 template <typename T>
+Transform3<T>& Transform3<T>::preRotate(const Quaternion3<T>& quat)
+{
+    return preRotate(Rotation3<T>(quat));
+}
+
+template <typename T>
+Transform3<T>& Transform3<T>::preRotate(const Vector3<T>& axis, T angle)
+{
+    return preRotate(Rotation3<T>(Quaternion3<T>(angle, axis)));
+}
+
+template <typename T>
 Transform3<T>& Transform3<T>::postRotate(const Rotation3<T>& r)
 {
     // T := T * T_rot = (R, t) * (r, 0) = (R * r, t)
     rotation = rotation * r;
     return *this;
+}
+
+template <typename T>
+Transform3<T>& Transform3<T>::postRotate(const Quaternion3<T>& quat)
+{
+    return postRotate(Rotation3<T>(quat));
+}
+
+template <typename T>
+Transform3<T>& Transform3<T>::postRotate(const Vector3<T>& axis, T angle)
+{
+    return postRotate(Rotation3<T>(Quaternion3<T>(angle, axis)));
 }
 
 // ---------------------------------------------------------------------------

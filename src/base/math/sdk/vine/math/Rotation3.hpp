@@ -33,6 +33,58 @@ class Rotation3 {
      */
     Rotation3(const Quaternion3<T>& quat) noexcept;
 
+    /**
+     * @brief Construct a rotation from raw elements in row-major order.
+     *
+     * Parameters follow the logical matrix layout:
+     * | m00 m01 m02 |
+     * | m10 m11 m12 |
+     * | m20 m21 m22 |
+     * Caller must ensure the matrix is orthonormal (det = 1).
+     *
+     * @param _m00 Row 0, col 0. @param _m01 Row 0, col 1. @param _m02 Row 0, col 2.
+     * @param _m10 Row 1, col 0. @param _m11 Row 1, col 1. @param _m12 Row 1, col 2.
+     * @param _m20 Row 2, col 0. @param _m21 Row 2, col 1. @param _m22 Row 2, col 2.
+     */
+    // clang-format off
+    constexpr Rotation3(T _m00, T _m01, T _m02,
+                        T _m10, T _m11, T _m12,
+                        T _m20, T _m21, T _m22) noexcept
+
+      : m00(_m00), m01(_m01), m02(_m02) // row0
+      , m10(_m10), m11(_m11), m12(_m12) // row1
+      , m20(_m20), m21(_m21), m22(_m22) // row2
+    {}
+    // clang-format on
+
+    /**
+     * @brief Construct a rotation from a 9-element array in column-major order.
+     *
+     * elements[0..8] match the internal data[] layout:
+     * col0: elements[0..2], col1: elements[3..5], col2: elements[6..8].
+     *
+     * @warning The pointer is not validated. Passing nullptr or fewer than
+     *          9 elements results in undefined behavior. Prefer the array-
+     *          reference overload when the array size is known at compile time.
+     *
+     * @param elements Pointer to 9 T values in column-major layout.
+     */
+    explicit Rotation3(const T* elements) noexcept
+      : m00(elements[0]), m10(elements[1]), m20(elements[2])
+      , m01(elements[3]), m11(elements[4]), m21(elements[5])
+      , m02(elements[6]), m12(elements[7]), m22(elements[8])
+    {}
+
+    /**
+     * @brief Construct a rotation from a 9-element array in column-major order
+     *        (compile-time size check).
+     *
+     * @param elements Array of 9 T values in column-major layout.
+     */
+    explicit Rotation3(const T (&elements)[9]) noexcept
+      : Rotation3(static_cast<const T*>(elements))
+    {}
+
   public:
     /**
      * @brief Convert this rotation to a quaternion.

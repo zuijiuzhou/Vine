@@ -61,10 +61,50 @@ Transform2<T>& Transform2<T>::preRotate(const Rotation2<T>& r)
 }
 
 template <typename T>
+Transform2<T>& Transform2<T>::preRotate(T angle)
+{
+    const auto c = std::cos(angle);
+    const auto s = std::sin(angle);
+
+    // translation = r * translation  (rotate the translation vector)
+    const auto tx = translation.x;
+    const auto ty = translation.y;
+    translation.x = c * tx - s * ty;
+    translation.y = s * tx + c * ty;
+
+    // rotation = r * rotation = R(θ + α), only compute first column
+    const auto new_m00 = rotation.m00 * c + rotation.m01 * s;
+    const auto new_m10 = rotation.m10 * c + rotation.m11 * s;
+    rotation.m00 = new_m00;
+    rotation.m10 = new_m10;
+    rotation.m01 = -new_m10;  // derived: -sin(θ+α)
+    rotation.m11 = new_m00;   // derived:  cos(θ+α)
+
+    return *this;
+}
+
+template <typename T>
 Transform2<T>& Transform2<T>::postRotate(const Rotation2<T>& r)
 {
     // T * T_rot = (R * r, t)
     rotation = rotation * r;
+    return *this;
+}
+
+template <typename T>
+Transform2<T>& Transform2<T>::postRotate(T angle)
+{
+    const auto c = std::cos(angle);
+    const auto s = std::sin(angle);
+
+    // rotation = rotation * R(angle) = R(θ + α), only compute first column
+    const auto new_m00 = rotation.m00 * c + rotation.m01 * s;
+    const auto new_m10 = rotation.m10 * c + rotation.m11 * s;
+    rotation.m00 = new_m00;
+    rotation.m10 = new_m10;
+    rotation.m01 = -new_m10;  // derived: -sin(θ+α)
+    rotation.m11 = new_m00;   // derived:  cos(θ+α)
+
     return *this;
 }
 
