@@ -71,10 +71,7 @@ class Matrix4x4 {
      * @param _m20 Row 2, col 0. @param _m21 Row 2, col 1. @param _m22 Row 2, col 2. @param _m23 Row 2, col 3.
      * @param _m30 Row 3, col 0. @param _m31 Row 3, col 1. @param _m32 Row 3, col 2. @param _m33 Row 3, col 3.
      */
-    constexpr Matrix4x4(T _m00, T _m01, T _m02, T _m03,
-                        T _m10, T _m11, T _m12, T _m13,
-                        T _m20, T _m21, T _m22, T _m23,
-                        T _m30, T _m31, T _m32, T _m33) noexcept
+    constexpr Matrix4x4(T _m00, T _m01, T _m02, T _m03, T _m10, T _m11, T _m12, T _m13, T _m20, T _m21, T _m22, T _m23, T _m30, T _m31, T _m32, T _m33) noexcept
       : vecs{
           { _m00, _m10, _m20, _m30 },
           { _m01, _m11, _m21, _m31 },
@@ -99,9 +96,9 @@ class Matrix4x4 {
      */
     explicit Matrix4x4(const T* elements) noexcept
       : vecs{
-          { elements[0], elements[1], elements[2],  elements[3]  },
-          { elements[4], elements[5], elements[6],  elements[7]  },
-          { elements[8], elements[9], elements[10], elements[11] },
+          { elements[0],  elements[1],  elements[2],  elements[3]  },
+          { elements[4],  elements[5],  elements[6],  elements[7]  },
+          { elements[8],  elements[9],  elements[10], elements[11] },
           { elements[12], elements[13], elements[14], elements[15] }
     }
     {}
@@ -416,12 +413,16 @@ class Matrix4x4 {
      * determinant of the upper-left 3x3 submatrix, indicating the
      * linear part's orientation and volume scaling:
      *
-     * - det > 0: right-handed, orientation-preserving.
-     * - det < 0: left-handed, contains a reflection (mirror flip).
-     * - det = 0: singular — at least one axis collapsed, non-invertible.
+     * - det > 0: orientation-preserving (no reflection).
+     * - det < 0: orientation-reversing (reflection / mirror flip).
+     * - det = 0: singular — the linear part loses dimension and is non-invertible.
      *
-     * For projection matrices, the determinant behaves differently and
-     * is generally not interpreted in the same geometric way.
+     * For projection matrices, the determinant still indicates invertibility,
+     * but is generally not interpreted as a direct geometric volume scaling factor.
+     *
+     * For other matrices, the determinant is still mathematically defined
+     * and indicates whether the matrix is invertible, but may not have
+     * a direct geometric interpretation.
      *
      * @return Determinant value.
      */
@@ -468,12 +469,20 @@ class Matrix4x4 {
      * - Any transform that collapses 3D space into lower dimension.
      *
      * @note For singular matrices (det(M) == 0), the matrix is left unchanged.
+     * @return true if inversion succeeded (det != 0), false for singular matrices.
      */
-    void invert();
+    bool invert();
 
     /**
      * @brief Return an inverted copy without modifying the original matrix.
-     * @return Inverted matrix.
+     *
+     * If the matrix is invertible (det != 0), returns the inverse.
+     * If the matrix is singular (det == 0), returns a copy of the original matrix unchanged.
+     *
+     * @note This method cannot report failure. If you need to detect singular matrices,
+     *       either check determinant() beforehand or use invert() which returns a bool.
+     *
+     * @return Inverted matrix, or a copy of the original matrix if singular.
      */
     constexpr Matrix4x4<T> inverted() const
     {
@@ -493,7 +502,20 @@ class Matrix4x4 {
 
     /**
      * @brief Get the rotation component of this matrix as a quaternion.
-     * @return Quaternion3<T>.
+     *
+     * Extracts rotation from the upper-left 3×3 block by normalizing each
+     * column to unit length, then converting to a quaternion.
+     *
+     * This method assumes the matrix decomposes as scale × rotation × translation
+     * (no shear, no reflection). If columns after normalization are not orthogonal,
+     * the rotation is ill-defined and the method safely returns identity.
+     *
+     * Falls back to identity quaternion when:
+     * - The matrix is not affine (e.g. projection).
+     * - Any basis column has zero length.
+     * - Normalized columns are not pairwise orthogonal (shear / reflection).
+     *
+     * @return Quaternion3<T> representing the rotation, or identity if not applicable.
      */
     Quaternion3<T> rotation() const;
 
@@ -513,6 +535,7 @@ class Matrix4x4 {
      * @param eps tolerance for floating-point comparisons.
      */
     bool isIdentity(T eps = EPS<T>()) const;
+
     /**
      * @brief Is this matrix an affine transformation matrix (last row is [0 0 0 1]).
      *        affine matrix that preserve the parallelism of straight lines, such as translation, scaling, rotation,
@@ -520,6 +543,7 @@ class Matrix4x4 {
      * @param eps Tolerance for floating-point comparisons.
      */
     bool isAffine(T eps = EPS<T>()) const;
+
     /**
      * @brief Is this matrix a rigid transformation matrix (only rotation and translation, no scaling or shearing or reflection).
      * @param eps Tolerance for floating-point comparisons.

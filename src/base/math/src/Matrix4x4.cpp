@@ -422,7 +422,7 @@ TMPL_PREFIX T Matrix4x4<T>::determinant() const
             vecs[0][3] * (vecs[1][0] * a1223 - vecs[1][1] * a0223 + vecs[1][2] * a0123));
 }
 
-TMPL_PREFIX void Matrix4x4<T>::invert()
+TMPL_PREFIX bool Matrix4x4<T>::invert()
 {
     // Invert with the adjugate method:
     // M^(-1) = adj(M) / det(M)
@@ -480,7 +480,7 @@ TMPL_PREFIX void Matrix4x4<T>::invert()
 
     // Singular matrix (det == 0): keep original matrix unchanged.
     if (math::isZero(det, EPS<T>())) {
-        return;
+        return false;
     }
 
     // M^(-1) = (1/det) * adj(M)
@@ -490,18 +490,24 @@ TMPL_PREFIX void Matrix4x4<T>::invert()
             vecs[i][j] = adj.vecs[i][j] * inv_det;
         }
     }
+
+    return true;
 }
 
 TMPL_PREFIX Quaternion3<T> Matrix4x4<T>::rotation() const
 {
     // Extract rotation as a quaternion from the upper-left 3x3 block.
     //
-    // The 3x3 is first normalized column-wise to factor out non-uniform
-    // scale. Rotation3::toQuaternion() then performs the trace-based
-    // extraction with branching on the dominant diagonal element for
-    // numerical stability near 180° rotations (see Rotation3.cpp).
-    //
-    // Degenerate (zero-length) columns fall back to identity quaternion.
+    // Columns are first normalized to remove scale. Only matrices that
+    // decompose as scale × rotation × translation (no shear / reflection)
+    // produce orthogonal columns after normalization.
+
+    // Guard 1: must be affine (bottom row = [0 0 0 1]).
+    if (!isAffine(EPS<T>())) {
+        return Quaternion3<T>(T(0), T(0), T(0), T(1));
+    }
+
+    // Guard 2: degenerate (zero-length) columns → identity.
     const auto col0_len2 = vecs[0].asVector3().length2();
     const auto col1_len2 = vecs[1].asVector3().length2();
     const auto col2_len2 = vecs[2].asVector3().length2();
@@ -510,14 +516,26 @@ TMPL_PREFIX Quaternion3<T> Matrix4x4<T>::rotation() const
         return Quaternion3<T>(T(0), T(0), T(0), T(1));
     }
 
+    // Normalize columns to factor out (potentially non-uniform) scale.
     const auto inv_col0_len = T(1) / std::sqrt(col0_len2);
     const auto inv_col1_len = T(1) / std::sqrt(col1_len2);
     const auto inv_col2_len = T(1) / std::sqrt(col2_len2);
 
+    const Vector3<T> cx(vecs[0][0] * inv_col0_len, vecs[0][1] * inv_col0_len, vecs[0][2] * inv_col0_len);
+    const Vector3<T> cy(vecs[1][0] * inv_col1_len, vecs[1][1] * inv_col1_len, vecs[1][2] * inv_col1_len);
+    const Vector3<T> cz(vecs[2][0] * inv_col2_len, vecs[2][1] * inv_col2_len, vecs[2][2] * inv_col2_len);
+
+    // Guard 3: normalized columns must be pairwise orthogonal.
+    // Non-orthogonal columns indicate shear or reflection — rotation is ill-defined.
+    if (!math::isZero(cx.dot(cy), EPS<T>()) || !math::isZero(cx.dot(cz), EPS<T>()) || !math::isZero(cy.dot(cz), EPS<T>())) {
+        return Quaternion3<T>(T(0), T(0), T(0), T(1));
+    }
+
+    // Build Rotation3 from the orthonormal columns and convert to quaternion.
     Rotation3<T> r;
-    r.vecs[0].set(vecs[0][0] * inv_col0_len, vecs[0][1] * inv_col0_len, vecs[0][2] * inv_col0_len);
-    r.vecs[1].set(vecs[1][0] * inv_col1_len, vecs[1][1] * inv_col1_len, vecs[1][2] * inv_col1_len);
-    r.vecs[2].set(vecs[2][0] * inv_col2_len, vecs[2][1] * inv_col2_len, vecs[2][2] * inv_col2_len);
+    r.vecs[0].set(cx.x, cx.y, cx.z);
+    r.vecs[1].set(cy.x, cy.y, cy.z);
+    r.vecs[2].set(cz.x, cz.y, cz.z);
 
     return r.toQuaternion();
 }

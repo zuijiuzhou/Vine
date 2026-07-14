@@ -34,6 +34,7 @@ bool parse_type_info_msvc(const std::type_info& c_type, String& name, String& ns
 #endif
 
 #if defined(__GNUC__)
+// clang defines __GNUC__ as well, so this is used for both GCC and clang
 bool parse_type_info_gnuc(const std::type_info& c_type, String& name, String& ns, String& full_name)
 {
     int   status;
