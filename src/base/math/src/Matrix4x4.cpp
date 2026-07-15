@@ -6,12 +6,53 @@
 
 #include <vine/math/Math.hpp>
 #include <vine/math/Point3.hpp>
-#include <vine/math/Rotation3.hpp>
 #include <vine/math/Vector3.hpp>
 
 V_MATH_NS_BEGIN
 
 #define TMPL_PREFIX template <typename T>
+
+// ---------------------------------------------------------------------------
+// Helper: compute the 3×3 rotation block of a 4×4 matrix from a unit quaternion.
+// Fills columns 0-2 (xyz + w=0). Column 3 (translation) is NOT modified.
+// Returns false if the quaternion is degenerate (zero-length → identity).
+// ---------------------------------------------------------------------------
+template <typename T>
+static bool computeRotationElements(const Quaternion<T>& quat, Matrix4x4<T>* m)
+{
+    auto       q      = quat;
+    const auto q_len2 = q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w;
+    if (q_len2 == T(0)) return false;
+    if (!math::isEqual(q_len2, T(1), T(1e-12))) {
+        const auto inv = T(1) / std::sqrt(q_len2);
+        q.x *= inv; q.y *= inv; q.z *= inv; q.w *= inv;
+    }
+
+    const auto x  = q.x,  y  = q.y,  z  = q.z,  w  = q.w;
+    const auto xx = x * x, yy = y * y, zz = z * z;
+    const auto xy = x * y, zw = z * w, xz = x * z;
+    const auto yw = y * w, yz = y * z, xw = x * w;
+
+    // Column 0 (X axis)
+    m->vecs[0][0] = T(1) - T(2) * (yy + zz);
+    m->vecs[0][1] = T(2) * (xy + zw);
+    m->vecs[0][2] = T(2) * (xz - yw);
+    m->vecs[0][3] = T(0);
+
+    // Column 1 (Y axis)
+    m->vecs[1][0] = T(2) * (xy - zw);
+    m->vecs[1][1] = T(1) - T(2) * (xx + zz);
+    m->vecs[1][2] = T(2) * (yz + xw);
+    m->vecs[1][3] = T(0);
+
+    // Column 2 (Z axis)
+    m->vecs[2][0] = T(2) * (xz + yw);
+    m->vecs[2][1] = T(2) * (yz - xw);
+    m->vecs[2][2] = T(1) - T(2) * (xx + yy);
+    m->vecs[2][3] = T(0);
+
+    return true;
+}
 
 /**
   变换连乘顺序说明（列向量约定，点在右侧）：
@@ -29,8 +70,8 @@ V_MATH_NS_BEGIN
 TMPL_PREFIX void Matrix4x4<T>::makeRotation(const Vector3<T>& start, const Vector3<T>& end)
 {
     // Build a shortest-arc rotation from start to end via quaternion.
-    // Quaternion3::makeRotate handles parallel and anti-parallel edge cases.
-    Quaternion3<T> quat;
+    // Quaternion::makeRotate handles parallel and anti-parallel edge cases.
+    Quaternion<T> quat;
     quat.makeRotate(start, end);
     makeRotation(quat);
 }
@@ -86,26 +127,17 @@ TMPL_PREFIX void Matrix4x4<T>::makeRotation(const Vector3<T>& axis, T angle)
 }
 
 template <typename T>
-void Matrix4x4<T>::makeRotation(const Quaternion3<T>& quat)
+void Matrix4x4<T>::makeRotation(const Quaternion<T>& quat)
 {
     // Build a 4x4 rotation matrix from a unit quaternion.
-    //
-    // The 3x3 rotation block is computed by Rotation3::fromQuaternion(),
-    // which uses the standard formula (see Rotation3.cpp for full derivation):
-    //
-    //   R = | 1-2(y²+z²)   2(xy-zw)     2(xz+yw) |
-    //       | 2(xy+zw)     1-2(x²+z²)   2(yz-xw) |
-    //       | 2(xz-yw)     2(yz+xw)     1-2(x²+y²) |
-    //
-    // Rotation3 also handles normalization of non-unit quaternions and
-    // maps zero-length quaternions to identity.
-    Rotation3<T> r(quat);
-
-    // Extend the 3x3 to a homogeneous 4x4 matrix.
-    vecs[0].set(r.vecs[0], T(0));
-    vecs[1].set(r.vecs[1], T(0));
-    vecs[2].set(r.vecs[2], T(0));
-    vecs[3].set(T(0), T(0), T(0), T(1));
+    if (!computeRotationElements(quat, this)) {
+        makeIdentity();
+        return;
+    }
+    vecs[3][0] = T(0);
+    vecs[3][1] = T(0);
+    vecs[3][2] = T(0);
+    vecs[3][3] = T(1);
 }
 
 TMPL_PREFIX void Matrix4x4<T>::makeLookAt(const Point3<T>& eye, const Point3<T>& target, const Vector3<T>& up)
@@ -261,52 +293,46 @@ TMPL_PREFIX Matrix4x4<T>& Matrix4x4<T>::postMulti(const Matrix4x4<T>& right)
 TMPL_PREFIX Matrix4x4<T>& Matrix4x4<T>::preRotate(const Vector3<T>& axis, T angle)
 {
     // Prepend axis-angle rotation: M := R * M.
-    return preRotate(Quaternion3<T>(angle, axis));
+    return preRotate(Quaternion<T>(angle, axis));
 }
 
 TMPL_PREFIX Matrix4x4<T>& Matrix4x4<T>::postRotate(const Vector3<T>& axis, T angle)
 {
     // Append axis-angle rotation: M := M * R.
-    return postRotate(Quaternion3<T>(angle, axis));
+    return postRotate(Quaternion<T>(angle, axis));
 }
 
-TMPL_PREFIX Matrix4x4<T>& Matrix4x4<T>::preRotate(const Quaternion3<T>& quat)
+TMPL_PREFIX Matrix4x4<T>& Matrix4x4<T>::preRotate(const Quaternion<T>& quat)
 {
     // Prepend quaternion rotation: M := R * M.
-    // Left-multiplication rotates each column's xyz components by R.
-    // R * v = v.x * col0(R) + v.y * col1(R) + v.z * col2(R)
-    Rotation3<T> rotation(quat);
+    Matrix4x4<T> rot;
+    if (!computeRotationElements(quat, &rot)) return *this;
 
-    for (size_t column = 0; column < 4; ++column) {
-        const auto old_x = vecs[column][0];
-        const auto old_y = vecs[column][1];
-        const auto old_z = vecs[column][2];
-
-        vecs[column][0] = rotation.m00 * old_x + rotation.m01 * old_y + rotation.m02 * old_z;
-        vecs[column][1] = rotation.m10 * old_x + rotation.m11 * old_y + rotation.m12 * old_z;
-        vecs[column][2] = rotation.m20 * old_x + rotation.m21 * old_y + rotation.m22 * old_z;
+    for (size_t col = 0; col < 4; ++col) {
+        const auto ox = vecs[col][0];
+        const auto oy = vecs[col][1];
+        const auto oz = vecs[col][2];
+        vecs[col][0] = rot.vecs[0][0] * ox + rot.vecs[1][0] * oy + rot.vecs[2][0] * oz;
+        vecs[col][1] = rot.vecs[0][1] * ox + rot.vecs[1][1] * oy + rot.vecs[2][1] * oz;
+        vecs[col][2] = rot.vecs[0][2] * ox + rot.vecs[1][2] * oy + rot.vecs[2][2] * oz;
     }
-
     return *this;
 }
 
-TMPL_PREFIX Matrix4x4<T>& Matrix4x4<T>::postRotate(const Quaternion3<T>& quat)
+TMPL_PREFIX Matrix4x4<T>& Matrix4x4<T>::postRotate(const Quaternion<T>& quat)
 {
     // Append quaternion rotation: M := M * R.
-    // Right-multiplication updates each row's columns 0..2.
-    // M'[r][c] = Σ_k M[r][k] * R[k][c]
-    Rotation3<T> rotation(quat);
+    Matrix4x4<T> rot;
+    if (!computeRotationElements(quat, &rot)) return *this;
 
     for (size_t row = 0; row < 4; ++row) {
-        const auto old_col0 = vecs[0][row];
-        const auto old_col1 = vecs[1][row];
-        const auto old_col2 = vecs[2][row];
-
-        vecs[0][row] = old_col0 * rotation.m00 + old_col1 * rotation.m10 + old_col2 * rotation.m20;
-        vecs[1][row] = old_col0 * rotation.m01 + old_col1 * rotation.m11 + old_col2 * rotation.m21;
-        vecs[2][row] = old_col0 * rotation.m02 + old_col1 * rotation.m12 + old_col2 * rotation.m22;
+        const auto oc0 = vecs[0][row];
+        const auto oc1 = vecs[1][row];
+        const auto oc2 = vecs[2][row];
+        vecs[0][row] = oc0 * rot.vecs[0][0] + oc1 * rot.vecs[0][1] + oc2 * rot.vecs[0][2];
+        vecs[1][row] = oc0 * rot.vecs[1][0] + oc1 * rot.vecs[1][1] + oc2 * rot.vecs[1][2];
+        vecs[2][row] = oc0 * rot.vecs[2][0] + oc1 * rot.vecs[2][1] + oc2 * rot.vecs[2][2];
     }
-
     return *this;
 }
 
@@ -494,7 +520,7 @@ TMPL_PREFIX bool Matrix4x4<T>::invert()
     return true;
 }
 
-TMPL_PREFIX Quaternion3<T> Matrix4x4<T>::rotation() const
+TMPL_PREFIX Quaternion<T> Matrix4x4<T>::rotation() const
 {
     // Extract rotation as a quaternion from the upper-left 3x3 block.
     //
@@ -504,7 +530,7 @@ TMPL_PREFIX Quaternion3<T> Matrix4x4<T>::rotation() const
 
     // Guard 1: must be affine (bottom row = [0 0 0 1]).
     if (!isAffine(EPS<T>())) {
-        return Quaternion3<T>(T(0), T(0), T(0), T(1));
+        return Quaternion<T>(T(0), T(0), T(0), T(1));
     }
 
     // Guard 2: degenerate (zero-length) columns → identity.
@@ -513,7 +539,7 @@ TMPL_PREFIX Quaternion3<T> Matrix4x4<T>::rotation() const
     const auto col2_len2 = vecs[2].asVector3().length2();
 
     if (math::isZero(col0_len2, EPS<T>()) || math::isZero(col1_len2, EPS<T>()) || math::isZero(col2_len2, EPS<T>())) {
-        return Quaternion3<T>(T(0), T(0), T(0), T(1));
+        return Quaternion<T>(T(0), T(0), T(0), T(1));
     }
 
     // Normalize columns to factor out (potentially non-uniform) scale.
@@ -528,16 +554,59 @@ TMPL_PREFIX Quaternion3<T> Matrix4x4<T>::rotation() const
     // Guard 3: normalized columns must be pairwise orthogonal.
     // Non-orthogonal columns indicate shear or reflection — rotation is ill-defined.
     if (!math::isZero(cx.dot(cy), EPS<T>()) || !math::isZero(cx.dot(cz), EPS<T>()) || !math::isZero(cy.dot(cz), EPS<T>())) {
-        return Quaternion3<T>(T(0), T(0), T(0), T(1));
+        return Quaternion<T>(T(0), T(0), T(0), T(1));
     }
 
-    // Build Rotation3 from the orthonormal columns and convert to quaternion.
-    Rotation3<T> r;
-    r.vecs[0].set(cx.x, cx.y, cx.z);
-    r.vecs[1].set(cy.x, cy.y, cy.z);
-    r.vecs[2].set(cz.x, cz.y, cz.z);
+    // Extract quaternion from the orthonormal columns using the trace-based algorithm.
+    // This is the same algorithm previously in Rotation3::toQuaternion().
+    const auto m00 = cx.x, m10 = cx.y, m20 = cx.z;
+    const auto m01 = cy.x, m11 = cy.y, m21 = cy.z;
+    const auto m02 = cz.x, m12 = cz.y, m22 = cz.z;
 
-    return r.toQuaternion();
+    const auto trace = m00 + m11 + m22;
+
+    Quaternion<T> quat;
+    if (trace > T(0)) {
+        const auto s = T(2) * std::sqrt(trace + T(1));
+        quat.w       = T(0.25) * s;
+        quat.x       = (m21 - m12) / s;
+        quat.y       = (m02 - m20) / s;
+        quat.z       = (m10 - m01) / s;
+    }
+    else if (m00 > m11 && m00 > m22) {
+        const auto s = T(2) * std::sqrt(T(1) + m00 - m11 - m22);
+        quat.w       = (m21 - m12) / s;
+        quat.x       = T(0.25) * s;
+        quat.y       = (m01 + m10) / s;
+        quat.z       = (m02 + m20) / s;
+    }
+    else if (m11 > m22) {
+        const auto s = T(2) * std::sqrt(T(1) + m11 - m00 - m22);
+        quat.w       = (m02 - m20) / s;
+        quat.x       = (m01 + m10) / s;
+        quat.y       = T(0.25) * s;
+        quat.z       = (m12 + m21) / s;
+    }
+    else {
+        const auto s = T(2) * std::sqrt(T(1) + m22 - m00 - m11);
+        quat.w       = (m10 - m01) / s;
+        quat.x       = (m02 + m20) / s;
+        quat.y       = (m12 + m21) / s;
+        quat.z       = T(0.25) * s;
+    }
+
+    // Normalize the extracted quaternion.
+    const auto q_len2 = quat.x * quat.x + quat.y * quat.y + quat.z * quat.z + quat.w * quat.w;
+    if (math::isZero(q_len2, EPS<T>())) {
+        return Quaternion<T>(T(0), T(0), T(0), T(1));
+    }
+    const auto inv_len = T(1) / std::sqrt(q_len2);
+    quat.x *= inv_len;
+    quat.y *= inv_len;
+    quat.z *= inv_len;
+    quat.w *= inv_len;
+
+    return quat;
 }
 
 TMPL_PREFIX bool Matrix4x4<T>::isIdentity(T eps) const

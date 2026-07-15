@@ -78,9 +78,7 @@ class Matrix3x3 {
      * @param _m10 Row 1, col 0. @param _m11 Row 1, col 1. @param _m12 Row 1, col 2.
      * @param _m20 Row 2, col 0. @param _m21 Row 2, col 1. @param _m22 Row 2, col 2.
      */
-    constexpr Matrix3x3(T _m00, T _m01, T _m02,
-                        T _m10, T _m11, T _m12,
-                        T _m20, T _m21, T _m22) noexcept
+    constexpr Matrix3x3(T _m00, T _m01, T _m02, T _m10, T _m11, T _m12, T _m20, T _m21, T _m22) noexcept
       : vecs{
           { _m00, _m10, _m20 },
           { _m01, _m11, _m21 },
@@ -343,10 +341,11 @@ class Matrix3x3 {
      * @brief Is this matrix an identity matrix.
      * @param eps tolerance for floating-point comparisons.
      */
-    bool isIdentity(T eps = EPS<T>()) const{
-        return math::isEqual(vecs[0][0], T(1), eps) && math::isZero(vecs[0][1], eps) && math::isZero(vecs[0][2], eps)
-         && math::isZero(vecs[1][0], eps) && math::isEqual(vecs[1][1], T(1), eps) && math::isZero(vecs[1][2], eps) 
-         && math::isZero(vecs[2][0], eps) && math::isZero(vecs[2][1], eps) && math::isEqual(vecs[2][2], T(1), eps);
+    bool isIdentity(T eps = EPS<T>()) const
+    {
+        return math::isEqual(vecs[0][0], T(1), eps) && math::isZero(vecs[0][1], eps) && math::isZero(vecs[0][2], eps) && math::isZero(vecs[1][0], eps) &&
+               math::isEqual(vecs[1][1], T(1), eps) && math::isZero(vecs[1][2], eps) && math::isZero(vecs[2][0], eps) && math::isZero(vecs[2][1], eps) &&
+               math::isEqual(vecs[2][2], T(1), eps);
     }
 
     /**
@@ -398,6 +397,8 @@ class Matrix3x3 {
     [[nodiscard]]
     T operator()(int row, int col) const
     {
+        assert(row < 3);
+        assert(col < 3);
         return vecs[col][row];
     }
 
@@ -410,6 +411,8 @@ class Matrix3x3 {
     [[nodiscard]]
     T& operator()(int row, int col)
     {
+        assert(row < 3);
+        assert(col < 3);
         return vecs[col][row];
     }
 

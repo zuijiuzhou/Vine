@@ -12,9 +12,9 @@ V_MATH_NS_BEGIN
 template <typename T>
 Transform3<T> Transform3<T>::inverted() const
 {
-    // T = (R, t)  =>  T⁻¹ = (Rᵀ, -Rᵀ * t)
+    // T = (q, t)  =>  T⁻¹ = (q⁻¹, -q⁻¹ * t)
     Transform3<T> inv;
-    inv.rotation    = rotation.transposed();
+    inv.rotation    = rotation.conj();
     inv.translation = -(inv.rotation * translation);
     return inv;
 }
@@ -22,8 +22,8 @@ Transform3<T> Transform3<T>::inverted() const
 template <typename T>
 void Transform3<T>::invert()
 {
-    // T = (R, t)  =>  T⁻¹ = (Rᵀ, -Rᵀ * t)
-    rotation.transpose();
+    // T = (q, t)  =>  T⁻¹ = (q⁻¹, -q⁻¹ * t)
+    rotation = rotation.conj();
     translation = -(rotation * translation);
 }
 
@@ -34,7 +34,7 @@ void Transform3<T>::invert()
 template <typename T>
 Transform3<T>& Transform3<T>::preTranslate(const Vector3<T>& dt)
 {
-    // T := T_trans * T = (I, dt) * (R, t) = (R, t + dt)
+    // T := T_trans * T = (q, t + dt)
     translation += dt;
     return *this;
 }
@@ -42,8 +42,11 @@ Transform3<T>& Transform3<T>::preTranslate(const Vector3<T>& dt)
 template <typename T>
 Transform3<T>& Transform3<T>::postTranslate(const Vector3<T>& dt)
 {
-    // T := T * T_trans = (R, t) * (I, dt) = (R, R * dt + t)
-    translation += rotation * dt;
+    // T := T * T_trans = (q, q * dt + t)
+    const auto rotated = rotation * dt;
+    translation.x += rotated.x;
+    translation.y += rotated.y;
+    translation.z += rotated.z;
     return *this;
 }
 
@@ -52,44 +55,32 @@ Transform3<T>& Transform3<T>::postTranslate(const Vector3<T>& dt)
 // ---------------------------------------------------------------------------
 
 template <typename T>
-Transform3<T>& Transform3<T>::preRotate(const Rotation3<T>& r)
+Transform3<T>& Transform3<T>::preRotate(const Quaternion<T>& quat)
 {
-    // T := T_rot * T = (r, 0) * (R, t) = (r * R, r * t)
-    translation = r * translation;
-    rotation    = r * rotation;
+    // T := T_rot * T = (quat * q, quat * t)
+    translation = quat * translation;
+    rotation = quat * rotation;
     return *this;
-}
-
-template <typename T>
-Transform3<T>& Transform3<T>::preRotate(const Quaternion3<T>& quat)
-{
-    return preRotate(Rotation3<T>(quat));
 }
 
 template <typename T>
 Transform3<T>& Transform3<T>::preRotate(const Vector3<T>& axis, T angle)
 {
-    return preRotate(Rotation3<T>(Quaternion3<T>(angle, axis)));
+    return preRotate(Quaternion<T>(angle, axis));
 }
 
 template <typename T>
-Transform3<T>& Transform3<T>::postRotate(const Rotation3<T>& r)
+Transform3<T>& Transform3<T>::postRotate(const Quaternion<T>& quat)
 {
-    // T := T * T_rot = (R, t) * (r, 0) = (R * r, t)
-    rotation = rotation * r;
+    // T := T * T_rot = (q * quat, t)
+    rotation = rotation * quat;
     return *this;
-}
-
-template <typename T>
-Transform3<T>& Transform3<T>::postRotate(const Quaternion3<T>& quat)
-{
-    return postRotate(Rotation3<T>(quat));
 }
 
 template <typename T>
 Transform3<T>& Transform3<T>::postRotate(const Vector3<T>& axis, T angle)
 {
-    return postRotate(Rotation3<T>(Quaternion3<T>(angle, axis)));
+    return postRotate(Quaternion<T>(angle, axis));
 }
 
 // ---------------------------------------------------------------------------
@@ -99,11 +90,13 @@ Transform3<T>& Transform3<T>::postRotate(const Vector3<T>& axis, T angle)
 template <typename T>
 Transform3<T> Transform3<T>::operator*(const Transform3<T>& right) const
 {
-    // (R₁, t₁) * (R₂, t₂) = (R₁ * R₂,  R₁ * t₂ + t₁)
+    // (q₁, t₁) * (q₂, t₂) = (q₁ * q₂,  q₁ * t₂ + t₁)
     Transform3<T> result;
     result.rotation    = rotation * right.rotation;
-    result.translation = translation;
-    result.translation += rotation * right.translation.asVector();
+    const auto rotated = rotation * right.translation;
+    result.translation = Point3<T>(translation.x + rotated.x,
+                                   translation.y + rotated.y,
+                                   translation.z + rotated.z);
     return result;
 }
 
@@ -121,15 +114,17 @@ Transform3<T>& Transform3<T>::operator*=(const Transform3<T>& right)
 template <typename T>
 Point3<T> operator*(const Transform3<T>& t, const Point3<T>& p)
 {
-    // p' = R * p + t
+    // p' = q * p + t
     const auto rotated = t.rotation * p;
-    return Point3<T>(rotated.x + t.translation.x, rotated.y + t.translation.y, rotated.z + t.translation.z);
+    return Point3<T>(rotated.x + t.translation.x,
+                     rotated.y + t.translation.y,
+                     rotated.z + t.translation.z);
 }
 
 template <typename T>
 Vector3<T> operator*(const Transform3<T>& t, const Vector3<T>& v)
 {
-    // v' = R * v  (pure rotation, no translation)
+    // v' = q * v  (pure rotation, no translation)
     return t.rotation * v;
 }
 

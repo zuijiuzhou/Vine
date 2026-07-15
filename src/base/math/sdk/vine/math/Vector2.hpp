@@ -2,8 +2,8 @@
 
 #include "math_global.hpp"
 
+#include <cassert>
 #include <cmath>
-#include <concepts>
 #include <cstddef>
 #include <cstdint>
 
@@ -77,7 +77,9 @@ class Vector2 {
      */
     [[nodiscard]]
     constexpr const Point2<T>& asPoint() const
-    { return reinterpret_cast<const Point2<T>&>(*this); }
+    {
+        return reinterpret_cast<const Point2<T>&>(*this);
+    }
 
     /**
      * @brief Dot product.
@@ -88,7 +90,9 @@ class Vector2 {
      */
     [[nodiscard]]
     T dot(const Vector2<T>& other) const requires(Real<T>)
-    { return static_cast<T>(x * other.x + y * other.y); }
+    {
+        return static_cast<T>(x * other.x + y * other.y);
+    }
 
     /**
      * @brief Cross product (in 2D, it is a scalar).
@@ -99,7 +103,9 @@ class Vector2 {
      */
     [[nodiscard]]
     T cross(const Vector2<T>& other) const requires(Real<T>)
-    { return static_cast<T>(x * other.y - y * other.x); }
+    {
+        return static_cast<T>(x * other.y - y * other.x);
+    }
 
     /**
      * @brief Length squared of the vector.
@@ -109,7 +115,9 @@ class Vector2 {
      */
     [[nodiscard]]
     constexpr TypeF<T> length2() const requires(Real<T>)
-    { return safeLengthSquared(x, y); }
+    {
+        return safeLengthSquared(x, y);
+    }
 
     /**
      * @brief Length of the vector.
@@ -118,7 +126,9 @@ class Vector2 {
      */
     [[nodiscard]]
     constexpr TypeF<T> length() const requires(Real<T>)
-    { return safeLength(x, y); }
+    {
+        return safeLength(x, y);
+    }
 
     /**
      * @brief Calculate the angle between this vector and another vector.
@@ -156,9 +166,21 @@ class Vector2 {
     }
 
     /**
-     * @brief Normalize the vector to unit length.
-     *        only for floating point types.
-     * @return Original vector length before normalization.
+     * @brief Normalizes the vector to unit length in-place.
+     *
+     * Normalization divides each component by the vector's length:
+     *
+     *     v̂ = v / |v|
+     *
+     * After normalization, the vector satisfies |v̂| = 1 (within
+     * floating-point precision), preserving its original direction.
+     *
+     * When the vector is exactly zero, it is set to (0, 0) to avoid
+     * division by zero, and the returned length is 0.
+     *
+     * This operation is enabled only for floating-point types.
+     *
+     * @return The original vector length before normalization.
      */
     constexpr T normalize() requires(FP<T>)
     {
@@ -176,12 +198,32 @@ class Vector2 {
     }
 
     /**
+     * @brief Returns a normalized copy of the vector.
+     *
+     * This is equivalent to calling normalize() on a copy of the vector.
+     * The original vector remains unchanged.
+     *
+     * This operation is enabled only for floating-point types.
+     *
+     * @return A new vector with unit length in the same direction.
+     */
+    [[nodiscard]]
+    constexpr Vector2<T> normalized() const requires(FP<T>)
+    {
+        Vector2<T> result = *this;
+        result.normalize();
+        return result;
+    }
+
+    /**
      * @brief Check whether all components are zero.
      * @return True when x and y are exactly zero.
      */
     [[nodiscard]]
     constexpr bool isZero() const
-    { return x == T(0) && y == T(0); }
+    {
+        return x == T(0) && y == T(0);
+    }
 
     /**
      * @brief Check whether all components are near zero.
@@ -190,7 +232,9 @@ class Vector2 {
      */
     [[nodiscard]]
     constexpr bool isZero(T eps) const requires(Real<T>)
-    { return math::isZero<T>(x, eps) && math::isZero<T>(y, eps); }
+    {
+        return math::isZero<T>(x, eps) && math::isZero<T>(y, eps);
+    }
 
     /**
      * @brief Compare with another vector using exact equality.
@@ -199,7 +243,9 @@ class Vector2 {
      */
     [[nodiscard]]
     constexpr bool isEqual(const Vector2<T>& other) const
-    { return x == other.x && y == other.y; }
+    {
+        return x == other.x && y == other.y;
+    }
 
     /**
      * @brief Compare with another vector using tolerance.
@@ -209,7 +255,9 @@ class Vector2 {
      */
     [[nodiscard]]
     constexpr bool isEqual(const Vector2<T>& other, T eps) const requires(Real<T>)
-    { return math::isEqual<T>(x, other.x, eps) && math::isEqual<T>(y, other.y, eps); }
+    {
+        return math::isEqual<T>(x, other.x, eps) && math::isEqual<T>(y, other.y, eps);
+    }
 
   public:
     /**
@@ -219,7 +267,9 @@ class Vector2 {
      */
     [[nodiscard]]
     constexpr bool operator==(const Vector2<T>& right) const
-    { return x == right.x && y == right.y; }
+    {
+        return x == right.x && y == right.y;
+    }
 
     /**
      * @brief Inequality operator.
@@ -228,7 +278,9 @@ class Vector2 {
      */
     [[nodiscard]]
     constexpr bool operator!=(const Vector2<T>& right) const
-    { return x != right.x || y != right.y; }
+    {
+        return x != right.x || y != right.y;
+    }
 
     /**
      * @brief Vector addition.
@@ -237,7 +289,9 @@ class Vector2 {
      */
     [[nodiscard]]
     constexpr Vector2<T> operator+(const Vector2<T>& right) const
-    { return Vector2<T>(arithmeticAdd(x, right.x), arithmeticAdd(y, right.y)); }
+    {
+        return Vector2<T>(arithmeticAdd(x, right.x), arithmeticAdd(y, right.y));
+    }
 
     /**
      * @brief Vector subtraction.
@@ -246,7 +300,9 @@ class Vector2 {
      */
     [[nodiscard]]
     constexpr Vector2<T> operator-(const Vector2<T>& right) const
-    { return Vector2<T>(arithmeticSub(x, right.x), arithmeticSub(y, right.y)); }
+    {
+        return Vector2<T>(arithmeticSub(x, right.x), arithmeticSub(y, right.y));
+    }
 
     /**
      * @brief Scale this vector.
@@ -338,7 +394,9 @@ class Vector2 {
      */
     [[nodiscard]]
     constexpr Vector2<T> operator-() const
-    { return Vector2<T>(arithmeticNagate(x), arithmeticNagate(y)); }
+    {
+        return Vector2<T>(arithmeticNagate(x), arithmeticNagate(y));
+    }
 
     /**
      * @brief Dot product.
@@ -347,7 +405,9 @@ class Vector2 {
      */
     [[nodiscard]]
     constexpr T operator*(const Vector2<T>& other) const requires(Real<T>)
-    { return dot(other); }
+    {
+        return dot(other);
+    }
 
     /**
      * @brief Cross product.
@@ -356,7 +416,9 @@ class Vector2 {
      */
     [[nodiscard]]
     constexpr T operator^(const Vector2<T>& other) const requires(Real<T>)
-    { return cross(other); }
+    {
+        return cross(other);
+    }
 
     /**
      * @brief Access component by index.
@@ -366,7 +428,7 @@ class Vector2 {
     [[nodiscard]]
     constexpr T& operator[](size_t index)
     {
-        // assert(index < 2);
+        assert(index < 2);
         return data[index];
     }
 
@@ -378,7 +440,7 @@ class Vector2 {
     [[nodiscard]]
     constexpr const T& operator[](size_t index) const
     {
-        // assert(index < 2);
+        assert(index < 2);
         return data[index];
     }
 
@@ -388,21 +450,27 @@ class Vector2 {
      */
     [[nodiscard]]
     static constexpr Vector2<T> unitX()
-    { return Vector2<T>(T(1), T(0)); }
+    {
+        return Vector2<T>(T(1), T(0));
+    }
 
     /**
      * @brief Unit vector along the Y axis (0, 1).
      */
     [[nodiscard]]
     static constexpr Vector2<T> unitY()
-    { return Vector2<T>(T(0), T(1)); }
+    {
+        return Vector2<T>(T(0), T(1));
+    }
 
     /**
      * @brief Zero vector (0, 0).
      */
     [[nodiscard]]
     static constexpr Vector2<T> zero()
-    { return Vector2<T>(T(0), T(0)); }
+    {
+        return Vector2<T>(T(0), T(0));
+    }
 
   public:
     union

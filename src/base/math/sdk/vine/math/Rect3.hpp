@@ -3,6 +3,7 @@
 #include "math_global.hpp"
 
 #include <algorithm>
+#include <cassert>
 #include <cstdint>
 
 #include "Math.hpp"

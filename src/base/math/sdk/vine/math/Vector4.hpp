@@ -3,6 +3,7 @@
 #include "math_global.hpp"
 
 #include <algorithm>
+#include <cassert>
 #include <cstddef>
 #include <cstdint>
 
@@ -119,7 +120,9 @@ class Vector4 {
      */
     [[nodiscard]]
     constexpr const Vector3<T>& asVector3() const
-    { return reinterpret_cast<const Vector3<T>&>(*this); }
+    {
+        return reinterpret_cast<const Vector3<T>&>(*this);
+    }
 
     /**
      * @brief Dot product.
@@ -131,7 +134,9 @@ class Vector4 {
 
     [[nodiscard]]
     constexpr T dot(const Vector4<T>& other) const requires(Real<T>)
-    { return static_cast<T>(x * other.x + y * other.y + z * other.z + w * other.w); }
+    {
+        return static_cast<T>(x * other.x + y * other.y + z * other.z + w * other.w);
+    }
 
     /**
      * @brief Compute squared vector length.
@@ -139,7 +144,9 @@ class Vector4 {
      */
     [[nodiscard]]
     constexpr TypeF<T> length2() const requires(Real<T>)
-    { return safeLengthSquared(x, y, z, w); }
+    {
+        return safeLengthSquared(x, y, z, w);
+    }
 
     /**
      * @brief Length of the vector.
@@ -148,7 +155,9 @@ class Vector4 {
      */
     [[nodiscard]]
     constexpr TypeF<T> length() const requires(Real<T>)
-    { return safeLength(x, y, z, w); }
+    {
+        return safeLength(x, y, z, w);
+    }
 
     /**
      * @brief Compute angle to another vector.
@@ -159,20 +168,36 @@ class Vector4 {
     constexpr TypeF<T> angleTo(const Vector4<T>& other) const requires(Real<T>)
     {
         /**
-         * Algorithm: θ = atan2(|a||b|sinθ, a·b)
+         * Compute the angle between two vectors using atan2:
+         *
+         *   angle = atan2(sin_component, dot_product)
          *
          * Derivation:
-         *   cosθ = (a·b) / (|a||b|)
-         *   sin²θ = 1 - cos²θ = 1 - (a·b)² / (|a|²|b|²)
-         *        = (|a|²|b|² - (a·b)²) / (|a|²|b|²)
+         *   cos(angle) = (a · b) / (|a||b|)
          *
-         *   Therefore: |a||b|sinθ = sqrt(|a|²|b|² - (a·b)²)
+         *   sin²(angle) = 1 - cos²(angle)
+         *               = 1 - (a · b)² / (|a|²|b|²)
+         *               = (|a|²|b|² - (a · b)²) / (|a|²|b|²)
          *
-         *   θ = atan2(|a||b|sinθ, |a||b|cosθ)
-         *     = atan2(sqrt(|a|²|b|² - (a·b)²), a·b)
+         *   Therefore:
+         *     |a||b|sin(angle) = sqrt(|a|²|b|² - (a · b)²)
          *
-         * This approach is numerically stable compared to acos(dot/(|a||b|))
-         * which suffers from precision loss when vectors are nearly parallel.
+         *   Since:
+         *     |a||b|cos(angle) = a · b
+         *
+         *   The angle can be computed as:
+         *
+         *     angle = atan2(
+         *         sqrt(|a|²|b|² - (a · b)²),
+         *         a · b
+         *     )
+         *
+         * This method is more numerically stable than:
+         *
+         *     acos((a · b) / (|a||b|))
+         *
+         * because acos loses precision when vectors are nearly parallel
+         * or anti-parallel.
          */
 
         using ft = TypeF<T>;
@@ -204,9 +229,21 @@ class Vector4 {
     }
 
     /**
-     * @brief Normalize the vector to unit length.
-     *        only for floating point types.
-     * @return Original vector length before normalization.
+     * @brief Normalizes the vector to unit length in-place.
+     *
+     * Normalization divides each component by the vector's length:
+     *
+     *     v̂ = v / |v|
+     *
+     * After normalization, the vector satisfies |v̂| = 1 (within
+     * floating-point precision), preserving its original direction.
+     *
+     * When the vector is exactly zero, it is set to (0, 0, 0, 0) to avoid
+     * division by zero, and the returned length is 0.
+     *
+     * This operation is enabled only for floating-point types.
+     *
+     * @return The original vector length before normalization.
      */
     [[nodiscard]]
     constexpr T normalize() requires(FP<T>)
@@ -230,12 +267,32 @@ class Vector4 {
     }
 
     /**
+     * @brief Returns a normalized copy of the vector.
+     *
+     * This is equivalent to calling normalize() on a copy of the vector.
+     * The original vector remains unchanged.
+     *
+     * This operation is enabled only for floating-point types.
+     *
+     * @return A new vector with unit length in the same direction.
+     */
+    [[nodiscard]]
+    constexpr Vector4<T> normalized() const requires(FP<T>)
+    {
+        Vector4<T> result = *this;
+        result.normalize();
+        return result;
+    }
+
+    /**
      * @brief Check whether all components are zero.
      * @return True when x/y/z/w are exactly zero.
      */
     [[nodiscard]]
     constexpr bool isZero() const
-    { return x == T() && y == T() && z == T() && w == T(); }
+    {
+        return x == T() && y == T() && z == T() && w == T();
+    }
 
     /**
      * @brief Check whether all components are near zero.
@@ -244,7 +301,9 @@ class Vector4 {
      */
     [[nodiscard]]
     constexpr bool isZero(T eps) const requires(Real<T>)
-    { return math::isZero<T>(x, eps) && math::isZero<T>(y, eps) && math::isZero<T>(z, eps) && math::isZero<T>(w, eps); }
+    {
+        return math::isZero<T>(x, eps) && math::isZero<T>(y, eps) && math::isZero<T>(z, eps) && math::isZero<T>(w, eps);
+    }
 
     /**
      * @brief Compare with another vector using exact equality.
@@ -253,7 +312,9 @@ class Vector4 {
      */
     [[nodiscard]]
     constexpr bool isEqual(const Vector4<T>& other) const
-    { return x == other.x && y == other.y && z == other.z && w == other.w; }
+    {
+        return x == other.x && y == other.y && z == other.z && w == other.w;
+    }
 
     /**
      * @brief Compare with another vector using tolerance.
@@ -263,7 +324,9 @@ class Vector4 {
      */
     [[nodiscard]]
     constexpr bool isEqual(const Vector4<T>& other, T eps) const requires(Real<T>)
-    { return math::isEqual<T>(x, other.x, eps) && math::isEqual<T>(y, other.y, eps) && math::isEqual<T>(z, other.z, eps) && math::isEqual<T>(w, other.w, eps); }
+    {
+        return math::isEqual<T>(x, other.x, eps) && math::isEqual<T>(y, other.y, eps) && math::isEqual<T>(z, other.z, eps) && math::isEqual<T>(w, other.w, eps);
+    }
 
   public:
     /**
@@ -273,7 +336,9 @@ class Vector4 {
      */
     [[nodiscard]]
     constexpr bool operator==(const Vector4<T>& right) const
-    { return x == right.x && y == right.y && z == right.z && w == right.w; }
+    {
+        return x == right.x && y == right.y && z == right.z && w == right.w;
+    }
 
     /**
      * @brief Inequality operator.
@@ -282,7 +347,9 @@ class Vector4 {
      */
     [[nodiscard]]
     constexpr bool operator!=(const Vector4<T>& right) const
-    { return !(*this == right); }
+    {
+        return !(*this == right);
+    }
 
     /**
      * @brief Vector addition.
@@ -291,7 +358,9 @@ class Vector4 {
      */
     [[nodiscard]]
     constexpr Vector4<T> operator+(const Vector4<T>& right) const
-    { return Vector4<T>(arithmeticAdd(x, right.x), arithmeticAdd(y, right.y), arithmeticAdd(z, right.z), arithmeticAdd(w, right.w)); }
+    {
+        return Vector4<T>(arithmeticAdd(x, right.x), arithmeticAdd(y, right.y), arithmeticAdd(z, right.z), arithmeticAdd(w, right.w));
+    }
 
     /**
      * @brief Vector subtraction.
@@ -300,7 +369,9 @@ class Vector4 {
      */
     [[nodiscard]]
     constexpr Vector4<T> operator-(const Vector4<T>& right) const
-    { return Vector4<T>(arithmeticSub(x, right.x), arithmeticSub(y, right.y), arithmeticSub(z, right.z), arithmeticSub(w, right.w)); }
+    {
+        return Vector4<T>(arithmeticSub(x, right.x), arithmeticSub(y, right.y), arithmeticSub(z, right.z), arithmeticSub(w, right.w));
+    }
 
     /**
      * @brief Scale this vector.
@@ -309,7 +380,9 @@ class Vector4 {
      */
     [[nodiscard]]
     constexpr Vector4<T> operator*(T scale) const
-    { return Vector4<T>(arithmeticMultiply(x, scale), arithmeticMultiply(y, scale), arithmeticMultiply(z, scale), arithmeticMultiply(w, scale)); }
+    {
+        return Vector4<T>(arithmeticMultiply(x, scale), arithmeticMultiply(y, scale), arithmeticMultiply(z, scale), arithmeticMultiply(w, scale));
+    }
 
     /**
      * @brief Divide this vector by a scalar.
@@ -318,7 +391,9 @@ class Vector4 {
      */
     [[nodiscard]]
     constexpr Vector4<T> operator/(T scale) const
-    { return Vector4<T>(arithmeticDivision(x, scale), arithmeticDivision(y, scale), arithmeticDivision(z, scale), arithmeticDivision(w, scale)); }
+    {
+        return Vector4<T>(arithmeticDivision(x, scale), arithmeticDivision(y, scale), arithmeticDivision(z, scale), arithmeticDivision(w, scale));
+    }
 
     /**
      * @brief Add another vector in-place.
@@ -386,7 +461,9 @@ class Vector4 {
      */
     [[nodiscard]]
     constexpr Vector4<T> operator-() const
-    { return Vector4<T>(arithmeticNagate(x), arithmeticNagate(y), arithmeticNagate(z), arithmeticNagate(w)); }
+    {
+        return Vector4<T>(arithmeticNagate(x), arithmeticNagate(y), arithmeticNagate(z), arithmeticNagate(w));
+    }
 
     /**
      * @brief Dot product.
@@ -395,7 +472,9 @@ class Vector4 {
      */
     [[nodiscard]]
     constexpr T operator*(const Vector4<T>& other) const requires(Real<T>)
-    { return dot(other); }
+    {
+        return dot(other);
+    }
 
     /**
      * @brief Access component by index.
@@ -405,7 +484,7 @@ class Vector4 {
     [[nodiscard]]
     constexpr T& operator[](size_t index)
     {
-        // assert(index < 4);
+        assert(index < 4);
         return data[index];
     }
 
@@ -417,7 +496,7 @@ class Vector4 {
     [[nodiscard]]
     constexpr const T& operator[](size_t index) const
     {
-        // assert(index < 4);
+        assert(index < 4);
         return data[index];
     }
 
@@ -427,35 +506,45 @@ class Vector4 {
      */
     [[nodiscard]]
     static constexpr Vector4<T> unitX()
-    { return Vector4<T>(T(1), T(0), T(0), T(0)); }
+    {
+        return Vector4<T>(T(1), T(0), T(0), T(0));
+    }
 
     /**
      * @brief Unit vector along the Y axis (0, 1, 0, 0).
      */
     [[nodiscard]]
     static constexpr Vector4<T> unitY()
-    { return Vector4<T>(T(0), T(1), T(0), T(0)); }
+    {
+        return Vector4<T>(T(0), T(1), T(0), T(0));
+    }
 
     /**
      * @brief Unit vector along the Z axis (0, 0, 1, 0).
      */
     [[nodiscard]]
     static constexpr Vector4<T> unitZ()
-    { return Vector4<T>(T(0), T(0), T(1), T(0)); }
+    {
+        return Vector4<T>(T(0), T(0), T(1), T(0));
+    }
 
     /**
      * @brief Unit vector along the W axis (0, 0, 0, 1).
      */
     [[nodiscard]]
     static constexpr Vector4<T> unitW()
-    { return Vector4<T>(T(0), T(0), T(0), T(1)); }
+    {
+        return Vector4<T>(T(0), T(0), T(0), T(1));
+    }
 
     /**
      * @brief Zero vector (0, 0, 0, 0).
      */
     [[nodiscard]]
     static constexpr Vector4<T> zero()
-    { return Vector4<T>(T(0), T(0), T(0), T(0)); }
+    {
+        return Vector4<T>(T(0), T(0), T(0), T(0));
+    }
 
   public:
     union

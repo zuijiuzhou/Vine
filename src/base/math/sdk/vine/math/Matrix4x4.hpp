@@ -5,7 +5,7 @@
 #include <cstring>
 
 #include "Point3.hpp"
-#include "Quaternion3.hpp"
+#include "Quaternion.hpp"
 #include "Transform3.hpp"
 #include "Vector3.hpp"
 #include "Vector4.hpp"
@@ -116,7 +116,7 @@ class Matrix4x4 {
      * @brief Construct a rotation matrix from quaternion.
      * @param quat Rotation quaternion.
      */
-    Matrix4x4(const Quaternion3<T>& quat)
+    Matrix4x4(const Quaternion<T>& quat)
     {
         makeRotation(quat);
     }
@@ -139,7 +139,7 @@ class Matrix4x4 {
      */
     Matrix4x4(const Transform3<T>& transform)
     {
-        setBasis(transform.translation, transform.rotation.vec0, transform.rotation.vec1, transform.rotation.vec2);
+        setBasis(transform.translation, transform.right(), transform.up(), transform.forward());
     }
 
   public:
@@ -188,7 +188,7 @@ class Matrix4x4 {
      * @brief Build rotation matrix from quaternion.
      * @param quat Rotation quaternion.
      */
-    void makeRotation(const Quaternion3<T>& quat);
+    void makeRotation(const Quaternion<T>& quat);
 
     /**
      * @brief Build translation matrix from offset vector.
@@ -359,7 +359,7 @@ class Matrix4x4 {
      * @param quat Rotation quaternion.
      * @return Reference to this matrix.
      */
-    Matrix4x4<T>& preRotate(const Quaternion3<T>& quat);
+    Matrix4x4<T>& preRotate(const Quaternion<T>& quat);
     /**
      * @brief Apply a quaternion rotation in local space: M := M * R.
      *
@@ -368,7 +368,7 @@ class Matrix4x4 {
      * @param quat Rotation quaternion.
      * @return Reference to this matrix.
      */
-    Matrix4x4<T>& postRotate(const Quaternion3<T>& quat);
+    Matrix4x4<T>& postRotate(const Quaternion<T>& quat);
     /**
      * @brief Apply a translation in world space: M := T * M.
      *
@@ -515,9 +515,9 @@ class Matrix4x4 {
      * - Any basis column has zero length.
      * - Normalized columns are not pairwise orthogonal (shear / reflection).
      *
-     * @return Quaternion3<T> representing the rotation, or identity if not applicable.
+     * @return Quaternion<T> representing the rotation, or identity if not applicable.
      */
-    Quaternion3<T> rotation() const;
+    Quaternion<T> rotation() const;
 
     /**
      * @brief Get the non-uniform scaling factors of this matrix.
@@ -575,6 +575,8 @@ class Matrix4x4 {
     [[nodiscard]]
     T operator()(int row, int col) const
     {
+        assert(row < 4);
+        assert(col < 4);
         return vecs[col][row];
     }
 
@@ -587,6 +589,8 @@ class Matrix4x4 {
     [[nodiscard]]
     T& operator()(int row, int col)
     {
+        assert(row < 4);
+        assert(col < 4);
         return vecs[col][row];
     }
 

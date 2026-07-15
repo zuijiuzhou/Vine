@@ -2,6 +2,7 @@
 
 #include "math_global.hpp"
 
+#include <cassert>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -70,7 +71,9 @@ class Point2 {
      */
     [[nodiscard]]
     constexpr TypeF<T> distanceTo(const Point2<T>& pt) const
-    { return std::sqrt((x - pt.x) * (x - pt.x) + (y - pt.y) * (y - pt.y)); }
+    {
+        return std::sqrt((x - pt.x) * (x - pt.x) + (y - pt.y) * (y - pt.y));
+    }
 
     /**
      * @brief Check whether all coordinates are zero.
@@ -78,7 +81,9 @@ class Point2 {
      */
     [[nodiscard]]
     constexpr bool isZero() const
-    { return x == T() && y == T(); }
+    {
+        return x == T() && y == T();
+    }
 
     /**
      * @brief Check whether all coordinates are near zero.
@@ -87,7 +92,9 @@ class Point2 {
      */
     [[nodiscard]]
     constexpr bool isZero(T eps) const requires(Real<T>)
-    { return math::isZero<T>(x, eps) && math::isZero<T>(y, eps); }
+    {
+        return math::isZero<T>(x, eps) && math::isZero<T>(y, eps);
+    }
 
     /**
      * @brief Compare with another point using exact equality.
@@ -96,7 +103,9 @@ class Point2 {
      */
     [[nodiscard]]
     constexpr bool isEqual(const Point2<T>& other) const
-    { return x == other.x && y == other.y; }
+    {
+        return x == other.x && y == other.y;
+    }
 
     /**
      * @brief Compare with another point using tolerance.
@@ -106,7 +115,9 @@ class Point2 {
      */
     [[nodiscard]]
     constexpr bool isEqual(const Point2<T>& other, T eps) const requires(Real<T>)
-    { return math::isEqual<T>(x, other.x, eps) && math::isEqual<T>(y, other.y, eps); }
+    {
+        return math::isEqual<T>(x, other.x, eps) && math::isEqual<T>(y, other.y, eps);
+    }
 
   public:
     /**
@@ -116,7 +127,9 @@ class Point2 {
      */
     [[nodiscard]]
     constexpr bool operator==(const Point2<T>& right) const
-    { return x == right.x && y == right.y; }
+    {
+        return x == right.x && y == right.y;
+    }
 
     /**
      * @brief Inequality operator.
@@ -125,7 +138,9 @@ class Point2 {
      */
     [[nodiscard]]
     constexpr bool operator!=(const Point2<T>& right) const
-    { return !(*this == right); }
+    {
+        return !(*this == right);
+    }
 
     /**
      * @brief Subtract two points to get a displacement vector.
@@ -134,7 +149,9 @@ class Point2 {
      */
     [[nodiscard]]
     constexpr Vector2<T> operator-(const Point2<T>& right) const
-    { return Vector2<T>(arithmeticSub(x, right.x), arithmeticSub(y, right.y)); }
+    {
+        return Vector2<T>(arithmeticSub(x, right.x), arithmeticSub(y, right.y));
+    }
 
     /**
      * @brief Translate this point by a vector.
@@ -143,7 +160,9 @@ class Point2 {
      */
     [[nodiscard]]
     constexpr Point2<T> operator+(const Vector2<T>& right) const
-    { return Point2<T>(arithmeticAdd(x, right.x), arithmeticAdd(y, right.y)); }
+    {
+        return Point2<T>(arithmeticAdd(x, right.x), arithmeticAdd(y, right.y));
+    }
 
     /**
      * @brief Translate this point in-place.
@@ -177,7 +196,9 @@ class Point2 {
      */
     [[nodiscard]]
     constexpr Point2<T> operator-() const
-    { return Point2<T>(arithmeticNagate(x), arithmeticNagate(y)); }
+    {
+        return Point2<T>(arithmeticNagate(x), arithmeticNagate(y));
+    }
 
     /**
      * @brief Access coordinate by index.
@@ -187,7 +208,7 @@ class Point2 {
     [[nodiscard]]
     constexpr T& operator[](size_t index)
     {
-        // assert(index < 2);
+        assert(index < 2);
         return data[index];
     }
 
@@ -199,7 +220,7 @@ class Point2 {
     [[nodiscard]]
     constexpr const T& operator[](size_t index) const
     {
-        // assert(index < 2);
+        assert(index < 2);
         return data[index];
     }
 

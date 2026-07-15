@@ -2,6 +2,7 @@
 
 #include "math_global.hpp"
 
+#include <cassert>
 #include <cstddef>
 
 #include "Math.hpp"
@@ -319,6 +320,7 @@ class VectorN {
     [[nodiscard]]
     constexpr T& operator[](size_t index)
     {
+        assert(index < N);
         return data[index];
     }
 
@@ -330,6 +332,7 @@ class VectorN {
     [[nodiscard]]
     constexpr const T& operator[](size_t index) const
     {
+        assert(index < N);
         return data[index];
     }
 

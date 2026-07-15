@@ -2,6 +2,7 @@
 
 #include "math_global.hpp"
 
+#include <cassert>
 #include <cstddef>
 
 #include "Math.hpp"
@@ -9,6 +10,9 @@
 #include "Vector4.hpp"
 
 V_MATH_NS_BEGIN
+
+template <typename T>
+class Point3;
 
 /**
  * @brief Quaternion for 3D rotations, stored as (x, y, z, w) = (v, s).
@@ -23,7 +27,7 @@ V_MATH_NS_BEGIN
  * @tparam T Only accepts float and double.
  */
 template <FP T>
-class Quaternion3 {
+class Quaternion {
   public:
     using value_type = T;
 
@@ -31,7 +35,7 @@ class Quaternion3 {
     /**
      * @brief Construct a zero quaternion.
      */
-    constexpr Quaternion3()
+    constexpr Quaternion()
       : x(T())
       , y(T())
       , z(T())
@@ -45,7 +49,7 @@ class Quaternion3 {
      * @param z Z component.
      * @param w W component.
      */
-    constexpr Quaternion3(T x, T y, T z, T w)
+    constexpr Quaternion(T x, T y, T z, T w)
       : x(x)
       , y(y)
       , z(z)
@@ -60,8 +64,10 @@ class Quaternion3 {
      * @param angle Rotation angle θ in radians.
      * @param axis  Rotation axis (normalized internally, any non-zero vector is safe).
      */
-    Quaternion3(T angle, const Vector3<T>& axis)
-    { makeRotate(angle, axis); }
+    Quaternion(T angle, const Vector3<T>& axis)
+    {
+        makeRotate(angle, axis);
+    }
 
     /**
      * @brief Construct a unit quaternion that rotates from one direction to another.
@@ -71,8 +77,10 @@ class Quaternion3 {
      * @param from Source direction (normalized internally, any non-zero vector is safe).
      * @param to   Target direction (normalized internally, any non-zero vector is safe).
      */
-    Quaternion3(const Vector3<T>& from, const Vector3<T>& to)
-    { makeRotate(from, to); }
+    Quaternion(const Vector3<T>& from, const Vector3<T>& to)
+    {
+        makeRotate(from, to);
+    }
 
   public:
     /**
@@ -81,7 +89,9 @@ class Quaternion3 {
      */
     [[nodiscard]]
     constexpr Vector4<T> toVector() const
-    { return Vector4<T>(x, y, z, w); }
+    {
+        return Vector4<T>(x, y, z, w);
+    }
 
     /**
      * @brief View quaternion as a 4D vector without copying.
@@ -90,8 +100,8 @@ class Quaternion3 {
     [[nodiscard]]
     constexpr const Vector4<T>& asVector() const
     {
-        static_assert(sizeof(Quaternion3<T>) == sizeof(Vector4<T>));
-        static_assert(std::is_standard_layout_v<Quaternion3<T>>);
+        static_assert(sizeof(Quaternion<T>) == sizeof(Vector4<T>));
+        static_assert(std::is_standard_layout_v<Quaternion<T>>);
         static_assert(std::is_standard_layout_v<Vector4<T>>);
 
         return reinterpret_cast<const Vector4<T>&>(*this);
@@ -103,7 +113,9 @@ class Quaternion3 {
      */
     [[nodiscard]]
     constexpr bool isIdentity(T eps = EPS<T>()) const
-    { return math::isZero(x, eps) && math::isZero(y, eps) && math::isZero(z, eps) && math::isEqual(w, T(1), eps); }
+    {
+        return math::isZero(x, eps) && math::isZero(y, eps) && math::isZero(z, eps) && math::isEqual(w, T(1), eps);
+    }
 
     /**
      * @brief Compute quaternion length.
@@ -111,7 +123,9 @@ class Quaternion3 {
      */
     [[nodiscard]]
     constexpr T length() const
-    { return safeLength(x, y, z, w); }
+    {
+        return safeLength(x, y, z, w);
+    }
 
     /**
      * @brief Compute squared quaternion length.
@@ -119,7 +133,9 @@ class Quaternion3 {
      */
     [[nodiscard]]
     constexpr T length2() const
-    { return safeLengthSquared(x, y, z, w); }
+    {
+        return safeLengthSquared(x, y, z, w);
+    }
 
     /**
      * @brief Compute the conjugate: q* = (-x, -y, -z, w).
@@ -129,8 +145,10 @@ class Quaternion3 {
      * @return Conjugated quaternion.
      */
     [[nodiscard]]
-    constexpr Quaternion3<T> conj() const
-    { return Quaternion3<T>(-x, -y, -z, w); }
+    constexpr Quaternion<T> conj() const
+    {
+        return Quaternion<T>(-x, -y, -z, w);
+    }
 
     /**
      * @brief Invert this quaternion in place: q⁻¹ = conj(q) / |q|².
@@ -151,7 +169,7 @@ class Quaternion3 {
         x = -x * rcp;
         y = -y * rcp;
         z = -z * rcp;
-        w =  w * rcp;
+        w = w * rcp;
     }
 
     /**
@@ -162,11 +180,11 @@ class Quaternion3 {
      * @return Inverted quaternion.
      */
     [[nodiscard]]
-    constexpr Quaternion3<T> inverted() const
+    constexpr Quaternion<T> inverted() const
     {
         const auto len2 = length2();
         if (len2 == T(0)) {
-            return Quaternion3<T>(T(0), T(0), T(0), T(1));
+            return Quaternion<T>(T(0), T(0), T(0), T(1));
         }
         return conj() / len2;
     }
@@ -208,7 +226,7 @@ class Quaternion3 {
      * @param t    Interpolation factor in [0, 1].
      * @return Interpolated unit quaternion.
      */
-    static Quaternion3<T> slerp(const Quaternion3<T>& from, const Quaternion3<T>& to, T t);
+    static Quaternion<T> slerp(const Quaternion<T>& from, const Quaternion<T>& to, T t);
 
   public:
     /**
@@ -217,8 +235,10 @@ class Quaternion3 {
      * @return True when components are equal.
      */
     [[nodiscard]]
-    constexpr bool operator==(const Quaternion3& right) const
-    { return x == right.x && y == right.y && z == right.z && w == right.w; }
+    constexpr bool operator==(const Quaternion& right) const
+    {
+        return x == right.x && y == right.y && z == right.z && w == right.w;
+    }
 
     /**
      * @brief Inequality operator.
@@ -226,8 +246,10 @@ class Quaternion3 {
      * @return True when any component differs.
      */
     [[nodiscard]]
-    constexpr bool operator!=(const Quaternion3& right) const
-    { return !(*this == right); }
+    constexpr bool operator!=(const Quaternion& right) const
+    {
+        return !(*this == right);
+    }
 
     /**
      * @brief Multiply quaternion by scalar: q' = (x·s, y·s, z·s, w·s).
@@ -239,9 +261,9 @@ class Quaternion3 {
      * @param right Scalar multiplier.
      * @return Scaled quaternion.
      */
-    constexpr Quaternion3<T> operator*(T right) const
+    constexpr Quaternion<T> operator*(T right) const
     {
-        Quaternion3<T> q;
+        Quaternion<T> q;
         q.x = x * right;
         q.y = y * right;
         q.z = z * right;
@@ -257,7 +279,7 @@ class Quaternion3 {
      * @param right Scalar multiplier.
      * @return Reference to this quaternion.
      */
-    constexpr Quaternion3<T>& operator*=(T right)
+    constexpr Quaternion<T>& operator*=(T right)
     {
         x *= right;
         y *= right;
@@ -277,10 +299,10 @@ class Quaternion3 {
      * @return Scaled quaternion.
      */
     [[nodiscard]]
-    constexpr Quaternion3<T> operator/(T right) const
+    constexpr Quaternion<T> operator/(T right) const
     {
         auto           rcp = T(1) / right;
-        Quaternion3<T> q;
+        Quaternion<T> q;
         q.x = x * rcp;
         q.y = y * rcp;
         q.z = z * rcp;
@@ -296,7 +318,7 @@ class Quaternion3 {
      * @param right Scalar divisor.
      * @return Reference to this quaternion.
      */
-    constexpr Quaternion3<T>& operator/=(T right)
+    constexpr Quaternion<T>& operator/=(T right)
     {
         auto rcp = T(1) / right;
         x *= rcp;
@@ -317,9 +339,9 @@ class Quaternion3 {
      * @return Sum quaternion.
      */
     [[nodiscard]]
-    constexpr Quaternion3<T> operator+(const Quaternion3& right) const
+    constexpr Quaternion<T> operator+(const Quaternion& right) const
     {
-        Quaternion3<T> q;
+        Quaternion<T> q;
         q.x = x + right.x;
         q.y = y + right.y;
         q.z = z + right.z;
@@ -335,7 +357,7 @@ class Quaternion3 {
      * @param right Right-hand quaternion.
      * @return Reference to this quaternion.
      */
-    constexpr Quaternion3<T>& operator+=(const Quaternion3& right)
+    constexpr Quaternion<T>& operator+=(const Quaternion& right)
     {
         x += right.x;
         y += right.y;
@@ -354,9 +376,9 @@ class Quaternion3 {
      * @return Difference quaternion.
      */
     [[nodiscard]]
-    constexpr Quaternion3<T> operator-(const Quaternion3& right) const
+    constexpr Quaternion<T> operator-(const Quaternion& right) const
     {
-        Quaternion3<T> q;
+        Quaternion<T> q;
         q.x = x - right.x;
         q.y = y - right.y;
         q.z = z - right.z;
@@ -372,7 +394,7 @@ class Quaternion3 {
      * @param right Right-hand quaternion.
      * @return Reference to this quaternion.
      */
-    constexpr Quaternion3<T>& operator-=(const Quaternion3& right)
+    constexpr Quaternion<T>& operator-=(const Quaternion& right)
     {
         x -= right.x;
         y -= right.y;
@@ -391,7 +413,7 @@ class Quaternion3 {
      * @return Product quaternion.
      */
     [[nodiscard]]
-    Quaternion3<T> operator*(const Quaternion3& right) const;
+    Quaternion<T> operator*(const Quaternion& right) const;
     /**
      * @brief Quaternion multiplication in place: q = q * r.
      *
@@ -400,7 +422,7 @@ class Quaternion3 {
      * @param right Right-hand quaternion (applied first).
      * @return Reference to this quaternion.
      */
-    Quaternion3<T>& operator*=(const Quaternion3& right);
+    Quaternion<T>& operator*=(const Quaternion& right);
 
     /**
      * @brief Quaternion division: q₁ / q₂ = q₁ * q₂⁻¹.
@@ -412,7 +434,7 @@ class Quaternion3 {
      * @return Quotient quaternion.
      */
     [[nodiscard]]
-    Quaternion3<T> operator/(const Quaternion3& right) const;
+    Quaternion<T> operator/(const Quaternion& right) const;
     /**
      * @brief Quaternion division assignment: q /= r  →  q = q * r⁻¹.
      *
@@ -423,7 +445,7 @@ class Quaternion3 {
      * @param right Divisor quaternion.
      * @return Reference to this quaternion.
      */
-    Quaternion3<T>& operator/=(const Quaternion3& right);
+    Quaternion<T>& operator/=(const Quaternion& right);
 
     /**
      * @brief Unary negation: -q = (-x, -y, -z, -w).
@@ -437,8 +459,10 @@ class Quaternion3 {
      * @return Negated quaternion.
      */
     [[nodiscard]]
-    constexpr Quaternion3<T> operator-() const
-    { return Quaternion3<T>(-x, -y, -z, -w); }
+    constexpr Quaternion<T> operator-() const
+    {
+        return Quaternion<T>(-x, -y, -z, -w);
+    }
 
     /**
      * @brief Access component by index.
@@ -447,7 +471,10 @@ class Quaternion3 {
      */
     [[nodiscard]]
     constexpr T& operator[](size_t i)
-    { return data[i]; }
+    {
+        assert(i < 4);
+        return data[i];
+    }
 
     /**
      * @brief Access component by index.
@@ -456,7 +483,10 @@ class Quaternion3 {
      */
     [[nodiscard]]
     constexpr T operator[](size_t i) const
-    { return data[i]; }
+    {
+        assert(i < 4);
+        return data[i];
+    }
 
   public:
     union
@@ -469,10 +499,13 @@ class Quaternion3 {
     };
 };
 
-using Quatf = Quaternion3<float>;
-using Quatd = Quaternion3<double>;
+using Quatf = Quaternion<float>;
+using Quatd = Quaternion<double>;
 
-template <typename T>
-Vector3<T> operator*(const Quaternion3<T>& left, const Vector3<T>& right);
+template <FP T>
+Vector3<T> operator*(const Quaternion<T>& left, const Vector3<T>& right);
+
+template <FP T>
+Point3<T> operator*(const Quaternion<T>& left, const Point3<T>& right);
 
 V_MATH_NS_END

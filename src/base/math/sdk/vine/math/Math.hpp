@@ -43,6 +43,17 @@ constexpr double EPS<double>()
 constexpr double RAD_TO_DEG = 180.0 / PI;
 constexpr double DEG_TO_RAD = PI / 180.0;
 
+/**
+ * Common cases that produce NaN (Not a Number):
+ * 1. 0.0 / 0.0: undefined division result
+ * 2. Inf / Inf: division of infinities has no defined result
+ * 3. Inf - Inf: subtraction of infinities produces an undefined result
+ * 4. sqrt(negative number): no real-valued result exists
+ * 5. asin/acos input outside the range [-1, 1]
+ * 6. NaN propagation: operations involving NaN usually result in NaN
+ * 7. Floating-point errors may cause acos/asin input to slightly exceed the valid range; clamp the value before use
+ */
+
 /*
  * @brief Check if a value is zero within a given epsilon.
  */

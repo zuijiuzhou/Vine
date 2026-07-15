@@ -3,7 +3,8 @@
 #include "math_global.hpp"
 
 #include "Point3.hpp"
-#include "Rotation3.hpp"
+#include "Quaternion.hpp"
+#include "Vector3.hpp"
 
 V_MATH_NS_BEGIN
 
@@ -22,17 +23,17 @@ class Transform3 {
      */
     constexpr Transform3() noexcept
       : translation()
-      , rotation()
+      , rotation(T(0), T(0), T(0), T(1))
     {}
 
     /**
      * @brief Construct from translation and rotation.
      * @param t Translation offset.
-     * @param r Rotation matrix.
+     * @param q Rotation quaternion.
      */
-    constexpr Transform3(const Point3<T>& t, const Rotation3<T>& r) noexcept
+    constexpr Transform3(const Point3<T>& t, const Quaternion<T>& q) noexcept
       : translation(t)
-      , rotation(r)
+      , rotation(q)
     {}
 
   public:
@@ -60,16 +61,10 @@ class Transform3 {
     Transform3<T>& postTranslate(const Vector3<T>& dt);
 
     /**
-     * @brief Pre-multiply a rotation: T := T_rot(r) * T.
-     * @param r Rotation in world space.
-     */
-    Transform3<T>& preRotate(const Rotation3<T>& r);
-
-    /**
      * @brief Pre-multiply a quaternion rotation: T := T_rot(quat) * T.
      * @param quat Rotation quaternion (world-space).
      */
-    Transform3<T>& preRotate(const Quaternion3<T>& quat);
+    Transform3<T>& preRotate(const Quaternion<T>& quat);
 
     /**
      * @brief Pre-multiply an axis-angle rotation: T := T_rot(axis, angle) * T.
@@ -79,16 +74,10 @@ class Transform3 {
     Transform3<T>& preRotate(const Vector3<T>& axis, T angle);
 
     /**
-     * @brief Post-multiply a rotation: T := T * T_rot(r).
-     * @param r Rotation in local space.
-     */
-    Transform3<T>& postRotate(const Rotation3<T>& r);
-
-    /**
      * @brief Post-multiply a quaternion rotation: T := T * T_rot(quat).
      * @param quat Rotation quaternion (local-space).
      */
-    Transform3<T>& postRotate(const Quaternion3<T>& quat);
+    Transform3<T>& postRotate(const Quaternion<T>& quat);
 
     /**
      * @brief Post-multiply an axis-angle rotation: T := T * T_rot(axis, angle).
@@ -103,9 +92,22 @@ class Transform3 {
     Transform3<T>  operator*(const Transform3<T>& right) const;
     Transform3<T>& operator*=(const Transform3<T>& right);
 
+    /**
+     * @brief Local X axis in parent coordinates (right direction).
+     */
+    [[nodiscard]] Vector3<T> right()   const { return rotation * Vector3<T>::unitX(); }
+    /**
+     * @brief Local Y axis in parent coordinates (up direction).
+     */
+    [[nodiscard]] Vector3<T> up()      const { return rotation * Vector3<T>::unitY(); }
+    /**
+     * @brief Local Z axis in parent coordinates (forward direction).
+     */
+    [[nodiscard]] Vector3<T> forward() const { return rotation * Vector3<T>::unitZ(); }
+
   public:
-    Point3<T>    translation;
-    Rotation3<T> rotation;
+    Point3<T>     translation;
+    Quaternion<T> rotation;
 };
 
 template <typename T>

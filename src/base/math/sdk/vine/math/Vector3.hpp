@@ -2,6 +2,7 @@
 #include "math_global.hpp"
 
 #include <algorithm>
+#include <cassert>
 #include <cstddef>
 #include <cstdint>
 
@@ -216,7 +217,7 @@ class Vector3 {
      *
      * Geometrically, |a × b| equals the area of the parallelogram spanned
      * by a and b. For orthogonal vectors (θ = 90°), the area is maximal:
-     * |a × b| = |a| · |b|.
+     *     |a × b| = |a| · |b|.
      *
      * <b>Lagrange's identity (avoiding the cross product for squared magnitude):</b>
      *
@@ -305,6 +306,39 @@ class Vector3 {
     [[nodiscard]]
     constexpr TypeF<T> angleTo(const Vector3<T>& other) const requires(Real<T>)
     {
+        /**
+         * Compute the angle between two vectors using atan2:
+         *
+         *   angle = atan2(sin_component, dot_product)
+         *
+         * Derivation:
+         *   cos(angle) = (a · b) / (|a||b|)
+         *
+         *   sin²(angle) = 1 - cos²(angle)
+         *               = 1 - (a · b)² / (|a|²|b|²)
+         *               = (|a|²|b|² - (a · b)²) / (|a|²|b|²)
+         *
+         *   Therefore:
+         *     |a||b|sin(angle) = sqrt(|a|²|b|² - (a · b)²)
+         *
+         *   Since:
+         *     |a||b|cos(angle) = a · b
+         *
+         *   The angle can be computed as:
+         *
+         *     angle = atan2(
+         *         sqrt(|a|²|b|² - (a · b)²),
+         *         a · b
+         *     )
+         *
+         * This method is more numerically stable than:
+         *
+         *     acos((a · b) / (|a||b|))
+         *
+         * because acos loses precision when vectors are nearly parallel
+         * or anti-parallel.
+         */
+
         using ft = TypeF<T>;
 
         const ft x1 = static_cast<ft>(x);
@@ -358,6 +392,24 @@ class Vector3 {
         }
 
         return len;
+    }
+
+    /**
+     * @brief Returns a normalized copy of the vector.
+     *
+     * This is equivalent to calling normalize() on a copy of the vector.
+     * The original vector remains unchanged.
+     *
+     * This operation is enabled only for floating-point types.
+     *
+     * @return A new vector with unit length in the same direction.
+     */
+    [[nodiscard]]
+    constexpr Vector3<T> normalized() const requires(FP<T>)
+    {
+        Vector3<T> result = *this;
+        result.normalize();
+        return result;
     }
 
     /**
@@ -660,7 +712,7 @@ class Vector3 {
     [[nodiscard]]
     constexpr T& operator[](size_t index)
     {
-        // assert(index < 3);
+        assert(index < 3);
         return data[index];
     }
 
@@ -678,7 +730,7 @@ class Vector3 {
     [[nodiscard]]
     constexpr const T& operator[](size_t index) const
     {
-        // assert(index < 3);
+        assert(index < 3);
         return data[index];
     }
 
