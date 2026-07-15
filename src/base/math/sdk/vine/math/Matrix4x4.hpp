@@ -178,12 +178,14 @@ class Matrix4x4 {
      * @param end Target direction vector.
      */
     void makeRotation(const Vector3<T>& start, const Vector3<T>& end);
+
     /**
      * @brief Build axis-angle rotation matrix.
      * @param axis Rotation axis.
      * @param angle Rotation angle in radians.
      */
     void makeRotation(const Vector3<T>& axis, T angle);
+
     /**
      * @brief Build rotation matrix from quaternion.
      * @param quat Rotation quaternion.
@@ -264,6 +266,7 @@ class Matrix4x4 {
      *       looks along the negative Z direction in view space.
      */
     void makeLookAt(const Point3<T>& eye, const Point3<T>& target, const Vector3<T>& up);
+
     /**
      * @brief Make an orthographic projection matrix.
      * @param left the left clipping plane.
@@ -274,6 +277,7 @@ class Matrix4x4 {
      * @param z_far the far clipping plane.
      */
     void makeOrtho(double left, double right, double bottom, double top, double z_near, double z_far);
+
     /**
      * @brief Make a perspective projection matrix.
      * @param fovy the vertical field of view angle in radians.
@@ -302,6 +306,7 @@ class Matrix4x4 {
      * @param zAxis the z axis direction of the coordinate system.
      */
     void setBasis(const Point3<T>& origin, const Vector3<T>& x_axis, const Vector3<T>& y_axis, const Vector3<T>& z_axis);
+    
     /**
      * @brief Get the coordinate system represented by this matrix.
      * @param o_origin Output origin point.
@@ -321,6 +326,7 @@ class Matrix4x4 {
      * @return Reference to this matrix.
      */
     Matrix4x4<T>& preMulti(const Matrix4x4<T>& left);
+    
     /**
      * @brief Right-multiply this matrix: M := M * right.
      *
@@ -331,6 +337,7 @@ class Matrix4x4 {
      * @return Reference to this matrix.
      */
     Matrix4x4<T>& postMulti(const Matrix4x4<T>& right);
+    
     /**
      * @brief Apply an axis-angle rotation in world space: M := R * M.
      *
@@ -341,6 +348,7 @@ class Matrix4x4 {
      * @return Reference to this matrix.
      */
     Matrix4x4<T>& preRotate(const Vector3<T>& axis, T angle);
+    
     /**
      * @brief Apply an axis-angle rotation in local space: M := M * R.
      *
@@ -351,6 +359,7 @@ class Matrix4x4 {
      * @return Reference to this matrix.
      */
     Matrix4x4<T>& postRotate(const Vector3<T>& axis, T angle);
+    
     /**
      * @brief Apply a quaternion rotation in world space: M := R * M.
      *
@@ -360,6 +369,7 @@ class Matrix4x4 {
      * @return Reference to this matrix.
      */
     Matrix4x4<T>& preRotate(const Quaternion<T>& quat);
+    
     /**
      * @brief Apply a quaternion rotation in local space: M := M * R.
      *
@@ -369,6 +379,7 @@ class Matrix4x4 {
      * @return Reference to this matrix.
      */
     Matrix4x4<T>& postRotate(const Quaternion<T>& quat);
+    
     /**
      * @brief Apply a translation in world space: M := T * M.
      *
@@ -378,6 +389,7 @@ class Matrix4x4 {
      * @return Reference to this matrix.
      */
     Matrix4x4<T>& preTranslate(const Vector3<T>& offset);
+    
     /**
      * @brief Apply a translation in local space: M := M * T.
      *
@@ -387,6 +399,7 @@ class Matrix4x4 {
      * @return Reference to this matrix.
      */
     Matrix4x4<T>& postTranslate(const Vector3<T>& offset);
+    
     /**
      * @brief Apply a non-uniform scale in world space: M := S * M.
      *
@@ -396,6 +409,7 @@ class Matrix4x4 {
      * @return Reference to this matrix.
      */
     Matrix4x4<T>& preScale(const Vector3<T>& factor);
+    
     /**
      * @brief Apply a non-uniform scale in local space: M := M * S.
      *
@@ -493,7 +507,12 @@ class Matrix4x4 {
 
     /**
      * @brief Get the translation component of this matrix.
-     * @return Vector3<T>.
+     *
+     * For affine matrices (last row = [0 0 0 1]), extracts the translation
+     * vector from column 3. For projection matrices the returned value is part
+     * of the homogeneous divide and has no independent geometric meaning.
+     *
+     * @return Column 3 xyz as Vector3<T>.
      */
     constexpr Vector3<T> translation() const
     {
@@ -520,10 +539,26 @@ class Matrix4x4 {
     Quaternion<T> rotation() const;
 
     /**
-     * @brief Get the non-uniform scaling factors of this matrix.
-     * @return Vector3<T> where x/y/z components represent scale along respective axes.
-     * @note If the matrix contains rotation, the extracted scaling factors may not be accurate.
-     *       For pure scale or uniform scale, the returned vector will be correct.
+     * @brief Get the diagonal elements of the upper-left 3×3 block.
+     *
+     * Returns (m00, m11, m22). Whether these equal the per-axis scale factors
+     * depends on the structure of the 3×3 block:
+     *
+     *   Transform type              | scaleFactors() meaningful?
+     *   ----------------------------|---------------------------
+     *   Axis-aligned scale          | yes – diagonal IS the scale
+     *   Axis-aligned reflection     | yes – negative diagonal = mirror axis
+     *   Shear (no scale)            | returns (1,1,1) – indeed no scale
+     *   Shear × axis-scale          | shear never touches the diagonal
+     *   Rotation                    | no  – diagonals are R, not S
+     *   Rotation × scale (R·S)      | no  – diagonals are those of R·S
+     *   Non-axis-aligned reflection | no  – I − 2nnᵀ has off-diagonal terms
+     *   Projection                  | no  – no geometric scale meaning
+     *
+     * To reliably extract scale from an arbitrary affine matrix, normalize
+     * the column vectors and take their lengths instead.
+     *
+     * @return (m00, m11, m22) as Vector3<T>.
      */
     constexpr Vector3<T> scaleFactors() const
     {
