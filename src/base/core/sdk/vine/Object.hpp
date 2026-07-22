@@ -113,7 +113,7 @@ const T& obj_cast(const Object& obj)
 
 V_CORE_NS_END
 
-#define V_OBJECT_META                                                                                                                                          \
+#define V_OBJECT_META(Sub, Parent)                                                                                                                                          \
   public:                                                                                                                                                      \
     virtual const vine::Class* getClass() const noexcept override                                                                                              \
     {                                                                                                                                                          \

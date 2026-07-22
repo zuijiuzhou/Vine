@@ -20,6 +20,7 @@ include(VineLibraryHelper)
 add_subdirectory(base)
 add_subdirectory(viz)
 add_subdirectory(fw)
+add_subdirectory(robotics)
 add_subdirectory(app)
 
 file(GLOB VI_GLOBAL_HEADER_FILES LIST_DIRECTORIES false ${CMAKE_SOURCE_DIR}/include/vine/*.h)

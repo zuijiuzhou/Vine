@@ -1,4 +1,4 @@
-#include <vine/math/Transform2.hpp>
+#include <vine/math/Isometry2.hpp>
 
 #include <cmath>
 
@@ -9,10 +9,10 @@ V_MATH_NS_BEGIN
 // ---------------------------------------------------------------------------
 
 template <typename T>
-Transform2<T> Transform2<T>::inverted() const
+Isometry2<T> Isometry2<T>::inverted() const
 {
     // T⁻¹ = (-θ, -R(-θ) * t)
-    Transform2<T> inv;
+    Isometry2<T> inv;
     inv.angle = -angle;
     const auto c = std::cos(inv.angle);
     const auto s = std::sin(inv.angle);
@@ -22,7 +22,7 @@ Transform2<T> Transform2<T>::inverted() const
 }
 
 template <typename T>
-void Transform2<T>::invert()
+void Isometry2<T>::invert()
 {
     angle = -angle;
     const auto c  = std::cos(angle);
@@ -38,7 +38,7 @@ void Transform2<T>::invert()
 // ---------------------------------------------------------------------------
 
 template <typename T>
-Transform2<T>& Transform2<T>::preTranslate(const Vector2<T>& dt)
+Isometry2<T>& Isometry2<T>::preTranslate(const Vector2<T>& dt)
 {
     translation.x += dt.x;
     translation.y += dt.y;
@@ -46,7 +46,7 @@ Transform2<T>& Transform2<T>::preTranslate(const Vector2<T>& dt)
 }
 
 template <typename T>
-Transform2<T>& Transform2<T>::postTranslate(const Vector2<T>& dt)
+Isometry2<T>& Isometry2<T>::postTranslate(const Vector2<T>& dt)
 {
     // T * T_trans = (θ, R(θ) * dt + t)
     const auto c = std::cos(angle);
@@ -61,7 +61,7 @@ Transform2<T>& Transform2<T>::postTranslate(const Vector2<T>& dt)
 // ---------------------------------------------------------------------------
 
 template <typename T>
-Transform2<T>& Transform2<T>::preRotate(T a)
+Isometry2<T>& Isometry2<T>::preRotate(T a)
 {
     // T_rot(a) * T = (a + θ, R(a) * t)
     const auto c = std::cos(a);
@@ -75,7 +75,7 @@ Transform2<T>& Transform2<T>::preRotate(T a)
 }
 
 template <typename T>
-Transform2<T>& Transform2<T>::postRotate(T a)
+Isometry2<T>& Isometry2<T>::postRotate(T a)
 {
     // T * T_rot(a) = (θ + a, t)
     angle += a;
@@ -87,10 +87,10 @@ Transform2<T>& Transform2<T>::postRotate(T a)
 // ---------------------------------------------------------------------------
 
 template <typename T>
-Transform2<T> Transform2<T>::operator*(const Transform2<T>& right) const
+Isometry2<T> Isometry2<T>::operator*(const Isometry2<T>& right) const
 {
     // (θ₁, t₁) * (θ₂, t₂) = (θ₁ + θ₂,  R(θ₁) * t₂ + t₁)
-    Transform2<T> result;
+    Isometry2<T> result;
     result.angle = angle + right.angle;
     const auto c = std::cos(angle);
     const auto s = std::sin(angle);
@@ -100,7 +100,7 @@ Transform2<T> Transform2<T>::operator*(const Transform2<T>& right) const
 }
 
 template <typename T>
-Transform2<T>& Transform2<T>::operator*=(const Transform2<T>& right)
+Isometry2<T>& Isometry2<T>::operator*=(const Isometry2<T>& right)
 {
     *this = *this * right;
     return *this;
@@ -111,7 +111,7 @@ Transform2<T>& Transform2<T>::operator*=(const Transform2<T>& right)
 // ---------------------------------------------------------------------------
 
 template <typename T>
-Point2<T> operator*(const Transform2<T>& t, const Point2<T>& p)
+Point2<T> operator*(const Isometry2<T>& t, const Point2<T>& p)
 {
     // p' = R(θ) * p + t
     const auto c = std::cos(t.angle);
@@ -121,7 +121,7 @@ Point2<T> operator*(const Transform2<T>& t, const Point2<T>& p)
 }
 
 template <typename T>
-Vector2<T> operator*(const Transform2<T>& t, const Vector2<T>& v)
+Vector2<T> operator*(const Isometry2<T>& t, const Vector2<T>& v)
 {
     // v' = R(θ) * v  (pure rotation, no translation)
     const auto c = std::cos(t.angle);
@@ -134,11 +134,11 @@ Vector2<T> operator*(const Transform2<T>& t, const Vector2<T>& v)
 // Explicit instantiations
 // ---------------------------------------------------------------------------
 
-template class V_MATH_API Transform2<float>;
-template class V_MATH_API Transform2<double>;
-template V_MATH_API Point2<float> operator*(const Transform2<float>&, const Point2<float>&);
-template V_MATH_API Point2<double> operator*(const Transform2<double>&, const Point2<double>&);
-template V_MATH_API Vector2<float> operator*(const Transform2<float>&, const Vector2<float>&);
-template V_MATH_API Vector2<double> operator*(const Transform2<double>&, const Vector2<double>&);
+template class V_MATH_API Isometry2<float>;
+template class V_MATH_API Isometry2<double>;
+template V_MATH_API Point2<float> operator*(const Isometry2<float>&, const Point2<float>&);
+template V_MATH_API Point2<double> operator*(const Isometry2<double>&, const Point2<double>&);
+template V_MATH_API Vector2<float> operator*(const Isometry2<float>&, const Vector2<float>&);
+template V_MATH_API Vector2<double> operator*(const Isometry2<double>&, const Vector2<double>&);
 
 V_MATH_NS_END

@@ -13,7 +13,7 @@ V_MATH_NS_BEGIN
  * @tparam T Only accepts float and double
  */
 template <typename T>
-class Transform3 {
+class Isometry3 {
   public:
     using value_type = T;
 
@@ -21,7 +21,7 @@ class Transform3 {
     /**
      * @brief Construct an identity transform.
      */
-    constexpr Transform3() noexcept
+    constexpr Isometry3() noexcept
       : translation()
       , rotation(T(0), T(0), T(0), T(1))
     {}
@@ -31,7 +31,7 @@ class Transform3 {
      * @param t Translation offset.
      * @param q Rotation quaternion.
      */
-    constexpr Transform3(const Point3<T>& t, const Quaternion<T>& q) noexcept
+    constexpr Isometry3(const Point3<T>& t, const Quaternion<T>& q) noexcept
       : translation(t)
       , rotation(q)
     {}
@@ -41,7 +41,7 @@ class Transform3 {
      * @brief Invert this transformation.
      * @return Inverted transformation.
      */
-    Transform3<T> inverted() const;
+    Isometry3<T> inverted() const;
 
     /**
      * @brief Invert this transformation in place.
@@ -52,45 +52,45 @@ class Transform3 {
      * @brief Pre-multiply a translation: T := T_trans(dt) * T.
      * @param dt Translation offset in world space.
      */
-    Transform3<T>& preTranslate(const Vector3<T>& dt);
+    Isometry3<T>& preTranslate(const Vector3<T>& dt);
 
     /**
      * @brief Post-multiply a translation: T := T * T_trans(dt).
      * @param dt Translation offset in local space.
      */
-    Transform3<T>& postTranslate(const Vector3<T>& dt);
+    Isometry3<T>& postTranslate(const Vector3<T>& dt);
 
     /**
      * @brief Pre-multiply a quaternion rotation: T := T_rot(quat) * T.
      * @param quat Rotation quaternion (world-space).
      */
-    Transform3<T>& preRotate(const Quaternion<T>& quat);
+    Isometry3<T>& preRotate(const Quaternion<T>& quat);
 
     /**
      * @brief Pre-multiply an axis-angle rotation: T := T_rot(axis, angle) * T.
      * @param axis  Rotation axis (world-space), should be normalized.
      * @param angle Rotation angle in radians.
      */
-    Transform3<T>& preRotate(const Vector3<T>& axis, T angle);
+    Isometry3<T>& preRotate(const Vector3<T>& axis, T angle);
 
     /**
      * @brief Post-multiply a quaternion rotation: T := T * T_rot(quat).
      * @param quat Rotation quaternion (local-space).
      */
-    Transform3<T>& postRotate(const Quaternion<T>& quat);
+    Isometry3<T>& postRotate(const Quaternion<T>& quat);
 
     /**
      * @brief Post-multiply an axis-angle rotation: T := T * T_rot(axis, angle).
      * @param axis  Rotation axis (local-space), should be normalized.
      * @param angle Rotation angle in radians.
      */
-    Transform3<T>& postRotate(const Vector3<T>& axis, T angle);
+    Isometry3<T>& postRotate(const Vector3<T>& axis, T angle);
 
     /**
      * @brief Compose two transforms: T₁ * T₂.
      */
-    Transform3<T>  operator*(const Transform3<T>& right) const;
-    Transform3<T>& operator*=(const Transform3<T>& right);
+    Isometry3<T>  operator*(const Isometry3<T>& right) const;
+    Isometry3<T>& operator*=(const Isometry3<T>& right);
 
     /**
      * @brief Local X axis in parent coordinates (right direction).
@@ -111,12 +111,12 @@ class Transform3 {
 };
 
 template <typename T>
-Point3<T> operator*(const Transform3<T>& t, const Point3<T>& p);
+Point3<T> operator*(const Isometry3<T>& t, const Point3<T>& p);
 
 template <typename T>
-Vector3<T> operator*(const Transform3<T>& t, const Vector3<T>& v);
+Vector3<T> operator*(const Isometry3<T>& t, const Vector3<T>& v);
 
-using Transform3f = Transform3<float>;
-using Transform3d = Transform3<double>;
+using Isometry3f = Isometry3<float>;
+using Isometry3d = Isometry3<double>;
 
 V_MATH_NS_END

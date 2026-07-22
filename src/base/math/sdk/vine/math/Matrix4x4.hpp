@@ -6,7 +6,7 @@
 
 #include "Point3.hpp"
 #include "Quaternion.hpp"
-#include "Transform3.hpp"
+#include "Isometry3.hpp"
 #include "Vector3.hpp"
 #include "Vector4.hpp"
 
@@ -134,10 +134,10 @@ class Matrix4x4 {
     }
 
     /**
-     * @brief Construct a matrix from a Transform3 object.
-     * @param transform Transform3 object containing translation and rotation.
+     * @brief Construct a matrix from a Isometry3 object.
+     * @param transform Isometry3 object containing translation and rotation.
      */
-    Matrix4x4(const Transform3<T>& transform)
+    Matrix4x4(const Isometry3<T>& transform)
     {
         setBasis(transform.translation, transform.right(), transform.up(), transform.forward());
     }

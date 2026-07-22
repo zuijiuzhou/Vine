@@ -1,4 +1,4 @@
-#include <vine/math/Transform3.hpp>
+#include <vine/math/Isometry3.hpp>
 
 #include <vine/math/Point3.hpp>
 #include <vine/math/Vector3.hpp>
@@ -10,17 +10,17 @@ V_MATH_NS_BEGIN
 // ---------------------------------------------------------------------------
 
 template <typename T>
-Transform3<T> Transform3<T>::inverted() const
+Isometry3<T> Isometry3<T>::inverted() const
 {
     // T = (q, t)  =>  T⁻¹ = (q⁻¹, -q⁻¹ * t)
-    Transform3<T> inv;
+    Isometry3<T> inv;
     inv.rotation    = rotation.conj();
     inv.translation = -(inv.rotation * translation);
     return inv;
 }
 
 template <typename T>
-void Transform3<T>::invert()
+void Isometry3<T>::invert()
 {
     // T = (q, t)  =>  T⁻¹ = (q⁻¹, -q⁻¹ * t)
     rotation = rotation.conj();
@@ -32,7 +32,7 @@ void Transform3<T>::invert()
 // ---------------------------------------------------------------------------
 
 template <typename T>
-Transform3<T>& Transform3<T>::preTranslate(const Vector3<T>& dt)
+Isometry3<T>& Isometry3<T>::preTranslate(const Vector3<T>& dt)
 {
     // T := T_trans * T = (q, t + dt)
     translation += dt;
@@ -40,7 +40,7 @@ Transform3<T>& Transform3<T>::preTranslate(const Vector3<T>& dt)
 }
 
 template <typename T>
-Transform3<T>& Transform3<T>::postTranslate(const Vector3<T>& dt)
+Isometry3<T>& Isometry3<T>::postTranslate(const Vector3<T>& dt)
 {
     // T := T * T_trans = (q, q * dt + t)
     const auto rotated = rotation * dt;
@@ -55,7 +55,7 @@ Transform3<T>& Transform3<T>::postTranslate(const Vector3<T>& dt)
 // ---------------------------------------------------------------------------
 
 template <typename T>
-Transform3<T>& Transform3<T>::preRotate(const Quaternion<T>& quat)
+Isometry3<T>& Isometry3<T>::preRotate(const Quaternion<T>& quat)
 {
     // T := T_rot * T = (quat * q, quat * t)
     translation = quat * translation;
@@ -64,13 +64,13 @@ Transform3<T>& Transform3<T>::preRotate(const Quaternion<T>& quat)
 }
 
 template <typename T>
-Transform3<T>& Transform3<T>::preRotate(const Vector3<T>& axis, T angle)
+Isometry3<T>& Isometry3<T>::preRotate(const Vector3<T>& axis, T angle)
 {
     return preRotate(Quaternion<T>(angle, axis));
 }
 
 template <typename T>
-Transform3<T>& Transform3<T>::postRotate(const Quaternion<T>& quat)
+Isometry3<T>& Isometry3<T>::postRotate(const Quaternion<T>& quat)
 {
     // T := T * T_rot = (q * quat, t)
     rotation = rotation * quat;
@@ -78,7 +78,7 @@ Transform3<T>& Transform3<T>::postRotate(const Quaternion<T>& quat)
 }
 
 template <typename T>
-Transform3<T>& Transform3<T>::postRotate(const Vector3<T>& axis, T angle)
+Isometry3<T>& Isometry3<T>::postRotate(const Vector3<T>& axis, T angle)
 {
     return postRotate(Quaternion<T>(angle, axis));
 }
@@ -88,10 +88,10 @@ Transform3<T>& Transform3<T>::postRotate(const Vector3<T>& axis, T angle)
 // ---------------------------------------------------------------------------
 
 template <typename T>
-Transform3<T> Transform3<T>::operator*(const Transform3<T>& right) const
+Isometry3<T> Isometry3<T>::operator*(const Isometry3<T>& right) const
 {
     // (q₁, t₁) * (q₂, t₂) = (q₁ * q₂,  q₁ * t₂ + t₁)
-    Transform3<T> result;
+    Isometry3<T> result;
     result.rotation    = rotation * right.rotation;
     const auto rotated = rotation * right.translation;
     result.translation = Point3<T>(translation.x + rotated.x,
@@ -101,7 +101,7 @@ Transform3<T> Transform3<T>::operator*(const Transform3<T>& right) const
 }
 
 template <typename T>
-Transform3<T>& Transform3<T>::operator*=(const Transform3<T>& right)
+Isometry3<T>& Isometry3<T>::operator*=(const Isometry3<T>& right)
 {
     *this = *this * right;
     return *this;
@@ -112,7 +112,7 @@ Transform3<T>& Transform3<T>::operator*=(const Transform3<T>& right)
 // ---------------------------------------------------------------------------
 
 template <typename T>
-Point3<T> operator*(const Transform3<T>& t, const Point3<T>& p)
+Point3<T> operator*(const Isometry3<T>& t, const Point3<T>& p)
 {
     // p' = q * p + t
     const auto rotated = t.rotation * p;
@@ -122,7 +122,7 @@ Point3<T> operator*(const Transform3<T>& t, const Point3<T>& p)
 }
 
 template <typename T>
-Vector3<T> operator*(const Transform3<T>& t, const Vector3<T>& v)
+Vector3<T> operator*(const Isometry3<T>& t, const Vector3<T>& v)
 {
     // v' = q * v  (pure rotation, no translation)
     return t.rotation * v;
@@ -132,11 +132,11 @@ Vector3<T> operator*(const Transform3<T>& t, const Vector3<T>& v)
 // Explicit instantiations
 // ---------------------------------------------------------------------------
 
-template class V_MATH_API Transform3<float>;
-template class V_MATH_API Transform3<double>;
-template V_MATH_API Point3<float> operator*(const Transform3<float>&, const Point3<float>&);
-template V_MATH_API Point3<double> operator*(const Transform3<double>&, const Point3<double>&);
-template V_MATH_API Vector3<float> operator*(const Transform3<float>&, const Vector3<float>&);
-template V_MATH_API Vector3<double> operator*(const Transform3<double>&, const Vector3<double>&);
+template class V_MATH_API Isometry3<float>;
+template class V_MATH_API Isometry3<double>;
+template V_MATH_API Point3<float> operator*(const Isometry3<float>&, const Point3<float>&);
+template V_MATH_API Point3<double> operator*(const Isometry3<double>&, const Point3<double>&);
+template V_MATH_API Vector3<float> operator*(const Isometry3<float>&, const Vector3<float>&);
+template V_MATH_API Vector3<double> operator*(const Isometry3<double>&, const Vector3<double>&);
 
 V_MATH_NS_END
