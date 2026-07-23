@@ -11,68 +11,58 @@ V_MATH_NS_BEGIN
 
 TMPL_PREFIX bool Rect2<T>::contains(T x, T y) const
 {
-    auto l = bottomLeft();
-    auto u = topRight();
-    return x >= l.x && x <= u.x && y >= l.y && y <= u.y;
+    auto mx = std::min(xmin, xmax), Mx = std::max(xmin, xmax);
+    auto my = std::min(ymin, ymax), My = std::max(ymin, ymax);
+    return x >= mx && x <= Mx && y >= my && y <= My;
 }
 
 TMPL_PREFIX bool Rect2<T>::contains(const Point2<T>& pt) const
 {
-    auto l = bottomLeft();
-    auto u = topRight();
-    return pt.x >= l.x && pt.x <= u.x && pt.y >= l.y && pt.y <= u.y;
+    auto mx = std::min(xmin, xmax), Mx = std::max(xmin, xmax);
+    auto my = std::min(ymin, ymax), My = std::max(ymin, ymax);
+    return pt.x >= mx && pt.x <= Mx && pt.y >= my && pt.y <= My;
 }
 
 TMPL_PREFIX void Rect2<T>::expandBy(const Point2<T>& pt)
 {
-    auto l = bottomLeft();
-    auto u = topRight();
-    l.x    = std::min<T>(l.x, pt.x);
-    l.y    = std::min<T>(l.y, pt.y);
-    u.x    = std::max<T>(u.x, pt.x);
-    u.y    = std::max<T>(u.y, pt.y);
-    x      = l.x;
-    y      = l.y;
-    w      = u.x - l.x;
-    h      = u.y - l.y;
+    auto mx = std::min(xmin, xmax), Mx = std::max(xmin, xmax);
+    auto my = std::min(ymin, ymax), My = std::max(ymin, ymax);
+    xmin = std::min<T>(mx, pt.x);
+    ymin = std::min<T>(my, pt.y);
+    xmax = std::max<T>(Mx, pt.x);
+    ymax = std::max<T>(My, pt.y);
 }
 
 TMPL_PREFIX void Rect2<T>::expandBy(const Rect2<T>& rect)
 {
-    auto lb1 = bottomLeft();
-    auto ub1 = topRight();
-    auto lb2 = rect.bottomLeft();
-    auto ub2 = rect.topRight();
-
-    lb1.x = std::min<T>(lb1.x, lb2.x);
-    lb1.y = std::min<T>(lb1.y, lb2.y);
-    ub1.x = std::max<T>(ub1.x, ub2.x);
-    ub1.y = std::max<T>(ub1.y, ub2.y);
-
-    x = lb1.x;
-    y = lb1.y;
-
-    w = ub1.x - lb1.x;
-    h = ub1.y - lb1.y;
+    auto mx  = std::min(xmin, xmax),      Mx  = std::max(xmin, xmax);
+    auto my  = std::min(ymin, ymax),      My  = std::max(ymin, ymax);
+    auto rmx = std::min(rect.xmin, rect.xmax), rMx = std::max(rect.xmin, rect.xmax);
+    auto rmy = std::min(rect.ymin, rect.ymax), rMy = std::max(rect.ymin, rect.ymax);
+    xmin = std::min<T>(mx, rmx);
+    ymin = std::min<T>(my, rmy);
+    xmax = std::max<T>(Mx, rMx);
+    ymax = std::max<T>(My, rMy);
 }
 
-TMPL_PREFIX Rect2<T> Rect2<T>::intersectWith(const Rect2<T>& rect) const
+TMPL_PREFIX bool Rect2<T>::intersectWith(const Rect2<T>& rect, Rect2<T>& out) const
 {
-    auto lb1 = bottomLeft();
-    auto ub1 = topRight();
-    auto lb2 = rect.bottomLeft();
-    auto ub2 = rect.topRight();
+    auto ax0 = std::min(xmin, xmax), ax1 = std::max(xmin, xmax);
+    auto ay0 = std::min(ymin, ymax), ay1 = std::max(ymin, ymax);
+    auto bx0 = std::min(rect.xmin, rect.xmax), bx1 = std::max(rect.xmin, rect.xmax);
+    auto by0 = std::min(rect.ymin, rect.ymax), by1 = std::max(rect.ymin, rect.ymax);
 
-    auto ix0 = std::max<T>(lb1.x, lb2.x);
-    auto iy0 = std::max<T>(lb1.y, lb2.y);
-    auto ix1 = std::min<T>(ub1.x, ub2.x);
-    auto iy1 = std::min<T>(ub1.y, ub2.y);
+    auto ix0 = std::max<T>(ax0, bx0);
+    auto iy0 = std::max<T>(ay0, by0);
+    auto ix1 = std::min<T>(ax1, bx1);
+    auto iy1 = std::min<T>(ay1, by1);
 
-    if (ix1 < ix0 || iy1 < iy0) {
-        return Rect2<T>();
-    }
+    out.xmin = std::min<T>(ix0, ix1);
+    out.ymin = std::min<T>(iy0, iy1);
+    out.xmax = std::max<T>(ix0, ix1);
+    out.ymax = std::max<T>(iy0, iy1);
 
-    return Rect2<T>(ix0, iy0, ix1 - ix0, iy1 - iy0);
+    return ix0 <= ix1 && iy0 <= iy1;
 }
 
 #undef TMPL_PREFIX

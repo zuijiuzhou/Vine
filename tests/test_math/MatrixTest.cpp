@@ -1,6 +1,7 @@
 ﻿#include <gtest/gtest.h>
 
 #include <vine/math/Matrix4x4.hpp>
+#include <vine/math/Transform3.hpp>
 
 using namespace vine::math;
 
@@ -37,11 +38,11 @@ TEST(Matrix4x4, setBasis_getBasis) {
     Vec3d y(0.0, 1.0, 0.0);
     Vec3d z(0.0, 0.0, 1.0);
 
-    m.setBasis(o, x, y, z);
+    setBasis(m, o, x, y, z);
 
     Point3d o2;
     Vec3d x2, y2, z2;
-    m.getBasis(o2, x2, y2, z2);
+    getBasis(m, o2, x2, y2, z2);
 
     EXPECT_DOUBLE_EQ(o2.x, 1.0);
     EXPECT_DOUBLE_EQ(o2.y, 2.0);
@@ -59,10 +60,10 @@ TEST(Matrix4x4, setBasis_getBasis) {
 
 TEST(Matrix4x4, multiplyAssign) {
     Mat4d a;
-    a.makeTranslation(1.0, 2.0, 3.0);
+    makeTranslation(a, 1.0, 2.0, 3.0);
 
     Mat4d b;
-    b.makeScale(2.0, 3.0, 4.0);
+    makeScale(b, 2.0, 3.0, 4.0);
 
     Mat4d expect = a * b;
     a *= b;
@@ -76,14 +77,14 @@ TEST(Matrix4x4, multiplyAssign) {
 
 TEST(Matrix4x4, makeRotationZeroAngleMakesIdentity) {
     Mat4d m;
-    m.makeTranslation(9.0, 8.0, 7.0);
-    m.makeRotation(Vec3d(1.0, 0.0, 0.0), 0.0);
+    makeTranslation(m, 9.0, 8.0, 7.0);
+    makeRotation(m, Vec3d(1.0, 0.0, 0.0), 0.0);
     EXPECT_TRUE(m.isIdentity());
 }
 
 TEST(Matrix4x4, transformVectorAndPoint) {
     Mat4d m;
-    m.makeTranslation(10.0, 20.0, 30.0);
+    makeTranslation(m, 10.0, 20.0, 30.0);
 
     Vec3d v(1.0, 2.0, 3.0);
     Point3d p(1.0, 2.0, 3.0);
@@ -105,13 +106,13 @@ TEST(Matrix4x4, invertAffineRoundTrip) {
     constexpr double pi = 3.14159265358979323846;
 
     Mat4d t;
-    t.makeTranslation(5.0, -2.0, 1.5);
+    makeTranslation(t, 5.0, -2.0, 1.5);
 
     Mat4d r;
-    r.makeRotation(Vec3d(0.0, 0.0, 1.0), pi * 0.25);
+    makeRotation(r, Vec3d(0.0, 0.0, 1.0), pi * 0.25);
 
     Mat4d s;
-    s.makeScale(2.0, 3.0, 4.0);
+    makeScale(s, 2.0, 3.0, 4.0);
 
     Mat4d m = t * r * s;
     Mat4d inv = m.inverted();
@@ -134,10 +135,10 @@ TEST(Matrix4x4, quaternionRotationMatchesAxisAngle) {
     Quatd q(half_pi, Vec3d(0.0, 0.0, 1.0));
 
     Mat4d mq;
-    mq.makeRotation(q);
+    makeRotation(mq, q);
 
     Mat4d ma;
-    ma.makeRotation(Vec3d(0.0, 0.0, 1.0), half_pi);
+    makeRotation(ma, Vec3d(0.0, 0.0, 1.0), half_pi);
 
     for (int i = 0; i < 4; ++i) {
         for (int j = 0; j < 4; ++j) {
@@ -152,12 +153,12 @@ TEST(Matrix4x4, rotationExtractsQuaternionRoundTrip) {
     const Quatd source(0.73, Vec3d(1.0, -2.0, 0.5));
 
     Mat4d m;
-    m.makeRotation(source);
+    makeRotation(m, source);
 
-    const Quatd extracted = m.rotation();
+    const Quatd extracted = getRotation(m);
 
     Mat4d reconstructed;
-    reconstructed.makeRotation(extracted);
+    makeRotation(reconstructed, extracted);
 
     for (int r = 0; r < 3; ++r) {
         for (int c = 0; c < 3; ++c) {
@@ -172,15 +173,15 @@ TEST(Matrix4x4, rotationIgnoresNonUniformScale) {
     const Quatd source(1.1, Vec3d(-1.0, 2.0, 0.25));
 
     Mat4d pure_rotation;
-    pure_rotation.makeRotation(source);
+    makeRotation(pure_rotation, source);
 
     Mat4d scaled_rotation = pure_rotation;
-    scaled_rotation.postScale(Vec3d(2.5, 0.5, 3.0));
+    postScale(scaled_rotation, Vec3d(2.5, 0.5, 3.0));
 
-    const Quatd extracted = scaled_rotation.rotation();
+    const Quatd extracted = getRotation(scaled_rotation);
 
     Mat4d reconstructed;
-    reconstructed.makeRotation(extracted);
+    makeRotation(reconstructed, extracted);
 
     for (int r = 0; r < 3; ++r) {
         for (int c = 0; c < 3; ++c) {
@@ -191,25 +192,25 @@ TEST(Matrix4x4, rotationIgnoresNonUniformScale) {
 
 TEST(Matrix4x4, isRigidRejectsScaleAndReflection) {
     Mat4d rigid;
-    rigid.makeRotation(Vec3d(0.0, 1.0, 0.0), 0.3);
+    makeRotation(rigid, Vec3d(0.0, 1.0, 0.0), 0.3);
     rigid(0, 3) = 1.0;
     rigid(1, 3) = 2.0;
     rigid(2, 3) = 3.0;
     EXPECT_TRUE(rigid.isRigid());
 
     Mat4d scaled;
-    scaled.makeScale(2.0, 1.0, 1.0);
+    makeScale(scaled, 2.0, 1.0, 1.0);
     EXPECT_FALSE(scaled.isRigid());
 
     Mat4d reflected;
-    reflected.makeScale(-1.0, 1.0, 1.0);
+    makeScale(reflected, -1.0, 1.0, 1.0);
     EXPECT_FALSE(reflected.isRigid());
 }
 
 TEST(Matrix4x4, perspectiveMapsPointWithHomogeneousDivide) {
     constexpr double pi = 3.14159265358979323846;
     Mat4d p;
-    p.makePerspective(pi / 2.0, 1.0, 1.0, 100.0);
+    makePerspective(p, pi / 2.0, 1.0, 1.0, 100.0);
 
     Point3d view_pt(0.0, 0.0, -2.0);
     Point3d clip_ndc = p * view_pt;
@@ -236,11 +237,11 @@ TEST(Matrix4x4, prePostOperationsMatchMatrixMultiplication) {
 
     Mat4d base;
     Mat4d tr;
-    tr.makeTranslation(1.2, -3.4, 5.6);
+    makeTranslation(tr, 1.2, -3.4, 5.6);
     Mat4d rot;
-    rot.makeRotation(Vec3d(1.0, 2.0, 3.0), 0.47);
+    makeRotation(rot, Vec3d(1.0, 2.0, 3.0), 0.47);
     Mat4d sc;
-    sc.makeScale(0.8, 1.3, 2.1);
+    makeScale(sc, 0.8, 1.3, 2.1);
     base = tr * rot * sc;
 
     const Vec3d axis(2.0, -1.0, 0.5);
@@ -250,40 +251,40 @@ TEST(Matrix4x4, prePostOperationsMatchMatrixMultiplication) {
     const Vec3d factor(1.5, 0.6, 1.2);
 
     Mat4d rmat;
-    rmat.makeRotation(q);
+    makeRotation(rmat, q);
     Mat4d tmat;
-    tmat.makeTranslation(offset);
+    makeTranslation(tmat, offset);
     Mat4d smat;
-    smat.makeScale(factor);
+    makeScale(smat, factor);
 
     {
         Mat4d m = base;
-        m.preRotate(q);
+        preRotate(m, q);
         expectMatNear(m, rmat * base);
     }
     {
         Mat4d m = base;
-        m.postRotate(q);
+        postRotate(m, q);
         expectMatNear(m, base * rmat);
     }
     {
         Mat4d m = base;
-        m.preTranslate(offset);
+        preTranslate(m, offset);
         expectMatNear(m, tmat * base);
     }
     {
         Mat4d m = base;
-        m.postTranslate(offset);
+        postTranslate(m, offset);
         expectMatNear(m, base * tmat);
     }
     {
         Mat4d m = base;
-        m.preScale(factor);
+        preScale(m, factor);
         expectMatNear(m, smat * base);
     }
     {
         Mat4d m = base;
-        m.postScale(factor);
+        postScale(m, factor);
         expectMatNear(m, base * smat);
     }
 }

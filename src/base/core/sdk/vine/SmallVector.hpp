@@ -268,7 +268,6 @@ class SmallVector {
         capacity_ = new_capacity;
     }
 
-
     void resize(size_type count)
     {
         if (count > size_) {
@@ -284,7 +283,7 @@ class SmallVector {
             }
         }
     }
-    
+
     void clear() noexcept
     {
         // for (size_type i = 0; i < size_; ++i) {
@@ -292,8 +291,7 @@ class SmallVector {
         // }
         // size_ = 0;
 
-        std::destroy(std::make_reverse_iterator(data_ + size_),
-                     std::make_reverse_iterator(data_));
+        std::destroy(std::make_reverse_iterator(data_ + size_), std::make_reverse_iterator(data_));
         size_ = 0;
     }
 

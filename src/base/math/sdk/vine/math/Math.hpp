@@ -103,8 +103,10 @@ constexpr bool isEqual(T a, T b, T eps)
 }
 
 /**
- * @brief Safe multiplication, for floating point types, it is just normal multiplication,
- *        for integer types, it is promoted to double first, then multiplied.
+ * @brief Safe multiplication.
+ *
+ * - For floating point types: normal multiplication.
+ * - For integer types: promoted to double first, then multiplied.
  */
 template <Real T>
 [[nodiscard]]
@@ -121,10 +123,11 @@ constexpr TypeF<T> safeMultiply(T first, T second)
 }
 
 /**
- * @brief Safe calculation of vector length squared, for floating point types, it is just normal calculation,
- *        for integer types, it is promoted to double first, then calculated.
+ * @brief Safe calculation of vector length squared.
+ *
+ * - For floating point types: normal calculation.
+ * - For integer types: promoted to double first, then calculated.
  */
-// computeVectorLength2Safe
 template <Arithmetic T, Arithmetic... Rest>
 [[nodiscard]]
 constexpr TypeF<T> safeLengthSquared(T first, Rest... rest)
@@ -143,8 +146,10 @@ constexpr TypeF<T> safeLengthSquared(T first, Rest... rest)
 }
 
 /**
- * @brief Safe calculation of vector length, for floating point types, it is just normal calculation,
- *        for integer types, it is promoted to double first, then calculated.
+ * @brief Safe calculation of vector length.
+ *
+ * - For floating point types: normal calculation.
+ * - For integer types: promoted to double first, then calculated.
  */
 template <Arithmetic T, Arithmetic... Rest>
 [[nodiscard]]
@@ -154,8 +159,10 @@ constexpr TypeF<T> safeLength(T first, Rest... rest)
 }
 
 /**
- * for boolean type, + is treated as logical OR
- * for other types, it is normal addition
+ * @brief Arithmetic addition.
+ *
+ * - For boolean type: `+` treated as logical OR.
+ * - For other types: normal addition.
  */
 template <Arithmetic T>
 [[nodiscard]]
@@ -170,8 +177,10 @@ constexpr T arithmeticAdd(T left, T right)
 }
 
 /**
- * for boolean type, - is treated as left AND (NOT right)
- * for other types, it is normal subtraction
+ * @brief Arithmetic subtraction.
+ *
+ * - For boolean type: `-` treated as left AND (NOT right).
+ * - For other types: normal subtraction.
  */
 template <Arithmetic T>
 [[nodiscard]]
@@ -186,8 +195,10 @@ constexpr T arithmeticSub(T left, T right)
 }
 
 /**
- * for boolean type, * is treated as logical AND
- * for other types, it is normal multiplication
+ * @brief Arithmetic multiplication.
+ *
+ * - For boolean type: `*` treated as logical AND.
+ * - For other types: normal multiplication.
  */
 template <Arithmetic T>
 [[nodiscard]]
@@ -202,8 +213,10 @@ constexpr T arithmeticMultiply(T left, T right)
 }
 
 /**
- * for boolean type, / is treated as logical AND
- * for other types, it is normal division
+ * @brief Arithmetic division.
+ *
+ * - For boolean type: `/` treated as logical AND.
+ * - For other types: normal division.
  */
 template <Arithmetic T>
 [[nodiscard]]
@@ -217,6 +230,12 @@ constexpr T arithmeticDivision(T left, T right)
     }
 }
 
+/**
+ * @brief Arithmetic negation.
+ *
+ * - For boolean type: `-` treated as logical NOT.
+ * - For other types: normal negation.
+ */
 template <Arithmetic T>
 [[nodiscard]]
 constexpr T arithmeticNagate(T left)
@@ -227,6 +246,39 @@ constexpr T arithmeticNagate(T left)
     else {
         return -left;
     }
+}
+
+/**
+ * @brief Normalize angle to [-π, π].
+ */
+template <FP T>
+[[nodiscard]]
+constexpr T normalizeAngle(T angle)
+{
+    constexpr T pi    = static_cast<T>(PI);
+    constexpr T two_pi = static_cast<T>(PI_TWO);
+
+    while (angle > pi) angle -= two_pi;
+
+    while (angle < -pi) angle += two_pi;
+
+    return angle;
+}
+
+/**
+ * @brief Normalize angle to [0, 2π).
+ */
+template <FP T>
+[[nodiscard]]
+constexpr T normalizeAnglePositive(T angle)
+{
+    constexpr T two_pi = static_cast<T>(PI_TWO);
+
+    while (angle >= two_pi) angle -= two_pi;
+
+    while (angle < 0) angle += two_pi;
+
+    return angle;
 }
 
 V_MATH_NS_END

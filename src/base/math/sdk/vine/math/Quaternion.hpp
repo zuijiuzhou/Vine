@@ -190,6 +190,41 @@ class Quaternion {
     }
 
     /**
+     * @brief Normalise this quaternion in place to unit length.
+     *
+     * For a zero-length quaternion (|q| = 0), the quaternion is left unchanged.
+     */
+    constexpr void normalize()
+    {
+        const auto len = length();
+        if (len > T(0)) {
+            const auto rcp = T(1) / len;
+            x *= rcp;
+            y *= rcp;
+            z *= rcp;
+            w *= rcp;
+        }
+    }
+
+    /**
+     * @brief Return a normalised copy of this quaternion.
+     *
+     * For a zero-length quaternion, returns the identity (0, 0, 0, 1).
+     *
+     * @return Normalised unit quaternion.
+     */
+    [[nodiscard]]
+    constexpr Quaternion<T> normalized() const
+    {
+        const auto len = length();
+        if (len > T(0)) {
+            const auto rcp = T(1) / len;
+            return Quaternion<T>(x * rcp, y * rcp, z * rcp, w * rcp);
+        }
+        return Quaternion<T>(T(0), T(0), T(0), T(1));
+    }
+
+    /**
      * @brief Set this quaternion from axis-angle: q = (sin(θ/2)·axis, cos(θ/2)).
      * @param angle Rotation angle θ in radians.
      * @param axis  Rotation axis (normalized internally, any non-zero vector is safe).

@@ -3,7 +3,6 @@
 #include "math_global.hpp"
 
 #include <algorithm>
-#include <cassert>
 #include <cstdint>
 
 #include "Point2.hpp"
@@ -12,248 +11,210 @@
 V_MATH_NS_BEGIN
 
 /**
- * @brief A class representing a rectangle in 2D space, defined by its top-left corner and size.
- *        The rectangle is axis-aligned, meaning its edges are parallel to the coordinate axes.
- * @tparam T Only accepts float double and integers(not boolean)
+ * @brief Axis-aligned 2D rectangle, defined by its minimum and maximum corners.
+ *
+ * The rectangle stores raw (xmin, ymin, xmax, ymax) without enforcing
+ * ordering.  Two categories of members are provided:
+ *
+ * - **Raw accessors** (min(), max(), width(), height(), size(), center()):
+ *   return stored values as-is.  Extents may be negative when the
+ *   rectangle is inverted (max < min) — check with isNeg().
+ *
+ * - **Normalizing methods** (contains(), expandBy(), intersectWith()):
+ *   internally normalize min/max before computing, producing correct
+ *   results even when the stored bounds are inverted.
+ *
+ * @tparam T Scalar type (float, double, integer).
  */
 template <typename T>
 class Rect2 {
   public:
     using value_type = T;
 
-  public:
     /**
-     * @brief Construct a zero-sized rectangle at origin.
+     * @brief Construct a zero-sized rectangle at the origin.
      */
     constexpr Rect2()
-      : x(T())
-      , y(T())
-      , w(T())
-      , h(T())
+      : xmin(T())
+      , ymin(T())
+      , xmax(T())
+      , ymax(T())
     {}
 
     /**
-     * @brief Construct a rectangle from corner and size.
-     * @param corner Top-left style corner.
-     * @param size Rectangle size vector.
+     * @brief Construct from minimum and maximum corners.
+     * @param minPt Minimum corner (lower-left in math coords).
+     * @param maxPt Maximum corner (upper-right in math coords).
      */
-    constexpr Rect2(const Point2<T>& corner, const Vector2<T>& size)
-      : x(corner.x)
-      , y(corner.y)
-      , w(size.x)
-      , h(size.y)
+    constexpr Rect2(const Point2<T>& minPt, const Point2<T>& maxPt)
+      : xmin(minPt.x)
+      , ymin(minPt.y)
+      , xmax(maxPt.x)
+      , ymax(maxPt.y)
     {}
 
     /**
-     * @brief Construct a rectangle from raw components.
-     * @param xx X coordinate.
-     * @param yy Y coordinate.
-     * @param ww Width.
-     * @param hh Height.
+     * @brief Convenience: construct from origin point and size vector.
+     * @param origin Minimum corner.
+     * @param size   Non-negative extents.
      */
-    constexpr Rect2(T xx, T yy, T ww, T hh)
-      : x(xx)
-      , y(yy)
-      , w(ww)
-      , h(hh)
+    constexpr Rect2(const Point2<T>& origin, const Vector2<T>& size)
+      : xmin(origin.x)
+      , ymin(origin.y)
+      , xmax(origin.x + size.x)
+      , ymax(origin.y + size.y)
     {}
 
-  public:
     /**
-     * @brief Get top boundary value.
-     * @return Maximum y boundary.
+     * @brief Construct from raw scalar components.
+     * @param x0 Minimum X.
+     * @param y0 Minimum Y.
+     * @param x1 Maximum X.
+     * @param y1 Maximum Y.
+     */
+    constexpr Rect2(T x0, T y0, T x1, T y1)
+      : xmin(x0)
+      , ymin(y0)
+      , xmax(x1)
+      , ymax(y1)
+    {}
+
+    /* ---- accessors ---- */
+
+    /**
+     * @name Raw accessors
+     *
+     * These return the stored values as-is.  When the rectangle is in a
+     * valid state (min ≤ max), the results are the expected geometric
+     * quantities.  When the rectangle is inverted (max < min), the
+     * extents may be negative — use isNeg() to check.
+     * @{
+     */
+
+    /** @brief Minimum corner (left, bottom in math Y-up). */
+    [[nodiscard]]
+    constexpr Point2<T> min() const { return Point2<T>(xmin, ymin); }
+
+    /** @brief Maximum corner (right, top in math Y-up). */
+    [[nodiscard]]
+    constexpr Point2<T> max() const { return Point2<T>(xmax, ymax); }
+
+    /** @brief Width (xmax - xmin), negative if inverted. */
+    [[nodiscard]]
+    constexpr T width() const { return xmax - xmin; }
+
+    /** @brief Height (ymax - ymin), negative if inverted. */
+    [[nodiscard]]
+    constexpr T height() const { return ymax - ymin; }
+
+    /** @brief Size vector, components may be negative if inverted. */
+    [[nodiscard]]
+    constexpr Vector2<T> size() const { return Vector2<T>(width(), height()); }
+
+    /** @brief Center point. */
+    [[nodiscard]]
+    constexpr Point2<T> center() const
+    {
+        return Point2<T>((xmin + xmax) / T(2), (ymin + ymax) / T(2));
+    }
+
+    /** @} */
+
+    /* ---- queries ---- */
+
+    /**
+     * @name Defensively-normalizing methods
+     *
+     * These methods internally normalize the rectangle (min/max ordering)
+     * before performing their computation, so they produce correct results
+     * even when the stored bounds are inverted.
+     * @{
+     */
+
+    /**
+     * @brief Check whether the rectangle has negative extent (max < min in any axis).
      */
     [[nodiscard]]
-    constexpr T top() const
+    constexpr bool isNeg() const { return xmax < xmin || ymax < ymin; }
+
+    /**
+     * @brief Check whether the rectangle has exactly zero area.
+     */
+    [[nodiscard]]
+    constexpr bool isZero() const { return xmax == xmin && ymax == ymin; }
+
+    /**
+     * @brief Check whether the rectangle has near-zero area.
+     */
+    [[nodiscard]]
+    constexpr bool isZero(T eps) const requires(Real<T>)
     {
-        return (std::max<T>)(y, y + h);
+        return math::isZero<T>(width(), eps) && math::isZero<T>(height(), eps);
     }
 
     /**
-     * @brief Get bottom boundary value.
-     * @return Minimum y boundary.
-     */
-    [[nodiscard]]
-    constexpr T bottom() const
-    {
-        return (std::min<T>)(y, y + h);
-    }
-
-    /**
-     * @brief Get left boundary value.
-     * @return Minimum x boundary.
-     */
-    [[nodiscard]]
-    constexpr T left() const
-    {
-        return (std::min<T>)(x, x + w);
-    }
-
-    /**
-     * @brief Get right boundary value.
-     * @return Maximum x boundary.
-     */
-    [[nodiscard]]
-    constexpr T right() const
-    {
-        return (std::max<T>)(x, x + w);
-    }
-
-    /**
-     * @brief Get minimum corner of this rectangle.
-     * @return Bottom-left corner.
-     */
-    [[nodiscard]]
-    constexpr Point2<T> bottomLeft() const
-    {
-        return Point2<T>((std::min<T>)(x, x + w), (std::min<T>)(y, y + h));
-    }
-
-    /**
-     * @brief Get bottom-right corner.
-     * @return Bottom-right corner point.
-     */
-    [[nodiscard]]
-    constexpr Point2<T> bottomRight() const
-    {
-        return Point2<T>((std::max<T>)(x, x + w), (std::min<T>)(y, y + h));
-    }
-
-    /**
-     * @brief Get top-left corner.
-     * @return Top-left corner point.
-     */
-    [[nodiscard]]
-    constexpr Point2<T> topLeft() const
-    {
-        return Point2<T>((std::min<T>)(x, x + w), (std::max<T>)(y, y + h));
-    }
-
-    /**
-     * @brief Get maximum corner of this rectangle.
-     * @return Top-right corner.
-     */
-    [[nodiscard]]
-    constexpr Point2<T> topRight() const
-    {
-        return Point2<T>((std::max<T>)(x, x + w), (std::max<T>)(y, y + h));
-    }
-
-    /**
-     * @brief Get width component.
-     * @return Stored width.
-     */
-    [[nodiscard]]
-    constexpr T width() const
-    {
-        return w;
-    }
-
-    /**
-     * @brief Get height component.
-     * @return Stored height.
-     */
-    [[nodiscard]]
-    constexpr T height() const
-    {
-        return h;
-    }
-
-    /**
-     * @brief Get size vector.
-     * @return Width/height vector.
-     */
-    [[nodiscard]]
-    constexpr Vector2<T> size() const
-    {
-        return Vector2<T>(w, h);
-    }
-
-    /**
-     * @brief Check whether a point coordinate lies inside rectangle.
-     * @param x X coordinate to test.
-     * @param y Y coordinate to test.
-     * @return True when point is inside or on boundary.
+     * @brief Check whether a point lies inside the rectangle (inclusive).
+     *
+     * Normalizes min/max internally; works correctly for inverted rectangles.
      */
     [[nodiscard]]
     bool contains(T x, T y) const;
+
     /**
-     * @brief Check whether a point lies inside rectangle.
-     * @param pt Point to test.
-     * @return True when point is inside or on boundary.
+     * @brief Check whether a point lies inside the rectangle (inclusive).
+     *
+     * Normalizes min/max internally; works correctly for inverted rectangles.
      */
     [[nodiscard]]
     bool contains(const Point2<T>& pt) const;
 
+    /* ---- modifiers ---- */
+
     /**
-     * @brief Expand rectangle to include a point.
-     * @param pt Point to include.
+     * @brief Expand to include a point.
+     *
+     * Normalizes bounds internally before expanding.
      */
     void expandBy(const Point2<T>& pt);
+
     /**
-     * @brief Expand rectangle to include another rectangle.
-     * @param rect Rectangle to include.
+     * @brief Expand to include another rectangle.
+     *
+     * Normalizes both rectangles internally before expanding.
      */
     void expandBy(const Rect2<T>& rect);
 
     /**
      * @brief Compute intersection with another rectangle.
+     *
+     * Normalizes both rectangles internally.  The output rectangle is
+     * always normalized (min ≤ max).
+     *
      * @param rect Other rectangle.
-     * @return Overlapping rectangle.
+     * @param out  Normalized output.
+     *             When disjoint, represents the gap between the two rectangles.
+     * @return true if intersecting, false if disjoint.
      */
-    [[nodiscard]]
-    Rect2<T> intersectWith(const Rect2<T>& rect) const;
+    bool intersectWith(const Rect2<T>& rect, Rect2<T>& out) const;
 
-    /**
-     * @brief Check whether size is exactly zero.
-     * @return True when width and height are zero.
-     */
+    /** @} */
+
+    /* ---- operators ---- */
+
     [[nodiscard]]
-    constexpr bool isZero() const
+    constexpr bool operator==(const Rect2<T>& r) const
     {
-        return w == T() && h == T();
+        return xmin == r.xmin && ymin == r.ymin && xmax == r.xmax && ymax == r.ymax;
     }
 
-    /**
-     * @brief Check whether size is near zero.
-     * @param eps Tolerance used for comparison.
-     * @return True when width and height are within tolerance of zero.
-     */
     [[nodiscard]]
-    constexpr bool isZero(T eps) const requires(Real<T>)
-    {
-        return math::isZero<T>(w, eps) && math::isZero<T>(h, eps);
-    }
-
-    /**
-     * @brief Equality operator.
-     * @param right Right-hand rectangle.
-     * @return True when all components are equal.
-     */
-    [[nodiscard]]
-    constexpr bool operator==(const Rect2<T>& right) const
-    {
-        return x == right.x && y == right.y && w == right.w && h == right.h;
-    }
-
-    /**
-     * @brief Inequality operator.
-     * @param right Right-hand rectangle.
-     * @return True when any component differs.
-     */
-    [[nodiscard]]
-    constexpr bool operator!=(const Rect2<T>& right) const
-    {
-        return !(*this == right);
-    }
+    constexpr bool operator!=(const Rect2<T>& r) const { return !(*this == r); }
 
   public:
-    union
-    {
+    union {
         struct {
-            T x, y, w, h;
+            T xmin, ymin, xmax, ymax;
         };
-
         T data[4];
     };
 };

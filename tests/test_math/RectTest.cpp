@@ -2,92 +2,100 @@
 
 #include <vine/math/Math.hpp>
 #include <vine/math/Point2.hpp>
-#include <vine/math/Rect3.hpp>
 #include <vine/math/Rect2.hpp>
+#include <vine/math/Rect3.hpp>
 #include <vine/math/Point3.hpp>
 
 using namespace vine::math;
 
-TEST(Rect2, corners)
+TEST(Rect2, minMax)
 {
-    Rect2d r(2.0, 3.0, -5.0, 7.0);
+    // Construct with (xmin, ymin, xmax, ymax).
+    Rect2d r(-3.0, 3.0, 2.0, 10.0);
 
-    auto bl = r.bottomLeft();
-    auto tl = r.topLeft();
-    auto tr = r.topRight();
+    auto mn = r.min();
+    auto mx = r.max();
 
-    EXPECT_DOUBLE_EQ(bl.x, -3.0);
-    EXPECT_DOUBLE_EQ(bl.y, 3.0);
-    EXPECT_DOUBLE_EQ(tl.x, -3.0);
-    EXPECT_DOUBLE_EQ(tl.y, 10.0);
-    EXPECT_DOUBLE_EQ(tr.x, 2.0);
-    EXPECT_DOUBLE_EQ(tr.y, 10.0);
+    EXPECT_DOUBLE_EQ(mn.x, -3.0);
+    EXPECT_DOUBLE_EQ(mn.y,  3.0);
+    EXPECT_DOUBLE_EQ(mx.x,  2.0);
+    EXPECT_DOUBLE_EQ(mx.y, 10.0);
+
+    EXPECT_DOUBLE_EQ(r.width(),  5.0);
+    EXPECT_DOUBLE_EQ(r.height(), 7.0);
+
+    auto c = r.center();
+    EXPECT_DOUBLE_EQ(c.x, -0.5);
+    EXPECT_DOUBLE_EQ(c.y,  6.5);
 }
 
 TEST(Rect2, intersectWith)
 {
     Rect2d a(0.0, 0.0, 10.0, 10.0);
-    Rect2d b(5.0, -2.0, 10.0, 5.0);
-    auto   i = a.intersectWith(b);
+    Rect2d b(5.0, -2.0, 15.0, 3.0);
+    Rect2d i;
+    bool   ok = a.intersectWith(b, i);
 
-    auto bl = i.bottomLeft();
-    auto tr = i.topRight();
+    EXPECT_TRUE(ok);
+    auto mn = i.min();
+    auto mx = i.max();
+    EXPECT_DOUBLE_EQ(mn.x, 5.0);
+    EXPECT_DOUBLE_EQ(mn.y, 0.0);
+    EXPECT_DOUBLE_EQ(mx.x, 10.0);
+    EXPECT_DOUBLE_EQ(mx.y, 3.0);
 
-    EXPECT_DOUBLE_EQ(bl.x, 5.0);
-    EXPECT_DOUBLE_EQ(bl.y, 0.0);
-    EXPECT_DOUBLE_EQ(tr.x, 10.0);
-    EXPECT_DOUBLE_EQ(tr.y, 3.0);
-
-    Rect2d c(20.0, 20.0, 2.0, 2.0);
-    auto   e = a.intersectWith(c);
-    EXPECT_TRUE(e.isZero());
+    // disjoint → returns false, out = gap rect (normalized)
+    Rect2d c(20.0, 20.0, 22.0, 22.0);
+    ok = a.intersectWith(c, i);
+    EXPECT_FALSE(ok);
+    EXPECT_FALSE(i.isNeg());
+    EXPECT_DOUBLE_EQ(i.min().x, 10.0);
+    EXPECT_DOUBLE_EQ(i.max().x, 20.0);
 }
 
 TEST(Rect3, expandBy)
 {
     Rect3d r1;
-    Rect3d r2;
 
     r1.expandBy(Point3d(1, 10, 10));
     r1.expandBy(Point3d(-1, 15, -6));
 
-    r2.x = -6;
-    r2.y = -6;
-    r2.z = -6;
-    r2.l = 10;
-    r2.w = 10;
-    r2.h = 10;
-
+    Rect3d r2(-6.0, -6.0, -6.0, 4.0, 4.0, 4.0);
     r1.expandBy(r2);
 
-    auto lb = r1.lowerBound();
-    auto ub = r1.upperBound();
+    auto mn = r1.min();
+    auto mx = r1.max();
 
-    EXPECT_DOUBLE_EQ(lb.x, -6.0);
-    EXPECT_DOUBLE_EQ(lb.y, -6.0);
-    EXPECT_DOUBLE_EQ(lb.z, -6.0);
-    EXPECT_DOUBLE_EQ(ub.x, 4.0);
-    EXPECT_DOUBLE_EQ(ub.y, 15.0);
-    EXPECT_DOUBLE_EQ(ub.z, 10.0);
+    EXPECT_DOUBLE_EQ(mn.x, -6.0);
+    EXPECT_DOUBLE_EQ(mn.y, -6.0);
+    EXPECT_DOUBLE_EQ(mn.z, -6.0);
+    EXPECT_DOUBLE_EQ(mx.x,  4.0);
+    EXPECT_DOUBLE_EQ(mx.y, 15.0);
+    EXPECT_DOUBLE_EQ(mx.z, 10.0);
 }
 
 TEST(Rect3, intersectWith)
 {
     Rect3d a(0.0, 0.0, 0.0, 10.0, 10.0, 10.0);
-    Rect3d b(5.0, -2.0, 3.0, 10.0, 5.0, 10.0);
-    auto i = a.intersectWith(b);
+    Rect3d b(5.0, -2.0, 3.0, 15.0, 3.0, 13.0);
+    Rect3d i;
+    bool   ok = a.intersectWith(b, i);
 
-    auto lb = i.lowerBound();
-    auto ub = i.upperBound();
+    EXPECT_TRUE(ok);
+    auto mn = i.min();
+    auto mx = i.max();
+    EXPECT_DOUBLE_EQ(mn.x, 5.0);
+    EXPECT_DOUBLE_EQ(mn.y, 0.0);
+    EXPECT_DOUBLE_EQ(mn.z, 3.0);
+    EXPECT_DOUBLE_EQ(mx.x, 10.0);
+    EXPECT_DOUBLE_EQ(mx.y, 3.0);
+    EXPECT_DOUBLE_EQ(mx.z, 10.0);
 
-    EXPECT_DOUBLE_EQ(lb.x, 5.0);
-    EXPECT_DOUBLE_EQ(lb.y, 0.0);
-    EXPECT_DOUBLE_EQ(lb.z, 3.0);
-    EXPECT_DOUBLE_EQ(ub.x, 10.0);
-    EXPECT_DOUBLE_EQ(ub.y, 3.0);
-    EXPECT_DOUBLE_EQ(ub.z, 10.0);
-
-    Rect3d c(20.0, 20.0, 20.0, 2.0, 2.0, 2.0);
-    auto   e = a.intersectWith(c);
-    EXPECT_TRUE(e.isZero());
+    // disjoint → returns false, out = gap box (normalized)
+    Rect3d c(20.0, 20.0, 20.0, 22.0, 22.0, 22.0);
+    ok = a.intersectWith(c, i);
+    EXPECT_FALSE(ok);
+    EXPECT_FALSE(i.isNeg());
+    EXPECT_DOUBLE_EQ(i.min().x, 10.0);
+    EXPECT_DOUBLE_EQ(i.max().x, 20.0);
 }

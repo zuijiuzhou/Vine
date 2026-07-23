@@ -5,6 +5,7 @@
 #include <vine/RefObject.hpp>
 #include <vine/SmallVector.hpp>
 #include <vine/math/Isometry3.hpp>
+#include <vine/robotics/kinematics/DofInfo.hpp>
 
 V_ROBOTICS_KINEMATICS_NS_BEGIN
 
@@ -22,6 +23,9 @@ enum class FrameType
 
 class V_ROBOTICS_CORE_API Frame : public vine::RefObject {
     V_OBJECT_META(Frame, vine::RefObject);
+
+  public:
+    Frame();
 
   protected:
     Frame(FrameType type);
@@ -52,13 +56,21 @@ class V_ROBOTICS_CORE_API Frame : public vine::RefObject {
         fixed_tf_ = tf;
     }
 
-    virtual math::Isometry3d getTransform() = 0;
+    virtual math::Isometry3d getTransform()
+    {
+        return fixed_tf_;
+    };
+
+    virtual const std::vector<DofInfo>& getDofInfos() const
+    {
+        static std::vector<DofInfo> empty;
+        return empty;
+    }
 
   private:
     String           name_;
     FrameType        type_;
     math::Isometry3d fixed_tf_;
-    ;
 };
 
 V_ROBOTICS_KINEMATICS_NS_END

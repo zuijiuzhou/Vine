@@ -14,78 +14,73 @@ V_MATH_NS_BEGIN
 
 TMPL_PREFIX bool Rect3<T>::contains(T x, T y, T z) const
 {
-    auto l = lowerBound();
-    auto u = upperBound();
-    return x >= l.x && x <= u.x && y >= l.y && y <= u.y && z >= l.z && z <= u.z;
+    auto mx = std::min(xmin, xmax), Mx = std::max(xmin, xmax);
+    auto my = std::min(ymin, ymax), My = std::max(ymin, ymax);
+    auto mz = std::min(zmin, zmax), Mz = std::max(zmin, zmax);
+    return x >= mx && x <= Mx && y >= my && y <= My && z >= mz && z <= Mz;
 }
 
 TMPL_PREFIX bool Rect3<T>::contains(const Point3<T>& pt) const
 {
-    auto l = lowerBound();
-    auto u = upperBound();
-    return pt.x >= l.x && pt.x <= u.x && pt.y >= l.y && pt.y <= u.y && pt.z >= l.z && pt.z <= u.z;
+    auto mx = std::min(xmin, xmax), Mx = std::max(xmin, xmax);
+    auto my = std::min(ymin, ymax), My = std::max(ymin, ymax);
+    auto mz = std::min(zmin, zmax), Mz = std::max(zmin, zmax);
+    return pt.x >= mx && pt.x <= Mx && pt.y >= my && pt.y <= My && pt.z >= mz && pt.z <= Mz;
 }
 
 TMPL_PREFIX void Rect3<T>::expandBy(const Point3<T>& pt)
 {
-    auto lb = lowerBound();
-    auto ub = upperBound();
-    lb.x    = std::min<T>(lb.x, pt.x);
-    lb.y    = std::min<T>(lb.y, pt.y);
-    lb.z    = std::min<T>(lb.z, pt.z);
-    ub.x    = std::max<T>(ub.x, pt.x);
-    ub.y    = std::max<T>(ub.y, pt.y);
-    ub.z    = std::max<T>(ub.z, pt.z);
-    x       = lb.x;
-    y       = lb.y;
-    z       = lb.z;
-    l       = ub.x - lb.x;
-    w       = ub.y - lb.y;
-    h       = ub.z - lb.z;
+    auto mx = std::min(xmin, xmax), Mx = std::max(xmin, xmax);
+    auto my = std::min(ymin, ymax), My = std::max(ymin, ymax);
+    auto mz = std::min(zmin, zmax), Mz = std::max(zmin, zmax);
+    xmin = std::min<T>(mx, pt.x);
+    ymin = std::min<T>(my, pt.y);
+    zmin = std::min<T>(mz, pt.z);
+    xmax = std::max<T>(Mx, pt.x);
+    ymax = std::max<T>(My, pt.y);
+    zmax = std::max<T>(Mz, pt.z);
 }
 
 TMPL_PREFIX void Rect3<T>::expandBy(const Rect3<T>& rect)
 {
-    auto lb1 = lowerBound();
-    auto ub1 = upperBound();
-    auto lb2 = rect.lowerBound();
-    auto ub2 = rect.upperBound();
-
-    lb1.x = std::min<T>(lb1.x, lb2.x);
-    lb1.y = std::min<T>(lb1.y, lb2.y);
-    lb1.z = std::min<T>(lb1.z, lb2.z);
-    ub1.x = std::max<T>(ub1.x, ub2.x);
-    ub1.y = std::max<T>(ub1.y, ub2.y);
-    ub1.z = std::max<T>(ub1.z, ub2.z);
-
-    x = lb1.x;
-    y = lb1.y;
-    z = lb1.z;
-
-    l = ub1.x - lb1.x;
-    w = ub1.y - lb1.y;
-    h = ub1.z - lb1.z;
+    auto mx  = std::min(xmin, xmax),      Mx  = std::max(xmin, xmax);
+    auto my  = std::min(ymin, ymax),      My  = std::max(ymin, ymax);
+    auto mz  = std::min(zmin, zmax),      Mz  = std::max(zmin, zmax);
+    auto rmx = std::min(rect.xmin, rect.xmax), rMx = std::max(rect.xmin, rect.xmax);
+    auto rmy = std::min(rect.ymin, rect.ymax), rMy = std::max(rect.ymin, rect.ymax);
+    auto rmz = std::min(rect.zmin, rect.zmax), rMz = std::max(rect.zmin, rect.zmax);
+    xmin = std::min<T>(mx, rmx);
+    ymin = std::min<T>(my, rmy);
+    zmin = std::min<T>(mz, rmz);
+    xmax = std::max<T>(Mx, rMx);
+    ymax = std::max<T>(My, rMy);
+    zmax = std::max<T>(Mz, rMz);
 }
 
-TMPL_PREFIX Rect3<T> Rect3<T>::intersectWith(const Rect3<T>& rect) const
+TMPL_PREFIX bool Rect3<T>::intersectWith(const Rect3<T>& rect, Rect3<T>& out) const
 {
-    auto lb1 = lowerBound();
-    auto ub1 = upperBound();
-    auto lb2 = rect.lowerBound();
-    auto ub2 = rect.upperBound();
+    auto ax0 = std::min(xmin, xmax), ax1 = std::max(xmin, xmax);
+    auto ay0 = std::min(ymin, ymax), ay1 = std::max(ymin, ymax);
+    auto az0 = std::min(zmin, zmax), az1 = std::max(zmin, zmax);
+    auto bx0 = std::min(rect.xmin, rect.xmax), bx1 = std::max(rect.xmin, rect.xmax);
+    auto by0 = std::min(rect.ymin, rect.ymax), by1 = std::max(rect.ymin, rect.ymax);
+    auto bz0 = std::min(rect.zmin, rect.zmax), bz1 = std::max(rect.zmin, rect.zmax);
 
-    auto ix0 = std::max<T>(lb1.x, lb2.x);
-    auto iy0 = std::max<T>(lb1.y, lb2.y);
-    auto iz0 = std::max<T>(lb1.z, lb2.z);
-    auto ix1 = std::min<T>(ub1.x, ub2.x);
-    auto iy1 = std::min<T>(ub1.y, ub2.y);
-    auto iz1 = std::min<T>(ub1.z, ub2.z);
+    auto ix0 = std::max<T>(ax0, bx0);
+    auto iy0 = std::max<T>(ay0, by0);
+    auto iz0 = std::max<T>(az0, bz0);
+    auto ix1 = std::min<T>(ax1, bx1);
+    auto iy1 = std::min<T>(ay1, by1);
+    auto iz1 = std::min<T>(az1, bz1);
 
-    if (ix1 < ix0 || iy1 < iy0 || iz1 < iz0) {
-        return Rect3<T>();
-    }
+    out.xmin = std::min<T>(ix0, ix1);
+    out.ymin = std::min<T>(iy0, iy1);
+    out.zmin = std::min<T>(iz0, iz1);
+    out.xmax = std::max<T>(ix0, ix1);
+    out.ymax = std::max<T>(iy0, iy1);
+    out.zmax = std::max<T>(iz0, iz1);
 
-    return Rect3<T>(ix0, iy0, iz0, ix1 - ix0, iy1 - iy0, iz1 - iz0);
+    return ix0 <= ix1 && iy0 <= iy1 && iz0 <= iz1;
 }
 
 #undef TMPL_PREFIX

@@ -18,6 +18,8 @@ struct DofInfo {
     math::Vec3d      axis;
     double           lower{};
     double           upper{};
+    double           velocity_limit{};
+    double           acceleration_limit{};
 };
 
 V_ROBOTICS_KINEMATICS_NS_END

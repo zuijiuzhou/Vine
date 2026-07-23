@@ -2,9 +2,9 @@
 
 #include <cmath>
 #include <cstring>
-#include <utility>
 
 #include <vine/math/Math.hpp>
+#include <vine/math/Vector2.hpp>
 
 V_MATH_NS_BEGIN
 
@@ -39,75 +39,6 @@ TMPL_PREFIX void Matrix3x3<T>::makeIdentity() noexcept
 {
     std::memset(data, 0, sizeof(data));
     vecs[0][0] = vecs[1][1] = vecs[2][2] = T(1);
-}
-
-// ---------------------------------------------------------------------------
-// Rotation
-// ---------------------------------------------------------------------------
-
-TMPL_PREFIX void Matrix3x3<T>::makeRotation(T angle)
-{
-    // 2D rotation matrix (CCW), column-major.
-    // R(θ) = | cosθ -sinθ 0 |
-    //        | sinθ  cosθ 0 |
-    //        |  0     0   1 |
-    const auto c = std::cos(angle);
-    const auto s = std::sin(angle);
-
-    vecs[0][0] = c;
-    vecs[0][1] = s;
-    vecs[0][2] = T(0);
-
-    vecs[1][0] = -s;
-    vecs[1][1] = c;
-    vecs[1][2] = T(0);
-
-    vecs[2][0] = T(0);
-    vecs[2][1] = T(0);
-    vecs[2][2] = T(1);
-}
-
-// ---------------------------------------------------------------------------
-// Translation
-// ---------------------------------------------------------------------------
-
-TMPL_PREFIX void Matrix3x3<T>::makeTranslation(const Vector2<T>& offset) noexcept
-{
-    makeIdentity();
-    vecs[2][0] = offset.x;
-    vecs[2][1] = offset.y;
-}
-
-TMPL_PREFIX void Matrix3x3<T>::makeTranslation(T x, T y) noexcept
-{
-    makeIdentity();
-    vecs[2][0] = x;
-    vecs[2][1] = y;
-}
-
-// ---------------------------------------------------------------------------
-// Scale
-// ---------------------------------------------------------------------------
-
-TMPL_PREFIX void Matrix3x3<T>::makeScale(const Vector2<T>& vec) noexcept
-{
-    makeIdentity();
-    vecs[0][0] = vec.x;
-    vecs[1][1] = vec.y;
-}
-
-TMPL_PREFIX void Matrix3x3<T>::makeScale(T x, T y) noexcept
-{
-    makeIdentity();
-    vecs[0][0] = x;
-    vecs[1][1] = y;
-}
-
-TMPL_PREFIX void Matrix3x3<T>::makeScale(T factor) noexcept
-{
-    makeIdentity();
-    vecs[0][0] = factor;
-    vecs[1][1] = factor;
 }
 
 // ---------------------------------------------------------------------------
@@ -146,84 +77,6 @@ TMPL_PREFIX Matrix3x3<T>& Matrix3x3<T>::postMulti(const Matrix3x3<T>& right)
             }
             vecs[col][row] = v;
         }
-    }
-    return *this;
-}
-
-// ---------------------------------------------------------------------------
-// Pre/post rotate
-// ---------------------------------------------------------------------------
-
-TMPL_PREFIX Matrix3x3<T>& Matrix3x3<T>::preRotate(T angle)
-{
-    // M := R(angle) * M
-    Matrix3x3<T> rot;
-    rot.makeRotation(angle);
-    return preMulti(rot);
-}
-
-TMPL_PREFIX Matrix3x3<T>& Matrix3x3<T>::postRotate(T angle)
-{
-    // M := M * R(angle)
-    Matrix3x3<T> rot;
-    rot.makeRotation(angle);
-    return postMulti(rot);
-}
-
-// ---------------------------------------------------------------------------
-// Pre/post translate
-// ---------------------------------------------------------------------------
-
-TMPL_PREFIX Matrix3x3<T>& Matrix3x3<T>::preTranslate(const Vector2<T>& offset)
-{
-    // Prepend translation: M := T * M.
-    // T * M adds offset * row_w to rows 0..1.
-    const auto tx = offset.x;
-    const auto ty = offset.y;
-    for (size_t col = 0; col < 3; ++col) {
-        const auto w = vecs[col][2];
-        vecs[col][0] += tx * w;
-        vecs[col][1] += ty * w;
-    }
-    return *this;
-}
-
-TMPL_PREFIX Matrix3x3<T>& Matrix3x3<T>::postTranslate(const Vector2<T>& offset)
-{
-    // Append translation: M := M * T.
-    // Only column 2 changes: col2 += tx*col0 + ty*col1.
-    const auto tx = offset.x;
-    const auto ty = offset.y;
-    for (size_t row = 0; row < 3; ++row) {
-        vecs[2][row] += vecs[0][row] * tx + vecs[1][row] * ty;
-    }
-    return *this;
-}
-
-// ---------------------------------------------------------------------------
-// Pre/post scale
-// ---------------------------------------------------------------------------
-
-TMPL_PREFIX Matrix3x3<T>& Matrix3x3<T>::preScale(const Vector2<T>& factor)
-{
-    // Prepend scale: M := S * M. Scale rows 0..1.
-    const auto sx = factor.x;
-    const auto sy = factor.y;
-    for (size_t col = 0; col < 3; ++col) {
-        vecs[col][0] *= sx;
-        vecs[col][1] *= sy;
-    }
-    return *this;
-}
-
-TMPL_PREFIX Matrix3x3<T>& Matrix3x3<T>::postScale(const Vector2<T>& factor)
-{
-    // Append scale: M := M * S. Scale columns 0..1.
-    const auto sx = factor.x;
-    const auto sy = factor.y;
-    for (size_t row = 0; row < 3; ++row) {
-        vecs[0][row] *= sx;
-        vecs[1][row] *= sy;
     }
     return *this;
 }
@@ -274,17 +127,6 @@ TMPL_PREFIX void Matrix3x3<T>::invert()
             vecs[col][row] = adj[col][row] * inv_det;
         }
     }
-}
-
-// ---------------------------------------------------------------------------
-// Component extraction
-// ---------------------------------------------------------------------------
-
-TMPL_PREFIX T Matrix3x3<T>::rotation() const
-{
-    // From upper-left 2x2: θ = atan2(sinθ, cosθ) = atan2(m10, m00)
-    // Adjust for column-major: m10 = vecs[0][1], m00 = vecs[0][0]
-    return std::atan2(vecs[0][1], vecs[0][0]);
 }
 
 // ---------------------------------------------------------------------------
@@ -360,78 +202,6 @@ TMPL_PREFIX Matrix3x3<T>& Matrix3x3<T>::operator*=(const Matrix3x3<T>& right)
 }
 
 // ---------------------------------------------------------------------------
-// Static factories
-// ---------------------------------------------------------------------------
-
-TMPL_PREFIX Matrix3x3<T> Matrix3x3<T>::rotate(T angle)
-{
-    Matrix3x3<T> m;
-    m.makeRotation(angle);
-    return m;
-}
-
-TMPL_PREFIX Matrix3x3<T> Matrix3x3<T>::translate(const Vector2<T>& offset)
-{
-    Matrix3x3<T> m;
-    m.makeTranslation(offset);
-    return m;
-}
-
-TMPL_PREFIX Matrix3x3<T> Matrix3x3<T>::translate(T x, T y)
-{
-    Matrix3x3<T> m;
-    m.makeTranslation(x, y);
-    return m;
-}
-
-TMPL_PREFIX Matrix3x3<T> Matrix3x3<T>::scale(const Vector2<T>& vec)
-{
-    Matrix3x3<T> m;
-    m.makeScale(vec);
-    return m;
-}
-
-TMPL_PREFIX Matrix3x3<T> Matrix3x3<T>::scale(T x, T y)
-{
-    Matrix3x3<T> m;
-    m.makeScale(x, y);
-    return m;
-}
-
-TMPL_PREFIX Matrix3x3<T> Matrix3x3<T>::scale(T factor)
-{
-    Matrix3x3<T> m;
-    m.makeScale(factor);
-    return m;
-}
-
-// ---------------------------------------------------------------------------
-// Point / vector transformation (global operators)
-// ---------------------------------------------------------------------------
-
-TMPL_PREFIX Vector2<T> operator*(const Matrix3x3<T>& m, const Vector2<T>& v)
-{
-    // v' = M·v  (w=0, translation ignored)
-    return Vector2<T>(m.vecs[0][0] * v.x + m.vecs[1][0] * v.y, m.vecs[0][1] * v.x + m.vecs[1][1] * v.y);
-}
-
-TMPL_PREFIX Point2<T> operator*(const Matrix3x3<T>& m, const Point2<T>& p)
-{
-    // p' = M·p  (w=1, full affine transform, with homogeneous divide)
-    const auto x = m.vecs[0][0] * p.x + m.vecs[1][0] * p.y + m.vecs[2][0];
-    const auto y = m.vecs[0][1] * p.x + m.vecs[1][1] * p.y + m.vecs[2][1];
-    const auto w = m.vecs[0][2] * p.x + m.vecs[1][2] * p.y + m.vecs[2][2];
-
-    if (math::isEqual(w, T(1), T(1e-12))) {
-        return Point2<T>(x, y);
-    }
-    if (math::isZero(w, T(1e-12))) {
-        return Point2<T>(x, y);
-    }
-    return Point2<T>(x / w, y / w);
-}
-
-// ---------------------------------------------------------------------------
 // Explicit instantiations
 // ---------------------------------------------------------------------------
 
@@ -439,9 +209,5 @@ TMPL_PREFIX Point2<T> operator*(const Matrix3x3<T>& m, const Point2<T>& p)
 
 template class V_MATH_API Matrix3x3<float>;
 template class V_MATH_API Matrix3x3<double>;
-template V_MATH_API Vector2<float> operator*(const Matrix3x3<float>&, const Vector2<float>&);
-template V_MATH_API Vector2<double> operator*(const Matrix3x3<double>&, const Vector2<double>&);
-template V_MATH_API Point2<float> operator*(const Matrix3x3<float>&, const Point2<float>&);
-template V_MATH_API Point2<double> operator*(const Matrix3x3<double>&, const Point2<double>&);
 
 V_MATH_NS_END
