@@ -16,8 +16,8 @@ using namespace vine::robotics::kinematics;
 namespace
 {
 
-constexpr double kTol     = 1e-10;   /* structural / validity checks */
-constexpr double kRtTol   = 1e-7;    /* roundtrip error (trace-method quaternion → ~3e-8) */
+constexpr double kTol   = 1e-10; /* structural / validity checks */
+constexpr double kRtTol = 1e-7;  /* roundtrip error (trace-method quaternion → ~3e-8) */
 
 /* Generate a random angle in [-π, π]. */
 double randomAngle(std::mt19937& rng)
@@ -41,8 +41,8 @@ double randomRange(std::mt19937& rng, double lo, double hi)
 
 TEST(MdhTransformTest, Identity)
 {
-    DHParameter dh;   /* all zeros */
-    Isometry3d T = mdhToTransform(dh);
+    DHParameter dh; /* all zeros */
+    Isometry3d  T = mdhToTransform(dh);
     EXPECT_NEAR(T.translation.x, 0.0, kTol);
     EXPECT_NEAR(T.translation.y, 0.0, kTol);
     EXPECT_NEAR(T.translation.z, 0.0, kTol);
@@ -55,7 +55,7 @@ TEST(MdhTransformTest, Identity)
 TEST(SdhTransformTest, Identity)
 {
     DHParameter dh;
-    Isometry3d T = sdhToTransform(dh);
+    Isometry3d  T = sdhToTransform(dh);
     EXPECT_NEAR(T.translation.x, 0.0, kTol);
     EXPECT_NEAR(T.translation.y, 0.0, kTol);
     EXPECT_NEAR(T.translation.z, 0.0, kTol);
@@ -93,15 +93,12 @@ TEST(MdhRoundtripTest, RandomParams)
         /* Verify roundtrip via forward transform. */
         Isometry3d T2 = mdhToTransform(dh_out);
 
-        double pos_err = (T2.translation.x - T.translation.x) * (T2.translation.x - T.translation.x)
-                       + (T2.translation.y - T.translation.y) * (T2.translation.y - T.translation.y)
-                       + (T2.translation.z - T.translation.z) * (T2.translation.z - T.translation.z);
+        double pos_err = (T2.translation.x - T.translation.x) * (T2.translation.x - T.translation.x) +
+                         (T2.translation.y - T.translation.y) * (T2.translation.y - T.translation.y) +
+                         (T2.translation.z - T.translation.z) * (T2.translation.z - T.translation.z);
 
         /* Rotation angular error (2·acos(|q1·q2|)). */
-        double qdot = std::abs(T.rotation.x * T2.rotation.x
-                             + T.rotation.y * T2.rotation.y
-                             + T.rotation.z * T2.rotation.z
-                             + T.rotation.w * T2.rotation.w);
+        double qdot    = std::abs(T.rotation.x * T2.rotation.x + T.rotation.y * T2.rotation.y + T.rotation.z * T2.rotation.z + T.rotation.w * T2.rotation.w);
         double rot_err = 2.0 * std::acos(std::clamp(qdot, 0.0, 1.0));
 
         EXPECT_LT(pos_err, kTol * kTol);
@@ -133,14 +130,11 @@ TEST(SdhRoundtripTest, RandomParams)
 
         Isometry3d T2 = sdhToTransform(*dh_opt);
 
-        double pos_err = (T2.translation.x - T.translation.x) * (T2.translation.x - T.translation.x)
-                       + (T2.translation.y - T.translation.y) * (T2.translation.y - T.translation.y)
-                       + (T2.translation.z - T.translation.z) * (T2.translation.z - T.translation.z);
+        double pos_err = (T2.translation.x - T.translation.x) * (T2.translation.x - T.translation.x) +
+                         (T2.translation.y - T.translation.y) * (T2.translation.y - T.translation.y) +
+                         (T2.translation.z - T.translation.z) * (T2.translation.z - T.translation.z);
 
-        double qdot = std::abs(T.rotation.x * T2.rotation.x
-                             + T.rotation.y * T2.rotation.y
-                             + T.rotation.z * T2.rotation.z
-                             + T.rotation.w * T2.rotation.w);
+        double qdot    = std::abs(T.rotation.x * T2.rotation.x + T.rotation.y * T2.rotation.y + T.rotation.z * T2.rotation.z + T.rotation.w * T2.rotation.w);
         double rot_err = 2.0 * std::acos(std::clamp(qdot, 0.0, 1.0));
 
         EXPECT_LT(pos_err, kTol * kTol);
@@ -164,7 +158,7 @@ TEST(UnrepresentableTest, MdhRejectsNonMdhRotation)
      *
      * Build as quaternion:  q = (0, sin(θ/2), 0, cos(θ/2))
      */
-    Quatd q_ry(0.0, std::sin(angle * 0.5), 0.0, std::cos(angle * 0.5));
+    Quatd      q_ry(0.0, std::sin(angle * 0.5), 0.0, std::cos(angle * 0.5));
     Isometry3d T(Point3d(0.0, 0.0, 0.0), q_ry);
 
     EXPECT_FALSE(isMdhRepresentable(T, kTol));
@@ -174,8 +168,8 @@ TEST(UnrepresentableTest, MdhRejectsNonMdhRotation)
 TEST(UnrepresentableTest, SdhRejectsNonSdhRotation)
 {
     /* Rot_y(0.5) has R(2,0) ≠ 0, so not SDH-representable either. */
-    double angle = 0.5;
-    Quatd q_ry(0.0, std::sin(angle * 0.5), 0.0, std::cos(angle * 0.5));
+    double     angle = 0.5;
+    Quatd      q_ry(0.0, std::sin(angle * 0.5), 0.0, std::cos(angle * 0.5));
     Isometry3d T(Point3d(0.0, 0.0, 0.0), q_ry);
 
     EXPECT_FALSE(isSdhRepresentable(T, kTol));
@@ -189,17 +183,22 @@ TEST(UnrepresentableTest, RandomRotationRejected)
 
     for (int trial = 0; trial < 50; ++trial) {
         /* Build random rotation via random axis-angle. */
-        double angle  = randomAngle(rng);
-        double ax     = randomRange(rng, -1.0, 1.0);
-        double ay     = randomRange(rng, -1.0, 1.0);
-        double az     = randomRange(rng, -1.0, 1.0);
-        double nrm    = std::sqrt(ax * ax + ay * ay + az * az);
-        if (nrm < 1e-10) { --trial; continue; }
-        ax /= nrm; ay /= nrm; az /= nrm;
+        double angle = randomAngle(rng);
+        double ax    = randomRange(rng, -1.0, 1.0);
+        double ay    = randomRange(rng, -1.0, 1.0);
+        double az    = randomRange(rng, -1.0, 1.0);
+        double nrm   = std::sqrt(ax * ax + ay * ay + az * az);
+        if (nrm < 1e-10) {
+            --trial;
+            continue;
+        }
+        ax /= nrm;
+        ay /= nrm;
+        az /= nrm;
 
-        double half = angle * 0.5;
-        double s    = std::sin(half);
-        Quatd q(ax * s, ay * s, az * s, std::cos(half));
+        double     half = angle * 0.5;
+        double     s    = std::sin(half);
+        Quatd      q(ax * s, ay * s, az * s, std::cos(half));
         Isometry3d T(Point3d(1.0, 2.0, 3.0), q);
 
         /* Most random rotations fail both constraints. */
@@ -209,14 +208,16 @@ TEST(UnrepresentableTest, RandomRotationRejected)
         if (mdh_ok) {
             auto r = tryMdhFromTransform(T, kTol);
             ASSERT_TRUE(r.has_value());
-        } else {
+        }
+        else {
             EXPECT_EQ(tryMdhFromTransform(T, kTol), std::nullopt);
         }
 
         if (sdh_ok) {
             auto r = trySdhFromTransform(T, kTol);
             ASSERT_TRUE(r.has_value());
-        } else {
+        }
+        else {
             EXPECT_EQ(trySdhFromTransform(T, kTol), std::nullopt);
         }
     }
@@ -258,7 +259,7 @@ TEST(CrossConventionTest, MdhTransformIsNotSdh)
 TEST(InvalidRotationTest, NonUnitQuaternion)
 {
     /* Non-unit quaternion → extraction fails. */
-    Quatd q(0.2, 0.3, 0.4, 0.5);   /* |q| ≠ 1 */
+    Quatd      q(0.2, 0.3, 0.4, 0.5); /* |q| ≠ 1 */
     Isometry3d T(Point3d(0.0, 0.0, 0.0), q);
 
     EXPECT_EQ(tryMdhFromTransform(T, kTol), std::nullopt);
@@ -267,7 +268,7 @@ TEST(InvalidRotationTest, NonUnitQuaternion)
 
 TEST(InvalidRotationTest, ZeroQuaternion)
 {
-    Quatd q(0.0, 0.0, 0.0, 0.0);
+    Quatd      q(0.0, 0.0, 0.0, 0.0);
     Isometry3d T(Point3d(0.0, 0.0, 0.0), q);
 
     EXPECT_EQ(tryMdhFromTransform(T, kTol), std::nullopt);
@@ -292,10 +293,10 @@ TEST(ToleranceTest, LooseTolerancePasses)
 
     /* Perturb rotation slightly (add a small Ry component). */
     double eps = 1e-6;
-    Quatd q_pert(std::sin(eps * 0.5), 0.0, 0.0, std::cos(eps * 0.5));  /* tiny Rx */
+    Quatd  q_pert(std::sin(eps * 0.5), 0.0, 0.0, std::cos(eps * 0.5)); /* tiny Rx */
     /* Actually, let's add a tiny Ry to break R(0,2)=0. */
-    Quatd q_ry(0.0, std::sin(eps * 0.5), 0.0, std::cos(eps * 0.5));
-    Quatd q_new = T.rotation * q_ry;   /* post-multiply → breaks MDH constraint */
+    Quatd      q_ry(0.0, std::sin(eps * 0.5), 0.0, std::cos(eps * 0.5));
+    Quatd      q_new = T.rotation * q_ry; /* post-multiply → breaks MDH constraint */
     Isometry3d T2(T.translation, q_new.normalized());
 
     /* Tight tol → fail. */
@@ -314,7 +315,7 @@ TEST(ToleranceTest, LooseTolerancePasses)
 TEST(EdgeCaseTest, AlphaNearHalfPi)
 {
     DHParameter dh;
-    dh.alpha = math::PI_HALF;   /* 90° */
+    dh.alpha = math::PI_HALF; /* 90° */
     dh.theta = 0.3;
     dh.a     = 1.0;
     dh.d     = 0.5;
@@ -329,7 +330,8 @@ TEST(EdgeCaseTest, AlphaNearHalfPi)
     /* α should recover to within tolerance. */
     double alpha_err = std::abs(dh_opt->alpha - dh.alpha);
     /* Account for 2π periodicity. */
-    if (alpha_err > math::PI) alpha_err = math::PI_TWO - alpha_err;
+    if (alpha_err > math::PI)
+        alpha_err = math::PI_TWO - alpha_err;
     EXPECT_LT(alpha_err, kTol);
 }
 
@@ -347,6 +349,7 @@ TEST(EdgeCaseTest, AlphaNearMinusHalfPi)
     ASSERT_TRUE(dh_opt.has_value());
 
     double alpha_err = std::abs(dh_opt->alpha - dh.alpha);
-    if (alpha_err > math::PI) alpha_err = math::PI_TWO - alpha_err;
+    if (alpha_err > math::PI)
+        alpha_err = math::PI_TWO - alpha_err;
     EXPECT_LT(alpha_err, kTol);
 }

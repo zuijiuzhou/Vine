@@ -16,16 +16,14 @@ class Vector3;
 /**
  * @brief Axis-aligned 3D box, defined by its minimum and maximum corners.
  *
- * The box stores raw (xmin, ymin, zmin, xmax, ymax, zmax) without
- * enforcing ordering.  Two categories of members are provided:
+ * Each field preserves its own direction:
+ * - xmin / ymin / zmin only decrease (via min operations).
+ * - xmax / ymax / zmax only increase (via max operations).
  *
- * - **Raw accessors** (min(), max(), length(), width(), height(), size(),
- *   center()): return stored values as-is.  Extents may be negative when
- *   the box is inverted (max < min) — check with isNeg().
+ * Accessors return stored values as-is — extents may be negative when
+ * the box is inverted (max < min).  Use isNeg() to check.
  *
- * - **Normalizing methods** (contains(), expandBy(), intersectWith()):
- *   internally normalize min/max before computing, producing correct
- *   results even when the stored bounds are inverted.
+ * The output of intersectWith() is always normalized (min ≤ max).
  *
  * @tparam T Scalar type (float, double, integer).
  */
@@ -94,16 +92,6 @@ class Rect3 {
 
     /* ---- accessors ---- */
 
-    /**
-     * @name Raw accessors
-     *
-     * These return the stored values as-is.  When the box is in a valid
-     * state (min ≤ max), the results are the expected geometric
-     * quantities.  When the box is inverted (max < min), the extents may
-     * be negative — use isNeg() to check.
-     * @{
-     */
-
     /** @brief Minimum corner. */
     [[nodiscard]]
     constexpr Point3<T> min() const
@@ -153,18 +141,7 @@ class Rect3 {
         return Point3<T>((xmin + xmax) / T(2), (ymin + ymax) / T(2), (zmin + zmax) / T(2));
     }
 
-    /** @} */
-
     /* ---- queries ---- */
-
-    /**
-     * @name Defensively-normalizing methods
-     *
-     * These methods internally normalize the box (min/max ordering)
-     * before performing their computation, so they produce correct results
-     * even when the stored bounds are inverted.
-     * @{
-     */
 
     /**
      * @brief Check whether the box has negative extent (max < min in any axis).
@@ -173,6 +150,26 @@ class Rect3 {
     constexpr bool isNeg() const
     {
         return xmax < xmin || ymax < ymin || zmax < zmin;
+    }
+
+    /**
+     * @brief Fix inverted axes in-place so that min ≤ max on every axis.
+     */
+    constexpr void normalize()
+    {
+        if (xmax < xmin) { auto t = xmin; xmin = xmax; xmax = t; }
+        if (ymax < ymin) { auto t = ymin; ymin = ymax; ymax = t; }
+        if (zmax < zmin) { auto t = zmin; zmin = zmax; zmax = t; }
+    }
+
+    /**
+     * @brief Return a normalized copy (min ≤ max on every axis).
+     */
+    [[nodiscard]]
+    constexpr Rect3<T> normalized() const
+    {
+        return Rect3<T>(std::min(xmin, xmax), std::min(ymin, ymax), std::min(zmin, zmax),
+                        std::max(xmin, xmax), std::max(ymin, ymax), std::max(zmin, zmax));
     }
 
     /**
@@ -195,16 +192,12 @@ class Rect3 {
 
     /**
      * @brief Check whether a point lies inside the box (inclusive).
-     *
-     * Normalizes min/max internally; works correctly for inverted boxes.
      */
     [[nodiscard]]
     bool contains(T x, T y, T z) const;
 
     /**
      * @brief Check whether a point lies inside the box (inclusive).
-     *
-     * Normalizes min/max internally; works correctly for inverted boxes.
      */
     [[nodiscard]]
     bool contains(const Point3<T>& pt) const;
@@ -214,22 +207,21 @@ class Rect3 {
     /**
      * @brief Expand to include a point.
      *
-     * Normalizes bounds internally before expanding.
+     * xmin/ymin/zmin decrease if needed, xmax/ymax/zmax increase if needed.
      */
     void expandBy(const Point3<T>& pt);
 
     /**
      * @brief Expand to include another box.
      *
-     * Normalizes both boxes internally before expanding.
+     * xmin/ymin/zmin decrease if needed, xmax/ymax/zmax increase if needed.
      */
     void expandBy(const Rect3<T>& rect);
 
     /**
      * @brief Compute intersection with another box.
      *
-     * Normalizes both boxes internally.  The output box is always
-     * normalized (min ≤ max).
+     * The output box is always normalized (min ≤ max).
      *
      * @param rect Other box.
      * @param out  Normalized output.
@@ -237,8 +229,6 @@ class Rect3 {
      * @return true if intersecting, false if disjoint.
      */
     bool intersectWith(const Rect3<T>& rect, Rect3<T>& out) const;
-
-    /** @} */
 
     /* ---- operators ---- */
 

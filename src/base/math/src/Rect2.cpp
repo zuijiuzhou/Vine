@@ -11,51 +11,36 @@ V_MATH_NS_BEGIN
 
 TMPL_PREFIX bool Rect2<T>::contains(T x, T y) const
 {
-    auto mx = std::min(xmin, xmax), Mx = std::max(xmin, xmax);
-    auto my = std::min(ymin, ymax), My = std::max(ymin, ymax);
-    return x >= mx && x <= Mx && y >= my && y <= My;
+    return x >= xmin && x <= xmax && y >= ymin && y <= ymax;
 }
 
 TMPL_PREFIX bool Rect2<T>::contains(const Point2<T>& pt) const
 {
-    auto mx = std::min(xmin, xmax), Mx = std::max(xmin, xmax);
-    auto my = std::min(ymin, ymax), My = std::max(ymin, ymax);
-    return pt.x >= mx && pt.x <= Mx && pt.y >= my && pt.y <= My;
+    return pt.x >= xmin && pt.x <= xmax && pt.y >= ymin && pt.y <= ymax;
 }
 
 TMPL_PREFIX void Rect2<T>::expandBy(const Point2<T>& pt)
 {
-    auto mx = std::min(xmin, xmax), Mx = std::max(xmin, xmax);
-    auto my = std::min(ymin, ymax), My = std::max(ymin, ymax);
-    xmin = std::min<T>(mx, pt.x);
-    ymin = std::min<T>(my, pt.y);
-    xmax = std::max<T>(Mx, pt.x);
-    ymax = std::max<T>(My, pt.y);
+    xmin = std::min<T>(xmin, pt.x);
+    ymin = std::min<T>(ymin, pt.y);
+    xmax = std::max<T>(xmax, pt.x);
+    ymax = std::max<T>(ymax, pt.y);
 }
 
 TMPL_PREFIX void Rect2<T>::expandBy(const Rect2<T>& rect)
 {
-    auto mx  = std::min(xmin, xmax),      Mx  = std::max(xmin, xmax);
-    auto my  = std::min(ymin, ymax),      My  = std::max(ymin, ymax);
-    auto rmx = std::min(rect.xmin, rect.xmax), rMx = std::max(rect.xmin, rect.xmax);
-    auto rmy = std::min(rect.ymin, rect.ymax), rMy = std::max(rect.ymin, rect.ymax);
-    xmin = std::min<T>(mx, rmx);
-    ymin = std::min<T>(my, rmy);
-    xmax = std::max<T>(Mx, rMx);
-    ymax = std::max<T>(My, rMy);
+    xmin = std::min<T>(xmin, rect.xmin);
+    ymin = std::min<T>(ymin, rect.ymin);
+    xmax = std::max<T>(xmax, rect.xmax);
+    ymax = std::max<T>(ymax, rect.ymax);
 }
 
 TMPL_PREFIX bool Rect2<T>::intersectWith(const Rect2<T>& rect, Rect2<T>& out) const
 {
-    auto ax0 = std::min(xmin, xmax), ax1 = std::max(xmin, xmax);
-    auto ay0 = std::min(ymin, ymax), ay1 = std::max(ymin, ymax);
-    auto bx0 = std::min(rect.xmin, rect.xmax), bx1 = std::max(rect.xmin, rect.xmax);
-    auto by0 = std::min(rect.ymin, rect.ymax), by1 = std::max(rect.ymin, rect.ymax);
-
-    auto ix0 = std::max<T>(ax0, bx0);
-    auto iy0 = std::max<T>(ay0, by0);
-    auto ix1 = std::min<T>(ax1, bx1);
-    auto iy1 = std::min<T>(ay1, by1);
+    auto ix0 = std::max<T>(xmin, rect.xmin);
+    auto iy0 = std::max<T>(ymin, rect.ymin);
+    auto ix1 = std::min<T>(xmax, rect.xmax);
+    auto iy1 = std::min<T>(ymax, rect.ymax);
 
     out.xmin = std::min<T>(ix0, ix1);
     out.ymin = std::min<T>(iy0, iy1);

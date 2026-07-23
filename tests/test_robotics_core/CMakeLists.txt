@@ -1,6 +1,7 @@
 set(TEST_NAME test_robotics_core)
 set(SRC_FILE_LIST
 	DHTransformConverterTest.cpp
+	JacobianIKSolverTest.cpp
 	PieperIKSolverTest.cpp
 )
 add_executable(${TEST_NAME} ${SRC_FILE_LIST})

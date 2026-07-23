@@ -13,16 +13,14 @@ V_MATH_NS_BEGIN
 /**
  * @brief Axis-aligned 2D rectangle, defined by its minimum and maximum corners.
  *
- * The rectangle stores raw (xmin, ymin, xmax, ymax) without enforcing
- * ordering.  Two categories of members are provided:
+ * Each field preserves its own direction:
+ * - xmin / ymin only decrease (via min operations).
+ * - xmax / ymax only increase (via max operations).
  *
- * - **Raw accessors** (min(), max(), width(), height(), size(), center()):
- *   return stored values as-is.  Extents may be negative when the
- *   rectangle is inverted (max < min) — check with isNeg().
+ * Accessors return stored values as-is — extents may be negative when
+ * the rectangle is inverted (max < min).  Use isNeg() to check.
  *
- * - **Normalizing methods** (contains(), expandBy(), intersectWith()):
- *   internally normalize min/max before computing, producing correct
- *   results even when the stored bounds are inverted.
+ * The output of intersectWith() is always normalized (min ≤ max).
  *
  * @tparam T Scalar type (float, double, integer).
  */
@@ -81,16 +79,6 @@ class Rect2 {
 
     /* ---- accessors ---- */
 
-    /**
-     * @name Raw accessors
-     *
-     * These return the stored values as-is.  When the rectangle is in a
-     * valid state (min ≤ max), the results are the expected geometric
-     * quantities.  When the rectangle is inverted (max < min), the
-     * extents may be negative — use isNeg() to check.
-     * @{
-     */
-
     /** @brief Minimum corner (left, bottom in math Y-up). */
     [[nodiscard]]
     constexpr Point2<T> min() const { return Point2<T>(xmin, ymin); }
@@ -118,24 +106,32 @@ class Rect2 {
         return Point2<T>((xmin + xmax) / T(2), (ymin + ymax) / T(2));
     }
 
-    /** @} */
-
     /* ---- queries ---- */
-
-    /**
-     * @name Defensively-normalizing methods
-     *
-     * These methods internally normalize the rectangle (min/max ordering)
-     * before performing their computation, so they produce correct results
-     * even when the stored bounds are inverted.
-     * @{
-     */
 
     /**
      * @brief Check whether the rectangle has negative extent (max < min in any axis).
      */
     [[nodiscard]]
     constexpr bool isNeg() const { return xmax < xmin || ymax < ymin; }
+
+    /**
+     * @brief Fix inverted axes in-place so that min ≤ max on every axis.
+     */
+    constexpr void normalize()
+    {
+        if (xmax < xmin) { auto t = xmin; xmin = xmax; xmax = t; }
+        if (ymax < ymin) { auto t = ymin; ymin = ymax; ymax = t; }
+    }
+
+    /**
+     * @brief Return a normalized copy (min ≤ max on every axis).
+     */
+    [[nodiscard]]
+    constexpr Rect2<T> normalized() const
+    {
+        return Rect2<T>(std::min(xmin, xmax), std::min(ymin, ymax),
+                        std::max(xmin, xmax), std::max(ymin, ymax));
+    }
 
     /**
      * @brief Check whether the rectangle has exactly zero area.
@@ -154,16 +150,12 @@ class Rect2 {
 
     /**
      * @brief Check whether a point lies inside the rectangle (inclusive).
-     *
-     * Normalizes min/max internally; works correctly for inverted rectangles.
      */
     [[nodiscard]]
     bool contains(T x, T y) const;
 
     /**
      * @brief Check whether a point lies inside the rectangle (inclusive).
-     *
-     * Normalizes min/max internally; works correctly for inverted rectangles.
      */
     [[nodiscard]]
     bool contains(const Point2<T>& pt) const;
@@ -173,22 +165,21 @@ class Rect2 {
     /**
      * @brief Expand to include a point.
      *
-     * Normalizes bounds internally before expanding.
+     * xmin/ymin decrease if needed, xmax/ymax increase if needed.
      */
     void expandBy(const Point2<T>& pt);
 
     /**
      * @brief Expand to include another rectangle.
      *
-     * Normalizes both rectangles internally before expanding.
+     * xmin/ymin decrease if needed, xmax/ymax increase if needed.
      */
     void expandBy(const Rect2<T>& rect);
 
     /**
      * @brief Compute intersection with another rectangle.
      *
-     * Normalizes both rectangles internally.  The output rectangle is
-     * always normalized (min ≤ max).
+     * The output rectangle is always normalized (min ≤ max).
      *
      * @param rect Other rectangle.
      * @param out  Normalized output.
@@ -196,8 +187,6 @@ class Rect2 {
      * @return true if intersecting, false if disjoint.
      */
     bool intersectWith(const Rect2<T>& rect, Rect2<T>& out) const;
-
-    /** @} */
 
     /* ---- operators ---- */
 

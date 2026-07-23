@@ -30,9 +30,7 @@ static DofInfo makeRevoluteDof(double alpha, double a, double d)
     // Origin at θ = 0:  Rot_x(α) * Trans_x(a) * Trans_z(d)
     //   translation = [a,  -d·sinα,  d·cosα]
     //   rotation    = Rot_x(α)  →  quaternion = (sin(α/2), 0, 0, cos(α/2))
-    dof.origin = Isometry3d(
-        Point3d(a, -d * sa, d * ca),
-        Quatd(std::sin(alpha * 0.5), 0.0, 0.0, std::cos(alpha * 0.5)));
+    dof.origin = Isometry3d(Point3d(a, -d * sa, d * ca), Quatd(std::sin(alpha * 0.5), 0.0, 0.0, std::cos(alpha * 0.5)));
 
     return dof;
 }
@@ -50,19 +48,18 @@ static DofInfo makeRevoluteDof(double alpha, double a, double d)
 //   4 │   90°    │    0     │ θ4  │  0      ← wrist pitch
 //   5 │    0     │    0     │ θ5  │  0.2 m  ← wrist yaw  (tool)
 // =============================================================================
-class PieperIKSolverTest : public ::testing::Test
-{
-protected:
+class PieperIKSolverTest : public ::testing::Test {
+  protected:
     void SetUp() override
     {
         // α (rad), a (m), d (m)
         const double params[6][3] = {
-            { 0.0,           0.0,  0.0 },  // joint 0: base
-            { -PI_HALF,      0.15, 0.0 },  // joint 1: shoulder  (a1 > 0 required by solver)
-            { 0.0,           1.0,  0.0 },  // joint 2: elbow
-            { -PI_HALF,      0.0,  0.5 },  // joint 3: wrist roll
-            {  PI_HALF,      0.0,  0.0 },  // joint 4: wrist pitch
-            {  PI_HALF,      0.0,  0.2 },  // joint 5: wrist yaw  (tool)
+            { 0.0,      0.0,  0.0 }, // joint 0: base
+            { -PI_HALF, 0.15, 0.0 }, // joint 1: shoulder  (a1 > 0 required by solver)
+            { 0.0,      1.0,  0.0 }, // joint 2: elbow
+            { -PI_HALF, 0.0,  0.5 }, // joint 3: wrist roll
+            { PI_HALF,  0.0,  0.0 }, // joint 4: wrist pitch
+            { PI_HALF,  0.0,  0.2 }, // joint 5: wrist yaw  (tool)
         };
 
         for (int i = 0; i < 6; ++i) {
@@ -71,22 +68,22 @@ protected:
         solver_ = std::make_unique<PieperIKSolver>(dofs_);
     }
 
-    std::vector<DofInfo>          dofs_;
+    std::vector<DofInfo>            dofs_;
     std::unique_ptr<PieperIKSolver> solver_;
 };
 
 // -----------------------------------------------------------------------------
 // Forward kinematics helper  (T_0_6)
 // -----------------------------------------------------------------------------
-static Isometry3d forwardKinematics(const std::vector<DofInfo>& dofs,
-                                     const double* q)
+static Isometry3d forwardKinematics(const std::vector<DofInfo>& dofs, const double* q)
 {
     Isometry3d T;
     for (int i = 0; i < 6; ++i) {
         auto dh_opt = tryMdhFromTransform(dofs[i].origin);
-        if (!dh_opt) return Isometry3d{};
+        if (!dh_opt)
+            return Isometry3d{};
         DHParameter dh = *dh_opt;
-        T = T * mdhToTransform(dh, /*dd=*/0.0, /*dtheta=*/q[i]);
+        T              = T * mdhToTransform(dh, /*dd=*/0.0, /*dtheta=*/q[i]);
     }
     return T;
 }
@@ -101,8 +98,8 @@ TEST_F(PieperIKSolverTest, ZeroConfig_FK_MatchesExpected)
     // because  α₀=0, α₁=-90°, α₂=0, α₃=-90°, α₄=90°, α₅=90°
     //    R = Rot_x(-90°)·Rot_x(-90°)·Rot_x(90°)·Rot_x(90°) = I
 
-    const double q[6] = {0, 0, 0, 0, 0, 0};
-    Isometry3d T = forwardKinematics(dofs_, q);
+    const double q[6] = { 0, 0, 0, 0, 0, 0 };
+    Isometry3d   T    = forwardKinematics(dofs_, q);
 
     EXPECT_NEAR(T.rotation.x, 0.0, 1e-8);
     EXPECT_NEAR(T.rotation.y, 0.0, 1e-8);
@@ -119,13 +116,13 @@ TEST_F(PieperIKSolverTest, IK_KnownPose_ReturnsSolutions)
     // Choose a known joint configuration, compute FK to get target pose,
     // then run IK and verify at least one solution reproduces the target.
 
-    const double q_known[6] = {0.3, -0.5, 1.2, 0.7, -0.4, 0.6};
-    Isometry3d targetPose = forwardKinematics(dofs_, q_known);
+    const double q_known[6] = { 0.3, -0.5, 1.2, 0.7, -0.4, 0.6 };
+    Isometry3d   targetPose = forwardKinematics(dofs_, q_known);
 
     std::vector<Q> solutions;
     ASSERT_TRUE(solver_->solve(targetPose, solutions));
     EXPECT_GE(solutions.size(), 1u);
-    EXPECT_LE(solutions.size(), 8u);  // max 8 for 6‑R spherical wrist
+    EXPECT_LE(solutions.size(), 8u); // max 8 for 6‑R spherical wrist
 
     // Verify that every returned solution, when used in FK, matches the target
     for (auto& sol : solutions) {
@@ -136,15 +133,10 @@ TEST_F(PieperIKSolverTest, IK_KnownPose_ReturnsSolutions)
         Isometry3d T_sol = forwardKinematics(dofs_, q_sol);
 
         // Position error
-        double pos_err = std::sqrt(
-            (T_sol.translation.x - targetPose.translation.x) *
-            (T_sol.translation.x - targetPose.translation.x) +
-            (T_sol.translation.y - targetPose.translation.y) *
-            (T_sol.translation.y - targetPose.translation.y) +
-            (T_sol.translation.z - targetPose.translation.z) *
-            (T_sol.translation.z - targetPose.translation.z));
-        EXPECT_LT(pos_err, 1e-4)
-            << "Position error too large for solution";
+        double pos_err = std::sqrt((T_sol.translation.x - targetPose.translation.x) * (T_sol.translation.x - targetPose.translation.x) +
+                                   (T_sol.translation.y - targetPose.translation.y) * (T_sol.translation.y - targetPose.translation.y) +
+                                   (T_sol.translation.z - targetPose.translation.z) * (T_sol.translation.z - targetPose.translation.z));
+        EXPECT_LT(pos_err, 1e-4) << "Position error too large for solution";
 
         // Orientation error: |q_sol * q_target⁻¹| ≈ (0,0,0,1)
         Quatd q_sol_q = T_sol.rotation;
@@ -152,10 +144,9 @@ TEST_F(PieperIKSolverTest, IK_KnownPose_ReturnsSolutions)
         Quatd q_diff  = q_sol_q * q_tgt.conj();
 
         // Angular error = 2·acos(|q_diff.w|)  (clamped to [-1,1])
-        double w = std::clamp(std::abs(q_diff.w), -1.0, 1.0);
+        double w       = std::clamp(std::abs(q_diff.w), -1.0, 1.0);
         double ang_err = 2.0 * std::acos(w);
-        EXPECT_LT(ang_err, 1e-4)
-            << "Orientation error too large for solution";
+        EXPECT_LT(ang_err, 1e-4) << "Orientation error too large for solution";
     }
 }
 

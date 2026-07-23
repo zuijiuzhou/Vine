@@ -17,7 +17,7 @@ class V_ROBOTICS_CORE_API IKSolver {
   protected:
     IKSolver(const std::vector<DofInfo>& dofs)
       : dofs_(dofs)
-      , is_valid_(false)
+      , is_valid_(!dofs_.empty())
     {}
 
 
