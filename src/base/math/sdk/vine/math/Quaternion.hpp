@@ -33,13 +33,13 @@ class Quaternion {
 
   public:
     /**
-     * @brief Construct a zero quaternion.
+     * @brief Construct a identity quaternion.
      */
     constexpr Quaternion()
       : x(T())
       , y(T())
       , z(T())
-      , w(T())
+      , w(T(1))
     {}
 
     /**

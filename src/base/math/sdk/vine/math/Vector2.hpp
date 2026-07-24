@@ -65,13 +65,6 @@ class Vector2 {
     }
 
     /**
-     * @brief Convert this vector to a 2D point.
-     * @return Converted point.
-     */
-    [[nodiscard]]
-    Point2<T> toPoint() const;
-
-    /**
      * @brief View this vector as a point without copying.
      * @return Const reference to the same memory as a point.
      */
@@ -284,6 +277,10 @@ class Vector2 {
 
     /**
      * @brief Vector addition.
+     *
+     * - For boolean type: `+` treated as logical OR.
+     * - For other types: normal addition.
+     *
      * @param right Right-hand vector.
      * @return Sum vector.
      */
@@ -295,6 +292,10 @@ class Vector2 {
 
     /**
      * @brief Vector subtraction.
+     *
+     * - For boolean type: `-` treated as left AND (NOT right).
+     * - For other types: normal subtraction.
+     *
      * @param right Right-hand vector.
      * @return Difference vector.
      */
@@ -306,6 +307,10 @@ class Vector2 {
 
     /**
      * @brief Scale this vector.
+     *
+     * - For boolean type: `*` treated as logical AND.
+     * - For other types: normal multiplication.
+     *
      * @param scale Scalar multiplier.
      * @return Scaled vector.
      */
@@ -322,6 +327,10 @@ class Vector2 {
 
     /**
      * @brief Divide this vector by a scalar.
+     *
+     * - For boolean type: `/` treated as logical AND.
+     * - For other types: normal division.
+     *
      * @param scale Scalar divisor.
      * @return Scaled vector.
      */
@@ -338,6 +347,10 @@ class Vector2 {
 
     /**
      * @brief Add another vector in-place.
+     *
+     * - For boolean type: `+` treated as logical OR.
+     * - For other types: normal addition.
+     *
      * @param right Right-hand vector.
      * @return Reference to this vector.
      */
@@ -351,6 +364,10 @@ class Vector2 {
 
     /**
      * @brief Subtract another vector in-place.
+     *
+     * - For boolean type: `-` treated as left AND (NOT right).
+     * - For other types: normal subtraction.
+     *
      * @param right Right-hand vector.
      * @return Reference to this vector.
      */
@@ -364,6 +381,10 @@ class Vector2 {
 
     /**
      * @brief Multiply by scalar in-place.
+     *
+     * - For boolean type: `*` treated as logical AND.
+     * - For other types: normal multiplication.
+     *
      * @param scale Scalar multiplier.
      * @return Reference to this vector.
      */
@@ -377,6 +398,10 @@ class Vector2 {
 
     /**
      * @brief Divide by scalar in-place.
+     *
+     * - For boolean type: `/` treated as logical AND.
+     * - For other types: normal division.
+     *
      * @param scale Scalar divisor.
      * @return Reference to this vector.
      */
@@ -390,6 +415,10 @@ class Vector2 {
 
     /**
      * @brief Unary negation.
+     *
+     * - For boolean type: `-` treated as logical NOT.
+     * - For other types: normal negation.
+     *
      * @return Vector with negated components.
      */
     [[nodiscard]]

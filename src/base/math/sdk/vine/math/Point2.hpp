@@ -9,11 +9,9 @@
 
 #include "Math.hpp"
 #include "Types.hpp"
+#include "Vector2.hpp"
 
 V_MATH_NS_BEGIN
-
-template <typename T>
-class Vector2;
 
 /**
  * @brief A class representing a point in 2D space
@@ -62,7 +60,10 @@ class Point2 {
      * @return Converted vector.
      */
     [[nodiscard]]
-    Vector2<T> toVector() const;
+    Vector2<T> toVector() const
+    {
+        return Vector2<T>(x, y);
+    }
 
     /**
      * @brief Compute Euclidean distance to another point.
@@ -144,6 +145,10 @@ class Point2 {
 
     /**
      * @brief Subtract two points to get a displacement vector.
+     *
+     * - For boolean type: `-` treated as left AND (NOT right).
+     * - For other types: normal subtraction.
+     *
      * @param right Right-hand point.
      * @return Vector from right to this point.
      */
@@ -155,6 +160,10 @@ class Point2 {
 
     /**
      * @brief Translate this point by a vector.
+     *
+     * - For boolean type: `+` treated as logical OR.
+     * - For other types: normal addition.
+     *
      * @param right Translation vector.
      * @return Translated point.
      */
@@ -166,6 +175,10 @@ class Point2 {
 
     /**
      * @brief Translate this point in-place.
+     *
+     * - For boolean type: `+` treated as logical OR.
+     * - For other types: normal addition.
+     *
      * @param right Translation vector.
      * @return Reference to this point.
      */
@@ -179,6 +192,10 @@ class Point2 {
 
     /**
      * @brief Translate this point in-place by the inverse vector.
+     *
+     * - For boolean type: `-` treated as left AND (NOT right).
+     * - For other types: normal subtraction.
+     *
      * @param right Translation vector.
      * @return Reference to this point.
      */
@@ -192,6 +209,10 @@ class Point2 {
 
     /**
      * @brief Unary negation of point coordinates.
+     *
+     * - For boolean type: `-` treated as logical NOT.
+     * - For other types: normal negation.
+     *
      * @return Point with negated coordinates.
      */
     [[nodiscard]]

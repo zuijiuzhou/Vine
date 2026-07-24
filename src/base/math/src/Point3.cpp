@@ -1,19 +1,8 @@
 ﻿#include <vine/math/Point3.hpp>
 
-#include <cassert>
-
-#include <vine/math/Math.hpp>
-#include <vine/math/Point2.hpp>
-#include <vine/math/Vector3.hpp>
-
 V_MATH_NS_BEGIN
 
 #define TMPL_PREFIX template <typename T>
-
-TMPL_PREFIX Vector3<T> Point3<T>::toVector() const
-{
-    return Vector3<T>(x, y, z);
-}
 
 #undef TMPL_PREFIX
 

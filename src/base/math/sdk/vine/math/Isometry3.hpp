@@ -23,7 +23,7 @@ class Isometry3 {
      */
     constexpr Isometry3() noexcept
       : translation()
-      , rotation(T(0), T(0), T(0), T(1))
+      , rotation()
     {}
 
     /**
@@ -38,15 +38,15 @@ class Isometry3 {
 
   public:
     /**
+     * @brief Invert this transformation in place.
+     */
+    void invert();
+
+    /**
      * @brief Invert this transformation.
      * @return Inverted transformation.
      */
     Isometry3<T> inverted() const;
-
-    /**
-     * @brief Invert this transformation in place.
-     */
-    void invert();
 
     /**
      * @brief Pre-multiply a translation: T := T_trans(dt) * T.
@@ -95,15 +95,26 @@ class Isometry3 {
     /**
      * @brief Local X axis in parent coordinates (right direction).
      */
-    [[nodiscard]] Vector3<T> right()   const { return rotation * Vector3<T>::unitX(); }
+    [[nodiscard]] Vector3<T> right() const
+    {
+        return rotation * Vector3<T>::unitX();
+    }
+
     /**
      * @brief Local Y axis in parent coordinates (up direction).
      */
-    [[nodiscard]] Vector3<T> up()      const { return rotation * Vector3<T>::unitY(); }
+    [[nodiscard]] Vector3<T> up() const
+    {
+        return rotation * Vector3<T>::unitY();
+    }
+
     /**
      * @brief Local Z axis in parent coordinates (forward direction).
      */
-    [[nodiscard]] Vector3<T> forward() const { return rotation * Vector3<T>::unitZ(); }
+    [[nodiscard]] Vector3<T> forward() const
+    {
+        return rotation * Vector3<T>::unitZ();
+    }
 
   public:
     Point3<T>     translation;

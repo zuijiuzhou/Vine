@@ -48,4 +48,21 @@ concept Arithmetic = FP<T> || Integral<T>;
 template <Arithmetic T>
 using TypeF = std::conditional_t<std::is_integral_v<T>, double, T>;
 
+/**
+ * @brief Tag type for column-major storage order (default).
+ *
+ * Elements are stored column by column: m(row, col) = data[col * rows + row].
+ * Column vectors are contiguous in memory — optimal for matrix-vector multiply.
+ */
+struct ColMajor {};
+
+/**
+ * @brief Tag type for row-major storage order.
+ *
+ * Elements are stored row by row: m(row, col) = data[row * cols + col].
+ * Row vectors are contiguous in memory — convenient for row-wise iteration
+ * and interop with libraries that expect row-major layout.
+ */
+struct RowMajor {};
+
 V_MATH_NS_END

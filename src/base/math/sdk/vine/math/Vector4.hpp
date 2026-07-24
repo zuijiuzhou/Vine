@@ -8,6 +8,7 @@
 #include <cstdint>
 
 #include "Math.hpp"
+#include "Vector3.hpp"
 
 V_MATH_NS_BEGIN
 template <typename T>
@@ -245,7 +246,6 @@ class Vector4 {
      *
      * @return The original vector length before normalization.
      */
-    [[nodiscard]]
     constexpr T normalize() requires(FP<T>)
     {
         auto len = length();
@@ -353,6 +353,10 @@ class Vector4 {
 
     /**
      * @brief Vector addition.
+     *
+     * - For boolean type: `+` treated as logical OR.
+     * - For other types: normal addition.
+     *
      * @param right Right-hand vector.
      * @return Sum vector.
      */
@@ -364,6 +368,10 @@ class Vector4 {
 
     /**
      * @brief Vector subtraction.
+     *
+     * - For boolean type: `-` treated as left AND (NOT right).
+     * - For other types: normal subtraction.
+     *
      * @param right Right-hand vector.
      * @return Difference vector.
      */
@@ -375,6 +383,10 @@ class Vector4 {
 
     /**
      * @brief Scale this vector.
+     *
+     * - For boolean type: `*` treated as logical AND.
+     * - For other types: normal multiplication.
+     *
      * @param scale Scalar multiplier.
      * @return Scaled vector.
      */
@@ -386,6 +398,10 @@ class Vector4 {
 
     /**
      * @brief Divide this vector by a scalar.
+     *
+     * - For boolean type: `/` treated as logical AND.
+     * - For other types: normal division.
+     *
      * @param scale Scalar divisor.
      * @return Scaled vector.
      */
@@ -397,6 +413,10 @@ class Vector4 {
 
     /**
      * @brief Add another vector in-place.
+     *
+     * - For boolean type: `+` treated as logical OR.
+     * - For other types: normal addition.
+     *
      * @param right Right-hand vector.
      * @return Reference to this vector.
      */
@@ -412,6 +432,10 @@ class Vector4 {
 
     /**
      * @brief Subtract another vector in-place.
+     *
+     * - For boolean type: `-` treated as left AND (NOT right).
+     * - For other types: normal subtraction.
+     *
      * @param right Right-hand vector.
      * @return Reference to this vector.
      */
@@ -427,6 +451,10 @@ class Vector4 {
 
     /**
      * @brief Multiply by scalar in-place.
+     *
+     * - For boolean type: `*` treated as logical AND.
+     * - For other types: normal multiplication.
+     *
      * @param scale Scalar multiplier.
      * @return Reference to this vector.
      */
@@ -442,6 +470,10 @@ class Vector4 {
 
     /**
      * @brief Divide by scalar in-place.
+     *
+     * - For boolean type: `/` treated as logical AND.
+     * - For other types: normal division.
+     *
      * @param scale Scalar divisor.
      * @return Reference to this vector.
      */
@@ -457,6 +489,10 @@ class Vector4 {
 
     /**
      * @brief Unary negation.
+     *
+     * - For boolean type: `-` treated as logical NOT.
+     * - For other types: normal negation.
+     *
      * @return Vector with negated components.
      */
     [[nodiscard]]

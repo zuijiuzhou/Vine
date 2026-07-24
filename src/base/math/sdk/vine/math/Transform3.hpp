@@ -15,7 +15,7 @@ V_MATH_NS_BEGIN
 /**
  * @brief 3D geometric transformation free functions.
  *
- * All functions operate on Matrix4x4<T> and follow the standard
+ * All functions operate on Matrix4x4<T, Order> and follow the standard
  * column-major, column-vector-left-multiply convention:
  *
  *   point'  = M * point    (homogeneous w = 1)
@@ -40,8 +40,8 @@ V_MATH_NS_BEGIN
  * @param m      Target matrix (overwritten).
  * @param offset Translation offset.
  */
-template <typename T>
-constexpr void makeTranslation(Matrix4x4<T>& m, const Vector3<T>& offset) noexcept;
+template <typename T, typename Order>
+constexpr void makeTranslation(Matrix4x4<T, Order>& m, const Vector3<T>& offset) noexcept;
 
 /**
  * @brief Build translation matrix from components.
@@ -50,8 +50,8 @@ constexpr void makeTranslation(Matrix4x4<T>& m, const Vector3<T>& offset) noexce
  * @param y Translation along Y axis.
  * @param z Translation along Z axis.
  */
-template <typename T>
-constexpr void makeTranslation(Matrix4x4<T>& m, T x, T y, T z) noexcept;
+template <typename T, typename Order>
+constexpr void makeTranslation(Matrix4x4<T, Order>& m, T x, T y, T z) noexcept;
 
 /* ---- rotation ---- */
 
@@ -60,8 +60,8 @@ constexpr void makeTranslation(Matrix4x4<T>& m, T x, T y, T z) noexcept;
  * @param m    Target matrix (overwritten).
  * @param quat Rotation quaternion.
  */
-template <typename T>
-void makeRotation(Matrix4x4<T>& m, const Quaternion<T>& quat);
+template <typename T, typename Order>
+void makeRotation(Matrix4x4<T, Order>& m, const Quaternion<T>& quat);
 
 /**
  * @brief Build axis-angle rotation matrix.
@@ -69,8 +69,8 @@ void makeRotation(Matrix4x4<T>& m, const Quaternion<T>& quat);
  * @param axis  Rotation axis.
  * @param angle Rotation angle in radians.
  */
-template <typename T>
-void makeRotation(Matrix4x4<T>& m, const Vector3<T>& axis, T angle);
+template <typename T, typename Order>
+void makeRotation(Matrix4x4<T, Order>& m, const Vector3<T>& axis, T angle);
 
 /**
  * @brief Build rotation from start vector to end vector.
@@ -78,8 +78,8 @@ void makeRotation(Matrix4x4<T>& m, const Vector3<T>& axis, T angle);
  * @param start Source direction vector.
  * @param end   Target direction vector.
  */
-template <typename T>
-void makeRotation(Matrix4x4<T>& m, const Vector3<T>& start, const Vector3<T>& end);
+template <typename T, typename Order>
+void makeRotation(Matrix4x4<T, Order>& m, const Vector3<T>& start, const Vector3<T>& end);
 
 /* ---- scale ---- */
 
@@ -88,8 +88,8 @@ void makeRotation(Matrix4x4<T>& m, const Vector3<T>& start, const Vector3<T>& en
  * @param m   Target matrix (overwritten).
  * @param vec Scale factors for x/y/z.
  */
-template <typename T>
-constexpr void makeScale(Matrix4x4<T>& m, const Vector3<T>& vec) noexcept;
+template <typename T, typename Order>
+constexpr void makeScale(Matrix4x4<T, Order>& m, const Vector3<T>& vec) noexcept;
 
 /**
  * @brief Build non-uniform scale matrix from components.
@@ -98,16 +98,16 @@ constexpr void makeScale(Matrix4x4<T>& m, const Vector3<T>& vec) noexcept;
  * @param y Scale factor along Y axis.
  * @param z Scale factor along Z axis.
  */
-template <typename T>
-constexpr void makeScale(Matrix4x4<T>& m, T x, T y, T z) noexcept;
+template <typename T, typename Order>
+constexpr void makeScale(Matrix4x4<T, Order>& m, T x, T y, T z) noexcept;
 
 /**
  * @brief Build uniform scale matrix.
  * @param m      Target matrix (overwritten).
  * @param factor Uniform scale factor.
  */
-template <typename T>
-constexpr void makeScale(Matrix4x4<T>& m, T factor) noexcept;
+template <typename T, typename Order>
+constexpr void makeScale(Matrix4x4<T, Order>& m, T factor) noexcept;
 
 /* ---- look-at ---- */
 
@@ -121,8 +121,8 @@ constexpr void makeScale(Matrix4x4<T>& m, T factor) noexcept;
  *       view matrix suitable for right-handed coordinates where the camera
  *       looks along the negative Z direction in view space.
  */
-template <typename T>
-void makeLookAt(Matrix4x4<T>& m, const Point3<T>& eye, const Point3<T>& target, const Vector3<T>& up);
+template <typename T, typename Order>
+void makeLookAt(Matrix4x4<T, Order>& m, const Point3<T>& eye, const Point3<T>& target, const Vector3<T>& up);
 
 /* ---- projection ---- */
 
@@ -136,8 +136,8 @@ void makeLookAt(Matrix4x4<T>& m, const Point3<T>& eye, const Point3<T>& target, 
  * @param z_near the near clipping plane.
  * @param z_far  the far clipping plane.
  */
-template <typename T>
-void makeOrtho(Matrix4x4<T>& m, double left, double right, double bottom, double top, double z_near, double z_far);
+template <typename T, typename Order>
+void makeOrtho(Matrix4x4<T, Order>& m, double left, double right, double bottom, double top, double z_near, double z_far);
 
 /**
  * @brief Make a perspective projection matrix.
@@ -151,8 +151,8 @@ void makeOrtho(Matrix4x4<T>& m, double left, double right, double bottom, double
  *       conventions used throughout this class. NDC conventions follow the
  *       framework's existing usage (check consumer code if unsure).
  */
-template <typename T>
-void makePerspective(Matrix4x4<T>& m, double fovy, double aspect_ratio, double z_near, double z_far);
+template <typename T, typename Order>
+void makePerspective(Matrix4x4<T, Order>& m, double fovy, double aspect_ratio, double z_near, double z_far);
 
 /* ---- reflection ---- */
 
@@ -162,8 +162,8 @@ void makePerspective(Matrix4x4<T>& m, double fovy, double aspect_ratio, double z
  * @param plane_normal Normal vector of the mirror plane.
  * @param plane_offset Offset of the mirror plane from the origin.
  */
-template <typename T>
-void makeReflection(Matrix4x4<T>& m, const Vector3<T>& plane_normal, T plane_offset);
+template <typename T, typename Order>
+void makeReflection(Matrix4x4<T, Order>& m, const Vector3<T>& plane_normal, T plane_offset);
 
 /* ---- basis ---- */
 
@@ -175,8 +175,8 @@ void makeReflection(Matrix4x4<T>& m, const Vector3<T>& plane_normal, T plane_off
  * @param y_axis the y axis direction of the coordinate system.
  * @param z_axis the z axis direction of the coordinate system.
  */
-template <typename T>
-void setBasis(Matrix4x4<T>& m, const Point3<T>& origin, const Vector3<T>& x_axis, const Vector3<T>& y_axis, const Vector3<T>& z_axis);
+template <typename T, typename Order>
+void setBasis(Matrix4x4<T, Order>& m, const Point3<T>& origin, const Vector3<T>& x_axis, const Vector3<T>& y_axis, const Vector3<T>& z_axis);
 
 /* ========================================================================= */
 /*  2. Get  –  extract properties from a matrix                              */
@@ -187,8 +187,8 @@ void setBasis(Matrix4x4<T>& m, const Point3<T>& origin, const Vector3<T>& x_axis
  * @param m Transform matrix.
  * @return Column 3 xyz as Vector3<T>.
  */
-template <typename T>
-constexpr Vector3<T> getTranslation(const Matrix4x4<T>& m) noexcept;
+template <typename T, typename Order>
+constexpr Vector3<T> getTranslation(const Matrix4x4<T, Order>& m) noexcept;
 
 /**
  * @brief Get the rotation quaternion from the upper-left 3x3 block.
@@ -200,16 +200,16 @@ constexpr Vector3<T> getTranslation(const Matrix4x4<T>& m) noexcept;
  * @param m Transform matrix.
  * @return Rotation quaternion, or identity if ill-defined.
  */
-template <typename T>
-Quaternion<T> getRotation(const Matrix4x4<T>& m);
+template <typename T, typename Order>
+Quaternion<T> getRotation(const Matrix4x4<T, Order>& m);
 
 /**
  * @brief Get the diagonal of the upper-left 3x3 block.
  * @param m Transform matrix.
  * @return (m00, m11, m22) as Vector3<T>.
  */
-template <typename T>
-constexpr Vector3<T> getScale(const Matrix4x4<T>& m) noexcept;
+template <typename T, typename Order>
+constexpr Vector3<T> getScale(const Matrix4x4<T, Order>& m) noexcept;
 
 /**
  * @brief Get the coordinate system represented by this matrix.
@@ -219,8 +219,8 @@ constexpr Vector3<T> getScale(const Matrix4x4<T>& m) noexcept;
  * @param o_y_axis Output y-axis direction.
  * @param o_z_axis Output z-axis direction.
  */
-template <typename T>
-void getBasis(const Matrix4x4<T>& m, Point3<T>& o_origin, Vector3<T>& o_x_axis, Vector3<T>& o_y_axis, Vector3<T>& o_z_axis);
+template <typename T, typename Order>
+void getBasis(const Matrix4x4<T, Order>& m, Point3<T>& o_origin, Vector3<T>& o_x_axis, Vector3<T>& o_y_axis, Vector3<T>& o_z_axis);
 
 /* ========================================================================= */
 /*  3. Modify  –  pre/post-multiply in-place                                 */
@@ -236,8 +236,8 @@ void getBasis(const Matrix4x4<T>& m, Point3<T>& o_origin, Vector3<T>& o_x_axis, 
  * @param angle Rotation angle in radians.
  * @return Reference to m.
  */
-template <typename T>
-Matrix4x4<T>& preRotate(Matrix4x4<T>& m, const Vector3<T>& axis, T angle);
+template <typename T, typename Order>
+Matrix4x4<T, Order>& preRotate(Matrix4x4<T, Order>& m, const Vector3<T>& axis, T angle);
 
 /**
  * @brief Apply an axis-angle rotation in local space: M := M * R.
@@ -249,8 +249,8 @@ Matrix4x4<T>& preRotate(Matrix4x4<T>& m, const Vector3<T>& axis, T angle);
  * @param angle Rotation angle in radians.
  * @return Reference to m.
  */
-template <typename T>
-Matrix4x4<T>& postRotate(Matrix4x4<T>& m, const Vector3<T>& axis, T angle);
+template <typename T, typename Order>
+Matrix4x4<T, Order>& postRotate(Matrix4x4<T, Order>& m, const Vector3<T>& axis, T angle);
 
 /**
  * @brief Apply a quaternion rotation in world space: M := R * M.
@@ -261,8 +261,8 @@ Matrix4x4<T>& postRotate(Matrix4x4<T>& m, const Vector3<T>& axis, T angle);
  * @param quat Rotation quaternion.
  * @return Reference to m.
  */
-template <typename T>
-Matrix4x4<T>& preRotate(Matrix4x4<T>& m, const Quaternion<T>& quat);
+template <typename T, typename Order>
+Matrix4x4<T, Order>& preRotate(Matrix4x4<T, Order>& m, const Quaternion<T>& quat);
 
 /**
  * @brief Apply a quaternion rotation in local space: M := M * R.
@@ -273,8 +273,8 @@ Matrix4x4<T>& preRotate(Matrix4x4<T>& m, const Quaternion<T>& quat);
  * @param quat Rotation quaternion.
  * @return Reference to m.
  */
-template <typename T>
-Matrix4x4<T>& postRotate(Matrix4x4<T>& m, const Quaternion<T>& quat);
+template <typename T, typename Order>
+Matrix4x4<T, Order>& postRotate(Matrix4x4<T, Order>& m, const Quaternion<T>& quat);
 
 /**
  * @brief Apply a translation in world space: M := T * M.
@@ -285,8 +285,8 @@ Matrix4x4<T>& postRotate(Matrix4x4<T>& m, const Quaternion<T>& quat);
  * @param offset Translation offset (world-space).
  * @return Reference to m.
  */
-template <typename T>
-Matrix4x4<T>& preTranslate(Matrix4x4<T>& m, const Vector3<T>& offset);
+template <typename T, typename Order>
+Matrix4x4<T, Order>& preTranslate(Matrix4x4<T, Order>& m, const Vector3<T>& offset);
 
 /**
  * @brief Apply a translation in local space: M := M * T.
@@ -297,8 +297,8 @@ Matrix4x4<T>& preTranslate(Matrix4x4<T>& m, const Vector3<T>& offset);
  * @param offset Translation offset (local-space).
  * @return Reference to m.
  */
-template <typename T>
-Matrix4x4<T>& postTranslate(Matrix4x4<T>& m, const Vector3<T>& offset);
+template <typename T, typename Order>
+Matrix4x4<T, Order>& postTranslate(Matrix4x4<T, Order>& m, const Vector3<T>& offset);
 
 /**
  * @brief Apply a non-uniform scale in world space: M := S * M.
@@ -309,8 +309,8 @@ Matrix4x4<T>& postTranslate(Matrix4x4<T>& m, const Vector3<T>& offset);
  * @param factor Scale factor per axis (world-space).
  * @return Reference to m.
  */
-template <typename T>
-Matrix4x4<T>& preScale(Matrix4x4<T>& m, const Vector3<T>& factor);
+template <typename T, typename Order>
+Matrix4x4<T, Order>& preScale(Matrix4x4<T, Order>& m, const Vector3<T>& factor);
 
 /**
  * @brief Apply a non-uniform scale in local space: M := M * S.
@@ -321,8 +321,8 @@ Matrix4x4<T>& preScale(Matrix4x4<T>& m, const Vector3<T>& factor);
  * @param factor Scale factor per axis (local-space).
  * @return Reference to m.
  */
-template <typename T>
-Matrix4x4<T>& postScale(Matrix4x4<T>& m, const Vector3<T>& factor);
+template <typename T, typename Order>
+Matrix4x4<T, Order>& postScale(Matrix4x4<T, Order>& m, const Vector3<T>& factor);
 
 /* ========================================================================= */
 /*  4. Apply  –  transform points and vectors                                */
@@ -335,8 +335,8 @@ Matrix4x4<T>& postScale(Matrix4x4<T>& m, const Vector3<T>& factor);
  * @param v Input vector.
  * @return Transformed vector.
  */
-template <typename T>
-Vector3<T> operator*(const Matrix4x4<T>& m, const Vector3<T>& v);
+template <typename T, typename Order>
+Vector3<T> operator*(const Matrix4x4<T, Order>& m, const Vector3<T>& v);
 
 /**
  * @brief Transform a point (w = 1, full affine with perspective divide).
@@ -344,8 +344,8 @@ Vector3<T> operator*(const Matrix4x4<T>& m, const Vector3<T>& v);
  * @param p Input point.
  * @return Transformed point (perspective-divided if w != 1).
  */
-template <typename T>
-Point3<T> operator*(const Matrix4x4<T>& m, const Point3<T>& p);
+template <typename T, typename Order>
+Point3<T> operator*(const Matrix4x4<T, Order>& m, const Point3<T>& p);
 
 /**
  * @brief 3×3 linear transform of a vector (no translation).
@@ -384,8 +384,8 @@ inline Point3<T> operator*(const Matrix3x3<T>& m, const Point3<T>& p)
  * @param quat Rotation quaternion.
  * @return Rotation matrix.
  */
-template <typename T>
-[[nodiscard]] Matrix4x4<T> rotate(const Quaternion<T>& quat);
+template <typename T, typename Order = ColMajor>
+[[nodiscard]] Matrix4x4<T, Order> rotate(const Quaternion<T>& quat);
 
 /**
  * @brief Create an axis-angle rotation matrix.
@@ -393,8 +393,8 @@ template <typename T>
  * @param angle Rotation angle in radians.
  * @return Rotation matrix.
  */
-template <typename T>
-[[nodiscard]] Matrix4x4<T> rotate(const Vector3<T>& axis, T angle);
+template <typename T, typename Order = ColMajor>
+[[nodiscard]] Matrix4x4<T, Order> rotate(const Vector3<T>& axis, T angle);
 
 /**
  * @brief Create a rotation matrix from start and end vectors.
@@ -402,16 +402,16 @@ template <typename T>
  * @param end   Target direction vector.
  * @return Rotation matrix.
  */
-template <typename T>
-[[nodiscard]] Matrix4x4<T> rotate(const Vector3<T>& start, const Vector3<T>& end);
+template <typename T, typename Order = ColMajor>
+[[nodiscard]] Matrix4x4<T, Order> rotate(const Vector3<T>& start, const Vector3<T>& end);
 
 /**
  * @brief Create a translation matrix from vector.
  * @param offset Translation offset.
  * @return Translation matrix.
  */
-template <typename T>
-[[nodiscard]] Matrix4x4<T> translate(const Vector3<T>& offset);
+template <typename T, typename Order = ColMajor>
+[[nodiscard]] Matrix4x4<T, Order> translate(const Vector3<T>& offset);
 
 /**
  * @brief Create a translation matrix from components.
@@ -420,16 +420,16 @@ template <typename T>
  * @param z Translation along Z axis.
  * @return Translation matrix.
  */
-template <typename T>
-[[nodiscard]] Matrix4x4<T> translate(T x, T y, T z);
+template <typename T, typename Order = ColMajor>
+[[nodiscard]] Matrix4x4<T, Order> translate(T x, T y, T z);
 
 /**
  * @brief Create a non-uniform scale matrix from vector.
  * @param vec Scale factors for x/y/z.
  * @return Scale matrix.
  */
-template <typename T>
-[[nodiscard]] Matrix4x4<T> scale(const Vector3<T>& vec);
+template <typename T, typename Order = ColMajor>
+[[nodiscard]] Matrix4x4<T, Order> scale(const Vector3<T>& vec);
 
 /**
  * @brief Create a non-uniform scale matrix from components.
@@ -438,16 +438,16 @@ template <typename T>
  * @param z Scale factor along Z axis.
  * @return Scale matrix.
  */
-template <typename T>
-[[nodiscard]] Matrix4x4<T> scale(T x, T y, T z);
+template <typename T, typename Order = ColMajor>
+[[nodiscard]] Matrix4x4<T, Order> scale(T x, T y, T z);
 
 /**
  * @brief Create a uniform scale matrix.
  * @param factor Uniform scale factor.
  * @return Scale matrix.
  */
-template <typename T>
-[[nodiscard]] Matrix4x4<T> scale(T factor);
+template <typename T, typename Order = ColMajor>
+[[nodiscard]] Matrix4x4<T, Order> scale(T factor);
 
 /**
  * @brief Create a look-at view matrix.
@@ -456,8 +456,8 @@ template <typename T>
  * @param up     Up direction reference.
  * @return View matrix.
  */
-template <typename T>
-[[nodiscard]] Matrix4x4<T> lookAt(const Point3<T>& eye, const Point3<T>& target, const Vector3<T>& up);
+template <typename T, typename Order = ColMajor>
+[[nodiscard]] Matrix4x4<T, Order> lookAt(const Point3<T>& eye, const Point3<T>& target, const Vector3<T>& up);
 
 /**
  * @brief Create an orthographic projection matrix.
@@ -469,8 +469,8 @@ template <typename T>
  * @param z_far  Far clipping plane.
  * @return Orthographic projection matrix.
  */
-template <typename T>
-[[nodiscard]] Matrix4x4<T> ortho(double left, double right, double bottom, double top, double z_near, double z_far);
+template <typename T, typename Order = ColMajor>
+[[nodiscard]] Matrix4x4<T, Order> ortho(double left, double right, double bottom, double top, double z_near, double z_far);
 
 /**
  * @brief Create a perspective projection matrix.
@@ -480,8 +480,8 @@ template <typename T>
  * @param z_far        Far clipping plane.
  * @return Perspective projection matrix.
  */
-template <typename T>
-[[nodiscard]] Matrix4x4<T> perspective(double fovy, double aspect_ratio, double z_near, double z_far);
+template <typename T, typename Order = ColMajor>
+[[nodiscard]] Matrix4x4<T, Order> perspective(double fovy, double aspect_ratio, double z_near, double z_far);
 
 /**
  * @brief Create a reflection matrix across a plane.
@@ -489,8 +489,8 @@ template <typename T>
  * @param plane_offset Offset of the plane from the origin.
  * @return Reflection matrix.
  */
-template <typename T>
-[[nodiscard]] Matrix4x4<T> reflect(const Vector3<T>& plane_normal, T plane_offset);
+template <typename T, typename Order = ColMajor>
+[[nodiscard]] Matrix4x4<T, Order> reflect(const Vector3<T>& plane_normal, T plane_offset);
 
 /**
  * @brief Create a matrix from basis vectors and origin.
@@ -500,8 +500,8 @@ template <typename T>
  * @param z_axis Z-axis direction.
  * @return Transform matrix composed from basis.
  */
-template <typename T>
-[[nodiscard]] Matrix4x4<T> fromBasis(const Point3<T>& origin, const Vector3<T>& x_axis, const Vector3<T>& y_axis, const Vector3<T>& z_axis);
+template <typename T, typename Order = ColMajor>
+[[nodiscard]] Matrix4x4<T, Order> fromBasis(const Point3<T>& origin, const Vector3<T>& x_axis, const Vector3<T>& y_axis, const Vector3<T>& z_axis);
 
 /* ========================================================================= */
 /*  6. Convert  –  type conversion                                           */
@@ -512,16 +512,16 @@ template <typename T>
  * @param quat Rotation quaternion.
  * @return 3x3 rotation matrix (upper-left block of the equivalent 4x4).
  */
-template <typename T>
-Matrix3x3<T> toRotationMatrix(const Quaternion<T>& quat);
+template <typename T, typename Order = ColMajor>
+Matrix3x3<T, Order> toRotationMatrix(const Quaternion<T>& quat);
 
 /**
  * @brief Construct a 4x4 rigid transform matrix from an Isometry3 object.
  * @param tf Isometry3 object containing translation and rotation.
  * @return 4x4 rigid transform matrix.
  */
-template <typename T>
-Matrix4x4<T> toMatrix4x4(const Isometry3<T>& tf);
+template <typename T, typename Order = ColMajor>
+Matrix4x4<T, Order> toMatrix4x4(const Isometry3<T>& tf);
 
 /* ========================================================================= */
 /*  Inline implementations (≤ 20 lines each)                                 */
@@ -529,194 +529,215 @@ Matrix4x4<T> toMatrix4x4(const Isometry3<T>& tf);
 
 /* ---- makeTranslation ---- */
 
-template <typename T>
-constexpr void makeTranslation(Matrix4x4<T>& m, const Vector3<T>& offset) noexcept
+template <typename T, typename Order>
+constexpr void makeTranslation(Matrix4x4<T, Order>& m, const Vector3<T>& offset) noexcept
 {
     m.makeIdentity();
-    m.vecs[3][0] = offset.x;
-    m.vecs[3][1] = offset.y;
-    m.vecs[3][2] = offset.z;
+    m.element(0, 3) = offset.x;
+    m.element(1, 3) = offset.y;
+    m.element(2, 3) = offset.z;
 }
 
-template <typename T>
-constexpr void makeTranslation(Matrix4x4<T>& m, T x, T y, T z) noexcept
+template <typename T, typename Order>
+constexpr void makeTranslation(Matrix4x4<T, Order>& m, T x, T y, T z) noexcept
 {
     m.makeIdentity();
-    m.vecs[3][0] = x;
-    m.vecs[3][1] = y;
-    m.vecs[3][2] = z;
+    m.element(0, 3) = x;
+    m.element(1, 3) = y;
+    m.element(2, 3) = z;
 }
 
 /* ---- makeScale ---- */
 
-template <typename T>
-constexpr void makeScale(Matrix4x4<T>& m, const Vector3<T>& vec) noexcept
+template <typename T, typename Order>
+constexpr void makeScale(Matrix4x4<T, Order>& m, const Vector3<T>& vec) noexcept
 {
     m.makeIdentity();
-    m.vecs[0][0] = vec.x;
-    m.vecs[1][1] = vec.y;
-    m.vecs[2][2] = vec.z;
+    m.element(0, 0) = vec.x;
+    m.element(1, 1) = vec.y;
+    m.element(2, 2) = vec.z;
 }
 
-template <typename T>
-constexpr void makeScale(Matrix4x4<T>& m, T x, T y, T z) noexcept
+template <typename T, typename Order>
+constexpr void makeScale(Matrix4x4<T, Order>& m, T x, T y, T z) noexcept
 {
     m.makeIdentity();
-    m.vecs[0][0] = x;
-    m.vecs[1][1] = y;
-    m.vecs[2][2] = z;
+    m.element(0, 0) = x;
+    m.element(1, 1) = y;
+    m.element(2, 2) = z;
 }
 
-template <typename T>
-constexpr void makeScale(Matrix4x4<T>& m, T factor) noexcept
+template <typename T, typename Order>
+constexpr void makeScale(Matrix4x4<T, Order>& m, T factor) noexcept
 {
     m.makeIdentity();
-    m.vecs[0][0] = factor;
-    m.vecs[1][1] = factor;
-    m.vecs[2][2] = factor;
+    m.element(0, 0) = factor;
+    m.element(1, 1) = factor;
+    m.element(2, 2) = factor;
 }
 
 /* ---- makeOrtho / makePerspective ---- */
 
-template <typename T>
-inline void makeOrtho(Matrix4x4<T>& m, double left, double right, double bottom, double top, double z_near, double z_far)
+template <typename T, typename Order>
+inline void makeOrtho(Matrix4x4<T, Order>& m, double left, double right, double bottom, double top, double z_near, double z_far)
 {
     auto tx = -(right + left) / (right - left);
     auto ty = -(top + bottom) / (top - bottom);
     auto tz = -(z_far + z_near) / (z_far - z_near);
 
-    m.vecs[0] = Vector4<T>(T(2) / (right - left), T(0), T(0), T(0));
-    m.vecs[1] = Vector4<T>(T(0), T(2) / (top - bottom), T(0), T(0));
-    m.vecs[2] = Vector4<T>(T(0), T(0), T(-2) / (z_far - z_near), T(0));
-    m.vecs[3] = Vector4<T>(tx, ty, tz, T(1));
+    // Column 0
+    m.element(0, 0) = T(2) / (right - left);
+    m.element(1, 0) = T(0);
+    m.element(2, 0) = T(0);
+    m.element(3, 0) = T(0);
+    // Column 1
+    m.element(0, 1) = T(0);
+    m.element(1, 1) = T(2) / (top - bottom);
+    m.element(2, 1) = T(0);
+    m.element(3, 1) = T(0);
+    // Column 2
+    m.element(0, 2) = T(0);
+    m.element(1, 2) = T(0);
+    m.element(2, 2) = T(-2) / (z_far - z_near);
+    m.element(3, 2) = T(0);
+    // Column 3 (translation)
+    m.element(0, 3) = T(tx);
+    m.element(1, 3) = T(ty);
+    m.element(2, 3) = T(tz);
+    m.element(3, 3) = T(1);
 }
 
-template <typename T>
-inline void makePerspective(Matrix4x4<T>& m, double fovy, double aspect_ratio, double z_near, double z_far)
+template <typename T, typename Order>
+inline void makePerspective(Matrix4x4<T, Order>& m, double fovy, double aspect_ratio, double z_near, double z_far)
 {
     const auto f = T(1) / std::tan(fovy / 2.0);
-    std::memset(m.data, 0, sizeof(m.data));
-    m.vecs[0][0] = T(f / aspect_ratio);
-    m.vecs[1][1] = T(f);
-    m.vecs[2][2] = T((z_far + z_near) / (z_near - z_far));
-    m.vecs[2][3] = T(-1);
-    m.vecs[3][2] = T(2 * z_far * z_near / (z_near - z_far));
+    m.makeIdentity();
+    m.element(0, 0) = T(0);
+    m.element(1, 1) = T(0);
+    m.element(2, 2) = T(0);
+    m.element(3, 3) = T(0);
+
+    m.element(0, 0) = T(f / aspect_ratio);
+    m.element(1, 1) = T(f);
+    m.element(2, 2) = T((z_far + z_near) / (z_near - z_far));
+    m.element(3, 2) = T(-1);
+    m.element(2, 3) = T(2 * z_far * z_near / (z_near - z_far));
 }
 
 /* ---- setBasis / getBasis ---- */
 
-template <typename T>
-inline void setBasis(Matrix4x4<T>& m, const Point3<T>& origin, const Vector3<T>& x_axis, const Vector3<T>& y_axis, const Vector3<T>& z_axis)
+template <typename T, typename Order>
+inline void setBasis(Matrix4x4<T, Order>& m, const Point3<T>& origin, const Vector3<T>& x_axis, const Vector3<T>& y_axis, const Vector3<T>& z_axis)
 {
-    m.vecs[0].set(x_axis, T(0));
-    m.vecs[1].set(y_axis, T(0));
-    m.vecs[2].set(z_axis, T(0));
-    m.vecs[3].set(origin.x, origin.y, origin.z, T(1));
+    m.element(0, 0) = x_axis.x; m.element(0, 1) = y_axis.x; m.element(0, 2) = z_axis.x; m.element(0, 3) = origin.x;
+    m.element(1, 0) = x_axis.y; m.element(1, 1) = y_axis.y; m.element(1, 2) = z_axis.y; m.element(1, 3) = origin.y;
+    m.element(2, 0) = x_axis.z; m.element(2, 1) = y_axis.z; m.element(2, 2) = z_axis.z; m.element(2, 3) = origin.z;
+    m.element(3, 0) = T(0);      m.element(3, 1) = T(0);      m.element(3, 2) = T(0);      m.element(3, 3) = T(1);
 }
 
-template <typename T>
-inline void getBasis(const Matrix4x4<T>& m, Point3<T>& o_origin, Vector3<T>& o_x_axis, Vector3<T>& o_y_axis, Vector3<T>& o_z_axis)
+template <typename T, typename Order>
+inline void getBasis(const Matrix4x4<T, Order>& m, Point3<T>& o_origin, Vector3<T>& o_x_axis, Vector3<T>& o_y_axis, Vector3<T>& o_z_axis)
 {
-    o_origin = m.vecs[3].asVector3().asPoint();
-    o_x_axis = m.vecs[0].asVector3();
-    o_y_axis = m.vecs[1].asVector3();
-    o_z_axis = m.vecs[2].asVector3();
+    o_origin = Point3<T>(m.element(0, 3), m.element(1, 3), m.element(2, 3));
+    o_x_axis.set(m.element(0, 0), m.element(1, 0), m.element(2, 0));
+    o_y_axis.set(m.element(0, 1), m.element(1, 1), m.element(2, 1));
+    o_z_axis.set(m.element(0, 2), m.element(1, 2), m.element(2, 2));
 }
 
 /* ---- getTranslation / getScale ---- */
 
-template <typename T>
-constexpr Vector3<T> getTranslation(const Matrix4x4<T>& m) noexcept
+template <typename T, typename Order>
+constexpr Vector3<T> getTranslation(const Matrix4x4<T, Order>& m) noexcept
 {
-    return Vector3<T>(m.vecs[3][0], m.vecs[3][1], m.vecs[3][2]);
+    return Vector3<T>(m.element(0, 3), m.element(1, 3), m.element(2, 3));
 }
 
-template <typename T>
-constexpr Vector3<T> getScale(const Matrix4x4<T>& m) noexcept
+template <typename T, typename Order>
+constexpr Vector3<T> getScale(const Matrix4x4<T, Order>& m) noexcept
 {
-    return Vector3<T>(m.vecs[0][0], m.vecs[1][1], m.vecs[2][2]);
+    return Vector3<T>(m.element(0, 0), m.element(1, 1), m.element(2, 2));
 }
 
 /* ---- preRotate / postRotate (axis -> quat adapters) ---- */
 
-template <typename T>
-inline Matrix4x4<T>& preRotate(Matrix4x4<T>& m, const Vector3<T>& axis, T angle)
+template <typename T, typename Order>
+inline Matrix4x4<T, Order>& preRotate(Matrix4x4<T, Order>& m, const Vector3<T>& axis, T angle)
 {
     return preRotate(m, Quaternion<T>(angle, axis));
 }
 
-template <typename T>
-inline Matrix4x4<T>& postRotate(Matrix4x4<T>& m, const Vector3<T>& axis, T angle)
+template <typename T, typename Order>
+inline Matrix4x4<T, Order>& postRotate(Matrix4x4<T, Order>& m, const Vector3<T>& axis, T angle)
 {
     return postRotate(m, Quaternion<T>(angle, axis));
 }
 
 /* ---- preTranslate / postTranslate / preScale / postScale ---- */
 
-template <typename T>
-inline Matrix4x4<T>& preTranslate(Matrix4x4<T>& m, const Vector3<T>& offset)
+template <typename T, typename Order>
+inline Matrix4x4<T, Order>& preTranslate(Matrix4x4<T, Order>& m, const Vector3<T>& offset)
 {
     const auto tx = offset.x, ty = offset.y, tz = offset.z;
-    for (size_t col = 0; col < 4; ++col) {
-        const auto w = m.vecs[col][3];
-        m.vecs[col][0] += tx * w;
-        m.vecs[col][1] += ty * w;
-        m.vecs[col][2] += tz * w;
+    for (int col = 0; col < 4; ++col) {
+        const auto w = m.element(3, col);
+        m.element(0, col) += tx * w;
+        m.element(1, col) += ty * w;
+        m.element(2, col) += tz * w;
     }
     return m;
 }
 
-template <typename T>
-inline Matrix4x4<T>& postTranslate(Matrix4x4<T>& m, const Vector3<T>& offset)
+template <typename T, typename Order>
+inline Matrix4x4<T, Order>& postTranslate(Matrix4x4<T, Order>& m, const Vector3<T>& offset)
 {
     const auto tx = offset.x, ty = offset.y, tz = offset.z;
-    for (size_t row = 0; row < 4; ++row) {
-        m.vecs[3][row] += m.vecs[0][row] * tx + m.vecs[1][row] * ty + m.vecs[2][row] * tz;
+    for (int row = 0; row < 4; ++row) {
+        m.element(row, 3) += m.element(row, 0) * tx + m.element(row, 1) * ty + m.element(row, 2) * tz;
     }
     return m;
 }
 
-template <typename T>
-inline Matrix4x4<T>& preScale(Matrix4x4<T>& m, const Vector3<T>& factor)
+template <typename T, typename Order>
+inline Matrix4x4<T, Order>& preScale(Matrix4x4<T, Order>& m, const Vector3<T>& factor)
 {
     const auto sx = factor.x, sy = factor.y, sz = factor.z;
-    for (size_t col = 0; col < 4; ++col) {
-        m.vecs[col][0] *= sx;
-        m.vecs[col][1] *= sy;
-        m.vecs[col][2] *= sz;
+    for (int col = 0; col < 4; ++col) {
+        m.element(0, col) *= sx;
+        m.element(1, col) *= sy;
+        m.element(2, col) *= sz;
     }
     return m;
 }
 
-template <typename T>
-inline Matrix4x4<T>& postScale(Matrix4x4<T>& m, const Vector3<T>& factor)
+template <typename T, typename Order>
+inline Matrix4x4<T, Order>& postScale(Matrix4x4<T, Order>& m, const Vector3<T>& factor)
 {
     const auto sx = factor.x, sy = factor.y, sz = factor.z;
-    for (size_t row = 0; row < 4; ++row) {
-        m.vecs[0][row] *= sx;
-        m.vecs[1][row] *= sy;
-        m.vecs[2][row] *= sz;
+    for (int row = 0; row < 4; ++row) {
+        m.element(row, 0) *= sx;
+        m.element(row, 1) *= sy;
+        m.element(row, 2) *= sz;
     }
     return m;
 }
 
 /* ---- operator*(Vector3) / operator*(Point3) ---- */
 
-template <typename T>
-inline Vector3<T> operator*(const Matrix4x4<T>& m, const Vector3<T>& v)
+template <typename T, typename Order>
+inline Vector3<T> operator*(const Matrix4x4<T, Order>& m, const Vector3<T>& v)
 {
-    return Vector3<T>(m.vecs[0][0] * v.x + m.vecs[1][0] * v.y + m.vecs[2][0] * v.z,
-                      m.vecs[0][1] * v.x + m.vecs[1][1] * v.y + m.vecs[2][1] * v.z,
-                      m.vecs[0][2] * v.x + m.vecs[1][2] * v.y + m.vecs[2][2] * v.z);
+    return Vector3<T>(m.element(0, 0) * v.x + m.element(0, 1) * v.y + m.element(0, 2) * v.z,
+                      m.element(1, 0) * v.x + m.element(1, 1) * v.y + m.element(1, 2) * v.z,
+                      m.element(2, 0) * v.x + m.element(2, 1) * v.y + m.element(2, 2) * v.z);
 }
 
-template <typename T>
-inline Point3<T> operator*(const Matrix4x4<T>& m, const Point3<T>& p)
+template <typename T, typename Order>
+inline Point3<T> operator*(const Matrix4x4<T, Order>& m, const Point3<T>& p)
 {
-    const auto x = m.vecs[0][0] * p.x + m.vecs[1][0] * p.y + m.vecs[2][0] * p.z + m.vecs[3][0];
-    const auto y = m.vecs[0][1] * p.x + m.vecs[1][1] * p.y + m.vecs[2][1] * p.z + m.vecs[3][1];
-    const auto z = m.vecs[0][2] * p.x + m.vecs[1][2] * p.y + m.vecs[2][2] * p.z + m.vecs[3][2];
-    const auto w = m.vecs[0][3] * p.x + m.vecs[1][3] * p.y + m.vecs[2][3] * p.z + m.vecs[3][3];
+    const auto x = m.element(0, 0) * p.x + m.element(0, 1) * p.y + m.element(0, 2) * p.z + m.element(0, 3);
+    const auto y = m.element(1, 0) * p.x + m.element(1, 1) * p.y + m.element(1, 2) * p.z + m.element(1, 3);
+    const auto z = m.element(2, 0) * p.x + m.element(2, 1) * p.y + m.element(2, 2) * p.z + m.element(2, 3);
+    const auto w = m.element(3, 0) * p.x + m.element(3, 1) * p.y + m.element(3, 2) * p.z + m.element(3, 3);
 
     if (math::isEqual(w, T(1), T(1e-12)))
         return Point3<T>(x, y, z);
@@ -727,157 +748,157 @@ inline Point3<T> operator*(const Matrix4x4<T>& m, const Point3<T>& p)
 
 /* ---- Factory functions ---- */
 
-template <typename T>
-inline Matrix4x4<T> rotate(const Vector3<T>& axis, T angle)
+template <typename T, typename Order>
+inline Matrix4x4<T, Order> rotate(const Vector3<T>& axis, T angle)
 {
-    Matrix4x4<T> m;
+    Matrix4x4<T, Order> m;
     makeRotation(m, axis, angle);
     return m;
 }
 
-template <typename T>
-inline Matrix4x4<T> rotate(const Vector3<T>& from, const Vector3<T>& to)
+template <typename T, typename Order>
+inline Matrix4x4<T, Order> rotate(const Vector3<T>& from, const Vector3<T>& to)
 {
-    Matrix4x4<T> m;
+    Matrix4x4<T, Order> m;
     makeRotation(m, from, to);
     return m;
 }
 
-template <typename T>
-inline Matrix4x4<T> translate(const Vector3<T>& offset)
+template <typename T, typename Order>
+inline Matrix4x4<T, Order> translate(const Vector3<T>& offset)
 {
-    Matrix4x4<T> m;
+    Matrix4x4<T, Order> m;
     makeTranslation(m, offset);
     return m;
 }
 
-template <typename T>
-inline Matrix4x4<T> translate(T x, T y, T z)
+template <typename T, typename Order>
+inline Matrix4x4<T, Order> translate(T x, T y, T z)
 {
-    Matrix4x4<T> m;
+    Matrix4x4<T, Order> m;
     makeTranslation(m, x, y, z);
     return m;
 }
 
-template <typename T>
-inline Matrix4x4<T> scale(const Vector3<T>& vec)
+template <typename T, typename Order>
+inline Matrix4x4<T, Order> scale(const Vector3<T>& vec)
 {
-    Matrix4x4<T> m;
+    Matrix4x4<T, Order> m;
     makeScale(m, vec);
     return m;
 }
 
-template <typename T>
-inline Matrix4x4<T> scale(T x, T y, T z)
+template <typename T, typename Order>
+inline Matrix4x4<T, Order> scale(T x, T y, T z)
 {
-    Matrix4x4<T> m;
+    Matrix4x4<T, Order> m;
     makeScale(m, x, y, z);
     return m;
 }
 
-template <typename T>
-inline Matrix4x4<T> scale(T factor)
+template <typename T, typename Order>
+inline Matrix4x4<T, Order> scale(T factor)
 {
-    Matrix4x4<T> m;
+    Matrix4x4<T, Order> m;
     makeScale(m, factor);
     return m;
 }
 
-template <typename T>
-inline Matrix4x4<T> lookAt(const Point3<T>& eye, const Point3<T>& target, const Vector3<T>& up)
+template <typename T, typename Order>
+inline Matrix4x4<T, Order> lookAt(const Point3<T>& eye, const Point3<T>& target, const Vector3<T>& up)
 {
-    Matrix4x4<T> m;
+    Matrix4x4<T, Order> m;
     makeLookAt(m, eye, target, up);
     return m;
 }
 
-template <typename T>
-inline Matrix4x4<T> ortho(double l, double r, double b, double t, double n, double f)
+template <typename T, typename Order>
+inline Matrix4x4<T, Order> ortho(double l, double r, double b, double t, double n, double f)
 {
-    Matrix4x4<T> m;
+    Matrix4x4<T, Order> m;
     makeOrtho(m, l, r, b, t, n, f);
     return m;
 }
 
-template <typename T>
-inline Matrix4x4<T> perspective(double fovy, double aspect, double n, double f)
+template <typename T, typename Order>
+inline Matrix4x4<T, Order> perspective(double fovy, double aspect, double n, double f)
 {
-    Matrix4x4<T> m;
+    Matrix4x4<T, Order> m;
     makePerspective(m, fovy, aspect, n, f);
     return m;
 }
 
-template <typename T>
-inline Matrix4x4<T> fromBasis(const Point3<T>& origin, const Vector3<T>& x, const Vector3<T>& y, const Vector3<T>& z)
+template <typename T, typename Order>
+inline Matrix4x4<T, Order> fromBasis(const Point3<T>& origin, const Vector3<T>& x, const Vector3<T>& y, const Vector3<T>& z)
 {
-    Matrix4x4<T> m;
+    Matrix4x4<T, Order> m;
     setBasis(m, origin, x, y, z);
     return m;
 }
 
-template <typename T>
-inline Matrix4x4<T> reflect(const Vector3<T>& n, T d)
+template <typename T, typename Order>
+inline Matrix4x4<T, Order> reflect(const Vector3<T>& n, T d)
 {
-    Matrix4x4<T> m;
+    Matrix4x4<T, Order> m;
     makeReflection(m, n, d);
     return m;
 }
 
 /* makeRotation / preRotate / postRotate  (delegate to rotate(quat)) */
 
-template <typename T>
-inline void makeRotation(Matrix4x4<T>& m, const Quaternion<T>& quat)
+template <typename T, typename Order>
+inline void makeRotation(Matrix4x4<T, Order>& m, const Quaternion<T>& quat)
 {
     m = rotate(quat);
 }
 
-template <typename T>
-inline void makeRotation(Matrix4x4<T>& m, const Vector3<T>& from, const Vector3<T>& to)
+template <typename T, typename Order>
+inline void makeRotation(Matrix4x4<T, Order>& m, const Vector3<T>& from, const Vector3<T>& to)
 {
     Quaternion<T> q;
     q.makeRotate(from, to);
     m = rotate(q);
 }
 
-template <typename T>
-inline Matrix4x4<T>& preRotate(Matrix4x4<T>& m, const Quaternion<T>& quat)
+template <typename T, typename Order>
+inline Matrix4x4<T, Order>& preRotate(Matrix4x4<T, Order>& m, const Quaternion<T>& quat)
 {
-    const Matrix4x4<T> rot = rotate(quat);
-    for (size_t col = 0; col < 4; ++col) {
-        const auto ox = m.vecs[col][0], oy = m.vecs[col][1], oz = m.vecs[col][2];
-        m.vecs[col][0] = rot.vecs[0][0] * ox + rot.vecs[1][0] * oy + rot.vecs[2][0] * oz;
-        m.vecs[col][1] = rot.vecs[0][1] * ox + rot.vecs[1][1] * oy + rot.vecs[2][1] * oz;
-        m.vecs[col][2] = rot.vecs[0][2] * ox + rot.vecs[1][2] * oy + rot.vecs[2][2] * oz;
+    const auto rot = rotate(quat);
+    for (int col = 0; col < 4; ++col) {
+        const auto ox = m.element(0, col), oy = m.element(1, col), oz = m.element(2, col);
+        m.element(0, col) = rot.element(0, 0) * ox + rot.element(0, 1) * oy + rot.element(0, 2) * oz;
+        m.element(1, col) = rot.element(1, 0) * ox + rot.element(1, 1) * oy + rot.element(1, 2) * oz;
+        m.element(2, col) = rot.element(2, 0) * ox + rot.element(2, 1) * oy + rot.element(2, 2) * oz;
     }
     return m;
 }
 
-template <typename T>
-inline Matrix4x4<T>& postRotate(Matrix4x4<T>& m, const Quaternion<T>& quat)
+template <typename T, typename Order>
+inline Matrix4x4<T, Order>& postRotate(Matrix4x4<T, Order>& m, const Quaternion<T>& quat)
 {
-    const Matrix4x4<T> rot = rotate(quat);
-    for (size_t row = 0; row < 4; ++row) {
-        const auto oc0 = m.vecs[0][row], oc1 = m.vecs[1][row], oc2 = m.vecs[2][row];
-        m.vecs[0][row] = oc0 * rot.vecs[0][0] + oc1 * rot.vecs[0][1] + oc2 * rot.vecs[0][2];
-        m.vecs[1][row] = oc0 * rot.vecs[1][0] + oc1 * rot.vecs[1][1] + oc2 * rot.vecs[1][2];
-        m.vecs[2][row] = oc0 * rot.vecs[2][0] + oc1 * rot.vecs[2][1] + oc2 * rot.vecs[2][2];
+    const auto rot = rotate(quat);
+    for (int row = 0; row < 4; ++row) {
+        const auto oc0 = m.element(row, 0), oc1 = m.element(row, 1), oc2 = m.element(row, 2);
+        m.element(row, 0) = oc0 * rot.element(0, 0) + oc1 * rot.element(1, 0) + oc2 * rot.element(2, 0);
+        m.element(row, 1) = oc0 * rot.element(0, 1) + oc1 * rot.element(1, 1) + oc2 * rot.element(2, 1);
+        m.element(row, 2) = oc0 * rot.element(0, 2) + oc1 * rot.element(1, 2) + oc2 * rot.element(2, 2);
     }
     return m;
 }
 
 /* ---- toRotationMatrix ---- */
 
-template <typename T>
-inline Matrix3x3<T> toRotationMatrix(const Quaternion<T>& quat)
+template <typename T, typename Order>
+inline Matrix3x3<T, Order> toRotationMatrix(const Quaternion<T>& quat)
 {
-    const Matrix4x4<T> m4 = rotate(quat);
-    return Matrix3x3<T>(m4(0, 0), m4(0, 1), m4(0, 2), m4(1, 0), m4(1, 1), m4(1, 2), m4(2, 0), m4(2, 1), m4(2, 2));
+    const Matrix4x4<T, Order> m4 = rotate(quat);
+    return Matrix3x3<T, Order>(m4(0, 0), m4(0, 1), m4(0, 2), m4(1, 0), m4(1, 1), m4(1, 2), m4(2, 0), m4(2, 1), m4(2, 2));
 }
 
-template <typename T>
-inline Matrix4x4<T> toMatrix4x4(const Isometry3<T>& tf)
+template <typename T, typename Order>
+inline Matrix4x4<T, Order> toMatrix4x4(const Isometry3<T>& tf)
 {
-    Matrix4x4<T> m;
+    Matrix4x4<T, Order> m;
     setBasis(m, tf.translation, tf.right(), tf.up(), tf.forward());
     return m;
 }

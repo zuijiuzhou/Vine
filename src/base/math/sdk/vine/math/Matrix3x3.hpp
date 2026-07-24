@@ -1,49 +1,81 @@
 #pragma once
 
 #include "math_global.hpp"
+#include "Types.hpp"
 
 #include <cstring>
 
 #include "Math.hpp"
+#include "Vector2.hpp"
 #include "Vector3.hpp"
 
 V_MATH_NS_BEGIN
 
 /**
- * @brief 3x3 column-major matrix.
+ * @brief 3x3 matrix.
  *
  * Layout (visualized by rows):
  * | m00 m01 m02 |
  * | m10 m11 m12 |
  * | m20 m21 m22 |
  *
- * Memory order: M00, M10, M20, M01, ... (column-major contiguous).
  * Matrices operate on column vectors: y = M * x.
  *
- * Geometric transforms (rotation, translation, scale, etc.)
- * are provided as free functions in Transform2.hpp / Transform3.hpp.
+ * Geometric transforms are provided as free functions in Transform2.hpp / Transform3.hpp.
  *
- * @tparam T floating-point type (typically `float` or `double`).
+ * @tparam T     floating-point type (typically `float` or `double`).
+ * @tparam Order storage order: `ColMajor` (default) or `RowMajor`.
  */
-template <typename T>
+template <typename T, typename Order = ColMajor>
 class Matrix3x3 {
   public:
-    using value_type = T;
+    using value_type    = T;
+    using storage_order = Order;
+
+    /**
+     * @brief Access element at (row, col), adapting to storage order at compile time.
+     */
+    constexpr T& element(size_t row, size_t col)
+    {
+        if constexpr (std::is_same_v<Order, ColMajor>) {
+            return vecs[col][row];
+        }
+        else {
+            return vecs[row][col];
+        }
+    }
+
+    constexpr const T& element(size_t row, size_t col) const
+    {
+        if constexpr (std::is_same_v<Order, ColMajor>) {
+            return vecs[col][row];
+        }
+        else {
+            return vecs[row][col];
+        }
+    }
 
   public:
+    /**
+     * @brief Reset this matrix to identity.
+     */
+    constexpr void makeIdentity() noexcept
+    {
+        for (int i = 0; i < 9; ++i) data[i] = T(0);
+        data[0] = data[4] = data[8] = T(1);
+    }
+
     /**
      * @brief Construct an identity matrix.
      */
     constexpr Matrix3x3() noexcept
-      : vecs{
-          { 1, 0, 0 },
-          { 0, 1, 0 },
-          { 0, 0, 1 }
+      : vecs{}
+    {
+        makeIdentity();
     }
-    {}
 
     /**
-     * @brief Construct a matrix from raw elements in row-major order.
+     * @brief Construct a matrix from 9 scalar elements.
      *
      * Parameters follow the logical matrix layout:
      * | m00 m01 m02 |
@@ -55,233 +87,228 @@ class Matrix3x3 {
      * @param _m20 Row 2, col 0. @param _m21 Row 2, col 1. @param _m22 Row 2, col 2.
      */
     constexpr Matrix3x3(T _m00, T _m01, T _m02, T _m10, T _m11, T _m12, T _m20, T _m21, T _m22) noexcept
-      : vecs{
-          { _m00, _m10, _m20 },
-          { _m01, _m11, _m21 },
-          { _m02, _m12, _m22 }
+      : vecs{}
+    {
+        element(0, 0) = _m00; element(0, 1) = _m01; element(0, 2) = _m02;
+        element(1, 0) = _m10; element(1, 1) = _m11; element(1, 2) = _m12;
+        element(2, 0) = _m20; element(2, 1) = _m21; element(2, 2) = _m22;
     }
-    {}
 
     /**
-     * @brief Construct a matrix from a 9-element array in column-major order.
+     * @brief Construct a matrix from a 9-element array.
      *
-     * elements[0..8] match the internal data[] layout:
-     * col0: elements[0..2], col1: elements[3..5], col2: elements[6..8].
+     * Elements are interpreted according to @p Order:
+     * - ColMajor: col0[0..2], col1[0..2], col2[0..2].
+     * - RowMajor: row0[0..2], row1[0..2], row2[0..2].
      *
-     * @warning The pointer is not validated. Passing nullptr or fewer than
-     *          9 elements results in undefined behavior. Prefer the array-
-     *          reference overload `Matrix3x3(const T (&)[9])` when the
-     *          array size is known at compile time.
-     *
-     * @param elements Pointer to 9 T values in column-major layout.
+     * @param elements Pointer to 9 T values in the storage order.
      */
     explicit Matrix3x3(const T* elements) noexcept
-      : vecs{
-          { elements[0], elements[1], elements[2] },
-          { elements[3], elements[4], elements[5] },
-          { elements[6], elements[7], elements[8] }
+      : vecs{}
+    {
+        for (int i = 0; i < 9; ++i) {
+            if constexpr (std::is_same_v<Order, ColMajor>) {
+                element(i % 3, i / 3) = elements[i];
+            }
+            else {
+                element(i / 3, i % 3) = elements[i];
+            }
+        }
     }
-    {}
 
     /**
-     * @brief Construct a matrix from a 9-element array in column-major order (compile-time size check).
-     *
-     * @param elements Array of 9 T values in column-major layout.
+     * @brief Construct a matrix from a 9-element array (compile-time size check).
      */
     explicit Matrix3x3(const T (&elements)[9]) noexcept
       : Matrix3x3(static_cast<const T*>(elements))
     {}
 
-  public:
-    /**
-     * @brief Reset this matrix to identity.
-     */
-    void makeIdentity() noexcept;
-
     /**
      * @brief Left-multiply this matrix: M := left * M.
-     *
-     * The incoming transform is applied in world space (before the existing
-     * transform), equivalent to transforming around a fixed/world axis.
-     *
-     * @param left The transform to apply on the left side.
-     * @return Reference to this matrix.
      */
-    Matrix3x3<T>& preMulti(const Matrix3x3<T>& left);
+    constexpr Matrix3x3& preMulti(const Matrix3x3& left)
+    {
+        auto old = *this;
+        for (int j = 0; j < 3; ++j)
+            for (int i = 0; i < 3; ++i) {
+                T v = T(0);
+                for (int k = 0; k < 3; ++k)
+                    v += left.element(i, k) * old.element(k, j);
+                element(i, j) = v;
+            }
+        return *this;
+    }
 
     /**
      * @brief Right-multiply this matrix: M := M * right.
-     *
-     * The incoming transform is applied in local space (after the existing
-     * transform), equivalent to transforming around a local/moving axis.
-     *
-     * @param right The transform to apply on the right side.
-     * @return Reference to this matrix.
      */
-    Matrix3x3<T>& postMulti(const Matrix3x3<T>& right);
+    constexpr Matrix3x3& postMulti(const Matrix3x3& right)
+    {
+        auto old = *this;
+        for (int j = 0; j < 3; ++j)
+            for (int i = 0; i < 3; ++i) {
+                T v = T(0);
+                for (int k = 0; k < 3; ++k)
+                    v += old.element(i, k) * right.element(k, j);
+                element(i, j) = v;
+            }
+        return *this;
+    }
 
     /**
-     * @brief Calculate the determinant of this 3x3 homogeneous matrix.
-     *
-     * For an affine matrix (last row = [0 0 1]), this equals the
-     * determinant of the upper-left 2x2 submatrix, which reveals the
-     * linear part's orientation and scaling behavior:
-     *
-     * - det > 0: orientation-preserving (e.g. rotation, uniform scale).
-     * - det < 0: orientation-reversing (contains a reflection / mirror).
-     * - det = 0: singular — at least one axis has collapsed (e.g. a
-     *   zero-scale axis), making the matrix non-invertible.
-     *
-     * For general 3x3 (non-affine), the full determinant is returned.
-     *
-     * @return Determinant value.
+     * @brief Calculate the determinant.
      */
-    T determinant() const;
+    constexpr T determinant() const
+    {
+        const auto a = element(0, 0), b = element(0, 1), c = element(0, 2);
+        const auto d = element(1, 0), e = element(1, 1), f = element(1, 2);
+        const auto g = element(2, 0), h = element(2, 1), i = element(2, 2);
+        return a * (e * i - f * h) - b * (d * i - f * g) + c * (d * h - e * g);
+    }
 
     /**
      * @brief Transpose the matrix.
      */
     constexpr void transpose()
     {
-        std::swap(vecs[0][1], vecs[1][0]);
-        std::swap(vecs[0][2], vecs[2][0]);
-        std::swap(vecs[1][2], vecs[2][1]);
+        for (int i = 0; i < 3; ++i)
+            for (int j = i + 1; j < 3; ++j)
+                std::swap(element(i, j), element(j, i));
     }
 
     /**
-     * @brief Return a transposed copy without modifying the original matrix.
-     * @return Transposed matrix.
+     * @brief Return a transposed copy.
      */
-    constexpr Matrix3x3<T> transposed() const
+    constexpr Matrix3x3 transposed() const
     {
-        Matrix3x3<T> m(*this);
+        Matrix3x3 m(*this);
         m.transpose();
         return m;
     }
 
     /**
      * @brief Invert the matrix in place.
-     *
-     * Uses the adjugate method: M⁻¹ = adj(M) / det(M).
-     * Inverse exists only when the determinant is non-zero (det(M) != 0).
-     *
-     * Typical invertible cases:
-     * - Rigid transforms (rotation + translation).
-     * - Affine transforms with non-zero scale on all axes.
-     * - Basis matrix with linearly independent x/y axes.
-     *
-     * Typical non-invertible cases:
-     * - Any axis scale is zero (matrix squashes to a line or point).
-     * - Basis axes are linearly dependent (det == 0).
-     * - Any transform that collapses 2D space into 1D or 0D.
-     *
-     * @note For singular matrices (det(M) == 0), the matrix is left unchanged.
      */
     void invert();
 
     /**
-     * @brief Return an inverted copy without modifying the original matrix.
-     * @return Inverted matrix.
+     * @brief Return an inverted copy.
      */
-    constexpr Matrix3x3<T> inverted() const
+    constexpr Matrix3x3 inverted() const
     {
-        Matrix3x3<T> m(*this);
+        Matrix3x3 m(*this);
         m.invert();
         return m;
     }
 
     /**
      * @brief Is this matrix an identity matrix.
-     * @param eps tolerance for floating-point comparisons.
      */
-    bool isIdentity(T eps = EPS<T>()) const
+    constexpr bool isIdentity(T eps = EPS<T>()) const
     {
-        return math::isEqual(vecs[0][0], T(1), eps) && math::isZero(vecs[0][1], eps) && math::isZero(vecs[0][2], eps) && math::isZero(vecs[1][0], eps) &&
-               math::isEqual(vecs[1][1], T(1), eps) && math::isZero(vecs[1][2], eps) && math::isZero(vecs[2][0], eps) && math::isZero(vecs[2][1], eps) &&
-               math::isEqual(vecs[2][2], T(1), eps);
+        for (int i = 0; i < 3; ++i)
+            for (int j = 0; j < 3; ++j)
+                if (!math::isEqual(element(i, j), (i == j) ? T(1) : T(0), eps))
+                    return false;
+        return true;
     }
 
     /**
-     * @brief Is this matrix an affine transformation matrix (last row is [0 0 1]).
-     *
-     * Affine matrices preserve the parallelism of straight lines and include
-     * translation, scaling, rotation, shearing, and reflection. Non-affine
-     * matrices include those where the last row deviates from [0 0 1], such
-     * as some projection matrices.
-     *
-     * @param eps Tolerance for floating-point comparisons.
-     * @return True if the matrix is affine, false otherwise.
+     * @brief Is this matrix affine (last row = [0 0 1]).
      */
     constexpr bool isAffine(T eps = EPS<T>()) const
     {
-        return math::isZero(vecs[0][2], eps) && math::isZero(vecs[1][2], eps) && math::isEqual(vecs[2][2], T(1), eps);
+        return math::isZero(element(2, 0), eps) && math::isZero(element(2, 1), eps) && math::isEqual(element(2, 2), T(1), eps);
     }
 
     /**
-     * @brief Is this matrix a rigid transformation matrix (only rotation and translation,
-     *        no scaling, shearing, or reflection).
-     * @param eps Tolerance for floating-point comparisons.
-     * @return True if the matrix is rigid, false otherwise.
+     * @brief Is this matrix rigid (rotation + translation only).
      */
-    bool isRigid(T eps = EPS<T>()) const;
+    constexpr bool isRigid(T eps = EPS<T>()) const
+    {
+        if (!isAffine(eps)) return false;
+        const Vector2<T> x(element(0, 0), element(1, 0));
+        const Vector2<T> y(element(0, 1), element(1, 1));
+        const auto len2_x  = x.length2();
+        const auto len2_y  = y.length2();
+        const auto eps_len = T(2) * eps + eps * eps;
+        if (!math::isEqual(len2_x, T(1), eps_len) || !math::isEqual(len2_y, T(1), eps_len))
+            return false;
+        if (!math::isZero(x.dot(y), eps)) return false;
+        const auto det2 = element(0, 0) * element(1, 1) - element(0, 1) * element(1, 0);
+        if (det2 < T(0)) return false;
+        return true;
+    }
 
     /**
-     * @brief Is this matrix approximately equal to another matrix within a certain tolerance (epsilon).
-     * @param other The matrix to compare with.
-     * @param eps Tolerance for floating-point comparisons.
-     * @return True if the matrices are approximately equal, false otherwise.
+     * @brief Element-wise approximate equality.
      */
-    bool isEqual(const Matrix3x3<T>& other, T eps = EPS<T>()) const;
+    constexpr bool isEqual(const Matrix3x3& other, T eps = EPS<T>()) const
+    {
+        for (int i = 0; i < 9; ++i)
+            if (!math::isEqual(data[i], other.data[i], eps))
+                return false;
+        return true;
+    }
 
     /**
-     * @brief Check if all elements of the matrix are zero within a certain tolerance (epsilon).
-     * @param eps tolerance for floating-point comparisons.
-     * @return true if all elements are approximately zero, false otherwise.
+     * @brief Check if all elements are zero.
      */
-    bool isZero(T eps = EPS<T>()) const;
+    constexpr bool isZero(T eps = EPS<T>()) const
+    {
+        for (int i = 0; i < 9; ++i)
+            if (!math::isZero(data[i], eps))
+                return false;
+        return true;
+    }
 
   public:
     /**
      * @brief Read matrix element by row and column.
-     * @param row Row index [0, 2].
-     * @param col Column index [0, 2].
-     * @return Element value at (row, col).
      */
     [[nodiscard]]
     T operator()(int row, int col) const
     {
         assert(row < 3);
         assert(col < 3);
-        return vecs[col][row];
+        return element(row, col);
     }
 
     /**
      * @brief Access matrix element by row and column.
-     * @param row Row index [0, 2].
-     * @param col Column index [0, 2].
-     * @return Mutable element reference at (row, col).
      */
     [[nodiscard]]
     T& operator()(int row, int col)
     {
         assert(row < 3);
         assert(col < 3);
-        return vecs[col][row];
+        return element(row, col);
     }
 
     /**
      * @brief Matrix multiplication.
-     * @param right Right-hand matrix.
-     * @return Product matrix.
      */
-    Matrix3x3<T> operator*(const Matrix3x3<T>& right) const;
+    constexpr Matrix3x3 operator*(const Matrix3x3& right) const
+    {
+        Matrix3x3 m;
+        for (int i = 0; i < 3; ++i)
+            for (int j = 0; j < 3; ++j) {
+                T v = T(0);
+                for (int k = 0; k < 3; ++k)
+                    v += element(i, k) * right.element(k, j);
+                m.element(i, j) = v;
+            }
+        return m;
+    }
 
     /**
      * @brief Matrix multiplication assignment.
-     * @param right Right-hand matrix.
-     * @return Reference to this matrix.
      */
-    Matrix3x3<T>& operator*=(const Matrix3x3<T>& right);
+    constexpr Matrix3x3& operator*=(const Matrix3x3& right)
+    {
+        *this = *this * right;
+        return *this;
+    }
 
   public:
     union

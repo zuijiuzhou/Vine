@@ -7,11 +7,11 @@
 #include <cstdint>
 
 #include "Math.hpp"
+#include "Point2.hpp"
+#include "Vector3.hpp"
 
 V_MATH_NS_BEGIN
 
-template <typename T>
-class Vector3;
 template <typename T>
 class Point2;
 
@@ -84,7 +84,10 @@ class Point3 {
      * @return Converted vector.
      */
     [[nodiscard]]
-    Vector3<T> toVector() const;
+    Vector3<T> toVector() const
+    {
+        return Vector3<T>(x, y, z);
+    }
 
     /**
      * @brief Check whether all coordinates are zero.
@@ -155,6 +158,10 @@ class Point3 {
 
     /**
      * @brief Subtract two points to get a displacement vector.
+     *
+     * - For boolean type: `-` treated as left AND (NOT right).
+     * - For other types: normal subtraction.
+     *
      * @param right Right-hand point.
      * @return Vector from right to this point.
      */
@@ -166,6 +173,10 @@ class Point3 {
 
     /**
      * @brief Translate this point by a vector.
+     *
+     * - For boolean type: `+` treated as logical OR.
+     * - For other types: normal addition.
+     *
      * @param right Translation vector.
      * @return Translated point.
      */
@@ -177,6 +188,10 @@ class Point3 {
 
     /**
      * @brief Translate this point in-place.
+     *
+     * - For boolean type: `+` treated as logical OR.
+     * - For other types: normal addition.
+     *
      * @param right Translation vector.
      * @return Reference to this point.
      */
@@ -191,6 +206,10 @@ class Point3 {
 
     /**
      * @brief Translate this point in-place by the inverse vector.
+     *
+     * - For boolean type: `-` treated as left AND (NOT right).
+     * - For other types: normal subtraction.
+     *
      * @param right Translation vector.
      * @return Reference to this point.
      */
@@ -205,6 +224,10 @@ class Point3 {
 
     /**
      * @brief Unary negation of point coordinates.
+     *
+     * - For boolean type: `-` treated as logical NOT.
+     * - For other types: normal negation.
+     *
      * @return Point with negated coordinates.
      */
     [[nodiscard]]

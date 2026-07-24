@@ -1,13 +1,5 @@
 ﻿#include <vine/math/Vector4.hpp>
 
-#include <algorithm>
-#include <cassert>
-#include <cmath>
-#include <type_traits>
-
-#include <vine/math/Math.hpp>
-#include <vine/math/Vector3.hpp>
-
 V_MATH_NS_BEGIN
 
 #define TMPL_PREFIX template <typename T>

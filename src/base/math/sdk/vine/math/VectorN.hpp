@@ -177,6 +177,10 @@ class VectorN {
 
     /**
      * @brief Vector addition.
+     *
+     * - For boolean type: `+` treated as logical OR.
+     * - For other types: normal addition.
+     *
      * @param right Right-hand vector.
      * @return Sum vector.
      */
@@ -192,6 +196,10 @@ class VectorN {
 
     /**
      * @brief Vector subtraction.
+     *
+     * - For boolean type: `-` treated as left AND (NOT right).
+     * - For other types: normal subtraction.
+     *
      * @param right Right-hand vector.
      * @return Difference vector.
      */
@@ -207,6 +215,10 @@ class VectorN {
 
     /**
      * @brief Scale this vector.
+     *
+     * - For boolean type: `*` treated as logical AND.
+     * - For other types: normal multiplication.
+     *
      * @param scale Scalar multiplier.
      * @return Scaled vector.
      */
@@ -222,6 +234,10 @@ class VectorN {
 
     /**
      * @brief Divide this vector by a scalar.
+     *
+     * - For boolean type: `/` treated as logical AND.
+     * - For other types: normal division.
+     *
      * @param scale Scalar divisor.
      * @return Scaled vector.
      */
@@ -237,6 +253,10 @@ class VectorN {
 
     /**
      * @brief Add another vector in-place.
+     *
+     * - For boolean type: `+` treated as logical OR.
+     * - For other types: normal addition.
+     *
      * @param right Right-hand vector.
      * @return Reference to this vector.
      */
@@ -250,6 +270,10 @@ class VectorN {
 
     /**
      * @brief Subtract another vector in-place.
+     *
+     * - For boolean type: `-` treated as left AND (NOT right).
+     * - For other types: normal subtraction.
+     *
      * @param right Right-hand vector.
      * @return Reference to this vector.
      */
@@ -263,6 +287,10 @@ class VectorN {
 
     /**
      * @brief Multiply by scalar in-place.
+     *
+     * - For boolean type: `*` treated as logical AND.
+     * - For other types: normal multiplication.
+     *
      * @param scale Scalar multiplier.
      * @return Reference to this vector.
      */
@@ -276,6 +304,10 @@ class VectorN {
 
     /**
      * @brief Divide by scalar in-place.
+     *
+     * - For boolean type: `/` treated as logical AND.
+     * - For other types: normal division.
+     *
      * @param scale Scalar divisor.
      * @return Reference to this vector.
      */
@@ -289,6 +321,10 @@ class VectorN {
 
     /**
      * @brief Unary negation.
+     *
+     * - For boolean type: `-` treated as logical NOT.
+     * - For other types: normal negation.
+     *
      * @return Vector with negated components.
      */
     [[nodiscard]]

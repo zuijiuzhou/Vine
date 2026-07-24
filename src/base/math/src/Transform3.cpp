@@ -6,22 +6,26 @@
 
 V_MATH_NS_BEGIN
 
-#define TMPL_PREFIX template <typename T>
+#define TMPL_PREFIX template <typename T, typename Order>
 
 /* ========================================================================= */
 /*  toQuaternion  –  extract rotation from upper-left 3x3                    */
 /* ========================================================================= */
 
-TMPL_PREFIX Quaternion<T> getRotation(const Matrix4x4<T>& m)
+TMPL_PREFIX Quaternion<T> getRotation(const Matrix4x4<T, Order>& m)
 {
     using namespace math;
 
     if (!m.isAffine(EPS<T>()))
         return Quaternion<T>(T(0), T(0), T(0), T(1));
 
-    const auto col0_len2 = m.vecs[0].asVector3().length2();
-    const auto col1_len2 = m.vecs[1].asVector3().length2();
-    const auto col2_len2 = m.vecs[2].asVector3().length2();
+    const Vector3<T> cx(m.element(0, 0), m.element(1, 0), m.element(2, 0));
+    const Vector3<T> cy(m.element(0, 1), m.element(1, 1), m.element(2, 1));
+    const Vector3<T> cz(m.element(0, 2), m.element(1, 2), m.element(2, 2));
+
+    const auto col0_len2 = cx.length2();
+    const auto col1_len2 = cy.length2();
+    const auto col2_len2 = cz.length2();
 
     if (math::isZero(col0_len2, EPS<T>()) || math::isZero(col1_len2, EPS<T>()) || math::isZero(col2_len2, EPS<T>()))
         return Quaternion<T>(T(0), T(0), T(0), T(1));
@@ -30,16 +34,15 @@ TMPL_PREFIX Quaternion<T> getRotation(const Matrix4x4<T>& m)
     const auto inv1 = T(1) / std::sqrt(col1_len2);
     const auto inv2 = T(1) / std::sqrt(col2_len2);
 
-    const Vector3<T> cx(m.vecs[0][0] * inv0, m.vecs[0][1] * inv0, m.vecs[0][2] * inv0);
-    const Vector3<T> cy(m.vecs[1][0] * inv1, m.vecs[1][1] * inv1, m.vecs[1][2] * inv1);
-    const Vector3<T> cz(m.vecs[2][0] * inv2, m.vecs[2][1] * inv2, m.vecs[2][2] * inv2);
+    const auto m00 = cx.x * inv0, m10 = cx.y * inv0, m20 = cx.z * inv0;
+    const auto m01 = cy.x * inv1, m11 = cy.y * inv1, m21 = cy.z * inv1;
+    const auto m02 = cz.x * inv2, m12 = cz.y * inv2, m22 = cz.z * inv2;
 
-    if (!math::isZero(cx.dot(cy), EPS<T>()) || !math::isZero(cx.dot(cz), EPS<T>()) || !math::isZero(cy.dot(cz), EPS<T>()))
+    if (!math::isZero(m00 * m01 + m10 * m11 + m20 * m21, EPS<T>()) ||
+        !math::isZero(m00 * m02 + m10 * m12 + m20 * m22, EPS<T>()) ||
+        !math::isZero(m01 * m02 + m11 * m12 + m21 * m22, EPS<T>()))
         return Quaternion<T>(T(0), T(0), T(0), T(1));
 
-    const auto m00 = cx.x, m10 = cx.y, m20 = cx.z;
-    const auto m01 = cy.x, m11 = cy.y, m21 = cy.z;
-    const auto m02 = cz.x, m12 = cz.y, m22 = cz.z;
     const auto trace = m00 + m11 + m22;
 
     Quaternion<T> quat;
@@ -81,11 +84,11 @@ TMPL_PREFIX Quaternion<T> getRotation(const Matrix4x4<T>& m)
 /*  rotate(quat)  –  canonical quaternion → rotation matrix                 */
 /* ========================================================================= */
 
-TMPL_PREFIX Matrix4x4<T> rotate(const Quaternion<T>& quat)
+TMPL_PREFIX Matrix4x4<T, Order> rotate(const Quaternion<T>& quat)
 {
     auto       q      = quat;
     const auto q_len2 = q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w;
-    if (q_len2 == T(0)) return Matrix4x4<T>{};
+    if (q_len2 == T(0)) return Matrix4x4<T, Order>{};
     if (!math::isEqual(q_len2, T(1), T(1e-12))) {
         const auto inv = T(1) / std::sqrt(q_len2);
         q.x *= inv; q.y *= inv; q.z *= inv; q.w *= inv;
@@ -96,26 +99,29 @@ TMPL_PREFIX Matrix4x4<T> rotate(const Quaternion<T>& quat)
     const auto xy = x * y, zw = z * w, xz = x * z;
     const auto yw = y * w, yz = y * z, xw = x * w;
 
-    Matrix4x4<T> m;
-    m.vecs[0][0] = T(1) - T(2) * (yy + zz);
-    m.vecs[0][1] = T(2) * (xy + zw);
-    m.vecs[0][2] = T(2) * (xz - yw);
-    m.vecs[0][3] = T(0);
+    Matrix4x4<T, Order> m;
 
-    m.vecs[1][0] = T(2) * (xy - zw);
-    m.vecs[1][1] = T(1) - T(2) * (xx + zz);
-    m.vecs[1][2] = T(2) * (yz + xw);
-    m.vecs[1][3] = T(0);
+    // Column 0
+    m.element(0, 0) = T(1) - T(2) * (yy + zz);
+    m.element(1, 0) = T(2) * (xy + zw);
+    m.element(2, 0) = T(2) * (xz - yw);
+    m.element(3, 0) = T(0);
+    // Column 1
+    m.element(0, 1) = T(2) * (xy - zw);
+    m.element(1, 1) = T(1) - T(2) * (xx + zz);
+    m.element(2, 1) = T(2) * (yz + xw);
+    m.element(3, 1) = T(0);
+    // Column 2
+    m.element(0, 2) = T(2) * (xz + yw);
+    m.element(1, 2) = T(2) * (yz - xw);
+    m.element(2, 2) = T(1) - T(2) * (xx + yy);
+    m.element(3, 2) = T(0);
+    // Column 3
+    m.element(0, 3) = T(0);
+    m.element(1, 3) = T(0);
+    m.element(2, 3) = T(0);
+    m.element(3, 3) = T(1);
 
-    m.vecs[2][0] = T(2) * (xz + yw);
-    m.vecs[2][1] = T(2) * (yz - xw);
-    m.vecs[2][2] = T(1) - T(2) * (xx + yy);
-    m.vecs[2][3] = T(0);
-
-    m.vecs[3][0] = T(0);
-    m.vecs[3][1] = T(0);
-    m.vecs[3][2] = T(0);
-    m.vecs[3][3] = T(1);
     return m;
 }
 
@@ -123,7 +129,7 @@ TMPL_PREFIX Matrix4x4<T> rotate(const Quaternion<T>& quat)
 /*  makeRotation  -  axis-angle  (Rodrigues)                                */
 /* ========================================================================= */
 
-TMPL_PREFIX void makeRotation(Matrix4x4<T>& m, const Vector3<T>& axis, T angle)
+TMPL_PREFIX void makeRotation(Matrix4x4<T, Order>& m, const Vector3<T>& axis, T angle)
 {
     if (angle == T(0) || math::isZero(axis.length2(), EPS<T>())) {
         m.makeIdentity();
@@ -140,32 +146,33 @@ TMPL_PREFIX void makeRotation(Matrix4x4<T>& m, const Vector3<T>& axis, T angle)
     const auto y  = naxis.y;
     const auto z  = naxis.z;
 
-    m.vecs[0][0] = x * x * ic + c;
-    m.vecs[0][1] = x * y * ic + z * s;
-    m.vecs[0][2] = x * z * ic - y * s;
-    m.vecs[0][3] = T(0);
-
-    m.vecs[1][0] = x * y * ic - z * s;
-    m.vecs[1][1] = y * y * ic + c;
-    m.vecs[1][2] = y * z * ic + x * s;
-    m.vecs[1][3] = T(0);
-
-    m.vecs[2][0] = x * z * ic + y * s;
-    m.vecs[2][1] = y * z * ic - x * s;
-    m.vecs[2][2] = z * z * ic + c;
-    m.vecs[2][3] = T(0);
-
-    m.vecs[3][0] = T(0);
-    m.vecs[3][1] = T(0);
-    m.vecs[3][2] = T(0);
-    m.vecs[3][3] = T(1);
+    // Column 0
+    m.element(0, 0) = x * x * ic + c;
+    m.element(1, 0) = x * y * ic + z * s;
+    m.element(2, 0) = x * z * ic - y * s;
+    m.element(3, 0) = T(0);
+    // Column 1
+    m.element(0, 1) = x * y * ic - z * s;
+    m.element(1, 1) = y * y * ic + c;
+    m.element(2, 1) = y * z * ic + x * s;
+    m.element(3, 1) = T(0);
+    // Column 2
+    m.element(0, 2) = x * z * ic + y * s;
+    m.element(1, 2) = y * z * ic - x * s;
+    m.element(2, 2) = z * z * ic + c;
+    m.element(3, 2) = T(0);
+    // Column 3
+    m.element(0, 3) = T(0);
+    m.element(1, 3) = T(0);
+    m.element(2, 3) = T(0);
+    m.element(3, 3) = T(1);
 }
 
 /* ========================================================================= */
 /*  makeLookAt                                                              */
 /* ========================================================================= */
 
-TMPL_PREFIX void makeLookAt(Matrix4x4<T>& m, const Point3<T>& eye,
+TMPL_PREFIX void makeLookAt(Matrix4x4<T, Order>& m, const Point3<T>& eye,
                              const Point3<T>& target, const Vector3<T>& up)
 {
     auto f = eye - target;
@@ -191,7 +198,7 @@ TMPL_PREFIX void makeLookAt(Matrix4x4<T>& m, const Point3<T>& eye,
 /*  makeReflection                                                          */
 /* ========================================================================= */
 
-TMPL_PREFIX void makeReflection(Matrix4x4<T>& m, const Vector3<T>& plane_normal,
+TMPL_PREFIX void makeReflection(Matrix4x4<T, Order>& m, const Vector3<T>& plane_normal,
                                  T plane_offset)
 {
     auto n = plane_normal;
@@ -199,46 +206,58 @@ TMPL_PREFIX void makeReflection(Matrix4x4<T>& m, const Vector3<T>& plane_normal,
 
     const auto a = n.x, b = n.y, c = n.z, d = plane_offset;
 
-    m.vecs[0][0] = T(1) - T(2) * a * a;
-    m.vecs[0][1] = T(-2) * a * b;
-    m.vecs[0][2] = T(-2) * a * c;
-    m.vecs[0][3] = T(0);
-
-    m.vecs[1][0] = T(-2) * a * b;
-    m.vecs[1][1] = T(1) - T(2) * b * b;
-    m.vecs[1][2] = T(-2) * b * c;
-    m.vecs[1][3] = T(0);
-
-    m.vecs[2][0] = T(-2) * a * c;
-    m.vecs[2][1] = T(-2) * b * c;
-    m.vecs[2][2] = T(1) - T(2) * c * c;
-    m.vecs[2][3] = T(0);
-
-    m.vecs[3][0] = T(-2) * a * d;
-    m.vecs[3][1] = T(-2) * b * d;
-    m.vecs[3][2] = T(-2) * c * d;
-    m.vecs[3][3] = T(1);
+    // Column 0
+    m.element(0, 0) = T(1) - T(2) * a * a;
+    m.element(1, 0) = T(-2) * a * b;
+    m.element(2, 0) = T(-2) * a * c;
+    m.element(3, 0) = T(0);
+    // Column 1
+    m.element(0, 1) = T(-2) * a * b;
+    m.element(1, 1) = T(1) - T(2) * b * b;
+    m.element(2, 1) = T(-2) * b * c;
+    m.element(3, 1) = T(0);
+    // Column 2
+    m.element(0, 2) = T(-2) * a * c;
+    m.element(1, 2) = T(-2) * b * c;
+    m.element(2, 2) = T(1) - T(2) * c * c;
+    m.element(3, 2) = T(0);
+    // Column 3
+    m.element(0, 3) = T(-2) * a * d;
+    m.element(1, 3) = T(-2) * b * d;
+    m.element(2, 3) = T(-2) * c * d;
+    m.element(3, 3) = T(1);
 }
 
 /* ========================================================================= */
 /*  Explicit instantiations                                                 */
 /* ========================================================================= */
 
-template Quaternion<float> getRotation(const Matrix4x4<float>&);
-template Quaternion<double> getRotation(const Matrix4x4<double>&);
-
 #undef TMPL_PREFIX
 
-template Matrix4x4<float> rotate(const Quaternion<float>&);
-template Matrix4x4<double> rotate(const Quaternion<double>&);
+// ColMajor instantiations
+template Quaternion<float> getRotation(const Matrix4x4<float, ColMajor>&);
+template Quaternion<double> getRotation(const Matrix4x4<double, ColMajor>&);
+template Quaternion<float> getRotation(const Matrix4x4<float, RowMajor>&);
+template Quaternion<double> getRotation(const Matrix4x4<double, RowMajor>&);
 
-template void makeRotation(Matrix4x4<float>&, const Vector3<float>&, float);
-template void makeRotation(Matrix4x4<double>&, const Vector3<double>&, double);
+template Matrix4x4<float, ColMajor> rotate(const Quaternion<float>&);
+template Matrix4x4<double, ColMajor> rotate(const Quaternion<double>&);
+template Matrix4x4<float, RowMajor> rotate(const Quaternion<float>&);
+template Matrix4x4<double, RowMajor> rotate(const Quaternion<double>&);
 
-template void makeLookAt(Matrix4x4<float>&, const Point3<float>&, const Point3<float>&, const Vector3<float>&);
-template void makeLookAt(Matrix4x4<double>&, const Point3<double>&, const Point3<double>&, const Vector3<double>&);
+template void makeRotation(Matrix4x4<float, ColMajor>&, const Vector3<float>&, float);
+template void makeRotation(Matrix4x4<double, ColMajor>&, const Vector3<double>&, double);
+template void makeRotation(Matrix4x4<float, RowMajor>&, const Vector3<float>&, float);
+template void makeRotation(Matrix4x4<double, RowMajor>&, const Vector3<double>&, double);
 
-template void makeReflection(Matrix4x4<float>&, const Vector3<float>&, float);
-template void makeReflection(Matrix4x4<double>&, const Vector3<double>&, double);
+template void makeLookAt(Matrix4x4<float, ColMajor>&, const Point3<float>&, const Point3<float>&, const Vector3<float>&);
+template void makeLookAt(Matrix4x4<double, ColMajor>&, const Point3<double>&, const Point3<double>&, const Vector3<double>&);
+template void makeLookAt(Matrix4x4<float, RowMajor>&, const Point3<float>&, const Point3<float>&, const Vector3<float>&);
+template void makeLookAt(Matrix4x4<double, RowMajor>&, const Point3<double>&, const Point3<double>&, const Vector3<double>&);
+
+template void makeReflection(Matrix4x4<float, ColMajor>&, const Vector3<float>&, float);
+template void makeReflection(Matrix4x4<double, ColMajor>&, const Vector3<double>&, double);
+template void makeReflection(Matrix4x4<float, RowMajor>&, const Vector3<float>&, float);
+template void makeReflection(Matrix4x4<double, RowMajor>&, const Vector3<double>&, double);
 
 V_MATH_NS_END

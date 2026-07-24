@@ -3,17 +3,20 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 
 #include "Math.hpp"
+#include "Vector2.hpp"
 
 V_MATH_NS_BEGIN
 
 template <typename T>
-class Point3;
-template <typename T>
 class Vector2;
+
+template <typename T>
+class Point3;
 
 /**
  * @brief A class representing a vector in 3D space
@@ -126,21 +129,6 @@ class Vector3 {
         yy = y;
         zz = z;
     }
-
-    /**
-     * @brief Converts this vector to a 3D point by value.
-     *
-     *     Point3<T>(this.x, this.y, this.z)
-     *
-     * This copies all components into a new Point3. For a zero-copy
-     * reinterpretation, use asPoint() instead.
-     *
-     * @return A new Point3 with the same components.
-     *
-     * @see asPoint()
-     */
-    [[nodiscard]]
-    Point3<T> toPoint() const;
 
     /**
      * @brief Views this vector as a 3D point without copying.
@@ -528,6 +516,9 @@ class Vector3 {
      *
      *     a + b = (a.x + b.x, a.y + b.y, a.z + b.z)
      *
+     * - For boolean type: `+` treated as logical OR.
+     * - For other types: normal addition.
+     *
      * @param right Right-hand vector.
      * @return Sum vector.
      */
@@ -541,6 +532,9 @@ class Vector3 {
      * @brief Component-wise vector subtraction.
      *
      *     a - b = (a.x - b.x, a.y - b.y, a.z - b.z)
+     *
+     * - For boolean type: `-` treated as left AND (NOT right).
+     * - For other types: normal subtraction.
      *
      * @param right Right-hand vector.
      * @return Difference vector.
@@ -556,6 +550,9 @@ class Vector3 {
      *
      *     v * s = (v.x*s, v.y*s, v.z*s)
      *
+     * - For boolean type: `*` treated as logical AND.
+     * - For other types: normal multiplication.
+     *
      * @param scale Scalar multiplier.
      * @return Scaled vector.
      */
@@ -570,6 +567,9 @@ class Vector3 {
      *
      *     v / s = (v.x/s, v.y/s, v.z/s)
      *
+     * - For boolean type: `/` treated as logical AND.
+     * - For other types: normal division.
+     *
      * @param scale Scalar divisor.
      * @return Scaled vector.
      */
@@ -583,6 +583,9 @@ class Vector3 {
      * @brief Adds another vector in-place.
      *
      *     this += b  ⇔  (this.x, this.y, this.z) += (b.x, b.y, b.z)
+     *
+     * - For boolean type: `+` treated as logical OR.
+     * - For other types: normal addition.
      *
      * @param right Right-hand vector.
      * @return Reference to this vector after addition.
@@ -601,6 +604,9 @@ class Vector3 {
      *
      *     this -= b  ⇔  (this.x, this.y, this.z) -= (b.x, b.y, b.z)
      *
+     * - For boolean type: `-` treated as left AND (NOT right).
+     * - For other types: normal subtraction.
+     *
      * @param right Right-hand vector.
      * @return Reference to this vector after subtraction.
      */
@@ -618,6 +624,9 @@ class Vector3 {
      *
      *     this *= s  ⇔  (this.x, this.y, this.z) *= s
      *
+     * - For boolean type: `*` treated as logical AND.
+     * - For other types: normal multiplication.
+     *
      * @param scale Scalar multiplier.
      * @return Reference to this vector after scaling.
      */
@@ -634,6 +643,9 @@ class Vector3 {
      * @brief Divides by a scalar in-place.
      *
      *     this /= s  ⇔  (this.x, this.y, this.z) /= s
+     *
+     * - For boolean type: `/` treated as logical AND.
+     * - For other types: normal division.
      *
      * Division by zero follows the underlying arithmetic type's behavior.
      *
@@ -653,6 +665,9 @@ class Vector3 {
      * @brief Unary negation (additive inverse).
      *
      *     -v = (-v.x, -v.y, -v.z)
+     *
+     * - For boolean type: `-` treated as logical NOT.
+     * - For other types: normal negation.
      *
      * @return A new vector with all components negated.
      */

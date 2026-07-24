@@ -1,21 +1,10 @@
 ﻿#include <vine/math/Point2.hpp>
 
-#include <cassert>
-#include <cmath>
-#include <cstdint>
-
-#include <vine/math/Math.hpp>
-#include <vine/math/Vector2.hpp>
-
 V_MATH_NS_BEGIN
 
 #define TMPL_PREFIX template <typename T>
 
-TMPL_PREFIX Vector2<T> Point2<T>::toVector() const
-{
-    return Vector2<T>(x, y);
-}
-
+ 
 #undef TMPL_PREFIX
 
 template class V_MATH_API Point2<float>;
