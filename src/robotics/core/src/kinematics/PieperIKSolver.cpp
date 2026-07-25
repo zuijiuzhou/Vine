@@ -332,7 +332,7 @@ void solveWrist(const DHParameter*           mdh,
         .arm_q  = arm_q,
         .dofs   = dofs,
         .seed   = seed,
-        .R      = toRotationMatrix(q_wrist),
+        .R      = rotate3x3(q_wrist),
         .ca4    = std::cos(mdh[4].alpha),
         .sa4    = std::sin(mdh[4].alpha),
         .ca5    = std::cos(mdh[5].alpha),
@@ -508,7 +508,7 @@ bool PieperIKSolver::solve(const math::Isometry3d& target, std::vector<Q>& solut
     const Vec3d  p_w4(mdh[3].a, -d4 * sa3, d4 * ca3);
 
     const Vec3d p_target(target.translation.x, target.translation.y, target.translation.z);
-    const Vec3d z_target  = target.forward();
+    const Vec3d z_target  = target.axisZ();
     const Vec3d p_w_world = p_target - z_target * d6;
 
     const Isometry3d T0_fixed = mdhToTransform(mdh[0], 0.0, 0.0);

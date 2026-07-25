@@ -96,30 +96,6 @@ TEST(Matrix3x3, isAffine) {
     ASSERT_FALSE(m.isAffine());
 }
 
-TEST(Matrix3x3, makeTranslation) {
-    Mat3d m;
-    makeTranslation(m, 10.0, 20.0);
-    EXPECT_EQ(m(0, 2), 10.0);
-    EXPECT_EQ(m(1, 2), 20.0);
-}
-
-TEST(Matrix3x3, makeScale) {
-    Mat3d m;
-    makeScale(m, 2.0, 3.0);
-    EXPECT_EQ(m(0, 0), 2.0);
-    EXPECT_EQ(m(1, 1), 3.0);
-    EXPECT_EQ(m(2, 2), 1.0); // 2D scale doesn't touch z
-}
-
-TEST(Matrix3x3, makeRotation2D) {
-    Mat3d m;
-    makeRotation(m, 3.14159265358979323846 * 0.5); // 90 degrees CCW
-    EXPECT_NEAR(m(0, 0), 0.0, 1e-12);
-    EXPECT_NEAR(m(0, 1), -1.0, 1e-12);
-    EXPECT_NEAR(m(1, 0), 1.0, 1e-12);
-    EXPECT_NEAR(m(1, 1), 0.0, 1e-12);
-}
-
 TEST(Matrix3x3, rowMajorStorage) {
     Matrix3x3<double, RowMajor> m(1, 2, 3,
                                   4, 5, 6,

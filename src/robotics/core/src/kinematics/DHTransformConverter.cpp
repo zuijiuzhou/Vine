@@ -6,43 +6,9 @@
 
 #include <vine/math/Math.hpp>
 #include <vine/math/Quaternion.hpp>
+#include <vine/math/Transform3.hpp>
 
 V_ROBOTICS_KINEMATICS_NS_BEGIN
-
-namespace
-{
-
-/* ----------------------------------------------------------------- */
-/*  Rotation matrix (3×3) extracted from a unit quaternion.          */
-/* ----------------------------------------------------------------- */
-
-struct Rot33 {
-    double m[3][3];
-
-    /* Accessor: m[row][col] */
-    double operator()(int r, int c) const noexcept
-    {
-        return m[r][c];
-    }
-};
-
-inline Rot33 quatToRot33(const math::Quatd& q)
-{
-    const double x = q.x, y = q.y, z = q.z, w = q.w;
-    const double x2 = x * x, y2 = y * y, z2 = z * z;
-    const double xy = x * y, xz = x * z, yz = y * z;
-    const double wx = w * x, wy = w * y, wz = w * z;
-
-    return {
-        {
-         { 1.0 - 2.0 * (y2 + z2), 2.0 * (xy - wz), 2.0 * (xz + wy) },
-         { 2.0 * (xy + wz), 1.0 - 2.0 * (x2 + z2), 2.0 * (yz - wx) },
-         { 2.0 * (xz - wy), 2.0 * (yz + wx), 1.0 - 2.0 * (x2 + y2) },
-         }
-    };
-}
-
-} // anonymous namespace
 
 /* ========================================================================= */
 /*  Forward transforms                                                       */
@@ -184,7 +150,7 @@ math::Isometry3d sdhToTransform(const DHParameter& sdh, double dd, double dtheta
 
 bool isMdhRepresentable(const math::Isometry3d& tf, double tolerance)
 {
-    const Rot33 R = quatToRot33(tf.rotation);
+    const auto R = rotate3x3(tf.rotation);
 
     /* MDH:  R = Rot_x(α)·Rot_z(θ)  ⇒  R(0,2) = 0 */
     return std::abs(R(0, 2)) <= tolerance;
@@ -192,7 +158,7 @@ bool isMdhRepresentable(const math::Isometry3d& tf, double tolerance)
 
 bool isSdhRepresentable(const math::Isometry3d& tf, double tolerance)
 {
-    const Rot33 R = quatToRot33(tf.rotation);
+    const auto R = rotate3x3(tf.rotation);
 
     /* SDH:  R = Rot_z(θ)·Rot_x(α)  ⇒  R(2,0) = 0 */
     return std::abs(R(2, 0)) <= tolerance;
@@ -210,7 +176,7 @@ std::optional<DHParameter> tryMdhFromTransform(const math::Isometry3d& tf, doubl
     if (std::abs(q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w - 1.0) > tolerance)
         return std::nullopt;
 
-    const Rot33 R = quatToRot33(tf.rotation);
+    const auto R = rotate3x3(tf.rotation);
 
     if (std::abs(R(0, 2)) > tolerance) /* R(0,2) must be 0 for MDH */
         return std::nullopt;
@@ -243,7 +209,7 @@ std::optional<DHParameter> trySdhFromTransform(const math::Isometry3d& tf, doubl
     if (std::abs(q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w - 1.0) > tolerance)
         return std::nullopt;
 
-    const Rot33 R = quatToRot33(tf.rotation);
+    const auto R = rotate3x3(tf.rotation);
 
     if (std::abs(R(2, 0)) > tolerance) /* R(2,0) must be 0 for SDH */
         return std::nullopt;

@@ -14,7 +14,7 @@ enum class DofType
 };
 
 struct DofInfo {
-    DofType           type = DofType::RevoluteJoint;
+    DofType          type = DofType::RevoluteJoint;
     math::Isometry3d origin;
     math::Vec3d      axis;
     double           lower{};

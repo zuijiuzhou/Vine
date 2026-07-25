@@ -1,7 +1,7 @@
 #pragma once
 
-#include "math_global.hpp"
 #include "Types.hpp"
+#include "math_global.hpp"
 
 #include <cstring>
 
@@ -89,9 +89,15 @@ class Matrix3x3 {
     constexpr Matrix3x3(T _m00, T _m01, T _m02, T _m10, T _m11, T _m12, T _m20, T _m21, T _m22) noexcept
       : vecs{}
     {
-        element(0, 0) = _m00; element(0, 1) = _m01; element(0, 2) = _m02;
-        element(1, 0) = _m10; element(1, 1) = _m11; element(1, 2) = _m12;
-        element(2, 0) = _m20; element(2, 1) = _m21; element(2, 2) = _m22;
+        element(0, 0) = _m00;
+        element(0, 1) = _m01;
+        element(0, 2) = _m02;
+        element(1, 0) = _m10;
+        element(1, 1) = _m11;
+        element(1, 2) = _m12;
+        element(2, 0) = _m20;
+        element(2, 1) = _m21;
+        element(2, 2) = _m22;
     }
 
     /**
@@ -132,8 +138,7 @@ class Matrix3x3 {
         for (int j = 0; j < 3; ++j)
             for (int i = 0; i < 3; ++i) {
                 T v = T(0);
-                for (int k = 0; k < 3; ++k)
-                    v += left.element(i, k) * old.element(k, j);
+                for (int k = 0; k < 3; ++k) v += left.element(i, k) * old.element(k, j);
                 element(i, j) = v;
             }
         return *this;
@@ -148,8 +153,7 @@ class Matrix3x3 {
         for (int j = 0; j < 3; ++j)
             for (int i = 0; i < 3; ++i) {
                 T v = T(0);
-                for (int k = 0; k < 3; ++k)
-                    v += old.element(i, k) * right.element(k, j);
+                for (int k = 0; k < 3; ++k) v += old.element(i, k) * right.element(k, j);
                 element(i, j) = v;
             }
         return *this;
@@ -172,8 +176,7 @@ class Matrix3x3 {
     constexpr void transpose()
     {
         for (int i = 0; i < 3; ++i)
-            for (int j = i + 1; j < 3; ++j)
-                std::swap(element(i, j), element(j, i));
+            for (int j = i + 1; j < 3; ++j) std::swap(element(i, j), element(j, i));
     }
 
     /**
@@ -189,7 +192,7 @@ class Matrix3x3 {
     /**
      * @brief Invert the matrix in place.
      */
-    void invert();
+    bool invert();
 
     /**
      * @brief Return an inverted copy.
@@ -226,17 +229,28 @@ class Matrix3x3 {
      */
     constexpr bool isRigid(T eps = EPS<T>()) const
     {
-        if (!isAffine(eps)) return false;
+        if (!isAffine(eps))
+            return false;
+
         const Vector2<T> x(element(0, 0), element(1, 0));
         const Vector2<T> y(element(0, 1), element(1, 1));
-        const auto len2_x  = x.length2();
-        const auto len2_y  = y.length2();
-        const auto eps_len = T(2) * eps + eps * eps;
-        if (!math::isEqual(len2_x, T(1), eps_len) || !math::isEqual(len2_y, T(1), eps_len))
+
+        const T eps_len = T(2) * eps + eps * eps;
+
+        if (!math::isEqual(x.length2(), T(1), eps_len))
             return false;
-        if (!math::isZero(x.dot(y), eps)) return false;
-        const auto det2 = element(0, 0) * element(1, 1) - element(0, 1) * element(1, 0);
-        if (det2 < T(0)) return false;
+
+        if (!math::isEqual(y.length2(), T(1), eps_len))
+            return false;
+
+        if (!math::isZero(x.dot(y), eps))
+            return false;
+
+        const T det = element(0, 0) * element(1, 1) - element(0, 1) * element(1, 0);
+
+        if (!math::isEqual(det, T(1), eps))
+            return false;
+
         return true;
     }
 
@@ -294,8 +308,7 @@ class Matrix3x3 {
         for (int i = 0; i < 3; ++i)
             for (int j = 0; j < 3; ++j) {
                 T v = T(0);
-                for (int k = 0; k < 3; ++k)
-                    v += element(i, k) * right.element(k, j);
+                for (int k = 0; k < 3; ++k) v += element(i, k) * right.element(k, j);
                 m.element(i, j) = v;
             }
         return m;

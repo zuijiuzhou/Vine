@@ -93,25 +93,25 @@ class Isometry3 {
     Isometry3<T>& operator*=(const Isometry3<T>& right);
 
     /**
-     * @brief Local X axis in parent coordinates (right direction).
+     * @brief Local X axis in parent coordinates.
      */
-    [[nodiscard]] Vector3<T> right() const
+    [[nodiscard]] Vector3<T> axisX() const
     {
         return rotation * Vector3<T>::unitX();
     }
 
     /**
-     * @brief Local Y axis in parent coordinates (up direction).
+     * @brief Local Y axis in parent coordinates.
      */
-    [[nodiscard]] Vector3<T> up() const
+    [[nodiscard]] Vector3<T> axisY() const
     {
         return rotation * Vector3<T>::unitY();
     }
 
     /**
-     * @brief Local Z axis in parent coordinates (forward direction).
+     * @brief Local Z axis in parent coordinates.
      */
-    [[nodiscard]] Vector3<T> forward() const
+    [[nodiscard]] Vector3<T> axisZ() const
     {
         return rotation * Vector3<T>::unitZ();
     }

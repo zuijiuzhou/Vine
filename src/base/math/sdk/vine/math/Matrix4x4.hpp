@@ -156,6 +156,12 @@ class Matrix4x4 {
 
     /**
      * @brief Left-multiply this matrix: M := left * M.
+     *
+     * The incoming transform is applied in world space (before the existing
+     * transform), equivalent to transforming around a fixed/world axis.
+     *
+     * @param left The transform to apply on the left side.
+     * @return Reference to this matrix.
      */
     constexpr Matrix4x4& preMulti(const Matrix4x4& left)
     {
@@ -171,6 +177,12 @@ class Matrix4x4 {
 
     /**
      * @brief Right-multiply this matrix: M := M * right.
+     *
+     * The incoming transform is applied in local space (after the existing
+     * transform), equivalent to transforming around a local/moving axis.
+     *
+     * @param right The transform to apply on the right side.
+     * @return Reference to this matrix.
      */
     constexpr Matrix4x4& postMulti(const Matrix4x4& right)
     {
@@ -186,6 +198,23 @@ class Matrix4x4 {
 
     /**
      * @brief Calculate the determinant of this 4x4 matrix.
+     *
+     * For affine matrices (last row = [0 0 0 1]), this equals the
+     * determinant of the upper-left 3x3 submatrix, indicating the
+     * linear part's orientation and volume scaling:
+     *
+     * - det > 0: orientation-preserving (no reflection).
+     * - det < 0: orientation-reversing (reflection / mirror flip).
+     * - det = 0: singular — the linear part loses dimension and is non-invertible.
+     *
+     * For projection matrices, the determinant still indicates invertibility,
+     * but is generally not interpreted as a direct geometric volume scaling factor.
+     *
+     * For other matrices, the determinant is still mathematically defined
+     * and indicates whether the matrix is invertible, but may not have
+     * a direct geometric interpretation.
+     *
+     * @return Determinant value.
      */
     constexpr T determinant() const
     {
@@ -263,6 +292,7 @@ class Matrix4x4 {
 
     /**
      * @brief Is this matrix an identity matrix.
+     * @param eps tolerance for floating-point comparisons.
      */
     constexpr bool isIdentity(T eps = EPS<T>()) const
     {
@@ -274,7 +304,10 @@ class Matrix4x4 {
     }
 
     /**
-     * @brief Is this matrix affine (last row = [0 0 0 1]).
+     * @brief Is this matrix an affine transformation matrix (last row is [0 0 0 1]).
+     *        affine matrix that preserve the parallelism of straight lines, such as translation, scaling, rotation,
+     *        shearing, and reflection. non-affine matrix includes projection matrix.
+     * @param eps Tolerance for floating-point comparisons.
      */
     constexpr bool isAffine(T eps = EPS<T>()) const
     {
