@@ -20,7 +20,7 @@ V_ROBOTICS_KINEMATICS_NS_BEGIN
  * @param dd      Offset added to d  (prismatic joint variable).
  * @param dtheta  Offset added to θ (revolute joint variable).
  */
-math::Isometry3d mdhToTransform(const DHParameter& mdh,
+V_ROBOTICS_CORE_API math::Isometry3d mdhToTransform(const DHParameter& mdh,
                                 double dd = 0.0, double dtheta = 0.0);
 
 /*
@@ -30,7 +30,7 @@ math::Isometry3d mdhToTransform(const DHParameter& mdh,
  * @param dd      Offset added to d  (prismatic joint variable).
  * @param dtheta  Offset added to θ (revolute joint variable).
  */
-math::Isometry3d sdhToTransform(const DHParameter& sdh,
+V_ROBOTICS_CORE_API math::Isometry3d sdhToTransform(const DHParameter& sdh,
                                 double dd = 0.0, double dtheta = 0.0);
 
 /* ========================================================================= */
@@ -44,7 +44,7 @@ math::Isometry3d sdhToTransform(const DHParameter& sdh,
  *
  * (element at row 0, column 2 of the 3×3 rotation matrix).
  */
-bool isMdhRepresentable(const math::Isometry3d& tf, double tolerance = 1e-10);
+V_ROBOTICS_CORE_API bool isMdhRepresentable(const math::Isometry3d& tf, double tolerance = 1e-10);
 
 /*
  * Check whether the rotation matrix satisfies the SDH structural constraint:
@@ -53,7 +53,7 @@ bool isMdhRepresentable(const math::Isometry3d& tf, double tolerance = 1e-10);
  *
  * (element at row 2, column 0 of the 3×3 rotation matrix).
  */
-bool isSdhRepresentable(const math::Isometry3d& tf, double tolerance = 1e-10);
+V_ROBOTICS_CORE_API bool isSdhRepresentable(const math::Isometry3d& tf, double tolerance = 1e-10);
 
 /* ========================================================================= */
 /*  Inverse extraction (may fail → std::optional)                            */
@@ -70,7 +70,7 @@ bool isSdhRepresentable(const math::Isometry3d& tf, double tolerance = 1e-10);
  *
  * MDH:  T = Rot_x(α) · Trans_x(a) · Rot_z(θ) · Trans_z(d)
  */
-std::optional<DHParameter> tryMdhFromTransform(const math::Isometry3d& tf,
+V_ROBOTICS_CORE_API std::optional<DHParameter> tryMdhFromTransform(const math::Isometry3d& tf,
                                                 double tolerance = 1e-10);
 
 /*
@@ -84,7 +84,7 @@ std::optional<DHParameter> tryMdhFromTransform(const math::Isometry3d& tf,
  *
  * SDH:  T = Rot_z(θ) · Trans_z(d) · Rot_x(α) · Trans_x(a)
  */
-std::optional<DHParameter> trySdhFromTransform(const math::Isometry3d& tf,
+V_ROBOTICS_CORE_API std::optional<DHParameter> trySdhFromTransform(const math::Isometry3d& tf,
                                                 double tolerance = 1e-10);
 
 V_ROBOTICS_KINEMATICS_NS_END

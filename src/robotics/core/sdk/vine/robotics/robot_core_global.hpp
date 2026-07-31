@@ -2,7 +2,7 @@
 
 #include <vine/core_global.hpp>
 
-#ifdef V_ROBOTICS_CORE_LIB
+#ifdef V_ROBOTICSCORE_LIB
 #    define V_ROBOTICS_CORE_API V_EXPORT
 #else
 #    define V_ROBOTICS_CORE_API V_IMPORT

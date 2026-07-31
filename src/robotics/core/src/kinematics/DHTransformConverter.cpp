@@ -14,7 +14,7 @@ V_ROBOTICS_KINEMATICS_NS_BEGIN
 /*  Forward transforms                                                       */
 /* ========================================================================= */
 
-math::Isometry3d mdhToTransform(const DHParameter& mdh, double dd, double dtheta)
+V_ROBOTICS_CORE_API math::Isometry3d mdhToTransform(const DHParameter& mdh, double dd, double dtheta)
 {
     using namespace math;
 
@@ -79,7 +79,7 @@ math::Isometry3d mdhToTransform(const DHParameter& mdh, double dd, double dtheta
     return Isometry3d(Point3d(t.x, t.y, t.z), Quatd(qx, qy, qz, qw));
 }
 
-math::Isometry3d sdhToTransform(const DHParameter& sdh, double dd, double dtheta)
+V_ROBOTICS_CORE_API math::Isometry3d sdhToTransform(const DHParameter& sdh, double dd, double dtheta)
 {
     using namespace math;
 
@@ -148,7 +148,7 @@ math::Isometry3d sdhToTransform(const DHParameter& sdh, double dd, double dtheta
 /*  Representability checks                                                  */
 /* ========================================================================= */
 
-bool isMdhRepresentable(const math::Isometry3d& tf, double tolerance)
+V_ROBOTICS_CORE_API bool isMdhRepresentable(const math::Isometry3d& tf, double tolerance)
 {
     const auto R = rotate3x3(tf.rotation);
 
@@ -156,7 +156,7 @@ bool isMdhRepresentable(const math::Isometry3d& tf, double tolerance)
     return std::abs(R(0, 2)) <= tolerance;
 }
 
-bool isSdhRepresentable(const math::Isometry3d& tf, double tolerance)
+V_ROBOTICS_CORE_API bool isSdhRepresentable(const math::Isometry3d& tf, double tolerance)
 {
     const auto R = rotate3x3(tf.rotation);
 
@@ -168,7 +168,7 @@ bool isSdhRepresentable(const math::Isometry3d& tf, double tolerance)
 /*  Inverse extraction                                                       */
 /* ========================================================================= */
 
-std::optional<DHParameter> tryMdhFromTransform(const math::Isometry3d& tf, double tolerance)
+V_ROBOTICS_CORE_API std::optional<DHParameter> tryMdhFromTransform(const math::Isometry3d& tf, double tolerance)
 {
     using namespace math;
 
@@ -201,7 +201,7 @@ std::optional<DHParameter> tryMdhFromTransform(const math::Isometry3d& tf, doubl
     return p;
 }
 
-std::optional<DHParameter> trySdhFromTransform(const math::Isometry3d& tf, double tolerance)
+V_ROBOTICS_CORE_API std::optional<DHParameter> trySdhFromTransform(const math::Isometry3d& tf, double tolerance)
 {
     using namespace math;
 
