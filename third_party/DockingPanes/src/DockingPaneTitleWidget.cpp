@@ -99,7 +99,10 @@ void DockingPaneTitleWidget::mouseMoveEvent(QMouseEvent* event)
 void DockingPaneTitleWidget::mouseReleaseEvent(QMouseEvent* event)
 {
     if (event->button() == Qt::LeftButton) {
-        releaseMouse();
+        if (m_grabbing) {
+            releaseMouse();
+            m_grabbing = false;
+        }
 
         Q_EMIT titleBarEndMove(this->mapToGlobal(event->pos()));
         event->accept();
@@ -114,9 +117,19 @@ void DockingPaneTitleWidget::mousePressEvent(QMouseEvent* event)
         // Keep receiving mouse events for the whole drag, even when the
         // cursor moves over the top-level docking indicator overlays.
         grabMouse();
+        m_grabbing = true;
 
         event->accept();
         Q_EMIT titleBarStartMove(this->mapToGlobal(event->pos()));
+    }
+}
+
+void DockingPaneTitleWidget::reacquireGrab(void)
+{
+    // The grab is lost when the owning window is recreated (docked pane is
+    // floated mid-drag); grab the new window to keep the drag alive.
+    if (m_grabbing) {
+        grabMouse();
     }
 }
 

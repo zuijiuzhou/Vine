@@ -362,6 +362,11 @@ void DockingPaneContainer::onMoveDragTitle(QPoint pos)
             m_initialPos = pos;
 
             m_dockingManager->floatingPaneStartMove(this, pos);
+
+            // floatPane() recreated the native window, which released the
+            // mouse grab taken on press; re-grab so the drag keeps receiving
+            // events while moving over the main window / indicators.
+            m_titleWidget->reacquireGrab();
         }
     }
 }

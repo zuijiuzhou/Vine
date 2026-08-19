@@ -34,6 +34,10 @@ class DockingPaneTitleWidget : public QWidget
         void setText(QString text);
         void setActive(bool active);
 
+        // Re-acquire the mouse grab after the owning window was recreated
+        // (e.g. when a docked pane is floated mid-drag).
+        void reacquireGrab(void);
+
     Q_SIGNALS:
         void titleBarStartMove(QPoint pos);
         void titleBarEndMove(QPoint pos);
@@ -52,6 +56,7 @@ class DockingPaneTitleWidget : public QWidget
         void onFocusChanged(QWidget *old,QWidget *now);
         QString m_text;
         bool m_active;
+        bool m_grabbing = false;
 };
 
 #endif // DOCKINGPANETITLEWIDGET_H
