@@ -23,6 +23,7 @@
 #include <QMouseEvent>
 #include <QPainter>
 
+#include "DockingPaneTheme.h"
 #include "DockingPaneTitleWidget.h"
 
 DockingPaneTitleWidget::DockingPaneTitleWidget(QString text, QWidget* parent)
@@ -58,12 +59,7 @@ void DockingPaneTitleWidget::paintEvent(QPaintEvent*)
 
     QString elidedText = fm.elidedText(m_text, Qt::ElideRight, width() - 6);
 
-    if (m_active) {
-        p.setPen(QColor(0xFF, 0xFF, 0xFF));
-    }
-    else {
-        p.setPen(QColor(0, 0, 0));
-    }
+    p.setPen(DockingPaneTheme::titleTextColor(m_active));
 
     p.drawText(leftMargin, 0, width() - (leftMargin + rightMargin), height(), Qt::AlignVCenter, elidedText, &drawnRect);
 
@@ -85,12 +81,7 @@ void DockingPaneTitleWidget::drawPattern(QPainter* p, int x, int y, int w, int h
 
     QPainter pp(&pixMap);
 
-    if (m_active) {
-        pp.setPen(QColor(0x59, 0xa8, 0xde));
-    }
-    else {
-        pp.setPen(QColor(0x99, 0x99, 0x99));
-    }
+    pp.setPen(DockingPaneTheme::titlePatternColor(m_active));
 
     pp.drawPoint(0, 0);
     pp.drawPoint(0, 4);
@@ -108,6 +99,8 @@ void DockingPaneTitleWidget::mouseMoveEvent(QMouseEvent* event)
 void DockingPaneTitleWidget::mouseReleaseEvent(QMouseEvent* event)
 {
     if (event->button() == Qt::LeftButton) {
+        releaseMouse();
+
         Q_EMIT titleBarEndMove(this->mapToGlobal(event->pos()));
         event->accept();
     }
@@ -117,6 +110,11 @@ void DockingPaneTitleWidget::mousePressEvent(QMouseEvent* event)
 {
     if (event->button() == Qt::LeftButton) {
         this->setFocus();
+
+        // Keep receiving mouse events for the whole drag, even when the
+        // cursor moves over the top-level docking indicator overlays.
+        grabMouse();
+
         event->accept();
         Q_EMIT titleBarStartMove(this->mapToGlobal(event->pos()));
     }
@@ -126,6 +124,15 @@ void DockingPaneTitleWidget::setActive(bool active)
 {
     m_active = active;
     update();
+}
+
+void DockingPaneTitleWidget::changeEvent(QEvent* event)
+{
+    if (event->type() == QEvent::PaletteChange || event->type() == QEvent::ApplicationPaletteChange) {
+        update();
+    }
+
+    QWidget::changeEvent(event);
 }
 
 void DockingPaneTitleWidget::onFocusChanged(QWidget*, QWidget* now)

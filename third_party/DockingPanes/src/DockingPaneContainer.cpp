@@ -31,6 +31,7 @@
 #include "DockingPaneFlyoutWidget.h"
 #include "DockingPaneGlow.h"
 #include "DockingPaneManager.h"
+#include "DockingPaneTheme.h"
 #include "DockingPaneTitleWidget.h"
 #include "DockingToolButton.h"
 
@@ -117,7 +118,11 @@ void DockingPaneContainer::paintEvent(QPaintEvent*)
 {
     QPainter p(this);
 
-    QPen pen(QColor(0xcc, 0xce, 0xdb));
+    // Pane header background. Painted here (instead of a style sheet) so the
+    // colours always follow the application palette.
+    p.fillRect(m_headerWidget->geometry(), m_isActive ? DockingPaneTheme::activeHeaderColor() : DockingPaneTheme::inactiveHeaderColor());
+
+    QPen pen(DockingPaneTheme::borderColor());
 
     pen.setWidth(1);
 
@@ -126,7 +131,7 @@ void DockingPaneContainer::paintEvent(QPaintEvent*)
     QRect clientRect = this->rect();
 
     if (state() == DockingPaneBase::Floating) {
-        p.setPen(QColor(0xaa, 0xaa, 0xaa));
+        p.setPen(DockingPaneTheme::floatingBorderColor());
 
         p.drawLine(clientRect.topLeft(), clientRect.topRight());
         p.drawLine(clientRect.topLeft(), clientRect.bottomLeft());
@@ -140,6 +145,15 @@ void DockingPaneContainer::paintEvent(QPaintEvent*)
     p.drawLine(clientRect.topLeft(), clientRect.bottomLeft());
     p.drawLine(clientRect.topRight(), clientRect.bottomRight());
     p.drawLine(clientRect.bottomLeft(), clientRect.bottomRight());
+}
+
+void DockingPaneContainer::changeEvent(QEvent* event)
+{
+    if (event->type() == QEvent::PaletteChange || event->type() == QEvent::ApplicationPaletteChange) {
+        update();
+    }
+
+    DockingPaneBase::changeEvent(event);
 }
 
 void DockingPaneContainer::onCloseButtonClicked(void)
@@ -173,8 +187,6 @@ void DockingPaneContainer::setActivePane(bool active)
     m_titleWidget->setActive(m_isActive);
 
     if (m_isActive) {
-        this->setStyleSheet("QWidget#headerWidget{background-color: #007acc}");
-
         this->m_pinButton->setButton(DockingToolButton::pinButtonActive);
         this->m_closeButton->setButton(DockingToolButton::closeButtonActive);
 
@@ -183,7 +195,6 @@ void DockingPaneContainer::setActivePane(bool active)
         }
     }
     else {
-        this->setStyleSheet("QWidget#headerWidget{background-color: #eeeef2}");
         this->m_pinButton->setButton(DockingToolButton::pinButtonInactive);
         this->m_closeButton->setButton(DockingToolButton::closeButtonInactive);
     }

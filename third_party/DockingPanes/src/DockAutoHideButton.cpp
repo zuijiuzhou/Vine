@@ -24,6 +24,7 @@
 #include <QTimer>
 
 #include "DockAutoHideButton.h"
+#include "DockingPaneTheme.h"
 
 DockAutoHideButton::DockAutoHideButton(DockAutoHideButton::Position pos, QWidget* parent)
   : QPushButton(parent)
@@ -152,6 +153,15 @@ void DockAutoHideButton::onTimerElapsed(void)
     }
 }
 
+void DockAutoHideButton::changeEvent(QEvent* event)
+{
+    if (event->type() == QEvent::PaletteChange || event->type() == QEvent::ApplicationPaletteChange) {
+        update();
+    }
+
+    QPushButton::changeEvent(event);
+}
+
 void DockAutoHideButton::paintEvent(QPaintEvent*)
 {
     QStylePainter p(this);
@@ -161,11 +171,11 @@ void DockAutoHideButton::paintEvent(QPaintEvent*)
     p.setRenderHint(QPainter::Antialiasing, true);
 
     if (m_hovered) {
-        color = textColor = QColor(0, 122, 204);
+        color = textColor = DockingPaneTheme::autoHideHoverColor();
     }
     else {
-        textColor = Qt::black;
-        color     = QColor(0xcc, 0xce, 0xdb);
+        textColor = DockingPaneTheme::titleTextColor(false);
+        color     = DockingPaneTheme::autoHideStripColor();
     }
 
     p.setPen(textColor);

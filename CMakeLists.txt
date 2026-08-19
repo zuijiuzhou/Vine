@@ -57,12 +57,13 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
 endif()
 
 list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_SOURCE_DIR}/cmake)
-include(VineThirdParty)
+
 
 # link_directories(${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
+add_subdirectory(third_party)
 add_subdirectory(src)
 
 if(WIN32)

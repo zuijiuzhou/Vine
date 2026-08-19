@@ -77,6 +77,7 @@ class DockingPaneContainer : public DockingPaneBase
         virtual void setName(QString name) override;
         void setActivePane(bool active);
         virtual void paintEvent(QPaintEvent* event) override;
+        virtual void changeEvent(QEvent* event) override;
 
         void onStartDragTitle(QPoint pos);
         void onEndDragTitle(QPoint pos);

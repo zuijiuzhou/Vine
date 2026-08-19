@@ -26,6 +26,7 @@
 
 #include "DockingPaneContainer.h"
 #include "DockingPaneFlyoutWidget.h"
+#include "DockingPaneTheme.h"
 #include "DockingPaneTitleWidget.h"
 #include "DockingToolButton.h"
 
@@ -217,7 +218,10 @@ void DockingPaneFlyoutWidget::paintEvent(QPaintEvent*)
 {
     QPainter p(this);
 
-    QPen pen(QColor(0xcc, 0xce, 0xdb));
+    // Pane header background, following the application palette.
+    p.fillRect(m_headerWidget->geometry(), m_isActive ? DockingPaneTheme::activeHeaderColor() : DockingPaneTheme::inactiveHeaderColor());
+
+    QPen pen(DockingPaneTheme::borderColor());
 
     pen.setWidth(1);
 
@@ -229,6 +233,15 @@ void DockingPaneFlyoutWidget::paintEvent(QPaintEvent*)
     p.drawLine(rc.topLeft(), rc.bottomLeft());
     p.drawLine(rc.topRight(), rc.bottomRight());
     p.drawLine(rc.bottomLeft(), rc.bottomRight());
+}
+
+void DockingPaneFlyoutWidget::changeEvent(QEvent* event)
+{
+    if (event->type() == QEvent::PaletteChange || event->type() == QEvent::ApplicationPaletteChange) {
+        update();
+    }
+
+    QWidget::changeEvent(event);
 }
 
 QRect DockingPaneFlyoutWidget::paneRect(void)
@@ -336,12 +349,10 @@ void DockingPaneFlyoutWidget::setActivePane(bool active)
     m_titleWidget->setActive(m_isActive);
 
     if (m_isActive) {
-        this->setStyleSheet("QWidget#headerWidget{background-color: #007acc}");
         this->m_pinButton->setButton(DockingToolButton::unpinButtonActive);
         this->m_closeButton->setButton(DockingToolButton::closeButtonActive);
     }
     else {
-        this->setStyleSheet("QWidget#headerWidget{background-color: #eeeef2}");
         this->m_pinButton->setButton(DockingToolButton::unpinButtonInactive);
         this->m_closeButton->setButton(DockingToolButton::closeButtonInactive);
     }

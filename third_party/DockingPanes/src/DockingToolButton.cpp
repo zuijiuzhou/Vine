@@ -22,6 +22,7 @@
 #include <QPaintEvent>
 #include <QPainter>
 
+#include "DockingPaneTheme.h"
 #include "DockingToolButton.h"
 
 DockingToolButton::DockingToolButton(DockingToolButton::ButtonType type, QWidget* parent)
@@ -98,6 +99,20 @@ void DockingToolButton::paintEvent(QPaintEvent*)
     }
     }
 
+    // Active bitmaps are white, inactive ones are black. Recolour the black
+    // bitmaps so they stay visible on dark headers.
+    const bool inactiveButton = (m_buttonType == closeButtonInactive || m_buttonType == pinButtonInactive || m_buttonType == unpinButtonInactive);
+
+    if (inactiveButton && !buttonImage.isNull()) {
+        // The PNGs load as Format_Indexed8, which cannot be painted on.
+        buttonImage = buttonImage.convertToFormat(QImage::Format_ARGB32);
+
+        QPainter tintPainter(&buttonImage);
+
+        tintPainter.setCompositionMode(QPainter::CompositionMode_SourceIn);
+        tintPainter.fillRect(buttonImage.rect(), DockingPaneTheme::iconTintColor(false));
+    }
+
     p.drawImage(centreX - (buttonImage.width() / 2), centreY - (buttonImage.height() / 2), buttonImage);
 
     QRect rcHighlight;
@@ -117,4 +132,13 @@ void DockingToolButton::setButton(DockingToolButton::ButtonType type)
 {
     m_buttonType = type;
     update();
+}
+
+void DockingToolButton::changeEvent(QEvent* event)
+{
+    if (event->type() == QEvent::PaletteChange || event->type() == QEvent::ApplicationPaletteChange) {
+        update();
+    }
+
+    QPushButton::changeEvent(event);
 }

@@ -37,6 +37,7 @@
 #include "DockingPaneGlow.h"
 #include "DockingPaneManager.h"
 #include "DockingPaneTabbedContainer.h"
+#include "DockingPaneTheme.h"
 #include "DockingPaneTitleWidget.h"
 #include "DockingToolButton.h"
 
@@ -194,7 +195,7 @@ void DockingPaneTabbedContainer::paintEvent(QPaintEvent*)
 
     QPainter p(this);
 
-    QPen pen(QColor(0xcc, 0xce, 0xdb));
+    QPen pen(DockingPaneTheme::borderColor());
 
     calculateButtonsRectangles();
 
@@ -205,7 +206,7 @@ void DockingPaneTabbedContainer::paintEvent(QPaintEvent*)
     QRect clientRect = this->rect();
 
     if (state() == DockingPaneBase::Floating) {
-        p.setPen(QColor(0xaa, 0xaa, 0xaa));
+        p.setPen(DockingPaneTheme::floatingBorderColor());
         p.drawLine(clientRect.topLeft(), clientRect.topRight());
         p.drawLine(clientRect.topLeft(), clientRect.bottomLeft());
         p.drawLine(clientRect.topRight(), clientRect.bottomRight());
@@ -248,7 +249,7 @@ void DockingPaneTabbedContainer::paintEvent(QPaintEvent*)
         tr.setRight(x + m_tabWidths.at(i));
         tr.setBottom(clientRect.bottom());
 
-        p.setPen(Qt::black);
+        p.setPen(DockingPaneTheme::titleTextColor(false));
         p.setRenderHint(QPainter::Antialiasing, true);
         p.drawText(tr, Qt::AlignHCenter | Qt::AlignVCenter, fm.elidedText(m_paneList.at(i)->name(), Qt::ElideRight, tr.width()));
 

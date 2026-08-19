@@ -110,7 +110,7 @@ class DockingPaneManager : QObject
         DockingPaneBase *getDockingParent(QWidget *widget);
 
         void updateAllSplitters(DockingPaneSplitterContainer *parentSplitter=NULL, bool *containsClient=NULL);
-        void updateFloatingPane(DockingPaneBase *currentPane, QPoint cursorPos);
+        bool updateFloatingPane(DockingPaneBase *currentPane, QPoint cursorPos);
 
     private Q_SLOTS:
         void onAutoDockButtonClicked(void);

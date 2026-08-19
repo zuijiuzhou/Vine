@@ -11,7 +11,6 @@
 #include <vine/appfw/gui/RibbonBar.hpp>
 #include <vine/appfw/gui/StatusBar.hpp>
 
-#include "Convert.hpp"
 #include "UIElementData.hpp"
 
 V_APPFWGUI_NS_BEGIN

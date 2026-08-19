@@ -62,6 +62,7 @@ class DockingPaneFlyoutWidget : public QWidget
 
     protected:
         virtual void paintEvent(QPaintEvent* event) override;
+        virtual void changeEvent(QEvent* event) override;
         virtual void closeEvent(QCloseEvent* event) override;
         virtual void resizeEvent(QResizeEvent* event) override;
 

@@ -1014,8 +1014,21 @@ void DockingPaneManager::floatingPaneStartMove(DockingPaneBase* pane, QPoint cur
 
 void DockingPaneManager::floatingPaneEndMove(DockingPaneBase* pane, QPoint cursorPos)
 {
-    Q_UNUSED(cursorPos);
     Q_D(DockingPaneManager);
+
+    // The last mouse-move event may not have been processed at the release
+    // position (fast drags / coalesced move events), so re-evaluate the drop
+    // target from the release position instead of trusting stale state.
+    d->m_targetPosition = -1;
+    d->m_targetPane     = NULL;
+
+    updateFloatingPane(d->m_clientPane, cursorPos);
+
+    foreach (DockingPaneBase* searchPane, d->m_dockingPaneList) {
+        DockingPaneContainer* currentPane = qobject_cast<DockingPaneContainer*>(searchPane);
+
+        if ((currentPane != pane) && (currentPane->state() == DockingPaneBase::Docked)) { updateFloatingPane(currentPane, cursorPos); }
+    }
 
     if (d->m_targetWidget) { d->m_targetWidget->hide(); }
 
@@ -1097,6 +1110,9 @@ void DockingPaneManager::floatingPaneEndMove(DockingPaneBase* pane, QPoint curso
 
         dockedPane->setFocus();
     }
+
+    d->m_targetPosition = -1;
+    d->m_targetPane     = NULL;
 }
 
 void DockingPaneManager::floatingPaneMoved(DockingPaneBase* pane, QPoint cursorPos)
@@ -1108,104 +1124,123 @@ void DockingPaneManager::floatingPaneMoved(DockingPaneBase* pane, QPoint cursorP
     d->m_targetPosition = -1;
     d->m_targetPane     = NULL;
 
-    updateFloatingPane(d->m_clientPane, cursorPos);
+    bool overPane = updateFloatingPane(d->m_clientPane, cursorPos);
 
     foreach (DockingPaneBase* searchPane, d->m_dockingPaneList) {
         DockingPaneContainer* currentPane = qobject_cast<DockingPaneContainer*>(searchPane);
 
-        if ((currentPane != pane) && (currentPane->state() == DockingPaneBase::Docked)) { updateFloatingPane(currentPane, cursorPos); }
+        if ((currentPane != pane) && (currentPane->state() == DockingPaneBase::Docked)) { overPane = updateFloatingPane(currentPane, cursorPos) || overPane; }
+    }
+
+    if (!overPane) {
+        // Cursor is not over any pane: clear everything left from a previous
+        // position.
+        if (d->m_targetWidget) { d->m_targetWidget->hide(); }
+
+        if (d->m_dockingStickers) { d->m_dockingStickers->hide(); }
+    }
+    else if (!d->m_targetPane) {
+        // Over a pane but not on an indicator: keep the indicator cluster
+        // visible as a guide, only remove the drop preview.
+        if (d->m_targetWidget) { d->m_targetWidget->hide(); }
     }
 }
 
-void DockingPaneManager::updateFloatingPane(DockingPaneBase* currentPane, QPoint cursorPos)
+bool DockingPaneManager::updateFloatingPane(DockingPaneBase* currentPane, QPoint cursorPos)
 {
     Q_D(DockingPaneManager);
 
-    static QRect lastHitRect, lastStickerRect;
-    QRect        paneRect;
+    QRect paneRect;
 
-    if (d->m_thisWidget->rect().contains(d->m_thisWidget->mapFromGlobal(cursorPos))) {
-        paneRect.setTopLeft(currentPane->mapToGlobal(QPoint(0, 0)));
-        paneRect.setBottomRight(currentPane->mapToGlobal(QPoint(currentPane->width(), currentPane->height())));
-
-        if (paneRect.contains(cursorPos)) {
-            DockingFrameStickers::DockingPosition dockPos;
-
-            if (d->m_dockingStickers) {
-                QPoint pt(paneRect.center().x() - (d->m_dockingStickers->width() / 2.0), paneRect.center().y() - (d->m_dockingStickers->height() / 2.0));
-
-                if (lastStickerRect != paneRect) { d->m_dockingStickers->hide(); }
-
-                if (currentPane == d->m_clientPane) { d->m_dockingStickers->setTabVisible(false); }
-                else {
-                    d->m_dockingStickers->setTabVisible(true);
-                }
-
-                d->m_dockingStickers->move(pt);
-                d->m_dockingStickers->show();
-
-                lastStickerRect = paneRect;
-            }
-
-            if (d->m_dockingStickers->getHit(cursorPos, &dockPos)) {
-                d->m_targetPosition = dockPos;
-
-                switch ((DockingFrameStickers::DockingPosition)dockPos) {
-                case DockingFrameStickers::paneLeft:
-                {
-                    paneRect.setRight(paneRect.left() + (paneRect.width() * 0.25));
-
-                    break;
-                }
-
-                case DockingFrameStickers::paneRight:
-                {
-                    paneRect.setLeft(paneRect.right() - (paneRect.width() * 0.25));
-
-                    break;
-                }
-
-                case DockingFrameStickers::paneTop:
-                {
-                    paneRect.setBottom(paneRect.top() + (paneRect.height() * 0.25));
-
-                    break;
-                }
-
-                case DockingFrameStickers::paneBottom:
-                {
-                    paneRect.setTop(paneRect.bottom() - (paneRect.height() * 0.25));
-
-                    break;
-                }
-
-                default:
-                {
-                    break;
-                }
-                }
-
-                d->m_targetPane = currentPane;
-
-                if (d->m_targetWidget) {
-                    if (lastHitRect != paneRect) { d->m_targetWidget->hide(); }
-
-                    d->m_targetWidget->move(paneRect.topLeft());
-                    d->m_targetWidget->resize(paneRect.size());
-                    d->m_targetWidget->show();
-
-                    lastHitRect = paneRect;
-                }
-            }
-            else {
-                if (d->m_targetWidget) { d->m_targetWidget->hide(); }
-            }
-        }
-    }
-    else {
+    if (!d->m_thisWidget->rect().contains(d->m_thisWidget->mapFromGlobal(cursorPos))) {
         d->m_targetWidget->hide();
         d->m_dockingStickers->hide();
+
+        return (false);
     }
+
+    paneRect.setTopLeft(currentPane->mapToGlobal(QPoint(0, 0)));
+    paneRect.setBottomRight(currentPane->mapToGlobal(QPoint(currentPane->width(), currentPane->height())));
+
+    if (!paneRect.contains(cursorPos)) {
+        // Cursor is over some other pane. Only hide the indicators if this
+        // pane owned them, otherwise leave them for the pane that matched.
+        if (d->m_targetPane == currentPane) {
+            if (d->m_targetWidget) { d->m_targetWidget->hide(); }
+
+            if (d->m_dockingStickers) { d->m_dockingStickers->hide(); }
+        }
+
+        return (false);
+    }
+
+    if (d->m_dockingStickers) {
+        QPoint pt(paneRect.center().x() - (d->m_dockingStickers->width() / 2.0), paneRect.center().y() - (d->m_dockingStickers->height() / 2.0));
+
+        if (currentPane == d->m_clientPane) { d->m_dockingStickers->setTabVisible(false); }
+        else {
+            d->m_dockingStickers->setTabVisible(true);
+        }
+
+        d->m_dockingStickers->move(pt);
+        d->m_dockingStickers->show();
+        d->m_dockingStickers->raise();
+
+        DockingFrameStickers::DockingPosition dockPos;
+
+        if (d->m_dockingStickers->getHit(cursorPos, &dockPos)) {
+            d->m_targetPosition = dockPos;
+
+            switch ((DockingFrameStickers::DockingPosition)dockPos) {
+            case DockingFrameStickers::paneLeft:
+            {
+                paneRect.setRight(paneRect.left() + (paneRect.width() * 0.25));
+
+                break;
+            }
+
+            case DockingFrameStickers::paneRight:
+            {
+                paneRect.setLeft(paneRect.right() - (paneRect.width() * 0.25));
+
+                break;
+            }
+
+            case DockingFrameStickers::paneTop:
+            {
+                paneRect.setBottom(paneRect.top() + (paneRect.height() * 0.25));
+
+                break;
+            }
+
+            case DockingFrameStickers::paneBottom:
+            {
+                paneRect.setTop(paneRect.bottom() - (paneRect.height() * 0.25));
+
+                break;
+            }
+
+            default:
+            {
+                break;
+            }
+            }
+
+            d->m_targetPane = currentPane;
+
+            if (d->m_targetWidget) {
+                d->m_targetWidget->move(paneRect.topLeft());
+                d->m_targetWidget->resize(paneRect.size());
+                d->m_targetWidget->show();
+                d->m_targetWidget->raise();
+            }
+        }
+        else if (d->m_targetPane == currentPane) {
+            if (d->m_targetWidget) { d->m_targetWidget->hide(); }
+        }
+    }
+
+    return (true);
 }
 
 QString DockingPaneManager::saveLayout(QString layoutId)
