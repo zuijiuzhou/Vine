@@ -151,9 +151,5 @@ GuiApplication::desc();
                   << std::endl;
     }
 
-    // Test floating
-    panelRight->setFloating(true);
-    std::cout << "Properties floating=" << panelRight->isFloating() << std::endl;
-
     return app.run();
 }

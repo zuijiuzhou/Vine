@@ -1,6 +1,7 @@
 #include <vine/appfw/gui/DockPanel.hpp>
 
 #include <DockingPaneContainer.h>
+#include <DockingPaneManager.h>
 
 #include "Convert.hpp"
 #include "UIElementData.hpp"
@@ -178,8 +179,39 @@ DockAreas DockPanel::dockArea() const
 void DockPanel::setFloating(bool floating)
 {
     auto* c = impl<itype>();
-    if (c)
-        c->setState(floating ? DockingPaneBase::Floating : DockingPaneBase::Docked);
+    if (!c)
+        return;
+
+    if (floating) {
+        if (c->state() != DockingPaneBase::Floating) {
+            // Really float: detach from the dock tree (which frees the space
+            // for the remaining panes) and keep the current position.
+            // floatPane(QPoint) records the global position before detaching
+            // and restores it afterwards; a manual closePane() would leave the
+            // pane at its old parent-relative coordinates.
+            c->floatPane(QPoint(0, 0));
+        }
+    }
+    else if (c->state() == DockingPaneBase::Floating) {
+        auto* mgr = c->dockingManager();
+        if (!mgr)
+            return;
+
+        // Dock back to the frame, using the remembered dock area.
+        DockingPaneManager::DockPosition pos = DockingPaneManager::dockRight;
+
+        const QVariant areaVar = c->property("_vine_dockarea");
+        if (areaVar.isValid()) {
+            switch (static_cast<DockAreas>(areaVar.toInt())) {
+            case DockAreas::Top:    pos = DockingPaneManager::dockTop;    break;
+            case DockAreas::Bottom: pos = DockingPaneManager::dockBottom; break;
+            case DockAreas::Left:   pos = DockingPaneManager::dockLeft;   break;
+            default:                pos = DockingPaneManager::dockRight;  break;
+            }
+        }
+
+        mgr->dockPane(c, pos, nullptr);
+    }
 }
 
 void DockPanel::pin()
