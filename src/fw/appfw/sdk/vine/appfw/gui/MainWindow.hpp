@@ -2,8 +2,8 @@
 
 #include <vector>
 
-#include "UIElement.hpp"
 #include "Gui.hpp"
+#include "UIElement.hpp"
 
 V_APPFWGUI_NS_BEGIN
 
@@ -19,7 +19,7 @@ class V_APPFW_API MainWindow : public UIElement {
 
   public:
     MainWindow();
-    virtual ~MainWindow();
+    ~MainWindow() override;
 
   public:
     void            startupPosition(StartupPosition position);
@@ -38,8 +38,8 @@ class V_APPFW_API MainWindow : public UIElement {
     void show();
     void close();
 
-    RibbonBar* ribbonBar() const;
-    StatusBar* statusBar() const;
+    RibbonBar*        ribbonBar() const;
+    StatusBar*        statusBar() const;
     DockPanelManager* dockPanelManager() const;
 
   private:

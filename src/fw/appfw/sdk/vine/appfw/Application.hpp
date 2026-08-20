@@ -28,7 +28,7 @@ class V_APPFW_API Application : public Object {
     Application(ApplicationData* data, int argc, char** argv);
 
   public:
-    virtual ~Application();
+    ~Application() override;
 
   public:
     virtual void init();

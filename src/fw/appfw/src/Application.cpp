@@ -16,17 +16,26 @@ static Application* s_current_app = nullptr;
 
 V_OBJECT_META_IMPL(Application, Object)
 
-auto Application::dptr() -> ApplicationData* { return static_cast<ApplicationData*>(d); }
-auto Application::dptr() const -> const ApplicationData* { return static_cast<const ApplicationData*>(d); }
+auto Application::dptr() -> ApplicationData*
+{
+    return d;
+}
+
+auto Application::dptr() const -> const ApplicationData*
+{
+    return d;
+}
 
 Application::Application(int argc, char** argv)
-    : Application(new ApplicationData(), argc, argv)
+  : Application(new ApplicationData(), argc, argv)
 {}
 
 Application::Application(ApplicationData* data, int argc, char** argv)
   : d(data)
 {
-    if (s_current_app) { throw Exception(-1); }
+    if (s_current_app) {
+        throw Exception(-1);
+    }
 
     s_current_app = this;
 
@@ -48,31 +57,49 @@ Application::~Application()
 
 void Application::init()
 {
-    if (dptr()->app == nullptr) { dptr()->app = new QCoreApplication(dptr()->argc, dptr()->argv); }
+    if (dptr()->app == nullptr) {
+        dptr()->app = new QCoreApplication(dptr()->argc, dptr()->argv);
+    }
 }
 
 int Application::run()
-{ return dptr()->app->exec(); }
+{
+    return dptr()->app->exec();
+}
 
 void Application::exit(int code)
-{ QCoreApplication::exit(code); }
+{
+    QCoreApplication::exit(code);
+}
 
 CommandManager* Application::commandManager() const
-{ return dptr()->command_manager; }
+{
+    return dptr()->command_manager;
+}
 
 AddinManager* Application::addinManager() const
-{ return dptr()->addin_manager; }
+{
+    return dptr()->addin_manager;
+}
 
 ServiceManager* Application::serviceManager() const
-{ return dptr()->service_manager; }
+{
+    return dptr()->service_manager;
+}
 
 Application* Application::current()
-{ return s_current_app; }
+{
+    return s_current_app;
+}
 
 int Application::argc() const
-{ return dptr()->argc; }
+{
+    return dptr()->argc;
+}
 
 char** Application::argv() const
-{ return dptr()->argv; }
+{
+    return dptr()->argv;
+}
 
 V_APPFW_NS_END
