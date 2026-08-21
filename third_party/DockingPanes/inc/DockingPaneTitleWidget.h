@@ -29,7 +29,7 @@ class DockingPaneTitleWidget : public QWidget
     Q_OBJECT
     public:
         explicit DockingPaneTitleWidget(QString text = QString(), QWidget *parent = nullptr);
-        virtual ~DockingPaneTitleWidget() = default;
+        ~DockingPaneTitleWidget() override;
 
         void setText(QString text);
         void setActive(bool active);
@@ -37,6 +37,10 @@ class DockingPaneTitleWidget : public QWidget
         // Re-acquire the mouse grab after the owning window was recreated
         // (e.g. when a docked pane is floated mid-drag).
         void reacquireGrab(void);
+
+        // Take over the drag: grab the mouse and enter dragging state, used
+        // when the flyout is hidden mid-drag and this title keeps the drag.
+        void takeGrab(void);
 
     Q_SIGNALS:
         void titleBarStartMove(QPoint pos);

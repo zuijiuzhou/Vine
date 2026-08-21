@@ -383,9 +383,11 @@ void DockingPaneContainer::onEndDragFlyoutTitle(QPoint pos)
 {
     dockingManager()->floatingPaneEndMove(this, pos);
 
-    m_flyoutWidget->endDrag();
+    if (m_flyoutWidget) {
+        m_flyoutWidget->endDrag();
 
-    m_flyoutWidget = nullptr;
+        m_flyoutWidget = nullptr;
+    }
 }
 
 void DockingPaneContainer::onMoveDragFlyoutTitle(QPoint pos)
@@ -428,6 +430,14 @@ void DockingPaneContainer::onMoveDragFlyoutTitle(QPoint pos)
             dockingManager()->floatingPaneStartMove(this, pos);
 
             m_draggingFlyout = true;
+
+            // flyout 已隐藏且鼠标抓取随隐藏释放, endDragFlyoutTitle 不会再触发;
+            // 立即清理 flyout, 否则会遗留到退出时才析构(焦点变化触发断言)
+            m_flyoutWidget->endDrag();
+            m_flyoutWidget = nullptr;
+
+            // 由容器标题接管鼠标抓取, 让转浮动后的拖动继续
+            m_titleWidget->takeGrab();
         }
     }
 }

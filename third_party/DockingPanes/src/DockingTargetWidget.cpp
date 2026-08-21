@@ -19,11 +19,17 @@
 
 #include "DockingTargetWidget.h"
 
+#include <QApplication>
+
 DockingTargetWidget::DockingTargetWidget(QWidget* parent)
   : QWidget(parent)
 {
     setWindowFlags(Qt::ToolTip | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint | Qt::NoDropShadowWindowHint);
     setWindowOpacity(0.5);
 
-    this->setStyleSheet("background-color:#6dbaf9");
+    // 目标指示色跟随调色板(随主题变化)
+    QPalette pal = palette();
+    pal.setColor(QPalette::Window, QApplication::palette().color(QPalette::Highlight));
+    setPalette(pal);
+    setAutoFillBackground(true);
 }

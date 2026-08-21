@@ -55,12 +55,12 @@ inline QColor floatingBorderColor(void)
     return window.lightness() < 128 ? window.lighter(160) : window.darker(150);
 }
 
-/* Pane header background: the highlight role is the accent colour, the
- * window role is the neutral background. Both pair with the text roles
- * below in every theme. */
+/* Pane header background: the active pane uses the content background (Base)
+ * so the title bar blends with the panel content; inactive panes use the
+ * window colour. Both stay neutral in every theme. */
 inline QColor activeHeaderColor(void)
 {
-    return appPalette().color(QPalette::Highlight);
+    return appPalette().color(QPalette::Base);
 }
 
 inline QColor inactiveHeaderColor(void)
@@ -69,20 +69,14 @@ inline QColor inactiveHeaderColor(void)
 }
 
 /* Title bar text, always paired with the matching header background */
-inline QColor titleTextColor(bool active)
+inline QColor titleTextColor(bool)
 {
-    return appPalette().color(active ? QPalette::HighlightedText : QPalette::WindowText);
+    return appPalette().color(QPalette::WindowText);
 }
 
 /* Title bar dotted pattern */
-inline QColor titlePatternColor(bool active)
+inline QColor titlePatternColor(bool)
 {
-    if (active) {
-        const QColor highlight = appPalette().color(QPalette::Highlight);
-
-        return highlight.lightness() < 128 ? highlight.lighter(150) : highlight.lighter(115);
-    }
-
     return appPalette().color(QPalette::Mid);
 }
 
@@ -97,12 +91,11 @@ inline QColor autoHideHoverColor(void)
     return appPalette().color(QPalette::Highlight);
 }
 
-/* Close/pin button icon tint. Active bitmaps are white, inactive ones are
- * black; recolour them with the palette text roles so they stay visible on
- * every header background. */
-inline QColor iconTintColor(bool active)
+/* Close/pin button icon tint, always paired with the matching header
+ * background. */
+inline QColor iconTintColor(bool)
 {
-    return appPalette().color(active ? QPalette::HighlightedText : QPalette::WindowText);
+    return appPalette().color(QPalette::WindowText);
 }
 
 } // namespace DockingPaneTheme

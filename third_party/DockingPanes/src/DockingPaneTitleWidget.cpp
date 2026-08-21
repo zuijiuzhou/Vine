@@ -36,6 +36,13 @@ DockingPaneTitleWidget::DockingPaneTitleWidget(QString text, QWidget* parent)
     connect(qApp, &QApplication::focusChanged, this, &DockingPaneTitleWidget::onFocusChanged);
 }
 
+DockingPaneTitleWidget::~DockingPaneTitleWidget()
+{
+    // 析构期间(如父窗口销毁子控件)焦点可能变化, focusChanged 会调用到基类析构已开始的
+    // 本对象导致 assertObjectType 断言, 因此提前断开连接
+    disconnect(qApp, &QApplication::focusChanged, this, &DockingPaneTitleWidget::onFocusChanged);
+}
+
 void DockingPaneTitleWidget::resizeEvent(QResizeEvent*)
 {
     this->setMinimumHeight(6 + this->fontMetrics().height());
@@ -130,6 +137,15 @@ void DockingPaneTitleWidget::reacquireGrab(void)
     // floated mid-drag); grab the new window to keep the drag alive.
     if (m_grabbing) {
         grabMouse();
+    }
+}
+
+void DockingPaneTitleWidget::takeGrab(void)
+{
+    // 飞窗拖出转浮动时飞窗被隐藏、抓取释放; 由本标题接管鼠标以继续拖动
+    if (!m_grabbing) {
+        grabMouse();
+        m_grabbing = true;
     }
 }
 
