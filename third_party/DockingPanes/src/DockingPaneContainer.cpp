@@ -396,6 +396,15 @@ void DockingPaneContainer::onEndDragFlyoutTitle(QPoint pos)
     }
 }
 
+void DockingPaneContainer::continueDrag(QPoint pos)
+{
+    m_initialPos = pos;
+
+    if (m_titleWidget) {
+        m_titleWidget->takeGrab();
+    }
+}
+
 void DockingPaneContainer::onMoveDragFlyoutTitle(QPoint pos)
 {
     QPoint deltaPos = pos - m_initialPos;

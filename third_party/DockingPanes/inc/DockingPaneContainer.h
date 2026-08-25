@@ -73,50 +73,54 @@ class DockingPaneContainer : public DockingPaneBase
         void setCloseCallback(CloseCallback cb) { m_closeCallback = cb; }
         bool invokeCloseCallback() { return m_closeCallback ? m_closeCallback(this) : true; }
 
+        // flyout 拖出转浮动后 flyout 隐藏导致鼠标抓取释放, 由目标 pane 标题接管以继续拖动
+        void continueDrag(QPoint pos);
+
     protected:
         virtual void setName(QString name) override;
         void setActivePane(bool active);
         virtual void paintEvent(QPaintEvent* event) override;
         virtual void changeEvent(QEvent* event) override;
 
-        void onStartDragTitle(QPoint pos);
-        void onEndDragTitle(QPoint pos);
-        void onMoveDragTitle(QPoint pos);
+        virtual void onStartDragTitle(QPoint pos);
+        virtual void onEndDragTitle(QPoint pos);
+        virtual void onMoveDragTitle(QPoint pos);
 
-        void onStartDragFlyoutTitle(QPoint pos);
-        void onEndDragFlyoutTitle(QPoint pos);
-        void onMoveDragFlyoutTitle(QPoint pos);
+        virtual void onStartDragFlyoutTitle(QPoint pos);
+        virtual void onEndDragFlyoutTitle(QPoint pos);
+        virtual void onMoveDragFlyoutTitle(QPoint pos);
 
-        QWidget *m_headerWidget;
-        QWidget *m_clientWidget;
-        QGridLayout *m_clientLayout;
+        virtual void onCloseButtonClicked(void);
+        virtual void onCloseContainer(void);
+        virtual void onFocusChanged(QWidget *old, QWidget *now);
+        virtual void onPinButtonClicked(void);
+        virtual void onUnpinContainer(void);
 
-        DockingToolButton *m_closeButton;
-        DockingToolButton *m_pinButton;
+        QWidget *m_headerWidget = nullptr;
+        QWidget *m_clientWidget = nullptr;
+        QGridLayout *m_clientLayout = nullptr;
 
-        bool m_isActive;
+        DockingToolButton *m_closeButton = nullptr;
+        DockingToolButton *m_pinButton = nullptr;
+
+        bool m_isActive = false;
         QPoint m_initialPos;
 
-        DockingPaneTitleWidget *m_titleWidget;
-        DockingPaneFlyoutWidget *m_flyoutWidget;
+        DockingPaneTitleWidget *m_titleWidget = nullptr;
+        DockingPaneFlyoutWidget *m_flyoutWidget = nullptr;
 
         QSize m_flyoutSize;
 
-        DockingPaneGlow *m_floatingGlow;
+        DockingPaneGlow *m_floatingGlow = nullptr;
 
-        bool m_draggingFlyout;
+        bool m_draggingFlyout = false;
 
-        bool m_closable  = true;
+        bool m_closable = true;
 
         CloseCallback m_closeCallback = nullptr;
 
      private:
-        void onCloseButtonClicked(void);
-        void onCloseContainer(void);
         void onFClicked(void);
-        void onFocusChanged(QWidget *old, QWidget *now);
-        void onPinButtonClicked(void);
-        void onUnpinContainer(void);
 };
 
 #endif // DOCKINGPANECONTAINER_H

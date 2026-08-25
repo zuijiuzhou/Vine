@@ -150,6 +150,18 @@ DockingPaneFlyoutWidget::DockingPaneFlyoutWidget(bool                  hasFocus,
     setMouseTracking(true);
 }
 
+DockingPaneFlyoutWidget::~DockingPaneFlyoutWidget()
+{
+    // 构造时安装了事件过滤器, 析构时必须移除, 避免 qApp/parent 上残留悬垂过滤器
+    if (qApp) {
+        qApp->removeEventFilter(this);
+    }
+
+    if (parentWidget()) {
+        parentWidget()->removeEventFilter(this);
+    }
+}
+
 void DockingPaneFlyoutWidget::resizeEvent(QResizeEvent*)
 {
     m_headerWidget->setMinimumHeight(6 + m_headerWidget->fontMetrics().height());

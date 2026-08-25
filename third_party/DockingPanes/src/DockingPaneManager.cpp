@@ -38,7 +38,12 @@ class DockingPaneManagerPrivate {
   public:
     DockingPaneManagerPrivate(DockingPaneManager* parent)
       : q_ptr(parent)
-    { Q_INIT_RESOURCE(images); }
+    {
+        Q_INIT_RESOURCE(images);
+
+        m_targetPosition = -1;
+        m_targetPane     = nullptr;
+    }
 
   private:
     DockingPaneManager* const q_ptr;
@@ -114,8 +119,24 @@ DockingPaneManager::DockingPaneManager()
 
     d->m_targetWidget    = new DockingTargetWidget();
     d->m_dockingStickers = new DockingFrameStickers();
+}
 
-    connect(qApp, SIGNAL(focusChanged(QWidget*, QWidget*)), this, SLOT(onFocusChanged(QWidget*, QWidget*)));
+DockingPaneManager::~DockingPaneManager()
+{
+    Q_D(DockingPaneManager);
+
+    // flyout 是 m_thisWidget 的子窗口, 内部资源先删
+    delete d->m_flyoutWidget;
+
+    // 内部预览/指示控件, 无父, 由管理器释放
+    delete d->m_targetWidget;
+    delete d->m_dockingStickers;
+
+    // 修复 d_ptr 泄漏 (DockingPaneManagerPrivate)
+    delete d_ptr;
+
+    // 注意: m_dockingWidget / m_thisWidget / m_clientPane 属于停靠树,
+    // 已交给调用方(如 setCentralWidget), 不在这里删除, 避免双重释放
 }
 
 DockingPaneBase* DockingPaneManager::setClientWidget(QWidget* widget)
@@ -205,6 +226,8 @@ DockingPaneBase* DockingPaneManager::dockPane(DockingPaneBase* paneToDock, DockP
             }
 
             closePane(paneToDock);
+
+            paneToDock->setState(DockingPaneBase::Tabbed);
         }
         else {
             DockingPaneTabbedContainer* newContainer = new DockingPaneTabbedContainer(NULL);
@@ -368,6 +391,8 @@ void DockingPaneManager::updateAutohideButton(DockingPaneBase* oldContainer, Doc
 
 void DockingPaneManager::replacePane(DockingPaneBase* oldPane, DockingPaneBase* newPane)
 {
+    Q_D(DockingPaneManager);
+
     DockingPaneSplitterContainer* parentSplitter = qobject_cast<DockingPaneSplitterContainer*>(getDockingParent(oldPane));
 
     if (parentSplitter) {
@@ -381,8 +406,18 @@ void DockingPaneManager::replacePane(DockingPaneBase* oldPane, DockingPaneBase* 
         closePane(oldPane);
 
         parentSplitter->m_splitterWidget->restoreState(state);
+    }
+    else if (oldPane == d->m_rootPane) {
+        // oldPane 是根(不在任何 splitter 内): 用 newPane 直接顶替根
+        setWidget(newPane);
 
-        // then we are in a splitter, otherwise the old pane was floating
+        d->m_rootPane = newPane;
+
+        closePane(oldPane);
+    }
+    else {
+        // oldPane 既不在 splitter 也不是根(如 floating): 无法原地替换, 仅关闭旧窗格
+        closePane(oldPane);
     }
 }
 
@@ -456,23 +491,24 @@ bool DockingPaneManager::eventFilter(QObject* obj, QEvent* event)
     case QEvent::Resize:
     {
         if (obj == d->m_leftAutoHidePane) {
-            d->m_leftAutoHidePane->setFixedWidth(10 + d->m_leftAutoHidePane->fontMetrics().height());
-            d->m_leftAutoHidePane->setMaximumWidth(10 + d->m_leftAutoHidePane->fontMetrics().height());
+            int h = 10 + d->m_leftAutoHidePane->fontMetrics().height();
+            d->m_leftAutoHidePane->setFixedWidth(h);
+            d->m_leftAutoHidePane->setMaximumWidth(h);
         }
-
-        if (obj == d->m_rightAutoHidePane) {
-            d->m_rightAutoHidePane->setFixedWidth(10 + d->m_leftAutoHidePane->fontMetrics().height());
-            d->m_rightAutoHidePane->setMaximumWidth(10 + d->m_leftAutoHidePane->fontMetrics().height());
+        else if (obj == d->m_rightAutoHidePane) {
+            int h = 10 + d->m_rightAutoHidePane->fontMetrics().height();
+            d->m_rightAutoHidePane->setFixedWidth(h);
+            d->m_rightAutoHidePane->setMaximumWidth(h);
         }
-
-        if (obj == d->m_topAutoHidePane) {
-            d->m_topAutoHidePane->setFixedHeight(10 + d->m_leftAutoHidePane->fontMetrics().height());
-            d->m_topAutoHidePane->setMaximumHeight(10 + d->m_leftAutoHidePane->fontMetrics().height());
+        else if (obj == d->m_topAutoHidePane) {
+            int h = 10 + d->m_topAutoHidePane->fontMetrics().height();
+            d->m_topAutoHidePane->setFixedHeight(h);
+            d->m_topAutoHidePane->setMaximumHeight(h);
         }
-
-        if (obj == d->m_bottomAutoHidePane) {
-            d->m_bottomAutoHidePane->setFixedHeight(10 + d->m_leftAutoHidePane->fontMetrics().height());
-            d->m_bottomAutoHidePane->setMaximumHeight(10 + d->m_leftAutoHidePane->fontMetrics().height());
+        else if (obj == d->m_bottomAutoHidePane) {
+            int h = 10 + d->m_bottomAutoHidePane->fontMetrics().height();
+            d->m_bottomAutoHidePane->setFixedHeight(h);
+            d->m_bottomAutoHidePane->setMaximumHeight(h);
         }
 
         break;
@@ -784,8 +820,6 @@ DockingPaneManager::DockPosition DockingPaneManager::getClientPaneDirection(Dock
 
                     return (dockRight);
                 }
-
-                return (dockLeft);
             }
         }
 
@@ -990,12 +1024,6 @@ void DockingPaneManager::showPane(DockingPaneBase* dockingPane)
     }
 }
 
-void DockingPaneManager::onFocusChanged(QWidget* old, QWidget* now)
-{
-    Q_UNUSED(old);
-    Q_UNUSED(now);
-}
-
 void DockingPaneManager::floatingPaneStartMove(DockingPaneBase* pane, QPoint cursorPos)
 {
     Q_UNUSED(pane);
@@ -1175,7 +1203,8 @@ bool DockingPaneManager::updateFloatingPane(DockingPaneBase* currentPane, QPoint
     }
 
     if (d->m_dockingStickers) {
-        QPoint pt(paneRect.center().x() - (d->m_dockingStickers->width() / 2.0), paneRect.center().y() - (d->m_dockingStickers->height() / 2.0));
+        QPoint pt(paneRect.center().x() - d->m_dockingStickers->width() / 2,
+                  paneRect.center().y() - d->m_dockingStickers->height() / 2);
 
         if (currentPane == d->m_clientPane) { d->m_dockingStickers->setTabVisible(false); }
         else {

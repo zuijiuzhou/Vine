@@ -34,7 +34,7 @@ class DockingPaneTitleWidget;
 class DockingPaneFlyoutWidget;
 class DockAutoHideButton;
 
-class DockingPaneManager : QObject
+class DockingPaneManager : public QObject
 {
     Q_OBJECT
 
@@ -51,6 +51,7 @@ class DockingPaneManager : QObject
 
     public:
         DockingPaneManager();
+        virtual ~DockingPaneManager();
 
         QWidget *widget(void);
 
@@ -114,7 +115,6 @@ class DockingPaneManager : QObject
 
     private Q_SLOTS:
         void onAutoDockButtonClicked(void);
-        void onFocusChanged(QWidget *old, QWidget *now);
         void onFlyoutFocusLost(void);
 
     protected:

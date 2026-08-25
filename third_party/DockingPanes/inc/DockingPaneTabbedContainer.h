@@ -42,8 +42,8 @@ class DockingPaneTabbedContainer : public DockingPaneContainer
         void restoreChildWidgets(void);
         void setVisiblePane(DockingPaneContainer *pane);
         bool containsPane(DockingPaneContainer *pane);
-        void onCloseButtonClicked(void);
-        void onPinButtonClicked(void);
+        virtual void onCloseButtonClicked(void) override;
+        virtual void onPinButtonClicked(void) override;
         // DockingPaneContainer overrides
         virtual int getPaneCount(void) override;
         virtual DockingPaneContainer *getPane(int index) override;
@@ -57,30 +57,28 @@ class DockingPaneTabbedContainer : public DockingPaneContainer
         virtual void mouseReleaseEvent(QMouseEvent* event) override;
         virtual void mouseMoveEvent(QMouseEvent*event) override;
         virtual void resizeEvent(QResizeEvent* event) override;
-        void onStartDragTitle(QPoint pos);
-        void onEndDragTitle(QPoint pos);
-        void onMoveDragTitle(QPoint pos);
-        void onStartDragFlyoutTitle(QPoint pos);
-        void onEndDragFlyoutTitle(QPoint pos);
-        void onMoveDragFlyoutTitle(QPoint pos);
+        virtual void onStartDragTitle(QPoint pos) override;
+        virtual void onEndDragTitle(QPoint pos) override;
+        virtual void onMoveDragTitle(QPoint pos) override;
+        virtual void onStartDragFlyoutTitle(QPoint pos) override;
+        virtual void onEndDragFlyoutTitle(QPoint pos) override;
+        virtual void onMoveDragFlyoutTitle(QPoint pos) override;
 
-        QStackedWidget *m_stackedWidget;
+        QStackedWidget *m_stackedWidget = nullptr;
         QList<DockingPaneContainer *> m_paneList;
         QList<int> m_tabWidths;
-        DockingPaneContainer *m_draggedPane;
-        QPoint m_initialPos;
+        DockingPaneContainer *m_draggedPane = nullptr;
         QPoint m_originalClickPos;
         QRect m_invalidTabRect;
-        DockingPaneFlyoutWidget *m_flyoutWidget;
-        bool m_fromMousePressEvent;
+        bool m_fromMousePressEvent = false;
 
     private:
         void calculateButtonsRectangles(void);
         QRect getButtonRect(int pos);
         void updateMargins(void);
-        void onUnpinContainer(void);
-        void onCloseContainer(void);
-        void onFocusChanged(QWidget *old, QWidget *now);
+        virtual void onUnpinContainer(void) override;
+        virtual void onCloseContainer(void) override;
+        virtual void onFocusChanged(QWidget *old, QWidget *now) override;
         void syncFeaturesFromCurrentPane();
 };
 

@@ -282,6 +282,10 @@ void DockingPaneTabbedContainer::calculateButtonsRectangles(void)
 
     m_tabWidths.clear();
 
+    if (m_paneList.isEmpty()) {
+        return;
+    }
+
     availableWidth = this->rect().width();
 
     currentIndex = m_stackedWidget->currentIndex();
@@ -438,6 +442,14 @@ void DockingPaneTabbedContainer::mouseReleaseEvent(QMouseEvent* e)
         releaseMouse();
 
         e->accept();
+
+        if (m_paneList.isEmpty()) {
+            hide();
+
+            dockingManager()->deletePane(this);
+
+            return;
+        }
 
         if (m_paneList.count() <= 1) {
             restoreChildWidgets();
@@ -739,6 +751,9 @@ void DockingPaneTabbedContainer::onMoveDragTitle(QPoint pos)
             m_initialPos = pos;
 
             m_dockingManager->floatingPaneStartMove(this, pos);
+
+            // floatPane() 重建了原生窗口, 鼠标抓取随窗口重建释放; 重新抓取以继续拖动
+            m_titleWidget->reacquireGrab();
         }
     }
 }
@@ -781,13 +796,23 @@ void DockingPaneTabbedContainer::onEndDragFlyoutTitle(QPoint pos)
     if (m_paneList.count() <= 1) {
         restoreChildWidgets();
 
-        dockingManager()->updateAutohideButton(this, m_paneList.at(0), m_paneList.at(0), m_paneList.at(0));
+        if (!m_paneList.isEmpty()) {
+            dockingManager()->updateAutohideButton(this, m_paneList.at(0), m_paneList.at(0), m_paneList.at(0));
+        }
 
         m_paneList.clear();
+
+        m_draggedPane = nullptr;
+
+        m_flyoutWidget->endDrag();
+        m_flyoutWidget = nullptr;
 
         hide();
 
         dockingManager()->deletePane(this);
+
+        // deletePane(this) 已调度本对象销毁, 之后不要再访问成员
+        return;
     }
 
     m_draggedPane = nullptr;
@@ -836,7 +861,10 @@ void DockingPaneTabbedContainer::onMoveDragFlyoutTitle(QPoint pos)
 
             update();
 
-            setName(m_paneList.at(m_stackedWidget->currentIndex())->name());
+            if (!m_paneList.isEmpty()) {
+                int idx = m_stackedWidget->currentIndex();
+                setName(m_paneList.at(idx < m_paneList.count() ? idx : 0)->name());
+            }
 
             dockingManager()->removePinnedButton(this, m_draggedPane);
 
@@ -849,6 +877,10 @@ void DockingPaneTabbedContainer::onMoveDragFlyoutTitle(QPoint pos)
             m_initialPos = pos;
 
             dockingManager()->floatingPaneStartMove(m_draggedPane, pos);
+
+            // flyout 已隐藏且鼠标抓取随隐藏释放, moveDragFlyoutTitle 不再触发;
+            // 由被拖出的 pane 的标题接管抓取, 让转浮动后的拖动继续
+            m_draggedPane->continueDrag(pos);
         }
     }
 }
@@ -866,6 +898,8 @@ void DockingPaneTabbedContainer::onFocusChanged(QWidget*, QWidget* now)
 
 void DockingPaneTabbedContainer::setClientWidget(QWidget* widget)
 {
+    // 注意: 与基类语义不同——tabbed 容器没有单一 client, 这里只在 widget 属于
+    // 某个 pane 时把它插回对应索引, 其余情况静默忽略
     int i = 0, insertIndex = -1;
 
     foreach (DockingPaneContainer* pane, m_paneList) {
