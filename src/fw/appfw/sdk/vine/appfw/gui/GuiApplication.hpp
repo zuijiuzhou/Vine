@@ -58,7 +58,7 @@ class V_APPFW_API GuiApplication : public Application {
      * Handlers are invoked on the GUI thread only; the parameter is the
      * newly effective theme.
      */
-    Signal<Theme> themeChanged;
+    Signal<Theme> theme_changed;
 
   private:
     void applyTheme(Theme theme);

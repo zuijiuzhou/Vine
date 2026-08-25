@@ -8,7 +8,7 @@
 
 V_APPFWGUI_NS_BEGIN
 
-V_OBJECT_META_IMPL(DockPanel, UIElement)
+V_OBJECT_META_IMPL(DockPanel, Control)
 
 // Helper to access protected members of DockingPaneContainer.
 struct DPC : DockingPaneContainer {
@@ -38,7 +38,7 @@ inline auto DockPanel::dptr() const -> const Data*
 { return static_cast<const Data*>(UIElement::d); }
 
 DockPanel::DockPanel()
-  : UIElement(new Data(), nullptr)
+  : Control(new Data(), nullptr)
 {}
 
 DockPanel::~DockPanel()
@@ -55,64 +55,64 @@ bool DockPanel::onClosing()
 
 // ---- Features ----
 
-void DockPanel::setFeatures(DockFeatures features)
+void DockPanel::features(DockFeatures f)
 {
-    dptr()->features = features;
+    dptr()->features = f;
     auto* c = impl<itype>();
     if (c)
-        c->setClosable(testFlag(features, DockFeatures::Closable));
+        c->setClosable(testFlag(f, DockFeatures::Closable));
 }
 
-DockFeatures DockPanel::getFeatures() const
+DockFeatures DockPanel::features() const
 { return dptr()->features; }
 
 // ---- Title / Id ----
 
-void DockPanel::setTitle(const String& title)
+void DockPanel::title(const String& t)
 {
-    dptr()->title = title;
+    dptr()->title = t;
     auto* c = impl<itype>();
     if (c)
-        DPC::setContainerName(c, toQString(title));
+        DPC::setContainerName(c, toQString(t));
 }
 
-String DockPanel::getTitle() const
+String DockPanel::title() const
 { return dptr()->title; }
 
-void DockPanel::setId(const String& id)
+void DockPanel::id(const String& i)
 {
-    dptr()->id = id;
+    dptr()->id = i;
     auto* c = impl<itype>();
     if (c)
-        DPC::setContainerId(c, toQString(id));
+        DPC::setContainerId(c, toQString(i));
 }
 
-String DockPanel::getId() const
+String DockPanel::id() const
 { return dptr()->id; }
 
 // ---- Content ----
 
-void DockPanel::setContent(UIElement* content)
+void DockPanel::content(UIElement* c)
 {
-    dptr()->content = content;
-    auto* c = impl<itype>();
-    if (!c) return;
+    dptr()->content = c;
+    auto* p = impl<itype>();
+    if (!p) return;
 
-    auto* newWidget = content ? static_cast<QWidget*>(content->impl()) : nullptr;
+    auto* newWidget = c ? static_cast<QWidget*>(c->impl()) : nullptr;
 
     // The docking library requires a non-null widget in the pane layout;
     // passing nullptr to setClientWidget() would assert/crash. Treat
-    // setContent(nullptr) as "keep the current content".
+    // content(nullptr) as "keep the current content".
     if (!newWidget)
         return;
 
-    auto* oldClient = c->clientWidget();
-    c->setClientWidget(newWidget);
+    auto* oldClient = p->clientWidget();
+    p->setClientWidget(newWidget);
     if (oldClient && oldClient != newWidget)
         oldClient->deleteLater();
 }
 
-UIElement* DockPanel::getContent() const
+UIElement* DockPanel::content() const
 { return dptr()->content; }
 
 // ---- Attach ----
@@ -172,10 +172,24 @@ DockAreas DockPanel::dockArea() const
     switch (state) {
     case DockingPaneBase::Docked:
     case DockingPaneBase::Tabbed: {
+        // Derive the current area dynamically so it stays correct even after
+        // the pane was moved by dragging (the stored _vine_dockarea property
+        // is only refreshed by addDockPanel()).
+        auto* mgr = c->dockingManager();
+        if (mgr) {
+            switch (mgr->dockPositionOf(c)) {
+            case DockingPaneManager::dockLeft:   return DockAreas::Left;
+            case DockingPaneManager::dockRight:  return DockAreas::Right;
+            case DockingPaneManager::dockTop:    return DockAreas::Top;
+            case DockingPaneManager::dockBottom: return DockAreas::Bottom;
+            default: break;
+            }
+        }
+        // Fall back to the remembered area if the position cannot be derived.
         auto var = c->property("_vine_dockarea");
         if (var.isValid())
             return static_cast<DockAreas>(var.toInt());
-        return DockAreas::Left;
+        return DockAreas::None;
     }
     case DockingPaneBase::Floating: return DockAreas::None;
     default: return DockAreas::None;
@@ -252,8 +266,12 @@ void DockPanel::collapse()
     if (!c) return;
 
     if (c->state() == DockingPaneBase::Docked || c->state() == DockingPaneBase::Tabbed) {
-        if (auto* mgr = c->dockingManager())
+        if (auto* mgr = c->dockingManager()) {
             mgr->closePane(c);
+            // closePane() detaches a docked pane but only hides floating
+            // panes; make sure a collapsed pane is invisible until restore().
+            c->hide();
+        }
     }
 }
 
@@ -262,10 +280,29 @@ void DockPanel::restore()
     auto* c = impl<itype>();
     if (!c) return;
 
-    if (c->state() == DockingPaneBase::Hidden) {
-        if (auto* mgr = c->dockingManager())
-            mgr->showPane(c);
+    if (c->state() != DockingPaneBase::Hidden)
+        return;
+
+    auto* mgr = c->dockingManager();
+    if (!mgr)
+        return;
+
+    // Dock back to the remembered area instead of floating the pane at an
+    // arbitrary position (the library's showPane(Hidden) would float it).
+    DockingPaneManager::DockPosition pos = DockingPaneManager::dockLeft;
+
+    const QVariant areaVar = c->property("_vine_dockarea");
+    if (areaVar.isValid()) {
+        switch (static_cast<DockAreas>(areaVar.toInt())) {
+        case DockAreas::Right:   pos = DockingPaneManager::dockRight;  break;
+        case DockAreas::Top:     pos = DockingPaneManager::dockTop;    break;
+        case DockAreas::Bottom:  pos = DockingPaneManager::dockBottom; break;
+        default:                 pos = DockingPaneManager::dockLeft;   break;
+        }
     }
+
+    mgr->dockPane(c, pos, nullptr);
+    c->show();
 }
 
 V_APPFWGUI_NS_END

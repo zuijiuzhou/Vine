@@ -12,6 +12,7 @@
 #include <QDebug>
 #include <QPointer>
 #include <QSplitter>
+#include <QStackedWidget>
 
 /*
  * This file is part of DockingPanes. (https://github.com/KestrelRadarSensors/dockingpanes)
@@ -184,6 +185,16 @@ DockingPaneBase* DockingPaneManager::createPane(QString                         
                                                 DockingPaneBase*                 neighbourPane)
 {
     Q_D(DockingPaneManager);
+
+    // A pane id must be unique: it drives closePane(id), layout restore and
+    // lookups. Refuse to create a second pane with the same id and return the
+    // existing one instead of silently overwriting the map (which would orphan
+    // the old pane in the manager's bookkeeping).
+    if (d->m_dockingPaneMap.contains(id)) {
+        qWarning() << "DockingPaneManager::createPane: duplicate id '" << id << "', returning the existing pane";
+
+        return (d->m_dockingPaneMap[id]);
+    }
 
     DockingPaneContainer* newPane = new DockingPaneContainer(title, id, NULL, widget);
 
@@ -808,6 +819,10 @@ void DockingPaneManager::hidePane(DockingPaneBase* dockingPane)
 
                 connect(button, SIGNAL(clicked()), this, SLOT(onAutoDockButtonClicked()));
 
+                // Hovering the strip button for 1s opens the flyout too
+                // (the button's hover timer emits openFlyout).
+                connect(button, &DockAutoHideButton::openFlyout, this, &DockingPaneManager::onAutoDockButtonClicked);
+
                 if ((pos == dockLeft) || (pos == dockRight)) {
                     QVBoxLayout* layout = (QVBoxLayout*)autoHideWidget->layout();
 
@@ -1378,10 +1393,12 @@ QString DockingPaneManager::saveLayout(QString layoutId)
 
     QDomNode pinNode = xmlRootNode.appendChild(doc.createElement("pinnedPanes"));
 
-    savePinnedState(&pinNode, qobject_cast<QBoxLayout*>(d->m_leftAutoHidePane->layout()));
-    savePinnedState(&pinNode, qobject_cast<QBoxLayout*>(d->m_rightAutoHidePane->layout()));
-    savePinnedState(&pinNode, qobject_cast<QBoxLayout*>(d->m_topAutoHidePane->layout()));
-    savePinnedState(&pinNode, qobject_cast<QBoxLayout*>(d->m_bottomAutoHidePane->layout()));
+    // The auto-hide strips only exist after widget() has been called; guard
+    // against saving a layout before the docking widget was materialised.
+    if (d->m_leftAutoHidePane && d->m_leftAutoHidePane->layout()) { savePinnedState(&pinNode, qobject_cast<QBoxLayout*>(d->m_leftAutoHidePane->layout())); }
+    if (d->m_rightAutoHidePane && d->m_rightAutoHidePane->layout()) { savePinnedState(&pinNode, qobject_cast<QBoxLayout*>(d->m_rightAutoHidePane->layout())); }
+    if (d->m_topAutoHidePane && d->m_topAutoHidePane->layout()) { savePinnedState(&pinNode, qobject_cast<QBoxLayout*>(d->m_topAutoHidePane->layout())); }
+    if (d->m_bottomAutoHidePane && d->m_bottomAutoHidePane->layout()) { savePinnedState(&pinNode, qobject_cast<QBoxLayout*>(d->m_bottomAutoHidePane->layout())); }
 
     QDomNode floatingNode = xmlRootNode.appendChild(doc.createElement("floatingPanes"));
 
@@ -1450,6 +1467,37 @@ bool DockingPaneManager::applyLayout(QString layout)
     else {
         d->m_rootPane = d->m_clientPane;
         returnValue   = false;
+    }
+
+    // The tabbed containers from a previous layout are no longer part of the
+    // restored tree (restoreLayout() always creates fresh ones). Reclaim any
+    // of their child widgets that were not re-attached to the new layout back
+    // to their owning panes, then drop the stale containers from the pane
+    // list / id map and destroy them, so repeated applyLayout() calls do not
+    // accumulate stale entries.
+    {
+        QList<DockingPaneBase*> stale;
+
+        foreach (DockingPaneBase* pane, d->m_dockingPaneList) {
+            if (qobject_cast<DockingPaneTabbedContainer*>(pane)) { stale.append(pane); }
+        }
+
+        foreach (DockingPaneBase* pane, stale) {
+            DockingPaneTabbedContainer* tabbed = static_cast<DockingPaneTabbedContainer*>(pane);
+
+            // Return child widgets still owned by this stale container to
+            // their panes (panes that are not present in the new layout keep
+            // their content and can be shown again later).
+            foreach (DockingPaneContainer* child, tabbed->m_paneList) {
+                QWidget* w = child->clientWidget();
+
+                if (w && (w->parentWidget() == tabbed->m_stackedWidget)) { child->setClientWidget(w); }
+            }
+
+            d->m_dockingPaneMap.remove(tabbed->id());
+
+            deletePane(tabbed);
+        }
     }
 
     setWidget(d->m_rootPane);
@@ -1677,4 +1725,65 @@ int DockingPaneManager::paneCount() const
     Q_D(const DockingPaneManager);
 
     return d->m_dockingPaneList.size();
+}
+
+DockingPaneManager::DockPosition DockingPaneManager::dockPositionOf(DockingPaneBase* pane)
+{
+    Q_D(DockingPaneManager);
+
+    DockingPaneContainer* container = qobject_cast<DockingPaneContainer*>(pane);
+
+    if (!container) { return (dockFloat); }
+
+    // 解析出可检查停靠位置的目标：Tabbed 子窗格经由其所属的 tabbed 容器报告。
+    DockingPaneBase* target = container;
+    switch (container->state()) {
+    case DockingPaneBase::Docked:
+        break;
+
+    case DockingPaneBase::Tabbed:
+    {
+        foreach (DockingPaneBase* candidate, d->m_dockingPaneList) {
+            if (DockingPaneTabbedContainer* tabbed = qobject_cast<DockingPaneTabbedContainer*>(candidate)) {
+                if (tabbed->containsPane(container)) { target = tabbed; break; }
+            }
+        }
+        if (target == container) { return (dockFloat); }   // 不在任何 tabbed 容器中
+        break;
+    }
+
+    default:
+        return (dockFloat);
+    }
+
+    // 从中央客户区向上遍历 splitter，找到同时包含客户区与 target 的那一层，
+    // 据此判断 target 位于客户区的哪一侧。
+    //
+    // 注意：不能使用 getClientPaneDirection() —— 它返回的是相反方向
+    // （hidePane() 正好补偿了这一点），因此这里复刻遍历并用正确的映射。
+    DockingPaneSplitterContainer* parentSplitter = qobject_cast<DockingPaneSplitterContainer*>(getDockingParent(d->m_clientPane));
+    while (parentSplitter) {
+        const int count = parentSplitter->m_splitterWidget->count();
+        for (int i = 0; i < count; ++i) {
+            if (containsPane(parentSplitter->m_splitterWidget->widget(i), target)) {
+                if (parentSplitter->direction() == DockingPaneSplitterContainer::splitVertical) {
+                    // QSplitter 垂直方向：index 0 在最上
+                    for (int j = 0; j < i; ++j) {
+                        if (containsPane(parentSplitter->m_splitterWidget->widget(j), d->m_clientPane)) { return (dockBottom); }   // 客户区在上 → 本窗格在下
+                    }
+                    return (dockTop);
+                }
+                else {
+                    // QSplitter 水平方向：index 0 在最左
+                    for (int j = 0; j < i; ++j) {
+                        if (containsPane(parentSplitter->m_splitterWidget->widget(j), d->m_clientPane)) { return (dockRight); }    // 客户区在左 → 本窗格在右
+                    }
+                    return (dockLeft);
+                }
+            }
+        }
+        parentSplitter = qobject_cast<DockingPaneSplitterContainer*>(getDockingParent(parentSplitter->parentWidget()));
+    }
+
+    return (dockFloat);
 }

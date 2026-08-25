@@ -5,7 +5,7 @@
 
 V_APPFWGUI_NS_BEGIN
 
-V_OBJECT_META_IMPL(StatusBar, UIElement)
+V_OBJECT_META_IMPL(StatusBar, Control)
 
 struct StatusBar::Data : public UIElementData {};
 
@@ -13,12 +13,12 @@ inline auto StatusBar::dptr() -> Data* { return static_cast<Data*>(UIElement::d)
 inline auto StatusBar::dptr() const -> const Data* { return static_cast<const Data*>(UIElement::d); }
 
 StatusBar::StatusBar()
-    : UIElement(new Data(), new QStatusBar())
+    : Control(new Data(), new QStatusBar())
 {
 }
 
 StatusBar::StatusBar(UIElement* parent)
-    : UIElement(new Data(), new QStatusBar())
+    : Control(new Data(), new QStatusBar())
 {
     // Attach to the parent widget if provided
     if (parent) {

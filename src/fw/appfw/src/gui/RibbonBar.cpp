@@ -4,14 +4,14 @@
 #include <vine/Exception.hpp>
 #include <vine/Ptr.hpp>
 #include <vine/appfw/gui/MainWindow.hpp>
-#include <vine/appfw/gui/RibbonDropDownItem.hpp>
+#include <vine/appfw/gui/RibbonAction.hpp>
 #include <vine/appfw/gui/RibbonTab.hpp>
 
 #include "UIElementData.hpp"
 
 V_APPFWGUI_NS_BEGIN
 
-V_OBJECT_META_IMPL(RibbonBar, UIElement)
+V_OBJECT_META_IMPL(RibbonBar, Control)
 
 struct RibbonBar::Data : public UIElementData {
     std::vector<RibbonTab*> tabs;
@@ -29,15 +29,39 @@ namespace
 
 using itype = SARibbonBar;
 
+SARibbonBar::RibbonStyles toSarRibbonStyle(RibbonStyle s)
+{
+    switch (s) {
+    case RibbonStyle::ThreeRowLoose:    return SARibbonBar::RibbonStyleLooseThreeRow;
+    case RibbonStyle::ThreeRowCompact:  return SARibbonBar::RibbonStyleCompactThreeRow;
+    case RibbonStyle::TwoRowLoose:      return SARibbonBar::RibbonStyleLooseTwoRow;
+    case RibbonStyle::TwoRowCompact:    return SARibbonBar::RibbonStyleCompactTwoRow;
+    case RibbonStyle::SingleRowLoose:   return SARibbonBar::RibbonStyleLooseSingleRow;
+    case RibbonStyle::SingleRowCompact: return SARibbonBar::RibbonStyleCompactSingleRow;
+    }
+
+    return SARibbonBar::RibbonStyleLooseThreeRow;
+}
+
+RibbonStyle fromSarRibbonStyle(SARibbonBar::RibbonStyles s)
+{
+    if (s.testFlag(SARibbonBar::RibbonStyleSingleRow)) {
+        return s.testFlag(SARibbonBar::RibbonStyleCompact) ? RibbonStyle::SingleRowCompact : RibbonStyle::SingleRowLoose;
+    }
+    if (s.testFlag(SARibbonBar::RibbonStyleTwoRow)) {
+        return s.testFlag(SARibbonBar::RibbonStyleCompact) ? RibbonStyle::TwoRowCompact : RibbonStyle::TwoRowLoose;
+    }
+    return s.testFlag(SARibbonBar::RibbonStyleCompact) ? RibbonStyle::ThreeRowCompact : RibbonStyle::ThreeRowLoose;
+}
+
 }
 
 inline auto RibbonBar::dptr() -> Data* { return static_cast<Data*>(UIElement::d); }
 inline auto RibbonBar::dptr() const -> const Data* { return static_cast<const Data*>(UIElement::d); }
 
 RibbonBar::RibbonBar(MainWindow* wnd)
-    : UIElement(new RibbonBar::Data(), static_cast<SARibbonMainWindow*>(wnd->impl())->ribbonBar())
+    : Control(new RibbonBar::Data(), static_cast<SARibbonMainWindow*>(wnd->impl())->ribbonBar(), /*owns=*/false)
 {
-    dptr()->owns_impl = false;             // SARibbonBar is owned by SARibbonMainWindow
     dptr()->wnd       = wnd;
     dptr()->application_menu = new QMenu();
     auto app_btn = qobject_cast<SARibbonApplicationButton*>(impl<itype>()->applicationButton());
@@ -53,7 +77,9 @@ int RibbonBar::numTabs() const
 { return (int)dptr()->tabs.size(); }
 
 RibbonTab* RibbonBar::tabAt(int idx) const
-{ return dptr()->tabs.at(idx); }
+{
+    return (idx >= 0 && idx < (int)dptr()->tabs.size()) ? dptr()->tabs[(size_t)idx] : nullptr;
+}
 
 void RibbonBar::addTab(RibbonTab* tab)
 {
@@ -75,10 +101,10 @@ void RibbonBar::removeTab(RibbonTab* tab)
     dptr()->tabs.erase(std::remove(dptr()->tabs.begin(), dptr()->tabs.end(), tab), dptr()->tabs.end());
 }
 
-int RibbonBar::currentIndex()
+int RibbonBar::currentIndex() const
 {
     auto w = impl<itype>();
-    return w->currentIndex();
+    return w ? w->currentIndex() : -1;
 }
 
 void RibbonBar::currentIndex(int idx)
@@ -87,7 +113,164 @@ void RibbonBar::currentIndex(int idx)
     w->setCurrentIndex(idx);
 }
 
-void RibbonBar::appendApplicationMenu(RibbonDropDownItem* mi)
+void RibbonBar::appendApplicationMenu(RibbonAction* mi)
 { dptr()->application_menu->addAction(mi->impl<QAction>()); }
+
+void RibbonBar::ribbonStyle(RibbonStyle s)
+{
+    auto w = impl<itype>();
+    if (w)
+        w->setRibbonStyle(toSarRibbonStyle(s));
+}
+
+RibbonStyle RibbonBar::ribbonStyle() const
+{
+    auto w = impl<itype>();
+    if (!w)
+        return RibbonStyle::ThreeRowLoose;
+    return fromSarRibbonStyle(w->currentRibbonStyle());
+}
+
+void RibbonBar::minimumMode(bool on)
+{
+    auto w = impl<itype>();
+    if (w)
+        w->setMinimumMode(on);
+}
+
+bool RibbonBar::minimumMode() const
+{
+    auto w = impl<itype>();
+    return w && w->isMinimumMode();
+}
+
+void RibbonBar::panelTitleVisible(bool on)
+{
+    auto w = impl<itype>();
+    if (w)
+        w->setEnableShowPanelTitle(on);
+}
+
+bool RibbonBar::panelTitleVisible() const
+{
+    auto w = impl<itype>();
+    return w && w->isEnableShowPanelTitle();
+}
+
+void RibbonBar::wordWrap(bool on)
+{
+    auto w = impl<itype>();
+    if (w)
+        w->setEnableWordWrap(on);
+}
+
+bool RibbonBar::wordWrap() const
+{
+    auto w = impl<itype>();
+    return w && w->isEnableWordWrap();
+}
+
+void RibbonBar::iconRightText(bool on)
+{
+    auto w = impl<itype>();
+    if (w)
+        w->setEnableIconRightText(on);
+}
+
+bool RibbonBar::iconRightText() const
+{
+    auto w = impl<itype>();
+    return w && w->isEnableIconRightText();
+}
+
+void RibbonBar::applicationButtonVisible(bool on)
+{
+    auto* bar = impl<itype>();
+    if (bar && bar->applicationButton())
+        bar->applicationButton()->setVisible(on);
+}
+
+bool RibbonBar::applicationButtonVisible() const
+{
+    auto* bar = impl<itype>();
+    return bar && bar->applicationButton() && bar->applicationButton()->isVisible();
+}
+
+void RibbonBar::applicationIcon(const Icon& ic)
+{
+    auto* bar = impl<itype>();
+    if (!bar)
+        return;
+    if (auto* btn = qobject_cast<SARibbonApplicationButton*>(bar->applicationButton()))
+        btn->setIcon(ic.value());
+}
+
+Icon RibbonBar::applicationIcon() const
+{
+    auto* bar = impl<itype>();
+    if (!bar)
+        return {};
+    if (auto* btn = qobject_cast<SARibbonApplicationButton*>(bar->applicationButton()))
+        return Icon(btn->icon());
+    return {};
+}
+
+void RibbonBar::applicationText(const String& t)
+{
+    auto* bar = impl<itype>();
+    if (!bar)
+        return;
+    if (auto* btn = qobject_cast<SARibbonApplicationButton*>(bar->applicationButton())) {
+        auto utf16 = t.toUtf16();
+        btn->setText(QString::fromStdU16String(utf16));
+    }
+}
+
+String RibbonBar::applicationText() const
+{
+    auto* bar = impl<itype>();
+    if (!bar)
+        return {};
+    if (auto* btn = qobject_cast<SARibbonApplicationButton*>(bar->applicationButton())) {
+        auto qs = btn->text();
+        return String::fromUtf16((const char16_t*)qs.utf16(), qs.size());
+    }
+    return {};
+}
+
+void RibbonBar::addQuickAccessItem(RibbonAction* item)
+{
+    if (!item)
+        return;
+    auto* bar = impl<itype>();
+    if (!bar)
+        return;
+    if (auto* qab = bar->quickAccessBar())
+        qab->addAction(item->impl<QAction>());
+}
+
+void RibbonBar::addQuickAccessSeparator()
+{
+    auto* bar = impl<itype>();
+    if (!bar)
+        return;
+    if (auto* qab = bar->quickAccessBar())
+        qab->addSeparator();
+}
+
+void RibbonBar::quickAccessVisible(bool on)
+{
+    auto* bar = impl<itype>();
+    if (!bar)
+        return;
+    if (auto* qab = bar->quickAccessBar())
+        qab->setVisible(on);
+}
+
+bool RibbonBar::quickAccessVisible() const
+{
+    auto* bar = impl<itype>();
+    return bar && bar->quickAccessBar() && bar->quickAccessBar()->isVisible();
+}
 
 V_APPFWGUI_NS_END

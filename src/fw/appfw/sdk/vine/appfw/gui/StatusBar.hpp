@@ -1,10 +1,10 @@
 #pragma once
 
-#include "UIElement.hpp"
+#include "Control.hpp"
 
 V_APPFWGUI_NS_BEGIN
 
-class V_APPFW_API StatusBar : public UIElement {
+class V_APPFW_API StatusBar : public Control {
     V_OBJECT_META_DECL
 
   public:

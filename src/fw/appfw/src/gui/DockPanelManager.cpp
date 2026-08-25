@@ -78,7 +78,7 @@ DockPanel* DockPanelManager::createDockPanel(const String& title, DockAreas area
 {
     auto* panel = new DockPanel();
     if (!title.empty())
-        panel->setTitle(title);
+        panel->title(title);
     addDockPanel(panel, area);
     return panel;
 }
@@ -87,9 +87,9 @@ DockPanel* DockPanelManager::createDockPanel(const String& title, UIElement* con
 {
     auto* panel = new DockPanel();
     if (!title.empty())
-        panel->setTitle(title);
+        panel->title(title);
     if (content)
-        panel->setContent(content);
+        panel->content(content);
     addDockPanel(panel, area);
     return panel;
 }
@@ -106,10 +106,17 @@ void DockPanelManager::addDockPanel(DockPanel* panel, DockAreas area)
 
     auto* dp = panel->impl<DockingPaneContainer>();
     if (!dp) {
-        QString panelId = QUuid::createUuid().toString();
-        auto    q8      = panelId.toUtf8();
-        panel->setId(String(reinterpret_cast<const String::value_type*>(q8.constData()), q8.size()));
-        auto    title        = panel->getTitle();
+        // 保留调用方设置的 id；仅当未设置时才生成随机 id 保证唯一。
+        QString panelId;
+        if (panel->id().empty()) {
+            panelId = QUuid::createUuid().toString();
+            auto q8 = panelId.toUtf8();
+            panel->id(String(reinterpret_cast<const String::value_type*>(q8.constData()), q8.size()));
+        }
+        else {
+            panelId = QString::fromUtf8(panel->id().data(), static_cast<int>(panel->id().size()));
+        }
+        auto    title        = panel->title();
         QString qtitle       = QString::fromUtf8(title.data(), static_cast<int>(title.size()));
         // Qt Debug asserts on addWidget(nullptr), so pass a temporary placeholder
         QWidget* placeholder = new QWidget();
@@ -120,7 +127,7 @@ void DockPanelManager::addDockPanel(DockPanel* panel, DockAreas area)
         if (dpc) {
             dpc->setUserData(static_cast<void*>(panel));
             // Replace placeholder with actual content if set
-            if (auto* content = panel->getContent()) {
+            if (auto* content = panel->content()) {
                 auto* w = static_cast<QWidget*>(content->impl());
                 if (w) {
                     w->setParent(nullptr);
@@ -220,7 +227,7 @@ DockPanel* DockPanelManager::findById(const String& id) const
         if (!dpc)
             continue;
         auto* wrapper = static_cast<DockPanel*>(dpc->userData());
-        if (wrapper && wrapper->getId() == id)
+        if (wrapper && wrapper->id() == id)
             return wrapper;
     }
     return nullptr;
@@ -236,7 +243,7 @@ DockPanel* DockPanelManager::findByTitle(const String& title) const
         if (!dpc)
             continue;
         auto* wrapper = static_cast<DockPanel*>(dpc->userData());
-        if (wrapper && wrapper->getTitle() == title)
+        if (wrapper && wrapper->title() == title)
             return wrapper;
     }
     return nullptr;
@@ -244,9 +251,9 @@ DockPanel* DockPanelManager::findByTitle(const String& title) const
 
 int DockPanelManager::count() const
 {
-    if (!d->dockingMgr)
-        return 0;
-    return d->dockingMgr->paneCount();
+    // 只统计真正对应 DockPanel 包装对象的窗格；内部的 tabbed 容器（以及
+    // 任何无 userData 的窗格）不参与计数。
+    return static_cast<int>(panels().size());
 }
 
 std::vector<DockPanel*> DockPanelManager::panels() const

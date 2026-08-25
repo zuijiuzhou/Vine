@@ -1,22 +1,52 @@
 #include <vine/appfw/gui/RibbonTab.hpp>
 
 #include <SARibbon.h>
+#include <algorithm>
+#include <vector>
 #include <vine/appfw/gui/RibbonGroup.hpp>
 
 #include "UIElementData.hpp"
 V_APPFWGUI_NS_BEGIN
 
-V_OBJECT_META_IMPL(RibbonTab, UIElement)
+V_OBJECT_META_IMPL(RibbonTab, Control)
+
+namespace
+{
+
+SARibbonPanel::PanelLayoutMode toSarPanelLayoutMode(RibbonPanelLayoutMode m)
+{
+    switch (m) {
+    case RibbonPanelLayoutMode::TwoRow:    return SARibbonPanel::TwoRowMode;
+    case RibbonPanelLayoutMode::SingleRow: return SARibbonPanel::SingleRowMode;
+    case RibbonPanelLayoutMode::ThreeRow:  break;
+    }
+
+    return SARibbonPanel::ThreeRowMode;
+}
+
+RibbonPanelLayoutMode fromSarPanelLayoutMode(SARibbonPanel::PanelLayoutMode m)
+{
+    switch (m) {
+    case SARibbonPanel::TwoRowMode:    return RibbonPanelLayoutMode::TwoRow;
+    case SARibbonPanel::SingleRowMode: return RibbonPanelLayoutMode::SingleRow;
+    default:                           break;
+    }
+
+    return RibbonPanelLayoutMode::ThreeRow;
+}
+
+} // namespace
 
 struct RibbonTab::Data : public UIElementData {
-    String title;
+    String                     title;
+    std::vector<RibbonGroup*>  groups;   // 已添加的组（框架层记账，供查询）
 };
 
 inline auto RibbonTab::dptr() -> Data* { return static_cast<Data*>(UIElement::d); }
 inline auto RibbonTab::dptr() const -> const Data* { return static_cast<const Data*>(UIElement::d); }
 
 RibbonTab::RibbonTab()
-    : UIElement(new Data(), new SARibbonCategory(QString()))
+    : Control(new Data(), new SARibbonCategory(QString()))
 {
 }
 
@@ -47,6 +77,9 @@ void RibbonTab::addGroup(RibbonGroup* g)
     auto* cat = impl<SARibbonCategory>();
     if (p && cat)
         cat->addPanel(p);
+    // 记账（去重）
+    if (std::find(dptr()->groups.begin(), dptr()->groups.end(), g) == dptr()->groups.end())
+        dptr()->groups.push_back(g);
 }
 
 void RibbonTab::removeGroup(RibbonGroup* g)
@@ -56,6 +89,58 @@ void RibbonTab::removeGroup(RibbonGroup* g)
     auto* cat = impl<SARibbonCategory>();
     if (p && cat)
         cat->removePanel(p);
+    dptr()->groups.erase(std::remove(dptr()->groups.begin(), dptr()->groups.end(), g), dptr()->groups.end());
+}
+
+int RibbonTab::numGroups() const
+{
+    return (int)dptr()->groups.size();
+}
+
+RibbonGroup* RibbonTab::groupAt(int i) const
+{
+    return (i >= 0 && i < (int)dptr()->groups.size()) ? dptr()->groups[(size_t)i] : nullptr;
+}
+
+void RibbonTab::panelLayoutMode(RibbonPanelLayoutMode m)
+{
+    auto* cat = impl<SARibbonCategory>();
+    if (cat)
+        cat->setPanelLayoutMode(toSarPanelLayoutMode(m));
+}
+
+RibbonPanelLayoutMode RibbonTab::panelLayoutMode() const
+{
+    auto* cat = impl<SARibbonCategory>();
+    if (!cat)
+        return RibbonPanelLayoutMode::ThreeRow;
+    return fromSarPanelLayoutMode(cat->panelLayoutMode());
+}
+
+void RibbonTab::panelTitleVisible(bool on)
+{
+    auto* cat = impl<SARibbonCategory>();
+    if (cat)
+        cat->setEnableShowPanelTitle(on);
+}
+
+bool RibbonTab::panelTitleVisible() const
+{
+    auto* cat = impl<SARibbonCategory>();
+    return cat && cat->isEnableShowPanelTitle();
+}
+
+void RibbonTab::panelSpacing(int n)
+{
+    auto* cat = impl<SARibbonCategory>();
+    if (cat)
+        cat->setPanelSpacing(n);
+}
+
+int RibbonTab::panelSpacing() const
+{
+    auto* cat = impl<SARibbonCategory>();
+    return cat ? cat->panelSpacing() : 0;
 }
 
 V_APPFWGUI_NS_END

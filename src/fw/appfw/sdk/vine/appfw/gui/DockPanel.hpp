@@ -1,13 +1,13 @@
 ﻿#pragma once
 
-#include "UIElement.hpp"
+#include "Control.hpp"
 #include "Gui.hpp"
 
 V_APPFWGUI_NS_BEGIN
 
 class DockPanelManager; // forward-declare for friend access
 
-class V_APPFW_API DockPanel : public UIElement {
+class V_APPFW_API DockPanel : public Control {
     V_OBJECT_META_DECL
 
     friend class DockPanelManager;
@@ -16,17 +16,17 @@ class V_APPFW_API DockPanel : public UIElement {
     DockPanel();
     virtual ~DockPanel();
 
-    void         setFeatures(DockFeatures features);
-    DockFeatures getFeatures() const;
+    void         features(DockFeatures f);
+    DockFeatures features() const;
 
-    void   setTitle(const String& title);
-    String getTitle() const;
+    void   title(const String& t);
+    String title() const;
 
-    void   setId(const String& id);
-    String getId() const;
+    void   id(const String& i);
+    String id() const;
 
-    void       setContent(UIElement* content);
-    UIElement* getContent() const;
+    void       content(UIElement* c);
+    UIElement* content() const;
 
     // State queries
     bool      isFloating() const;

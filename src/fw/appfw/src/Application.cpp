@@ -6,6 +6,8 @@
 #include <vine/appfw/AddinManager.hpp>
 #include <vine/appfw/Application.hpp>
 #include <vine/appfw/CommandManager.hpp>
+#include <vine/appfw/ConfigManager.hpp>
+#include <vine/appfw/ConfigRegistry.hpp>
 #include <vine/appfw/ServiceManager.hpp>
 
 #include "ApplicationData.hpp"
@@ -42,6 +44,8 @@ Application::Application(ApplicationData* data, int argc, char** argv)
     dptr()->addin_manager   = new AddinManager;
     dptr()->service_manager = new ServiceManager;
     dptr()->command_manager = new CommandManager;
+    dptr()->config_manager  = new ConfigManager;
+    dptr()->config_registry = new ConfigRegistry;
     dptr()->argc            = argc;
     dptr()->argv            = argv;
 }
@@ -51,6 +55,8 @@ Application::~Application()
     delete dptr()->addin_manager;
     delete dptr()->service_manager;
     delete dptr()->command_manager;
+    delete dptr()->config_manager;
+    delete dptr()->config_registry;
     delete d;
     s_current_app = nullptr;
 }
@@ -85,6 +91,16 @@ AddinManager* Application::addinManager() const
 ServiceManager* Application::serviceManager() const
 {
     return dptr()->service_manager;
+}
+
+ConfigManager* Application::configManager() const
+{
+    return dptr()->config_manager;
+}
+
+ConfigRegistry* Application::configRegistry() const
+{
+    return dptr()->config_registry;
 }
 
 Application* Application::current()

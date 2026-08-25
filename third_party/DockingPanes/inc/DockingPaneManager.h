@@ -217,6 +217,15 @@ class DockingPaneManager : public QObject
          */
         int paneCount() const;
 
+        /**
+         * \brief 查询窗格当前所处停靠方位（动态计算）。
+         *
+         * Docked → 相对客户区的方位；Tabbed → 所属标签组的方位；
+         * Floating/Pinned/Hidden → dockFloat。
+         * \note 供宿主实时查询（如 dockArea）；不要用于决定停靠目标。
+         */
+        DockPosition dockPositionOf(DockingPaneBase *pane);
+
     public:
         /**
          * \brief 拖动浮动窗格时更新停靠指示器（由容器拖动回调调用）。

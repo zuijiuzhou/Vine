@@ -3,7 +3,7 @@
 #include <vector>
 
 #include "Gui.hpp"
-#include "UIElement.hpp"
+#include "Window.hpp"
 
 V_APPFWGUI_NS_BEGIN
 
@@ -11,7 +11,7 @@ class RibbonBar;
 class StatusBar;
 class DockPanelManager;
 
-class V_APPFW_API MainWindow : public UIElement {
+class V_APPFW_API MainWindow : public Window {
     V_OBJECT_META_DECL
 
     friend class RibbonBar;
@@ -22,22 +22,6 @@ class V_APPFW_API MainWindow : public UIElement {
     ~MainWindow() override;
 
   public:
-    void            startupPosition(StartupPosition position);
-    StartupPosition startupPosition() const;
-
-    void        windowState(WindowState state);
-    WindowState windowState() const;
-
-    void activate();
-    void setEnabled();
-    void setDisabled();
-
-    bool isActive() const;
-    bool isEnabled() const;
-
-    void show();
-    void close();
-
     RibbonBar*        ribbonBar() const;
     StatusBar*        statusBar() const;
     DockPanelManager* dockPanelManager() const;

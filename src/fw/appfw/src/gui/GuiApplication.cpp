@@ -161,7 +161,7 @@ void GuiApplication::setTheme(Theme theme)
     }
     d->theme = theme;
     applyTheme(theme);
-    themeChanged.trigger(theme);
+    theme_changed.trigger(theme);
 }
 
 Theme GuiApplication::theme() const

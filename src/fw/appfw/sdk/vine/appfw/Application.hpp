@@ -9,6 +9,8 @@ V_APPFW_NS_BEGIN
 class CommandManager;
 class AddinManager;
 class ServiceManager;
+class ConfigManager;
+class ConfigRegistry;
 class ApplicationData;
 
 class V_APPFW_API Application : public Object {
@@ -43,6 +45,12 @@ class V_APPFW_API Application : public Object {
     AddinManager* addinManager() const;
 
     ServiceManager* serviceManager() const;
+
+    /// 应用级配置管理器（唯一实例，随 Application 生命周期）。
+    ConfigManager* configManager() const;
+
+    /// 配置项注册表（唯一实例，随 Application 生命周期）。
+    ConfigRegistry* configRegistry() const;
 
     int argc() const;
 
