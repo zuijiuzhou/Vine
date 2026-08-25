@@ -114,6 +114,12 @@ DockingPaneContainer::DockingPaneContainer(QString title, QString id, QWidget* p
     connect(qApp, &QApplication::focusChanged, this, &DockingPaneContainer::onFocusChanged);
 }
 
+DockingPaneContainer::~DockingPaneContainer()
+{
+    // 析构期间焦点可能变化，提前断开避免基类析构后仍被调用（assertObjectType 断言）。
+    disconnect(qApp, &QApplication::focusChanged, this, &DockingPaneContainer::onFocusChanged);
+}
+
 void DockingPaneContainer::paintEvent(QPaintEvent*)
 {
     QPainter p(this);

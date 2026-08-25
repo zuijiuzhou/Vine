@@ -125,7 +125,9 @@ DockingPaneTabbedContainer::DockingPaneTabbedContainer(QWidget* parent)
 }
 
 DockingPaneTabbedContainer::~DockingPaneTabbedContainer()
-{}
+{
+    disconnect(qApp, &QApplication::focusChanged, this, &DockingPaneTabbedContainer::onFocusChanged);
+}
 
 void DockingPaneTabbedContainer::onPinButtonClicked(void)
 {

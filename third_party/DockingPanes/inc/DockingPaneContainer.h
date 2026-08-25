@@ -45,7 +45,7 @@ class DockingPaneContainer : public DockingPaneBase
 
         explicit DockingPaneContainer(QString title, QString id, QWidget *parent = nullptr, QWidget *clientWidget = nullptr);
         explicit DockingPaneContainer(QWidget *parent = nullptr);
-        virtual ~DockingPaneContainer() = default;
+        virtual ~DockingPaneContainer();
 
         void floatPane(QRect rect);
         void floatPane(QPoint pos);
