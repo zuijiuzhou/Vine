@@ -50,7 +50,10 @@ DockPanelManager::~DockPanelManager()
 
 void DockPanelManager::setWindow(UIElement* wnd)
 {
-    if (!wnd || d->dockingMgr)
+    // NOTE: d->dockingMgr is created in the ctor, so the old condition
+    // "if (!wnd || d->dockingMgr) return;" always returned early and the
+    // main window was never registered on the DockingPaneManager.
+    if (!wnd || !d->dockingMgr)
         return;
     d->dockingMgr->setMainWindow(static_cast<QWidget*>(wnd->impl()));
 }
@@ -122,6 +125,10 @@ void DockPanelManager::addDockPanel(DockPanel* panel, DockAreas area)
                 if (w) {
                     w->setParent(nullptr);
                     dpc->setClientWidget(w);
+                    // The temporary placeholder widget was removed from the
+                    // pane layout by setClientWidget(); drop it so we do not
+                    // leak one QWidget per dock panel.
+                    placeholder->deleteLater();
                 }
             }
         }
@@ -179,10 +186,26 @@ void DockPanelManager::removeDockPanel(DockPanel* panel)
 {
     if (!panel)
         return;
+
     if (d->dockingMgr) {
         auto* dpc = panel->impl<DockingPaneContainer>();
-        if (dpc)
+        if (dpc) {
             d->dockingMgr->closePane(dpc);
+
+            // If the close actually went through, the pane is now hidden and
+            // no longer referenced by any tabbed container. Drop it from the
+            // manager's bookkeeping: the wrapper below owns the container and
+            // deletes it, so leaving it in the list would make panels()/
+            // count()/findById() iterate a dangling pointer.
+            //
+            // If the close was vetoed (onClosing() returned false), the pane
+            // is still alive and visible — keep the wrapper (and the pane)
+            // untouched so nothing dangles.
+            if (dpc->state() == DockingPaneBase::Hidden)
+                d->dockingMgr->deletePane(dpc);
+            else
+                return;
+        }
     }
     delete panel;
 }

@@ -22,6 +22,15 @@
 
 #include <QWidget>
 
+/**
+ * \brief 浮动窗格边缘的缩放手柄（几乎透明的窄条）。
+ *
+ * 9px 宽/高的边缘窗口，光标进入显示相应缩放光标；按下拖动即可调整
+ * 浮动窗格尺寸（上/下边还支持左右拖动实现四角缩放）。
+ *
+ * \note 窗口透明度 0.01，视觉上几乎不可见，仅作为命中区使用；
+ * 依赖 QCursor::pos()，Wayland 下失效。
+ */
 class DockingPaneGlowWidget : public QWidget
 {
     Q_OBJECT
@@ -37,10 +46,13 @@ class DockingPaneGlowWidget : public QWidget
 
         explicit DockingPaneGlowWidget(QWidget* floatingPane, Position pos, QWidget* parent = nullptr);
 
+        /**
+         * \brief 按浮动窗格当前位置/尺寸重排本光晕窗口。
+         */
         void updatePosition(void);
 
     Q_SIGNALS:
-        void glowResized();
+        void glowResized();   ///< 尺寸被拖动改变（通知 DockingPaneGlow 重排其它边）。
 
     protected:
         virtual void paintEvent(QPaintEvent* event) override;
@@ -53,13 +65,13 @@ class DockingPaneGlowWidget : public QWidget
     private:
         void updateCursor();
 
-        QWidget* m_floatingPane;
-        QRect m_paneGeometry;
-        QPoint m_Pos;
-        int m_position;
-        int m_cursorDelta;
-        int m_cornerState;
-        bool m_dragging;
+        QWidget* m_floatingPane;   ///< 被缩放的浮动窗格。
+        QRect m_paneGeometry;      ///< 按下时窗格几何（用于限制最小尺寸）。
+        QPoint m_Pos;              ///< 上一次全局光标位置。
+        int m_position;            ///< 本手柄的 Position。
+        int m_cursorDelta;         ///< 按下时相对手柄左缘的偏移。
+        int m_cornerState;         ///< 上/下边：0=中部 1=左角 2=右角。
+        bool m_dragging;           ///< 是否正在拖动。
 };
 
 #endif // DOCKINGPANEGLOWWIDGET_H

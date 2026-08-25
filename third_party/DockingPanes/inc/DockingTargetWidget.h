@@ -22,6 +22,12 @@
 
 #include <QWidget>
 
+/**
+ * \brief 停靠预览高亮（半透明蓝色矩形）。
+ *
+ * 拖动浮动窗格命中某停靠指示时，显示目标区域（窗格的一侧或停靠区边缘）
+ * 的预览框。颜色取调色板 Highlight（随主题变化），透明度 0.5。
+ */
 class DockingTargetWidget : public QWidget
 {
     Q_OBJECT

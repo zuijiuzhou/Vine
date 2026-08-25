@@ -26,6 +26,14 @@ class QGridLayout;
 
 class DockingPaneManager;
 
+/**
+ * \brief 中央客户区容器（停靠树的根/中心节点）。
+ *
+ * 存放宿主通过 setClientWidget 设置的中央内容；所有停靠窗格围绕它展开。
+ * 布局恢复时以本节点为“包含客户端”的锚点（updateAllSplitters / applyLayout）。
+ *
+ * \note 是停靠树的叶子，不含标题栏；永远存在，不应被关闭。
+ */
 class DockingPaneClient : public DockingPaneBase
 {
     Q_OBJECT

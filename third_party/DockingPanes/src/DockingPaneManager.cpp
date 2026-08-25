@@ -10,6 +10,7 @@
 #include "DockingTargetWidget.h"
 #include <QApplication>
 #include <QDebug>
+#include <QPointer>
 #include <QSplitter>
 
 /*
@@ -76,7 +77,12 @@ class DockingPaneManagerPrivate {
 
     QWidget* m_mainWindow;
 
-    DockingPaneFlyoutWidget* m_flyoutWidget;
+    QPointer<DockingPaneFlyoutWidget> m_flyoutWidget;
+
+    // True while applyLayout() closes every pane to rebuild the layout.
+    // During that phase closePane() must not route tabbed children through
+    // their containers (no close callbacks, no premature tab teardown).
+    bool m_closingAll = false;
 };
 
 /*
@@ -215,6 +221,15 @@ DockingPaneBase* DockingPaneManager::dockPane(DockingPaneBase* paneToDock, DockP
         if (DockingPaneTabbedContainer* tabbedContainer = qobject_cast<DockingPaneTabbedContainer*>(neighbourPane)) {
             // dock in existing tabbed container
 
+            // If the pane being docked is itself already a committed tab,
+            // detach it from its previous group first so addPane() below can
+            // take ownership of its client widget again (otherwise the close
+            // routing below would pull the widget back out of this container,
+            // leaving an empty tab slot).
+            if (DockingPaneContainer* paneToDockContainer = qobject_cast<DockingPaneContainer*>(paneToDock)) {
+                if (paneToDockContainer->state() == DockingPaneBase::Tabbed) { closePane(paneToDock); }
+            }
+
             if (tabbedContainer->addPane(qobject_cast<DockingPaneContainer*>(paneToDock))) {
                 // we docked a tabbed container into another one, so we need to delete the one we docked
 
@@ -239,6 +254,14 @@ DockingPaneBase* DockingPaneManager::dockPane(DockingPaneBase* paneToDock, DockP
             replacePane(neighbourPane, newContainer);
 
             newContainer->addPane(parentContainer);
+
+            // Same re-tab handling as above: detach an already-tabbed pane
+            // from its previous group before addPane() takes over its client
+            // widget.
+            if (DockingPaneContainer* paneToDockContainer = qobject_cast<DockingPaneContainer*>(paneToDock)) {
+                if (paneToDockContainer->state() == DockingPaneBase::Tabbed) { closePane(paneToDock); }
+            }
+
             newContainer->addPane(qobject_cast<DockingPaneContainer*>(paneToDock));
 
             closePane(paneToDock);
@@ -611,7 +634,7 @@ void DockingPaneManager::removePinnedButton(DockingPaneBase* dockingPaneContaine
 
             if (button) {
                 if ((button->container() == dockingPaneContainer) && ((dockingPane == NULL) || ((dockingPane) && (button->pane() == dockingPane)))) {
-                    if (!deleteList.contains(dockingPane)) { deleteList.append(button); }
+                    if (!deleteList.contains(button)) { deleteList.append(button); }
                 }
             }
         }
@@ -630,6 +653,29 @@ void DockingPaneManager::removePinnedButton(DockingPaneBase* dockingPaneContaine
 
 void DockingPaneManager::closePane(DockingPaneBase* dockingPane)
 {
+    Q_D(DockingPaneManager);
+
+    // A pane living inside a tabbed container must be removed by that
+    // container (tab strip + stacked widget), otherwise closing it directly
+    // would leave a stale tab behind while the pane stays visible. Only
+    // route panes that are *committed* tabs (state Tabbed): while a pane is
+    // being docked as a tab it is transiently in the container's list but
+    // still Floating, and routing at that point would tear the just-created
+    // tab group apart again.
+    if (DockingPaneContainer* child = qobject_cast<DockingPaneContainer*>(dockingPane)) {
+        if (!d->m_closingAll && child->state() == DockingPaneBase::Tabbed) {
+            foreach (DockingPaneBase* candidate, d->m_dockingPaneList) {
+                if (DockingPaneTabbedContainer* tabbed = qobject_cast<DockingPaneTabbedContainer*>(candidate)) {
+                    if (tabbed->containsPane(child)) {
+                        tabbed->closePane(child);
+
+                        return;
+                    }
+                }
+            }
+        }
+    }
+
     DockingPaneSplitterContainer* parentSplitter = qobject_cast<DockingPaneSplitterContainer*>(getDockingParent(dockingPane->parentWidget()));
 
     if (dockingPane->state() == DockingPaneBase::Pinned) { removePinnedButton(dockingPane); }
@@ -1220,6 +1266,12 @@ bool DockingPaneManager::updateFloatingPane(DockingPaneBase* currentPane, QPoint
         if (d->m_dockingStickers->getHit(cursorPos, &dockPos)) {
             d->m_targetPosition = dockPos;
 
+            // Frame-edge hits dock to the whole docking area, so the preview
+            // must span the frame's edge instead of a strip of the pane that
+            // happens to be under the cursor.
+            const QRect frameRect(d->m_thisWidget->mapToGlobal(d->m_thisWidget->rect().topLeft()),
+                                  d->m_thisWidget->mapToGlobal(d->m_thisWidget->rect().bottomRight()));
+
             switch ((DockingFrameStickers::DockingPosition)dockPos) {
             case DockingFrameStickers::paneLeft:
             {
@@ -1249,12 +1301,48 @@ bool DockingPaneManager::updateFloatingPane(DockingPaneBase* currentPane, QPoint
                 break;
             }
 
+            case DockingFrameStickers::frameLeft:
+            {
+                paneRect = frameRect;
+                paneRect.setRight(paneRect.left() + (frameRect.width() * 0.25));
+
+                break;
+            }
+
+            case DockingFrameStickers::frameRight:
+            {
+                paneRect = frameRect;
+                paneRect.setLeft(paneRect.right() - (frameRect.width() * 0.25));
+
+                break;
+            }
+
+            case DockingFrameStickers::frameTop:
+            {
+                paneRect = frameRect;
+                paneRect.setBottom(paneRect.top() + (frameRect.height() * 0.25));
+
+                break;
+            }
+
+            case DockingFrameStickers::frameBottom:
+            {
+                paneRect = frameRect;
+                paneRect.setTop(paneRect.bottom() - (frameRect.height() * 0.25));
+
+                break;
+            }
+
             default:
             {
                 break;
             }
             }
 
+            // m_targetPane always names the pane under the cursor; the
+            // frame->edge remap (targetPane = NULL) happens in
+            // floatingPaneEndMove, which also uses m_targetPane as the guard
+            // for whether to dock at all.
             d->m_targetPane = currentPane;
 
             if (d->m_targetWidget) {
@@ -1326,7 +1414,14 @@ bool DockingPaneManager::applyLayout(QString layout)
 
     d->m_thisWidget->setUpdatesEnabled(false);
 
+    // Restore closes every pane purely as bookkeeping: do not route tabbed
+    // children through their containers (that would invoke close callbacks
+    // and tear tab groups down while the whole layout is being rebuilt).
+    d->m_closingAll = true;
+
     foreach (DockingPaneBase* pane, d->m_dockingPaneList) { closePane(pane); }
+
+    d->m_closingAll = false;
 
     d->m_rootPane = restoreLayout(docElement.firstChildElement("dockedLayout").firstChild());
 

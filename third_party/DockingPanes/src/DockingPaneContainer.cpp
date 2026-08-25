@@ -273,6 +273,11 @@ void DockingPaneContainer::setClientWidget(QWidget* widget)
         m_clientLayout->takeAt(0);
     }
 
+    // A layout cannot hold a null widget (QGridLayout::addWidget(nullptr)
+    // asserts in debug and crashes in release). A null client means "clear",
+    // which is represented by leaving the layout empty.
+    if (!widget) { return; }
+
     m_clientLayout->addWidget(widget);
 
     widget->setVisible(true);

@@ -412,6 +412,11 @@ void DockingPaneTabbedContainer::mousePressEvent(QMouseEvent* e)
 
                 setName(m_paneList.at(i)->name());
 
+                // Keep the close button in sync with the newly selected tab's
+                // closability (setVisiblePane() does this for the programmatic
+                // path; tab clicks must do the same).
+                syncFeaturesFromCurrentPane();
+
                 update();
 
                 m_clientWidget->setFocus();
@@ -932,16 +937,18 @@ void DockingPaneTabbedContainer::updateMargins(void)
     this->layout()->setContentsMargins(framePixels, framePixels, framePixels, tabSize + framePixels);
 }
 
-void DockingPaneTabbedContainer::onCloseButtonClicked(void)
+void DockingPaneTabbedContainer::closePane(DockingPaneContainer* pane)
 {
-    int currentIndex = m_stackedWidget->currentIndex();
-    DockingPaneContainer* pane = m_paneList.at(currentIndex);
+    int currentIndex = m_paneList.indexOf(pane);
+
+    if (currentIndex < 0)
+        return;
 
     // Check close callback on the pane being closed
     if (!pane->invokeCloseCallback())
         return;
 
-    QWidget* widget = m_stackedWidget->currentWidget();
+    QWidget* widget = pane->clientWidget();
 
     pane->setClientWidget(widget);
     m_paneList.removeAt(currentIndex);
@@ -958,7 +965,13 @@ void DockingPaneTabbedContainer::onCloseButtonClicked(void)
     updateMargins();
     update();
 
-    setName(m_paneList.at(m_stackedWidget->currentIndex())->name());
+    int idx = qBound(0, m_stackedWidget->currentIndex(), m_paneList.count() - 1);
+
+    m_stackedWidget->setCurrentIndex(idx);
+
+    setName(m_paneList.at(idx)->name());
+
+    syncFeaturesFromCurrentPane();
 
     if (m_paneList.count() <= 1) {
         restoreChildWidgets();
@@ -992,6 +1005,15 @@ void DockingPaneTabbedContainer::onCloseButtonClicked(void)
 
         dockingManager()->deletePane(this);
     }
+}
+
+void DockingPaneTabbedContainer::onCloseButtonClicked(void)
+{
+    int currentIndex = m_stackedWidget->currentIndex();
+
+    if ((currentIndex < 0) || (currentIndex >= m_paneList.count())) { return; }
+
+    closePane(m_paneList.at(currentIndex));
 }
 
 void DockingPaneTabbedContainer::saveLayout(QDomNode* parentNode, bool includeGeometry)

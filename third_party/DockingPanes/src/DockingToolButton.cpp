@@ -99,18 +99,20 @@ void DockingToolButton::paintEvent(QPaintEvent*)
     }
     }
 
-    // Active bitmaps are white, inactive ones are black. Recolour the black
-    // bitmaps so they stay visible on dark headers.
-    const bool inactiveButton = (m_buttonType == closeButtonInactive || m_buttonType == pinButtonInactive || m_buttonType == unpinButtonInactive);
+    // Both the white "active" bitmaps and the black "inactive" ones are
+    // re-coloured with a palette-driven colour so the icons stay visible on
+    // every theme: the white bitmaps would vanish on light headers, the
+    // black ones on dark headers. The PNGs load as Format_Indexed8, which
+    // cannot be painted on, so convert first.
+    const bool activeButton = (m_buttonType == closeButtonActive || m_buttonType == pinButtonActive || m_buttonType == unpinButtonActive);
 
-    if (inactiveButton && !buttonImage.isNull()) {
-        // The PNGs load as Format_Indexed8, which cannot be painted on.
+    if (!buttonImage.isNull()) {
         buttonImage = buttonImage.convertToFormat(QImage::Format_ARGB32);
 
         QPainter tintPainter(&buttonImage);
 
         tintPainter.setCompositionMode(QPainter::CompositionMode_SourceIn);
-        tintPainter.fillRect(buttonImage.rect(), DockingPaneTheme::iconTintColor(false));
+        tintPainter.fillRect(buttonImage.rect(), DockingPaneTheme::iconTintColor(activeButton));
     }
 
     p.drawImage(centreX - (buttonImage.width() / 2), centreY - (buttonImage.height() / 2), buttonImage);

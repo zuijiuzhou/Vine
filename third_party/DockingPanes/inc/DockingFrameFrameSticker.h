@@ -22,12 +22,26 @@
 
 #include <QWidget>
 
+/**
+ * \brief 停靠指示器的四角帧指示小窗口（可停靠到停靠区边缘）。
+ *
+ * 独立的 Qt::ToolTip 置顶透明窗口，随光标进入/离开切换激活/非激活位图。
+ * 由 DockingFrameStickers 统一摆放与驱动。
+ */
 class DockingFrameFrameSticker : public QWidget
 {
     Q_OBJECT
 
     public:
+        /**
+         * \brief 构造。
+         * \param image 位图前缀（如 "frame_left"，实际加载 _active/_inactive 两张）。
+         */
         explicit DockingFrameFrameSticker(QString image, QWidget *parent = nullptr);
+
+        /**
+         * \brief 更新激活态（光标是否落在本指示上）。
+         */
         void updateCursorPos(QPoint pos);
 
     protected:

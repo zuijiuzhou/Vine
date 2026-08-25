@@ -97,10 +97,18 @@ void DockPanel::setContent(UIElement* content)
     dptr()->content = content;
     auto* c = impl<itype>();
     if (!c) return;
+
+    auto* newWidget = content ? static_cast<QWidget*>(content->impl()) : nullptr;
+
+    // The docking library requires a non-null widget in the pane layout;
+    // passing nullptr to setClientWidget() would assert/crash. Treat
+    // setContent(nullptr) as "keep the current content".
+    if (!newWidget)
+        return;
+
     auto* oldClient = c->clientWidget();
-    if (!content) { c->setClientWidget(nullptr); }
-    else { c->setClientWidget(static_cast<QWidget*>(content->impl())); }
-    if (oldClient && oldClient != static_cast<QWidget*>(content ? content->impl() : nullptr))
+    c->setClientWidget(newWidget);
+    if (oldClient && oldClient != newWidget)
         oldClient->deleteLater();
 }
 
@@ -217,25 +225,47 @@ void DockPanel::setFloating(bool floating)
 void DockPanel::pin()
 {
     auto* c = impl<itype>();
-    if (c) c->setState(DockingPaneBase::Pinned);
+    if (!c) return;
+
+    if (c->state() != DockingPaneBase::Pinned) {
+        // Real auto-hide: pull the pane out of the dock tree and create the
+        // strip button (same path as the title-bar pin button).
+        if (auto* mgr = c->dockingManager())
+            mgr->hidePane(c);
+    }
 }
 
 void DockPanel::unpin()
 {
     auto* c = impl<itype>();
-    if (c) c->setState(DockingPaneBase::Docked);
+    if (!c) return;
+
+    if (c->state() == DockingPaneBase::Pinned) {
+        if (auto* mgr = c->dockingManager())
+            mgr->unpinPane(c);
+    }
 }
 
 void DockPanel::collapse()
 {
     auto* c = impl<itype>();
-    if (c) c->setState(DockingPaneBase::Hidden);
+    if (!c) return;
+
+    if (c->state() == DockingPaneBase::Docked || c->state() == DockingPaneBase::Tabbed) {
+        if (auto* mgr = c->dockingManager())
+            mgr->closePane(c);
+    }
 }
 
 void DockPanel::restore()
 {
     auto* c = impl<itype>();
-    if (c) c->setState(DockingPaneBase::Docked);
+    if (!c) return;
+
+    if (c->state() == DockingPaneBase::Hidden) {
+        if (auto* mgr = c->dockingManager())
+            mgr->showPane(c);
+    }
 }
 
 V_APPFWGUI_NS_END

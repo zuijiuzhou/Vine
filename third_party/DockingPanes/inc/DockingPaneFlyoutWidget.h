@@ -28,6 +28,19 @@ class DockingPaneContainer;
 class DockingToolButton;
 class DockingPaneTitleWidget;
 
+/**
+ * \brief 自动隐藏（Pinned）窗格的弹出窗口（flyout）。
+ *
+ * 点击/悬停边缘自动隐藏按钮时从对应边弹出，带标题栏（可拖动）与
+ * 6px 宽的缩放边缘。聚焦丢失（onFocusChanged）或 beginDrag/endDrag 会
+ * 通知管理器关闭自身。
+ *
+ * \note 注意事项：
+ *  - 依赖 QCursor::pos() 计算光标位置，Wayland 下失效（宿主强制 xcb 规避）。
+ *  - 无聚焦打开时 1s 后触发 autoHideFlyout 信号，但该信号当前未被连接
+ *    （自动隐藏只依赖焦点丢失）。
+ *  - 对象所有权归 DockingPaneManager/容器（QPointer 管理），不要自行 delete。
+ */
 class DockingPaneFlyoutWidget : public QWidget
 {
     Q_OBJECT
@@ -41,24 +54,55 @@ class DockingPaneFlyoutWidget : public QWidget
             Bottom
         };
 
+        /**
+         * \brief 构造 flyout。
+         * \param hasFocus 是否立即取得焦点。
+         * \param container 所属容器（用于取 flyout 尺寸 / 归还客户区）。
+         * \param pane      被弹出的子窗格。
+         * \param pos       弹出方向。
+         * \param widget    要显示的客户区控件。
+         */
         explicit DockingPaneFlyoutWidget(bool hasFocus, DockingPaneContainer *container, DockingPaneContainer *pane, FlyoutPosition pos, QWidget *widget, QWidget *parent = nullptr);
         virtual ~DockingPaneFlyoutWidget();
 
+        /**
+         * \brief 把客户区控件归还给所属容器（关闭/拖动时调用）。
+         */
         void restorePaneWidget();
+
+        /**
+         * \brief 当前被弹出的子窗格。
+         */
         DockingPaneContainer *pane(void);
+
+        /**
+         * \brief 开始拖出（隐藏自身并把客户区归还容器）。
+         */
         void beginDrag(void);
+
+        /**
+         * \brief 结束拖出（发射 flyoutFocusLost 通知管理器清理）。
+         */
         void endDrag(void);
+
+        /**
+         * \brief 客户区控件。
+         */
         QWidget *clientWidget(void);
+
+        /**
+         * \brief 可视内容矩形（去掉 5~6px 缩放边缘后的区域）。
+         */
         QRect paneRect(void);
 
     Q_SIGNALS:
-        void unpinContainer(void);
-        void closeContainer(void);
+        void unpinContainer(void);       ///< 固定按钮被点击。
+        void closeContainer(void);       ///< 关闭按钮被点击。
         void startDragFlyoutTitle(QPoint pos);
         void endDragFlyoutTitle(QPoint pos);
         void moveDragFlyoutTitle(QPoint pos);
-        void flyoutFocusLost(void);
-        void autoHideFlyout(void);
+        void flyoutFocusLost(void);      ///< 焦点丢失 / 拖出结束（管理器据此清理）。
+        void autoHideFlyout(void);       ///< 无焦点超时自动隐藏（当前未连接）。
 
     protected:
         virtual void paintEvent(QPaintEvent* event) override;
