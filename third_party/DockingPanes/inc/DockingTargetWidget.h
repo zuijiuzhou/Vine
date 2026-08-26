@@ -23,10 +23,11 @@
 #include <QWidget>
 
 /**
- * \brief 停靠预览高亮（半透明蓝色矩形）。
+ * @brief Docking preview highlight (a semi-transparent rectangle).
  *
- * 拖动浮动窗格命中某停靠指示时，显示目标区域（窗格的一侧或停靠区边缘）
- * 的预览框。颜色取调色板 Highlight（随主题变化），透明度 0.5。
+ * When a dragged floating pane hits a docking indicator, shows a preview box of the target
+ * area (a side of the pane or the docking-area edge). The colour comes from the palette's
+ * Highlight (follows the theme) with an opacity of 0.5.
  */
 class DockingTargetWidget : public QWidget {
     Q_OBJECT

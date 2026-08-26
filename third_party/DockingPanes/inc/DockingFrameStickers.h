@@ -28,32 +28,36 @@ class QPaintEvent;
 class DockingFrameFrameSticker;
 
 /**
- * \brief 停靠指示器组（中心 + 四边图标 + 四角帧指示）。
+ * @brief Group of docking indicators (centre + four edge icons + corner frame stickers).
  *
- * 拖动浮动窗格时显示在当前候选窗格中央：中心/四边指示停靠到该窗格的哪一侧，四角帧指示停靠到整个停靠区（frame）边缘。
- * 命中检测由 getHit() 完成，驱动 DockingPaneManager 决定停靠位置。
+ * Shown at the centre of the current candidate pane while a floating pane is being
+ * dragged: the centre/edge icons indicate which side of the pane to dock to, while
+ * the corner frame stickers indicate docking to the whole docking-area edge.
+ * Hit testing is done by getHit(), which drives DockingPaneManager's docking decision.
  *
- * \note 实现细节：
- *  - 是 Qt::ToolTip 置顶无边框窗口，带 WA_TranslucentBackground。
- *  - m_rcCentre 为遗留死代码：中心区域实际由 m_rcTab（Tab 图标）命中，tab 不可见时中心不可停靠。
- *  - m_rcBottom / frame 角用 Top/Left 的尺寸定位，属 copy-paste 遗留；当前各图标尺寸一致所以无可见问题。
+ * @note Implementation details:
+ *  - It is a Qt::ToolTip topmost frameless window with WA_TranslucentBackground.
+ *  - m_rcCentre is legacy dead code: the centre area is actually hit via m_rcTab (Tab icon),
+ *    so the centre cannot be docked when the tab is not visible.
+ *  - m_rcBottom / the frame corners are positioned with the Top/Left sizes, a copy-paste
+ *    leftover; harmless because all icons currently share the same size.
  */
 class DockingFrameStickers : public QWidget {
     Q_OBJECT
 
   public:
-    /// 命中结果：停靠到窗格某侧 / 停靠区边缘 / Tab。
+    /// Hit result: dock to a pane side / docking-area edge / Tab.
     enum DockingPosition
     {
-        paneLeft,    // 停靠到窗格左侧。
-        paneRight,   // 停靠到窗格右侧。
-        paneTop,     // 停靠到窗格上侧。
-        paneBottom,  // 停靠到窗格下侧。
-        frameLeft,   // 停靠到停靠区左边缘。
-        frameRight,  // 停靠到停靠区右边缘。
-        frameTop,    // 停靠到停靠区上边缘。
-        frameBottom, // 停靠到停靠区下边缘。
-        tab          // 并入标签组。
+        paneLeft,    // Dock to the left side of the pane.
+        paneRight,   // Dock to the right side of the pane.
+        paneTop,     // Dock to the top of the pane.
+        paneBottom,  // Dock to the bottom of the pane.
+        frameLeft,   // Dock to the left edge of the docking area.
+        frameRight,  // Dock to the right edge of the docking area.
+        frameTop,    // Dock to the top edge of the docking area.
+        frameBottom, // Dock to the bottom edge of the docking area.
+        tab          // Join the tab group.
     };
 
   public:
@@ -61,25 +65,25 @@ class DockingFrameStickers : public QWidget {
 
   public:
     /**
-     * \brief 设置停靠区（主窗口中央区）矩形，用于摆放四角帧指示。
+     * @brief Sets the docking-area (main window central area) rectangle used to position the corner frame stickers.
      */
     void setFrameRect(QRect rect);
 
     /**
-     * \brief 拖动移动时更新各指示的激活态（光标所在者高亮）。
+     * @brief Updates each indicator's active state while dragging (the one under the cursor is highlighted).
      */
     void updateCursorPos(QPoint pos);
 
     /**
-     * \brief 是否显示中心 Tab 图标（候选窗格是普通窗格时显示）。
+     * @brief Whether to show the centre Tab icon (shown when the candidate pane is a normal pane).
      */
     void setTabVisible(bool state);
 
     /**
-     * \brief 命中检测。
-     * \param pos     全局光标位置。
-     * \param dockPos 输出命中方位。
-     * \return 是否命中任一指示。
+     * @brief Hit testing.
+     * @param pos     Global cursor position.
+     * @param dockPos Output: the hit dock position.
+     * @return true if any indicator is hit.
      */
     bool getHit(QPoint pos, DockingPosition* dockPos);
 

@@ -78,8 +78,9 @@ QPalette createDarkPalette()
 // Classic Fusion dark palette (matches the Qt >= 6.5 Fusion dark palette).
 QPalette createLightPalette()
 {
-    // 注意: Qt >= 6.5 的 Fusion 标准调色板会跟随系统亮/暗配色,
-    // 不能直接用 style()->standardPalette() 当浅色板, 必须显式定义
+    // Note: since Qt >= 6.5 the Fusion standard palette follows the system
+    // light/dark scheme, so style()->standardPalette() cannot be used directly
+    // as a light palette; it must be defined explicitly.
     QPalette pal;
     pal.setColor(QPalette::Window, QColor(239, 239, 239));
     pal.setColor(QPalette::WindowText, Qt::black);
@@ -98,7 +99,7 @@ QPalette createLightPalette()
     return pal;
 }
 
-// 将“系统当前主题”解析为 Theme 枚举值
+// Resolves the "system current theme" into a Theme enum value.
 Theme resolveSystemTheme()
 {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
@@ -138,7 +139,7 @@ void GuiApplication::init()
     d->app = new QApplication(d->argc, d->argv);
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
-    // 跟随系统时监听系统主题变化并重新解析
+    // When following the system, listen for system theme changes and re-resolve.
     QObject::connect(QGuiApplication::styleHints(), &QStyleHints::colorSchemeChanged, d->app, [this, d](Qt::ColorScheme) {
         if (d->follow_system) {
             setTheme(resolveSystemTheme());
@@ -146,7 +147,7 @@ void GuiApplication::init()
     });
 #endif
 
-    // 应用初始主题（跟随系统或固定）
+    // Apply the initial theme (follows the system or fixed).
     if (d->follow_system) {
         d->theme = resolveSystemTheme();
     }

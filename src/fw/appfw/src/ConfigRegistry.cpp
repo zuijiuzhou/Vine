@@ -1,92 +1,95 @@
 #include <vine/appfw/ConfigRegistry.hpp>
 
-#include <cstddef>
+#include <algorithm>
+#include <memory>
+#include <utility>
 
 V_APPFW_NS_BEGIN
 
 struct ConfigRegistry::Data {
-    std::vector<ConfigItem> items;             // 有序（注册顺序 = 显示顺序）
-    std::map<String, size_t> index;            // key -> index
+    std::vector<std::unique_ptr<ConfigCategory>> categories;
 };
 
 ConfigRegistry::ConfigRegistry()
-    : d(new Data)
-{
-}
+  : d(new Data)
+{}
 
 ConfigRegistry::~ConfigRegistry()
 {
     delete d;
 }
 
-bool ConfigRegistry::addItem(const ConfigItem& item)
+ConfigCategory* ConfigRegistry::addCategory(String name)
 {
-    if (d->index.find(item.key()) != d->index.end())
-        return false;   // 重复 key，拒绝
-    d->index.emplace(item.key(), d->items.size());
-    d->items.push_back(item);
-    return true;
+    if (category(name) != nullptr)
+        return nullptr; // Duplicate name, reject
+    d->categories.push_back(std::unique_ptr<ConfigCategory>(new ConfigCategory(std::move(name), this)));
+    return d->categories.back().get();
 }
 
-bool ConfigRegistry::removeItem(const String& key)
+bool ConfigRegistry::removeCategory(const String& name)
 {
-    auto it = d->index.find(key);
-    if (it == d->index.end())
-        return false;
-    d->items.erase(d->items.begin() + static_cast<std::ptrdiff_t>(it->second));
-    // 重建索引
-    d->index.clear();
-    for (size_t i = 0; i < d->items.size(); ++i)
-        d->index.emplace(d->items[i].key(), i);
-    return true;
+    for (auto it = d->categories.begin(); it != d->categories.end(); ++it) {
+        if ((*it)->name() == name) {
+            d->categories.erase(it);
+            return true;
+        }
+    }
+    return false;
 }
 
 void ConfigRegistry::clear()
 {
-    d->items.clear();
-    d->index.clear();
+    d->categories.clear();
+}
+
+std::vector<ConfigCategory*> ConfigRegistry::categories() const
+{
+    std::vector<ConfigCategory*> out;
+    out.reserve(d->categories.size());
+    for (const auto& c : d->categories) out.push_back(c.get());
+    std::stable_sort(out.begin(), out.end(), [](const ConfigCategory* a, const ConfigCategory* b) { return a->order() < b->order(); });
+    return out;
+}
+
+ConfigCategory* ConfigRegistry::category(const String& name) const
+{
+    for (const auto& c : d->categories) {
+        if (c->name() == name)
+            return c.get();
+    }
+    return nullptr;
 }
 
 int ConfigRegistry::itemCount() const
 {
-    return static_cast<int>(d->items.size());
-}
-
-const ConfigItem* ConfigRegistry::itemAt(int index) const
-{
-    if (index < 0 || static_cast<size_t>(index) >= d->items.size())
-        return nullptr;
-    return &d->items[static_cast<size_t>(index)];
+    int n = 0;
+    for (const auto& c : d->categories) {
+        for (ConfigGroup* g : c->groups()) n += static_cast<int>(g->items().size());
+    }
+    return n;
 }
 
 const ConfigItem* ConfigRegistry::item(const String& key) const
 {
-    auto it = d->index.find(key);
-    if (it == d->index.end())
-        return nullptr;
-    return &d->items[it->second];
-}
-
-const std::vector<ConfigItem>& ConfigRegistry::items() const
-{
-    return d->items;
-}
-
-std::vector<String> ConfigRegistry::groups() const
-{
-    std::vector<String> out;
-    for (const auto& item : d->items) {
-        bool found = false;
-        for (const auto& g : out) {
-            if (g == item.group()) {
-                found = true;
-                break;
-            }
+    for (const auto& c : d->categories) {
+        for (ConfigGroup* g : c->groups()) {
+            if (const ConfigItem* it = g->item(key))
+                return it;
         }
-        if (!found)
-            out.push_back(item.group());
     }
-    return out;
+    return nullptr;
+}
+
+bool ConfigRegistry::removeItem(const String& key)
+{
+    for (const auto& c : d->categories) {
+        for (ConfigGroup* g : c->groups()) {
+            if (g->item(key) != nullptr)
+                return g->removeItem(key);
+        }
+    }
+    return false;
 }
 
 V_APPFW_NS_END

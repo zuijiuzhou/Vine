@@ -29,16 +29,18 @@ class QStyleOptionButton;
 class QTimer;
 
 /**
- * \brief 自动隐藏条上的按钮（显示窗格名称，可横/竖排）。
+ * @brief Button on the auto-hide strip (shows the pane name; can be laid out
+ * horizontally or vertically).
  *
- * 位于主窗口边缘的自动隐藏条上，指向一个被固定（Pinned）的窗格，点击（clicked）会经 DockingPaneManager 打开对应 flyout。
+ * Sits on the auto-hide strip at the edge of the main window and points to a
+ * pinned pane; clicking it opens the corresponding flyout via DockingPaneManager.
  */
 class DockAutoHideButton : public QPushButton {
     Q_OBJECT
 
   public:
     /**
-     * \brief 按钮所在边缘（决定文字排布方向与 swap）。
+     * @brief Edge the button is located on (determines text layout direction and swap).
      */
     enum Position
     {
@@ -55,11 +57,11 @@ class DockAutoHideButton : public QPushButton {
 
   public:
     /**
-     * \brief 文字排布方向（Horizontal/Vertical）。
+     * @brief Text layout orientation (Horizontal/Vertical).
      */
     Qt::Orientation orientation() const;
     /**
-     * \brief 设置文字排布方向（Horizontal/Vertical）。
+     * @brief Sets the text layout orientation (Horizontal/Vertical).
      */
     void setOrientation(Qt::Orientation orientation);
 
@@ -67,29 +69,29 @@ class DockAutoHideButton : public QPushButton {
     void setMirrored(bool mirrored);
 
     /**
-     * \brief 切换文字/色条绘制方向（边缘内侧/外侧）。
+     * @brief Switches the text/color-strip drawing direction (inside/outside the edge).
      */
     void swapDirection(bool state);
 
     QSize sizeHint() const override;
 
     /**
-     * \brief 按钮所在边缘。
+     * @brief Edge the button is located on.
      */
     Position position();
 
     /**
-     * \brief 设置按钮指向的容器与子窗格。
+     * @brief Sets the container and child pane the button points to.
      */
     void setPane(DockingPaneContainer* container, DockingPaneBase* pane);
 
     /**
-     * \brief 指向的子窗格。
+     * @brief The child pane the button points to.
      */
     DockingPaneBase* pane();
 
     /**
-     * \brief 指向的容器（含自动隐藏按钮）。
+     * @brief The container that owns this auto-hide button.
      */
     DockingPaneContainer* container();
 
@@ -105,11 +107,11 @@ class DockAutoHideButton : public QPushButton {
   private:
     void init();
     /*
-     * @brief 获取当前对象的StyleOption
+     * @brief Returns the StyleOption for the current object.
      */
     QStyleOptionButton* getStyleOption() const;
     /*
-     * @brief 悬停计时到点
+     * @brief Called when the hover timer elapses.
      */
     void onTimerElapsed();
 
@@ -117,8 +119,8 @@ class DockAutoHideButton : public QPushButton {
     Qt::Orientation       m_orientation;
     bool                  m_mirrored;
     bool                  m_hovered;
-    DockingPaneBase*      m_dockingPane;   // 指向的子窗格（原始指针）。
-    DockingPaneContainer* m_paneContainer; //  指向的容器（原始指针）。
+    DockingPaneBase*      m_dockingPane;   // Pointed-to child pane (raw pointer).
+    DockingPaneContainer* m_paneContainer; //  Pointed-to container (raw pointer).
 
     bool     m_swapDirection;
     Position m_pos;

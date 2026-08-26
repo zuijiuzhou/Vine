@@ -23,25 +23,28 @@
 #include <QPushButton>
 
 /**
- * \brief 标题栏上的关闭/固定小按钮（位图 + 调色板着色）。
+ * @brief Small close/pin button on the title bar (bitmap + palette tinting).
  *
- * 按状态（激活/非激活、关闭/固定/取消固定）从资源加载对应 PNG，非激活位图会被重着色为调色板 WindowText 色以适配深色主题；悬停时绘制半透明白色高亮块。
+ * Loads the corresponding PNG from the resources by state (active/inactive, close/pin/unpin);
+ * inactive bitmaps are re-tinted with the palette's WindowText colour to fit dark themes.
+ * A semi-transparent white highlight block is drawn on hover.
  *
- * \note 继承 QPushButton 但完全重写绘制，仅复用其点击/悬停语义；16px 最大宽度，命中区域较小。
+ * @note Derives from QPushButton but completely overrides the painting, only reusing its
+ * click/hover semantics; maximum width is 16px, so the hit area is small.
  */
 class DockingToolButton : public QPushButton {
     Q_OBJECT
 
   public:
-    /// 按钮形态（图标 + 激活态组合）。
+    /// Button form (icon + active state combination).
     enum ButtonType
     {
-        closeButtonActive,   // 关闭图标，激活态（白色）。
-        closeButtonInactive, // 关闭图标，非激活态（着色）。
-        pinButtonActive,     // 固定图标，激活态。
-        pinButtonInactive,   // 固定图标，非激活态。
-        unpinButtonActive,   // 取消固定图标（旋转 90°）。
-        unpinButtonInactive  // 取消固定图标，非激活态。
+        closeButtonActive,   // Close icon, active state (white).
+        closeButtonInactive, // Close icon, inactive state (tinted).
+        pinButtonActive,     // Pin icon, active state.
+        pinButtonInactive,   // Pin icon, inactive state.
+        unpinButtonActive,   // Unpin icon (rotated 90°).
+        unpinButtonInactive  // Unpin icon, inactive state.
     };
 
   public:
@@ -50,7 +53,7 @@ class DockingToolButton : public QPushButton {
 
   public:
     /**
-     * \brief 切换按钮形态（激活/非激活、关闭/固定）。
+     * @brief Switches the button form (active/inactive, close/pin).
      */
     void setButton(ButtonType type);
 
@@ -62,7 +65,7 @@ class DockingToolButton : public QPushButton {
 
   private:
     ButtonType m_buttonType;
-    bool       m_highlight; ///< 悬停高亮。
+    bool       m_highlight; ///< Hover highlight.
 };
 
 #endif // DOCKINGTOOLBUTTON_H

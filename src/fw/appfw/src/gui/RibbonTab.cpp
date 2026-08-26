@@ -16,9 +16,9 @@ namespace
 SARibbonPanel::PanelLayoutMode toSarPanelLayoutMode(RibbonPanelLayoutMode m)
 {
     switch (m) {
-    case RibbonPanelLayoutMode::TwoRow:    return SARibbonPanel::TwoRowMode;
+    case RibbonPanelLayoutMode::TwoRow: return SARibbonPanel::TwoRowMode;
     case RibbonPanelLayoutMode::SingleRow: return SARibbonPanel::SingleRowMode;
-    case RibbonPanelLayoutMode::ThreeRow:  break;
+    case RibbonPanelLayoutMode::ThreeRow: break;
     }
 
     return SARibbonPanel::ThreeRowMode;
@@ -27,9 +27,9 @@ SARibbonPanel::PanelLayoutMode toSarPanelLayoutMode(RibbonPanelLayoutMode m)
 RibbonPanelLayoutMode fromSarPanelLayoutMode(SARibbonPanel::PanelLayoutMode m)
 {
     switch (m) {
-    case SARibbonPanel::TwoRowMode:    return RibbonPanelLayoutMode::TwoRow;
+    case SARibbonPanel::TwoRowMode: return RibbonPanelLayoutMode::TwoRow;
     case SARibbonPanel::SingleRowMode: return RibbonPanelLayoutMode::SingleRow;
-    default:                           break;
+    default: break;
     }
 
     return RibbonPanelLayoutMode::ThreeRow;
@@ -38,8 +38,8 @@ RibbonPanelLayoutMode fromSarPanelLayoutMode(SARibbonPanel::PanelLayoutMode m)
 } // namespace
 
 struct RibbonTab::Data : public UIElementData {
-    String                     title;
-    std::vector<RibbonGroup*>  groups;   // 已添加的组（框架层记账，供查询）
+    String                    title;
+    std::vector<RibbonGroup*> groups; // added groups (framework bookkeeping, for queries)
 };
 
 RibbonTab::RibbonTab()
@@ -51,7 +51,7 @@ RibbonTab::~RibbonTab()
     // d is deleted by UIElement
 }
 
-void RibbonTab::title(const String& t)
+void RibbonTab::setTitle(const String& t)
 {
     dptr()->title = t;
     auto* cat     = impl<SARibbonCategory>();
@@ -74,7 +74,7 @@ void RibbonTab::addGroup(RibbonGroup* g)
     auto* cat = impl<SARibbonCategory>();
     if (p && cat)
         cat->addPanel(p);
-    // 记账（去重）
+    // Bookkeeping (dedupe)
     if (std::find(dptr()->groups.begin(), dptr()->groups.end(), g) == dptr()->groups.end())
         dptr()->groups.push_back(g);
 }
@@ -100,7 +100,7 @@ RibbonGroup* RibbonTab::groupAt(int i) const
     return (i >= 0 && i < (int)dptr()->groups.size()) ? dptr()->groups[(size_t)i] : nullptr;
 }
 
-void RibbonTab::panelLayoutMode(RibbonPanelLayoutMode m)
+void RibbonTab::setPanelLayoutMode(RibbonPanelLayoutMode m)
 {
     auto* cat = impl<SARibbonCategory>();
     if (cat)
@@ -115,7 +115,7 @@ RibbonPanelLayoutMode RibbonTab::panelLayoutMode() const
     return fromSarPanelLayoutMode(cat->panelLayoutMode());
 }
 
-void RibbonTab::panelTitleVisible(bool on)
+void RibbonTab::setPanelTitleVisible(bool on)
 {
     auto* cat = impl<SARibbonCategory>();
     if (cat)
@@ -128,7 +128,7 @@ bool RibbonTab::panelTitleVisible() const
     return cat && cat->isEnableShowPanelTitle();
 }
 
-void RibbonTab::panelSpacing(int n)
+void RibbonTab::setPanelSpacing(int n)
 {
     auto* cat = impl<SARibbonCategory>();
     if (cat)

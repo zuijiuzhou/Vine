@@ -16,16 +16,16 @@ class V_APPFW_API DockPanel : public Control {
     DockPanel();
     virtual ~DockPanel();
 
-    void         features(DockFeatures f);
+    void         setFeatures(DockFeatures f);
     DockFeatures features() const;
 
-    void   title(const String& t);
+    void   setTitle(const String& t);
     String title() const;
 
-    void   id(const String& i);
+    void   setId(const String& i);
     String id() const;
 
-    void       content(UIElement* c);
+    void       setContent(UIElement* c);
     UIElement* content() const;
 
     // State queries

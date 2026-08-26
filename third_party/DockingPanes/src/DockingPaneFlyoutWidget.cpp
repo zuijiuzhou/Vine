@@ -150,7 +150,7 @@ DockingPaneFlyoutWidget::DockingPaneFlyoutWidget(bool                  hasFocus,
 
 DockingPaneFlyoutWidget::~DockingPaneFlyoutWidget()
 {
-    // 构造时安装了事件过滤器, 析构时必须移除, 避免 qApp/parent 上残留悬垂过滤器
+    // An event filter was installed in the constructor; remove it in the destructor to avoid a dangling filter on qApp/parent.
     if (qApp) {
         qApp->removeEventFilter(this);
     }

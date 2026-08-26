@@ -99,17 +99,17 @@ class DockingPaneManagerPrivate {
 };
 
 /*
-m_dockingWidget (顶层，含 QGridLayout)
-  ├── m_topAutoHidePane    (上 auto-hide 按钮条)
-  ├── m_leftAutoHidePane   (左 auto-hide 按钮条)
-  ├── m_thisWidget         (中央区域)
-  │     └── m_rootPane     (停靠树根)
-  │           └── m_clientPane  (中心客户区)
-  │           └── ...已停靠的窗格...
-  ├── m_rightAutoHidePane  (右 auto-hide 按钮条)
-  └── m_bottomAutoHidePane (下 auto-hide 按钮条)
+m_dockingWidget (top level, contains QGridLayout)
+  ├── m_topAutoHidePane    (top auto-hide button strip)
+  ├── m_leftAutoHidePane   (left auto-hide button strip)
+  ├── m_thisWidget         (central area)
+  │     └── m_rootPane     (root of the docking tree)
+  │           └── m_clientPane  (central client area)
+  │           └── ...docked panes...
+  ├── m_rightAutoHidePane  (right auto-hide button strip)
+  └── m_bottomAutoHidePane (bottom auto-hide button strip)
 
-m_flyoutWidget (独立弹出，不属于上述层次)
+m_flyoutWidget (standalone popup, not part of the hierarchy above)
  */
 
 DockingPaneManager::DockingPaneManager()
@@ -144,18 +144,18 @@ DockingPaneManager::~DockingPaneManager()
 {
     Q_D(DockingPaneManager);
 
-    // flyout 是 m_thisWidget 的子窗口, 内部资源先删
+    // The flyout is a child of m_thisWidget; delete its internal resources first.
     delete d->m_flyoutWidget;
 
-    // 内部预览/指示控件, 无父, 由管理器释放
+    // Internal preview/indicator widgets, parentless; released by the manager.
     delete d->m_targetWidget;
     delete d->m_dockingStickers;
 
-    // 修复 d_ptr 泄漏 (DockingPaneManagerPrivate)
+    // Fix the d_ptr leak (DockingPaneManagerPrivate).
     delete d_ptr;
 
-    // 注意: m_dockingWidget / m_thisWidget / m_clientPane 属于停靠树,
-    // 已交给调用方(如 setCentralWidget), 不在这里删除, 避免双重释放
+    // Note: m_dockingWidget / m_thisWidget / m_clientPane belong to the docking tree and
+    // were handed to the caller (e.g. via setCentralWidget); do not delete them here to avoid double-free.
 }
 
 QWidget* DockingPaneManager::widget()
@@ -663,7 +663,7 @@ void DockingPaneManager::replacePane(DockingPaneBase* oldPane, DockingPaneBase* 
         parentSplitter->m_splitterWidget->restoreState(state);
     }
     else if (oldPane == d->m_rootPane) {
-        // oldPane 是根(不在任何 splitter 内): 用 newPane 直接顶替根
+        // oldPane is the root (not inside any splitter): replace the root with newPane directly.
         setWidget(newPane);
 
         d->m_rootPane = newPane;
@@ -671,7 +671,7 @@ void DockingPaneManager::replacePane(DockingPaneBase* oldPane, DockingPaneBase* 
         closePane(oldPane);
     }
     else {
-        // oldPane 既不在 splitter 也不是根(如 floating): 无法原地替换, 仅关闭旧窗格
+        // oldPane is neither in a splitter nor the root (e.g. floating): cannot replace in place; just close the old pane.
         closePane(oldPane);
     }
 }
@@ -1094,7 +1094,7 @@ DockingPaneManager::DockPosition DockingPaneManager::dockPositionOf(DockingPaneB
         return (dockFloat);
     }
 
-    // 解析出可检查停靠位置的目标：Tabbed 子窗格经由其所属的 tabbed 容器报告。
+    // Resolve the target whose dock position can be checked: a Tabbed child pane reports via its tabbed container.
     DockingPaneBase* target = container;
     switch (container->state()) {
     case DockingPaneBase::Docked: break;
@@ -1111,38 +1111,39 @@ DockingPaneManager::DockPosition DockingPaneManager::dockPositionOf(DockingPaneB
         }
         if (target == container) {
             return (dockFloat);
-        } // 不在任何 tabbed 容器中
+        } // Not inside any tabbed container.
         break;
     }
 
     default: return (dockFloat);
     }
 
-    // 从中央客户区向上遍历 splitter，找到同时包含客户区与 target 的那一层，
-    // 据此判断 target 位于客户区的哪一侧。
+    // Walk up the splitters from the central client area to find the level that
+    // contains both the client area and target, and determine which side of the
+    // client area the target is on.
     //
-    // 注意：不能使用 getClientPaneDirection() —— 它返回的是相反方向
-    // （hidePane() 正好补偿了这一点），因此这里复刻遍历并用正确的映射。
+    // Note: getClientPaneDirection() cannot be used here — it returns the opposite
+    // direction (hidePane() compensates for it), so replicate the walk with the correct mapping.
     DockingPaneSplitterContainer* parentSplitter = qobject_cast<DockingPaneSplitterContainer*>(getDockingParent(d->m_clientPane));
     while (parentSplitter) {
         const int count = parentSplitter->m_splitterWidget->count();
         for (int i = 0; i < count; ++i) {
             if (containsPane(parentSplitter->m_splitterWidget->widget(i), target)) {
                 if (parentSplitter->direction() == DockingPaneSplitterContainer::splitVertical) {
-                    // QSplitter 垂直方向：index 0 在最上
+                    // QSplitter vertical orientation: index 0 is at the top.
                     for (int j = 0; j < i; ++j) {
                         if (containsPane(parentSplitter->m_splitterWidget->widget(j), d->m_clientPane)) {
                             return (dockBottom);
-                        } // 客户区在上 → 本窗格在下
+                        } // Client above → this pane is below.
                     }
                     return (dockTop);
                 }
                 else {
-                    // QSplitter 水平方向：index 0 在最左
+                    // QSplitter horizontal orientation: index 0 is at the left.
                     for (int j = 0; j < i; ++j) {
                         if (containsPane(parentSplitter->m_splitterWidget->widget(j), d->m_clientPane)) {
                             return (dockRight);
-                        } // 客户区在左 → 本窗格在右
+                        } // Client on the left → this pane is on the right.
                     }
                     return (dockLeft);
                 }

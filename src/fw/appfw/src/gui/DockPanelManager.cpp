@@ -10,9 +10,9 @@
 #include <QSize>
 #include <QUuid>
 
+#include <vine/appfw/gui/DockPanel.hpp>
 #include <vine/appfw/gui/MainWindow.hpp>
 #include <vine/appfw/gui/UIElement.hpp>
-#include <vine/appfw/gui/DockPanel.hpp>
 
 #include "Convert.hpp"
 
@@ -39,7 +39,9 @@ struct DockPanelManager::Data {
 
 DockPanelManager::DockPanelManager()
   : d(new Data)
-{ d->dockingMgr = new DockingPaneManager(); }
+{
+    d->dockingMgr = new DockingPaneManager();
+}
 
 DockPanelManager::~DockPanelManager()
 {
@@ -78,7 +80,7 @@ DockPanel* DockPanelManager::createDockPanel(const String& title, DockAreas area
 {
     auto* panel = new DockPanel();
     if (!title.empty())
-        panel->title(title);
+        panel->setTitle(title);
     addDockPanel(panel, area);
     return panel;
 }
@@ -87,9 +89,9 @@ DockPanel* DockPanelManager::createDockPanel(const String& title, UIElement* con
 {
     auto* panel = new DockPanel();
     if (!title.empty())
-        panel->title(title);
+        panel->setTitle(title);
     if (content)
-        panel->content(content);
+        panel->setContent(content);
     addDockPanel(panel, area);
     return panel;
 }
@@ -106,12 +108,13 @@ void DockPanelManager::addDockPanel(DockPanel* panel, DockAreas area)
 
     auto* dp = panel->impl<DockingPaneContainer>();
     if (!dp) {
-        // 保留调用方设置的 id；仅当未设置时才生成随机 id 保证唯一。
+        // Keep the caller-set id; only generate a random one when unset to
+        // guarantee uniqueness.
         QString panelId;
         if (panel->id().empty()) {
             panelId = QUuid::createUuid().toString();
             auto q8 = panelId.toUtf8();
-            panel->id(String(reinterpret_cast<const String::value_type*>(q8.constData()), q8.size()));
+            panel->setId(String(reinterpret_cast<const String::value_type*>(q8.constData()), q8.size()));
         }
         else {
             panelId = QString::fromUtf8(panel->id().data(), static_cast<int>(panel->id().size()));
@@ -144,7 +147,6 @@ void DockPanelManager::addDockPanel(DockPanel* panel, DockAreas area)
     if (!dp)
         return;
 
-    // ---- auto-tab: merge into tab group when same area already has panels ----
     DockingPaneManager::DockPosition pos;
     DockingPaneBase*                 neighbor = nullptr;
 
@@ -251,8 +253,8 @@ DockPanel* DockPanelManager::findByTitle(const String& title) const
 
 int DockPanelManager::count() const
 {
-    // 只统计真正对应 DockPanel 包装对象的窗格；内部的 tabbed 容器（以及
-    // 任何无 userData 的窗格）不参与计数。
+    // Only panes that correspond to a real DockPanel wrapper are counted;
+    // internal tabbed containers (and any pane without userData) are excluded.
     return static_cast<int>(panels().size());
 }
 

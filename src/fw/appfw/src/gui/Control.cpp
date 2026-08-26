@@ -21,7 +21,7 @@ Control::~Control()
     // d is deleted by UIElement
 }
 
-void Control::enabled(bool on)
+void Control::setEnabled(bool on)
 {
     if (auto* w = impl<QWidget>())
         w->setEnabled(on);
@@ -33,7 +33,7 @@ bool Control::enabled() const
     return w && w->isEnabled();
 }
 
-void Control::visible(bool on)
+void Control::setVisible(bool on)
 {
     if (auto* w = impl<QWidget>())
         w->setVisible(on);
@@ -45,7 +45,7 @@ bool Control::visible() const
     return w && w->isVisible();
 }
 
-void Control::tooltip(const String& t)
+void Control::setTooltip(const String& t)
 {
     auto* w = impl<QWidget>();
     if (!w)
@@ -81,7 +81,7 @@ Size Control::size() const
     return w ? Size(w->width(), w->height()) : Size();
 }
 
-void Control::size(const Size& s)
+void Control::setSize(const Size& s)
 {
     auto* w = impl<QWidget>();
     if (w)

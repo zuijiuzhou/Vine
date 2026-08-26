@@ -33,21 +33,23 @@
  */
 
 /**
- * \brief 调色板驱动的主题颜色辅助（命名空间内联函数集合）。
+ * @brief Palette-driven theme colour helpers (a set of inline functions in a namespace).
  *
- * 所有颜色从 QApplication::palette() 派生，因此窗格颜色自动跟随主题/深色模式变化，无需硬编码亮/暗色。
- * 相关控件在收到QEvent::PaletteChange / ApplicationPaletteChange 后 update() 重绘。
+ * All colours are derived from QApplication::palette(), so the pane colours automatically
+ * follow the theme/dark-mode changes without hardcoding light/dark colours.
+ * The affected widgets repaint on receiving QEvent::PaletteChange / ApplicationPaletteChange.
  *
- * \note 颜色语义约定：
- *  - 边框（border/floatingBorder）由 Window 亮度派生（亮主题加深、暗主题加亮）。
- *  - 标题栏背景：激活用 Base（与内容融合）、非激活用 Window。
- *  - 标题文字/图标用 WindowText；悬停/指示用 Highlight。
+ * @note Colour semantics:
+ *  - Borders (border/floatingBorder) are derived from the Window lightness (darker on light
+ *    themes, lighter on dark themes).
+ *  - Title-bar background: Base when active (blends with the content), Window when inactive.
+ *  - Title text/icons use WindowText; hover/indicators use Highlight.
  */
 namespace DockingPaneTheme
 {
 
 /**
- * \brief 当前应用调色板。
+ * @brief The current application palette.
  */
 inline QPalette appPalette()
 {
@@ -55,7 +57,7 @@ inline QPalette appPalette()
 }
 
 /**
- * \brief 1px 窗格边框色（亮主题略深、暗主题略亮的 Window）。
+ * @brief 1px pane border colour (Window slightly darker on light themes, slightly lighter on dark themes).
  */
 inline QColor borderColor()
 {
@@ -65,7 +67,7 @@ inline QColor borderColor()
 }
 
 /**
- * \brief 浮动窗格边框色。
+ * @brief Floating pane border colour.
  */
 inline QColor floatingBorderColor()
 {
@@ -75,7 +77,7 @@ inline QColor floatingBorderColor()
 }
 
 /**
- * \brief 激活标题栏背景（用 Base 与面板内容融合）。
+ * @brief Active title-bar background (uses Base to blend with the panel content).
  */
 inline QColor activeHeaderColor()
 {
@@ -83,7 +85,7 @@ inline QColor activeHeaderColor()
 }
 
 /**
- * \brief 非激活标题栏背景（用 Window）。
+ * @brief Inactive title-bar background (uses Window).
  */
 inline QColor inactiveHeaderColor()
 {
@@ -91,7 +93,7 @@ inline QColor inactiveHeaderColor()
 }
 
 /**
- * \brief 标题文字色（与对应标题栏背景配对使用）。
+ * @brief Title text colour (used with the matching title-bar background).
  */
 inline QColor titleTextColor(bool)
 {
@@ -99,7 +101,7 @@ inline QColor titleTextColor(bool)
 }
 
 /**
- * \brief 标题栏点状纹理色。
+ * @brief Title-bar dotted pattern colour.
  */
 inline QColor titlePatternColor(bool)
 {
@@ -107,7 +109,7 @@ inline QColor titlePatternColor(bool)
 }
 
 /**
- * \brief 自动隐藏按钮条底色（同边框色）。
+ * @brief Auto-hide button strip background colour (same as the border colour).
  */
 inline QColor autoHideStripColor()
 {
@@ -115,7 +117,7 @@ inline QColor autoHideStripColor()
 }
 
 /**
- * \brief 自动隐藏按钮悬停色（Highlight）。
+ * @brief Auto-hide button hover colour (Highlight).
  */
 inline QColor autoHideHoverColor()
 {
@@ -123,7 +125,7 @@ inline QColor autoHideHoverColor()
 }
 
 /**
- * \brief 关闭/固定图标着色（与对应标题栏背景配对）。
+ * @brief Close/pin icon tint (paired with the matching title-bar background).
  */
 inline QColor iconTintColor(bool)
 {

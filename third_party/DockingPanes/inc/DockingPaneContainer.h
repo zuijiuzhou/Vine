@@ -33,24 +33,29 @@ class DockingPaneTitleWidget;
 class DockingToolButton;
 
 /**
- * \brief 单个停靠窗格：标题栏 + 关闭/固定按钮 + 客户区。
+ * @brief A single dockable pane: title bar + close/pin buttons + client area.
  *
- * 是停靠树中的基本叶子节点。可处于停靠、浮动、自动隐藏、Tab 四种形态（见 DockingPaneBase::State）。
- * 浮动时为 Qt::ToolTip 无边框置顶窗口，带边缘缩放光晕（DockingPaneGlow）。
+ * The basic leaf node of the docking tree. It can be in one of four forms:
+ * docked, floating, auto-hidden or tabbed (see DockingPaneBase::State).
+ * When floating it is a Qt::ToolTip frameless topmost window with an edge
+ * resize glow (DockingPaneGlow).
  *
- * \note 注意事项：
- *  - 默认构造 DockingPaneContainer(QWidget*) 仅面向派生类（DockingPaneTabbedContainer）使用，成员未初始化，直接调用其方法会崩溃。
- *  - 作为 Tab 子窗格时，只有 clientWidget 被放进标签组，容器对象本身不reparent；
- *    关闭/移动必须经由 DockingPaneManager::closePane() 路由或 DockingPaneTabbedContainer::closePane()，不要直接操作。
- *  - m_flyoutWidget 为 QPointer，flyout 被管理器删除后自动置空。
- *  - 拖动标题栏超过 5px 会转为浮动（floatPane），期间窗口重建会丢失鼠标抓取，需要 reacquireGrab()/takeGrab() 重新抓取。
+ * @note Notes:
+ *  - The default constructor DockingPaneContainer(QWidget*) is only for derived classes
+ *    (DockingPaneTabbedContainer); its members are uninitialized, so calling its methods directly crashes.
+ *  - As a tab child, only the clientWidget is placed into the tab group; the container
+ *    object itself is not reparented. Closing/moving must go through DockingPaneManager::closePane()
+ *    routing or DockingPaneTabbedContainer::closePane(); do not operate on it directly.
+ *  - m_flyoutWidget is a QPointer that is automatically cleared once the manager deletes the flyout.
+ *  - Dragging the title bar more than 5px turns the pane floating (floatPane), which rebuilds the
+ *    window and loses the mouse grab; re-grab with reacquireGrab()/takeGrab().
  */
 class DockingPaneContainer : public DockingPaneBase {
     Q_OBJECT
 
   public:
     /**
-     * \brief 自动隐藏弹出方向（flyout 从哪条边弹出）。
+     * @brief Auto-hide popup direction (which edge the flyout pops out from).
      */
     enum FlyoutPosition
     {
@@ -64,100 +69,96 @@ class DockingPaneContainer : public DockingPaneBase {
 
   public:
     /**
-     * \brief 完整构造（含标题、id、父窗口、客户区）。
+     * @brief Full constructor (title, id, parent window and client area).
      */
     explicit DockingPaneContainer(const QString& title, const QString& id, QWidget* parent = nullptr, QWidget* clientWidget = nullptr);
 
     /**
-     * \brief 默认构造，仅供派生类初始化自身成员后使用。
-     * \note 本构造不创建标题栏/按钮/客户区，直接使用会解引用空指针。
+     * @brief Default constructor; only for derived classes after initializing their own members.
+     * @note This constructor does not create the title bar/buttons/client area; using it directly dereferences null pointers.
      */
     explicit DockingPaneContainer(QWidget* parent = nullptr);
     ~DockingPaneContainer() override;
 
   public:
     /**
-     * \brief 转为浮动窗格（QRect 版本，参数当前被忽略，仅用于状态切换）。
+     * @brief Turns the pane into a floating window (QRect overload; the argument is currently ignored and only used for the state switch).
      */
     void floatPane(QRect rect);
 
     /**
-     * \brief 从当前位置偏移 pos 转为浮动窗格。
+     * @brief Turns the pane into a floating window, offset by pos from its current position.
      *
-     * 先经 closePane() 从停靠树摘除，再按记录的全局位置浮动。
-     * \note 需要 dockingManager() 与 mainWindow() 有效（否则为无父顶层窗口）。
+     * Removes the pane from the docking tree via closePane() first, then floats it at the recorded global position.
+     * @note Requires a valid dockingManager() and mainWindow() (otherwise it becomes a parentless top-level window).
      */
     void floatPane(QPoint pos);
 
     /**
-     * \brief 打开自动隐藏 flyout。
-     * \param hasFocus 是否立即获得焦点（否则 1s 后进入自动隐藏超时）。
-     * \param parent
-     * \param pos
-     * \param pane     要弹出的子窗格（Tab 容器按标签选择）。
-     * \return 新建的 flyout 控件。
+     * @brief Opens the auto-hide flyout.
+     * @param hasFocus Whether to take focus immediately (otherwise auto-hide timeout starts after 1s).
+     * @param parent
+     * @param pos
+     * @param pane     The child pane to pop out (a Tab container selects it by tab).
+     * @return The newly created flyout widget.
      */
     virtual DockingPaneFlyoutWidget* openFlyout(bool hasFocus, QWidget* parent, FlyoutPosition pos, DockingPaneContainer* pane);
 
     /**
-     * \brief 设置状态；非 Floating 时显示固定按钮并释放光晕。
+     * @brief Sets the state; shows the pin button and releases the glow when not Floating.
      */
     void setState(State state) override;
 
     /**
-     * \brief 子窗格数量（单窗格恒为 1；Tab 容器返回标签数）。
+     * @brief Number of child panes (always 1 for a single pane; a Tab container returns the tab count).
      */
     virtual int getPaneCount();
 
     /**
-     * \brief 取第 index 个子窗格（单窗格返回自身）。
+     * @brief Returns the child pane at index (a single pane returns itself).
      */
     virtual DockingPaneContainer* getPane(int index);
 
     /**
-     * \brief 当前客户区控件。
+     * @brief The current client-area widget.
      */
     QWidget* clientWidget();
 
     /**
-     * \brief 设置客户区控件。
-     * \note widget 为 nullptr 时仅清空布局并返回（不会崩溃）。
+     * @brief Sets the client-area widget.
+     * @note When widget is nullptr the layout is merely cleared and the function returns (no crash).
      */
     virtual void setClientWidget(QWidget* widget);
 
     void saveLayout(QDomNode* parentNode, bool includeGeometry = false) override;
 
     /**
-     * \brief flyout 尺寸（未设置时默认 100x100）。
+     * @brief Flyout size (defaults to 100x100 when unset).
      */
     QSize flyoutSize();
 
     /**
-     * \brief 设置 flyout 尺寸（自动隐藏时保存窗格尺寸用）。
+     * @brief Sets the flyout size (used to save the pane size when auto-hiding).
      */
     void setFlyoutSize(QSize flyoutSize);
 
     /**
-     * \brief 浮动时的边缘缩放光晕对象。
+     * @brief The edge resize glow object used when floating.
      */
     DockingPaneGlow* floatingGlow();
 
-    // --- Feature toggles ---
-
     /**
-     * \brief 是否可关闭（仅控制标题栏关闭按钮可见性）。
-     * \note 不阻止编程式 closePane()/removeDockPanel() 等其它关闭路径。
+     * @brief Whether the pane is closable (only controls the visibility of the title-bar close button).
+     * @note Does not prevent other close paths such as programmatic closePane()/removeDockPanel().
      */
     void setClosable(bool closable);
     bool isClosable() const;
 
-    // --- Close callback ---
-
-    /// 关闭回调：返回 false 可否决本次关闭（宿主可借此拦截）。
+    /// Close callback: returning false vetoes the close (lets the host intercept it).
     using CloseCallback = bool (*)(DockingPaneContainer*);
 
     /**
-     * \brief 设置关闭回调（宿主安装 onClosing 拦截用）。
+     * @brief Sets the close callback (for the host to install an onClosing interceptor).
      */
     void setCloseCallback(CloseCallback cb)
     {
@@ -165,7 +166,7 @@ class DockingPaneContainer : public DockingPaneBase {
     }
 
     /**
-     * \brief 调用关闭回调；无回调时视为允许关闭。
+     * @brief Invokes the close callback; treated as allowed when no callback is set.
      */
     bool invokeCloseCallback()
     {
@@ -173,38 +174,36 @@ class DockingPaneContainer : public DockingPaneBase {
     }
 
     /**
-     * \brief flyout 拖出转浮动后 flyout 隐藏导致鼠标抓取释放，
-     *        由目标 pane 标题接管以继续拖动。
+     * @brief After a flyout drag turns floating and the flyout hides, the mouse grab is released;
+     *        the target pane's title takes over so the drag can continue.
      */
     void continueDrag(QPoint pos);
 
   protected:
     void setName(const QString& name) override;
 
-    /// 激活态变化时更新标题/按钮外观（焦点变化触发）。
+    /// Updates the title/button appearance when the active state changes (triggered by focus changes).
     void setActivePane(bool active);
     void paintEvent(QPaintEvent* event) override;
     void changeEvent(QEvent* event) override;
 
-    // ---- 标题栏拖动（停靠/浮动切换）----
     virtual void onStartDragTitle(QPoint pos);
     virtual void onEndDragTitle(QPoint pos);
     virtual void onMoveDragTitle(QPoint pos);
 
-    // ---- flyout 标题拖动（自动隐藏拖出为浮动）----
     virtual void onStartDragFlyoutTitle(QPoint pos);
     virtual void onEndDragFlyoutTitle(QPoint pos);
     virtual void onMoveDragFlyoutTitle(QPoint pos);
 
-    /// 标题栏关闭按钮被点击（先经 close 回调，可被否决）。
+    /// The title-bar close button was clicked (goes through the close callback, which may veto it).
     virtual void onCloseButtonClicked();
-    /// flyout 的关闭按钮被点击（关闭固定窗格）。
+    /// The flyout's close button was clicked (closes the pinned pane).
     virtual void onCloseContainer();
-    /// qApp 焦点变化：设置本窗格激活态。
+    /// qApp focus changed: sets this pane's active state.
     virtual void onFocusChanged(QWidget* old, QWidget* now);
-    /// 固定按钮被点击：走 hidePane 进入自动隐藏。
+    /// The pin button was clicked: enters auto-hide via hidePane.
     virtual void onPinButtonClicked();
-    /// flyout 的固定按钮被点击：unpin。
+    /// The flyout's pin button was clicked: unpins.
     virtual void onUnpinContainer();
 
   protected:

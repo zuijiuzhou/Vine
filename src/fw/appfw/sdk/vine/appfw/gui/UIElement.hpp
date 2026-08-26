@@ -24,7 +24,7 @@ class V_APPFW_API UIElement : public Object {
     virtual ~UIElement();
 
   public:
-    String       getName() const;
+    String       name() const;
     virtual void setName(const String& name);
 
   public:
@@ -35,7 +35,9 @@ class V_APPFW_API UIElement : public Object {
 
     template <typename TImpl>
     TImpl* impl() const
-    { return (TImpl*)impl(); }
+    {
+        return (TImpl*)impl();
+    }
 
     void setOwnsImpl(bool owns);
 

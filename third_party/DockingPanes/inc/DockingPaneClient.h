@@ -27,12 +27,14 @@ class QGridLayout;
 class DockingPaneManager;
 
 /**
- * \brief 中央客户区容器（停靠树的根/中心节点）。
+ * @brief Central client-area container (the root/centre node of the docking tree).
  *
- * 存放宿主通过 setClientWidget 设置的中央内容；所有停靠窗格围绕它展开。
- * 布局恢复时以本节点为“包含客户端”的锚点（updateAllSplitters / applyLayout）。
+ * Holds the central content set by the host via setClientWidget; all docked panes
+ * are arranged around it. During layout restore this node is the "contains client"
+ * anchor (updateAllSplitters / applyLayout).
  *
- * \note 是停靠树的叶子，不含标题栏；永远存在，不应被关闭。
+ * @note It is a leaf of the docking tree with no title bar; it always exists and
+ * should never be closed.
  */
 class DockingPaneClient : public DockingPaneBase {
     Q_OBJECT

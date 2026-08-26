@@ -1,10 +1,10 @@
 #include <vine/appfw/gui/RibbonButton.hpp>
 
-#include <SARibbon.h>
 #include <QAction>
 #include <QIcon>
 #include <QSize>
 #include <QToolButton>
+#include <SARibbon.h>
 #include <algorithm>
 
 #include <vine/appfw/gui/RibbonAction.hpp>
@@ -15,6 +15,7 @@ V_APPFWGUI_NS_BEGIN
 
 namespace
 {
+
 Qt::ToolButtonStyle toQtStyle(RibbonButtonStyle s)
 {
     switch (s) {
@@ -38,19 +39,22 @@ RibbonButtonStyle fromQtStyle(Qt::ToolButtonStyle s)
 
     return RibbonButtonStyle::IconOnly;
 }
+
 } // namespace
 
 V_OBJECT_META_IMPL(RibbonButton, Control)
 
 struct RibbonButton::Data : public UIElementData {
-    void* user = nullptr;
+    void*          user       = nullptr;
     RibbonItemSize buttonSize = RibbonItemSize::Small;
-    /// 下拉菜单条目（有序）：item 为 nullptr 表示分隔线。
+
+    /// Drop-down menu entry (ordered): item == nullptr means a separator.
     struct Entry {
         RibbonAction* item = nullptr;
     };
-    std::vector<Entry>    entries;    // 有序条目（项/分隔线）
-    std::vector<QAction*> separators; // 本按钮创建的分隔线 QAction（重建时释放）
+
+    std::vector<Entry>    entries;    // ordered entries (items/separators)
+    std::vector<QAction*> separators; // separator QActions created by this button (freed on rebuild)
     SARibbonMenu*         menu = nullptr;
     EventArgs             clickedArgs;
 };
@@ -71,7 +75,7 @@ RibbonButton::~RibbonButton()
     // d is deleted by UIElement
 }
 
-void RibbonButton::text(const String& t)
+void RibbonButton::setText(const String& t)
 {
     auto* btn = impl<SARibbonToolButton>();
     if (!btn)
@@ -89,7 +93,7 @@ String RibbonButton::text() const
     return String::fromUtf16((const char16_t*)qs.utf16(), qs.size());
 }
 
-void RibbonButton::icon(const Icon& ic)
+void RibbonButton::setIcon(const Icon& ic)
 {
     auto* btn = impl<SARibbonToolButton>();
     if (!btn)
@@ -105,7 +109,7 @@ Icon RibbonButton::icon() const
     return Icon(btn->icon());
 }
 
-void RibbonButton::checkable(bool on)
+void RibbonButton::setCheckable(bool on)
 {
     auto* btn = impl<SARibbonToolButton>();
     if (!btn)
@@ -119,7 +123,7 @@ bool RibbonButton::checkable() const
     return btn && btn->isCheckable();
 }
 
-void RibbonButton::checked(bool on)
+void RibbonButton::setChecked(bool on)
 {
     auto* btn = impl<SARibbonToolButton>();
     if (!btn)
@@ -133,7 +137,7 @@ bool RibbonButton::checked() const
     return btn && btn->isChecked();
 }
 
-void RibbonButton::buttonSize(RibbonItemSize s)
+void RibbonButton::setButtonSize(RibbonItemSize s)
 {
     dptr()->buttonSize = s;
 
@@ -141,8 +145,9 @@ void RibbonButton::buttonSize(RibbonItemSize s)
     if (!btn)
         return;
 
-    // SARibbon 按钮类型只有 Large/Small 两档：Medium 走 SmallButton，
-    // 中等占位由面板行比例（RowProportion::Medium）决定。
+    // SARibbon button types only have Large/Small: Medium uses SmallButton,
+    // and the medium placeholder is decided by the panel row proportion
+    // (RowProportion::Medium).
     btn->setButtonType(s == RibbonItemSize::Large ? SARibbonToolButton::LargeButton : SARibbonToolButton::SmallButton);
 }
 
@@ -151,7 +156,7 @@ RibbonItemSize RibbonButton::buttonSize() const
     return dptr()->buttonSize;
 }
 
-void RibbonButton::style(RibbonButtonStyle s)
+void RibbonButton::setStyle(RibbonButtonStyle s)
 {
     auto* btn = impl<SARibbonToolButton>();
     if (!btn)
@@ -167,7 +172,7 @@ RibbonButtonStyle RibbonButton::style() const
     return fromQtStyle(btn->toolButtonStyle());
 }
 
-void RibbonButton::largeIconSize(const Size& s)
+void RibbonButton::setLargeIconSize(const Size& s)
 {
     auto* btn = impl<SARibbonToolButton>();
     if (!btn)
@@ -184,7 +189,7 @@ Size RibbonButton::largeIconSize() const
     return Size(qs.width(), qs.height());
 }
 
-void RibbonButton::smallIconSize(const Size& s)
+void RibbonButton::setSmallIconSize(const Size& s)
 {
     auto* btn = impl<SARibbonToolButton>();
     if (!btn)
@@ -201,7 +206,7 @@ Size RibbonButton::smallIconSize() const
     return Size(qs.width(), qs.height());
 }
 
-void RibbonButton::wordWrap(bool on)
+void RibbonButton::setWordWrap(bool on)
 {
     auto* btn = impl<SARibbonToolButton>();
     if (!btn)
@@ -215,7 +220,7 @@ bool RibbonButton::wordWrap() const
     return btn && btn->isEnableWordWrap();
 }
 
-void RibbonButton::iconRightText(bool on)
+void RibbonButton::setIconRightText(bool on)
 {
     auto* btn = impl<SARibbonToolButton>();
     if (!btn)
@@ -239,7 +244,7 @@ void RibbonButton::addDropDownItem(RibbonAction* item)
     for (const auto& e : entries) {
         if (e.item == item) {
             return;
-        } // 已存在则忽略
+        } // already exists, ignore
     }
 
     entries.push_back({ item });
@@ -261,8 +266,8 @@ void RibbonButton::removeDropDownItem(RibbonAction* item)
 
     entries.erase(it);
 
-    // 把 item 的 QAction 所有权交还给 item（挂菜单期间由菜单持有）；
-    // rebuildMenu() 会把它从菜单摘除。
+    // Return the item's QAction ownership back to the item (while attached to
+    // the menu, the menu holds it); rebuildMenu() removes it from the menu.
     item->setOwnsImpl(true);
 
     rebuildMenu();
@@ -276,7 +281,7 @@ void RibbonButton::clearDropDownItems()
         return;
     }
 
-    // 把每个 item 的 QAction 所有权交还后再清空。
+    // Return each item's QAction ownership before clearing.
     for (const auto& e : entries) {
         if (e.item) {
             e.item->setOwnsImpl(true);
@@ -297,7 +302,7 @@ void RibbonButton::addSeparator()
 
 size_t RibbonButton::dropDownItemCount() const
 {
-    // 只统计真实项，分隔线不计入
+    // Count only real items; separators are not included
     size_t n = 0;
     for (const auto& e : dptr()->entries) {
         if (e.item) {
@@ -327,7 +332,7 @@ RibbonAction* RibbonButton::dropDownItemAt(size_t i) const
 
 size_t RibbonButton::dropDownEntryCount() const
 {
-    // 全条目数：真实项 + 分隔线
+    // Total entries: real items + separators
     return dptr()->entries.size();
 }
 
@@ -337,11 +342,12 @@ void RibbonButton::removeDropDownEntryAt(size_t i)
 
     if (i >= entries.size()) {
         return;
-    } // 越界安全
+    } // out-of-range guard
 
     auto it = entries.begin() + i;
 
-    // 移除真实项时交还 QAction 所有权；分隔线无需处理（由本按钮持有）
+    // Return QAction ownership when removing a real item; separators need no
+    // handling (owned by this button)
     if (it->item) {
         it->item->setOwnsImpl(true);
     }
@@ -370,8 +376,9 @@ void RibbonButton::rebuildMenu()
 
     auto& entries = dptr()->entries;
 
-    // 释放上次构建的分隔线 QAction（由本按钮创建，需要自行管理）。
-    // 它们虽是菜单的子对象，但重建后不再出现在菜单 action 列表里。
+    // Free the separator QActions built last time (created by this button, so
+    // we must manage them). Though they are children of the menu, after a
+    // rebuild they no longer appear in the menu's action list.
     for (QAction* s : dptr()->separators) {
         delete s;
     }
@@ -390,8 +397,9 @@ void RibbonButton::rebuildMenu()
         dptr()->menu = new SARibbonMenu(btn);
     }
 
-    // 摘除当前所有 action 后按条目顺序重建。绝不使用 QMenu::clear()：
-    // 它会删除 item 的 QAction（item 的 UIElement 也引用它）。
+    // Detach all current actions, then rebuild in entry order. Never use
+    // QMenu::clear(): it would delete the item's QAction (the item's UIElement
+    // also references it).
     for (QAction* a : dptr()->menu->actions()) {
         dptr()->menu->removeAction(a);
     }

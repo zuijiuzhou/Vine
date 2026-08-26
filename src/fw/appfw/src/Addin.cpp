@@ -10,7 +10,7 @@ void Addin::load(AddinLoadContext* context)
 void Addin::unload()
 {}
 
-String Addin::getName() const
+String Addin::name() const
 {
     return String();
 }

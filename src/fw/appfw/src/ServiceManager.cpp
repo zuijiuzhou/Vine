@@ -1,7 +1,7 @@
 ﻿#include <vine/appfw/ServiceManager.hpp>
 
-#include <vine/di/Container.hpp>
 #include <vine/Ptr.hpp>
+#include <vine/di/Container.hpp>
 
 V_APPFW_NS_BEGIN
 
@@ -20,13 +20,13 @@ ServiceManager::~ServiceManager()
     delete d;
 }
 
-ServiceManager* ServiceManager::registerService(di::Registration* reg)
+ServiceManager* ServiceManager::registerService(const di::Registration& reg)
 {
-
+    d->container->add(reg);
     return this;
 }
 
-RefObject* ServiceManager::getService(Type type) const
+RefObject* ServiceManager::service(Type type) const
 {
     return d->container->resolve(type);
 }

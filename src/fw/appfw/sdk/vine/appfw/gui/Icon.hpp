@@ -1,20 +1,23 @@
 #pragma once
 
-#include <vine/appfw/appfw_global.hpp>
 #include <vine/String.hpp>
+#include <vine/appfw/appfw_global.hpp>
 
 class QIcon;
 
 V_APPFWGUI_NS_BEGIN
 
 /**
- * \brief 图标对象：内部持有 QIcon（Pimpl 隐藏，头文件不包含 Qt 头）。
+ * @brief Icon object: holds a QIcon internally (hidden via Pimpl; the header
+ * includes no Qt headers).
  *
- * 供 RibbonButton / RibbonAction 等 gui 包装类设置图标，让框架层
- * 头文件不暴露、不包含 Qt。可从现有 QIcon 或文件路径（String）构造。
+ * Used by gui wrapper classes such as RibbonButton/RibbonAction to set icons,
+ * so framework headers neither expose nor include Qt. Can be constructed from
+ * an existing QIcon or a file path (String).
  *
- * \note 这是框架内唯一接触 QIcon 的桥接类型：QIcon 在头文件中仅前置声明，
- * 需要真正使用 QIcon 的代码（实现文件）自行包含 <QIcon>。
+ * @note This is the only bridge type in the framework that touches QIcon:
+ * QIcon is only forward-declared in headers, and code that actually needs
+ * QIcon (implementation files) must include <QIcon> itself.
  */
 class V_APPFW_API Icon {
   public:
@@ -26,13 +29,13 @@ class V_APPFW_API Icon {
     ~Icon();
 
   public:
-    /// 底层 QIcon（只读）。
+    /// The underlying QIcon (read-only).
     const QIcon& value() const;
 
-    /// 是否为空图标。
+    /// Whether the icon is null.
     bool isNull() const;
 
-    /// 隐式转换为 QIcon。
+    /// Implicitly converts to QIcon.
     operator QIcon() const;
 
   private:

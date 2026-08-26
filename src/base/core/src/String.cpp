@@ -470,4 +470,16 @@ String String::fromUtf32(const char32_t* data, size_type count)
     return String(std::move(out));
 }
 
+String String::hex(std::span<const std::uint8_t> bytes)
+{
+    static constexpr char8_t digits[] = u8"0123456789abcdef";
+    std::u8string            out;
+    out.reserve(bytes.size() * 2);
+    for (std::uint8_t byte : bytes) {
+        out.push_back(digits[byte >> 4]);
+        out.push_back(digits[byte & 0xF]);
+    }
+    return String(std::move(out));
+}
+
 V_CORE_NS_END

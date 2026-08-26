@@ -2,7 +2,9 @@
 #include "core_global.hpp"
 
 #include <cstddef>
+#include <cstdint>
 #include <initializer_list>
+#include <span>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -1518,6 +1520,13 @@ class V_CORE_API String final {
      *        If count is npos, processing continues until a null terminator is found
      */
     static String fromUtf32(const char32_t* data, size_type count = std::string::npos);
+
+    /** Create a lowercase hex string from a byte sequence
+     *  @param bytes The byte sequence to encode
+     *  @return A new String with the lowercase hex representation
+     *  @note Each byte is encoded as two hex digits
+     */
+    static String hex(std::span<const std::uint8_t> bytes);
 
   public:
     /** Assignment operator

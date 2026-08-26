@@ -31,7 +31,7 @@ class V_ROBOTICS_CORE_API Frame : public vine::RefObject {
     Frame(FrameType type);
 
   public:
-    const String& getName() const
+    const String& name() const
     {
         return name_;
     }
@@ -41,12 +41,12 @@ class V_ROBOTICS_CORE_API Frame : public vine::RefObject {
         name_ = name;
     }
 
-    FrameType getFrameType() const
+    FrameType frameType() const
     {
         return type_;
     }
 
-    math::Isometry3d getFixedTransform() const
+    math::Isometry3d fixedTransform() const
     {
         return fixed_tf_;
     }
@@ -56,12 +56,12 @@ class V_ROBOTICS_CORE_API Frame : public vine::RefObject {
         fixed_tf_ = tf;
     }
 
-    virtual math::Isometry3d getTransform()
+    virtual math::Isometry3d transform()
     {
         return fixed_tf_;
     };
 
-    virtual const std::vector<DofInfo>& getDofInfos() const
+    virtual const std::vector<DofInfo>& dofInfos() const
     {
         static std::vector<DofInfo> empty;
         return empty;

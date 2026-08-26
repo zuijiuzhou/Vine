@@ -24,7 +24,7 @@ class V_ROBOTICS_CORE_API IKSolver {
   public:
     virtual bool solve(const math::Isometry3d& target, std::vector<Q>& solutions) const = 0;
 
-    const std::vector<DofInfo>& getDofs() const
+    const std::vector<DofInfo>& dofs() const
     {
         return dofs_;
     }

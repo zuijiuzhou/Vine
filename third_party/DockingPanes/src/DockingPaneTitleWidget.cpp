@@ -38,8 +38,9 @@ DockingPaneTitleWidget::DockingPaneTitleWidget(const QString& text, QWidget* par
 
 DockingPaneTitleWidget::~DockingPaneTitleWidget()
 {
-    // 析构期间(如父窗口销毁子控件)焦点可能变化, focusChanged 会调用到基类析构已开始的
-    // 本对象导致 assertObjectType 断言, 因此提前断开连接
+    // Focus may change during destruction (e.g. the parent destroys child widgets); focusChanged
+    // would call into this object after its base destructor has started, causing an assertObjectType
+    // assertion, so disconnect early.
     disconnect(qApp, &QApplication::focusChanged, this, &DockingPaneTitleWidget::onFocusChanged);
 }
 
@@ -65,7 +66,8 @@ void DockingPaneTitleWidget::reacquireGrab()
 
 void DockingPaneTitleWidget::takeGrab()
 {
-    // 飞窗拖出转浮动时飞窗被隐藏、抓取释放; 由本标题接管鼠标以继续拖动
+    // When a flyout drag turns floating the flyout is hidden and the grab is released;
+    // this title takes over the mouse to continue the drag.
     if (!m_grabbing) {
         grabMouse();
         m_grabbing = true;

@@ -27,27 +27,30 @@ class QDomNode;
 class DockingPaneManager;
 
 /**
- * \brief 停靠系统所有节点的抽象基类。
+ * @brief Abstract base class for all nodes of the docking system.
  *
- * 停靠树中的每个元素（单窗格 DockingPaneContainer、标签组 DockingPaneTabbedContainer、分割器 DockingPaneSplitterContainer、中央客户区
- * DockingPaneClient）都继承自本类。 提供统一的身份（id/name）、状态（State）与宿主数据（userData）。
+ * Every element of the docking tree (single pane DockingPaneContainer, tab group
+ * DockingPaneTabbedContainer, splitter DockingPaneSplitterContainer, central client
+ * DockingPaneClient) derives from this class. It provides a uniform identity
+ * (id/name), state (State) and host data (userData).
  *
- * \note 已知设计缺陷：setState() 只是给 m_state 赋值，不附带任何副作用；
- * 真正的状态转换（隐藏/显示/固定/浮动等）必须由具体子类或
- * DockingPaneManager 的对应操作完成，调用方不要依赖 setState 产生界面变化。
+ * @note Known design flaw: setState() only assigns m_state without any side effects;
+ * the real state transitions (hide/show/pin/float, etc.) must be performed by the
+ * concrete subclasses or the corresponding DockingPaneManager operations; callers
+ * must not rely on setState to produce UI changes.
  */
 class DockingPaneBase : public QWidget {
     Q_OBJECT
 
   public:
     /**
-     * \brief 窗格生命周期状态。
+     * @brief Pane lifecycle state.
      *
-     * Hidden  已关闭/隐藏（仍可能留在树中）；
-     * Docked  停靠在树中；
-     * Floating 浮动独立窗口；
-     * Pinned  自动隐藏（边缘有按钮）；
-     * Tabbed  是某个 DockingPaneTabbedContainer 的标签页。
+     * Hidden   Closed/hidden (may still remain in the tree);
+     * Docked   Docked in the tree;
+     * Floating Floating independent window;
+     * Pinned   Auto-hidden (has an edge button);
+     * Tabbed   A tab page of a DockingPaneTabbedContainer.
      */
     enum State
     {
@@ -66,24 +69,24 @@ class DockingPaneBase : public QWidget {
 
   public:
     /**
-     * \brief 显示名称（窗格标题 / Tab 文本来源）。
+     * @brief Display name (pane title / source of the Tab text).
      */
     const QString& name();
 
     /**
-     * \brief 唯一标识（用于布局恢复与查找）。
+     * @brief Unique identifier (used for layout restore and lookups).
      */
     const QString& id();
 
     /**
-     * \brief 返回所属的 DockingPaneManager。
-     * \note 未加入管理器时为 nullptr。
+     * @brief Returns the owning DockingPaneManager.
+     * @note nullptr when not added to a manager.
      */
     DockingPaneManager* dockingManager();
 
     /**
-     * \brief 设置宿主自定义数据（如宿主 UIElement 包装对象指针）。
-     * \note 原始 void*，调用方负责生命周期；删除所指对象前应清空。
+     * @brief Sets host custom data (e.g. a pointer to the host's UIElement wrapper object).
+     * @note Raw void*; the caller owns its lifetime and should clear it before deleting the object.
      */
     void setUserData(void* data)
     {
@@ -96,21 +99,22 @@ class DockingPaneBase : public QWidget {
     }
 
     /**
-     * \brief 当前状态。 \see State
+     * @brief Current state. @see State
      */
     virtual State state();
 
     /**
-     * \brief 设置状态，仅内部使用。
-     * \note 仅赋值，不附带界面副作用（见类说明）。
-     * \note 仅供派生类与 DockingPaneManager（friend）使用，宿主请通过管理器的高层操作（dockPane/closePane/hidePane 等）改变状态。
+     * @brief Sets the state; for internal use only.
+     * @note Merely assigns the value without UI side effects (see the class description).
+     * @note For derived classes and DockingPaneManager (friend) only; hosts should change state via
+     * the manager's high-level operations (dockPane/closePane/hidePane, etc.).
      */
     virtual void setState(State state);
 
     /**
-     * \brief 将本节点及其子节点写入父 XML 节点（布局保存）。
-     * \param parentNode
-     * \param includeGeometry 是否包含几何信息（浮动窗格用）。
+     * @brief Writes this node and its children into the parent XML node (layout save).
+     * @param parentNode
+     * @param includeGeometry Whether to include geometry information (used for floating panes).
      */
     virtual void saveLayout(QDomNode* parentNode, bool includeGeometry = false);
 
@@ -119,12 +123,12 @@ class DockingPaneBase : public QWidget {
     virtual void setId(const QString& id);
 
   protected:
-    bool                m_isClient;           ///< 是否中央客户区。
-    DockingPaneManager* m_dockingManager;     ///< 所属管理器。
-    State               m_state;              ///< 当前状态。
-    QString             m_name;               ///< 显示名称。
-    QString             m_id;                 ///< 唯一标识。
-    void*               m_userData = nullptr; ///< 宿主自定义数据。
+    bool                m_isClient;           ///< Whether this is the central client area.
+    DockingPaneManager* m_dockingManager;     ///< The owning manager.
+    State               m_state;              ///< Current state.
+    QString             m_name;               ///< Display name.
+    QString             m_id;                 ///< Unique identifier.
+    void*               m_userData = nullptr; ///< Host custom data.
 };
 
 #endif // DOCKINGPANEBASE_H

@@ -25,32 +25,34 @@
 class DockingPaneGlowWidget;
 
 /**
- * \brief 浮动窗格边缘缩放光晕的管理者。
+ * @brief Manager of the edge resize glow for a floating pane.
  *
- * 为某个浮动窗格创建四个 DockingPaneGlowWidget（左/右/上/下），用于拖动窗格边缘调整大小。窗格移动/尺寸变化时调用 update() 重排。
+ * Creates four DockingPaneGlowWidgets (left/right/top/bottom) for a floating pane so its
+ * edges can be dragged to resize it. update() repositions them when the pane moves or resizes.
  *
- * \note 生命周期：归所属窗格管理（DockingPaneContainer::m_floatingGlow），由 setState()/floatPane() 释放；窗格被销毁而未走这些路径时会泄漏。
+ * @note Lifetime: owned by the pane (DockingPaneContainer::m_floatingGlow) and released by
+ * setState()/floatPane(); if the pane is destroyed without going through those paths, it leaks.
  */
 class DockingPaneGlow : public QObject {
     Q_OBJECT
 
   public:
     /**
-     * \brief 构造。
-     * \param floatingPane 要加光晕的浮动窗格。
-     * \param parent       光晕窗口的父窗口（通常为主窗口）。
+     * @brief Constructs a glow manager.
+     * @param floatingPane The floating pane to add the glow to.
+     * @param parent       Parent window of the glow widgets (usually the main window).
      */
     explicit DockingPaneGlow(QWidget* floatingPane, QObject* parent = nullptr);
     ~DockingPaneGlow() override;
 
   public:
     /**
-     * \brief 把四个光晕窗口置顶。
+     * @brief Raises all four glow windows to the top.
      */
     void raise();
 
     /**
-     * \brief 按浮动窗格当前位置/尺寸重排四个光晕窗口。
+     * @brief Repositions all four glow windows according to the floating pane's current position/size.
      */
     void update();
 

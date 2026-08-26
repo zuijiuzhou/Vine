@@ -100,3 +100,20 @@ function(v_add_library target_name_var short_name)
     message(--------AddLib:${target_alias})
 
 endfunction()
+
+# v_group_targets_folder(dir folder)
+# Recursively sets the FOLDER property on every target created in the given
+# directory and all its subdirectories. FetchContent third-party projects may
+# declare targets in nested subdirectories (e.g. mbedtls library/, 3rdparty/),
+# so a single-level BUILDSYSTEM_TARGETS query misses them. This groups all of
+# them under one solution folder, e.g. third_party.
+function(v_group_targets_folder dir folder)
+    get_property(_targets DIRECTORY ${dir} PROPERTY BUILDSYSTEM_TARGETS)
+    foreach(_tgt IN LISTS _targets)
+        set_target_properties(${_tgt} PROPERTIES FOLDER ${folder})
+    endforeach()
+    get_property(_subdirs DIRECTORY ${dir} PROPERTY SUBDIRECTORIES)
+    foreach(_sub IN LISTS _subdirs)
+        v_group_targets_folder(${_sub} ${folder})
+    endforeach()
+endfunction()

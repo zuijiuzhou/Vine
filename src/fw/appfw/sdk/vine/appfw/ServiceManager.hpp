@@ -13,8 +13,8 @@ class V_APPFW_API ServiceManager {
     ~ServiceManager();
 
   public:
-    ServiceManager* registerService(di::Registration* reg);
-    RefObject*      getService(Type type) const;
+    ServiceManager* registerService(const di::Registration& reg);
+    RefObject*      service(Type type) const;
 
   private:
     struct Data;

@@ -13,14 +13,20 @@ V_OBJECT_META_IMPL(DockPanel, Control)
 // Helper to access protected members of DockingPaneContainer.
 struct DPC : DockingPaneContainer {
     static void setContainerName(DockingPaneContainer* c, const QString& n)
-    { reinterpret_cast<DPC*>(c)->setName(n); }
+    {
+        reinterpret_cast<DPC*>(c)->setName(n);
+    }
 
     static void setContainerId(DockingPaneContainer* c, const QString& i)
-    { reinterpret_cast<DPC*>(c)->setId(i); }
+    {
+        reinterpret_cast<DPC*>(c)->setId(i);
+    }
 };
 
 inline QString toQString(const String& s)
-{ return QString::fromUtf8(s.data(), static_cast<int>(s.size())); }
+{
+    return QString::fromUtf8(s.data(), static_cast<int>(s.size()));
+}
 
 using itype = DockingPaneContainer;
 
@@ -28,7 +34,7 @@ struct DockPanel::Data : public UIElementData {
     DockFeatures features = DockFeatures::None;
     String       title;
     String       id;
-    UIElement*   content  = nullptr;
+    UIElement*   content = nullptr;
 };
 
 DockPanel::DockPanel()
@@ -50,63 +56,62 @@ inline auto DockPanel::dptr() const -> const Data*
     return static_cast<const Data*>(UIElement::d);
 }
 
-// ---- Close interception ----
-
 bool DockPanel::onClosing()
 {
     return true; // default: allow close
 }
 
-// ---- Features ----
-
-void DockPanel::features(DockFeatures f)
+void DockPanel::setFeatures(DockFeatures f)
 {
     dptr()->features = f;
-    auto* c = impl<itype>();
+    auto* c          = impl<itype>();
     if (c)
         c->setClosable(testFlag(f, DockFeatures::Closable));
 }
 
 DockFeatures DockPanel::features() const
-{ return dptr()->features; }
+{
+    return dptr()->features;
+}
 
-// ---- Title / Id ----
-
-void DockPanel::title(const String& t)
+void DockPanel::setTitle(const String& t)
 {
     dptr()->title = t;
-    auto* c = impl<itype>();
+    auto* c       = impl<itype>();
     if (c)
         DPC::setContainerName(c, toQString(t));
 }
 
 String DockPanel::title() const
-{ return dptr()->title; }
+{
+    return dptr()->title;
+}
 
-void DockPanel::id(const String& i)
+void DockPanel::setId(const String& i)
 {
     dptr()->id = i;
-    auto* c = impl<itype>();
+    auto* c    = impl<itype>();
     if (c)
         DPC::setContainerId(c, toQString(i));
 }
 
 String DockPanel::id() const
-{ return dptr()->id; }
+{
+    return dptr()->id;
+}
 
-// ---- Content ----
-
-void DockPanel::content(UIElement* c)
+void DockPanel::setContent(UIElement* c)
 {
     dptr()->content = c;
-    auto* p = impl<itype>();
-    if (!p) return;
+    auto* p         = impl<itype>();
+    if (!p)
+        return;
 
     auto* newWidget = c ? static_cast<QWidget*>(c->impl()) : nullptr;
 
     // The docking library requires a non-null widget in the pane layout;
     // passing nullptr to setClientWidget() would assert/crash. Treat
-    // content(nullptr) as "keep the current content".
+    // setContent(nullptr) as "keep the current content".
     if (!newWidget)
         return;
 
@@ -117,15 +122,16 @@ void DockPanel::content(UIElement* c)
 }
 
 UIElement* DockPanel::content() const
-{ return dptr()->content; }
-
-// ---- Attach ----
+{
+    return dptr()->content;
+}
 
 void DockPanel::attach(UIObject* container)
 {
-    if (!container) return;
+    if (!container)
+        return;
 
-    auto* dpc = static_cast<DockingPaneContainer*>(container);
+    auto* dpc          = static_cast<DockingPaneContainer*>(container);
     UIElement::d->impl = container;
     setOwnsImpl(true); // DockingPanes owns the container lifetime
 
@@ -141,8 +147,6 @@ void DockPanel::attach(UIObject* container)
         return panel ? panel->onClosing() : true;
     });
 }
-
-// ---- State queries ----
 
 bool DockPanel::isFloating() const
 {
@@ -171,20 +175,22 @@ bool DockPanel::isTabbed() const
 DockAreas DockPanel::dockArea() const
 {
     auto* c = impl<itype>();
-    if (!c) return DockAreas::None;
+    if (!c)
+        return DockAreas::None;
     auto state = c->state();
     switch (state) {
     case DockingPaneBase::Docked:
-    case DockingPaneBase::Tabbed: {
+    case DockingPaneBase::Tabbed:
+    {
         // Derive the current area dynamically so it stays correct even after
         // the pane was moved by dragging (the stored _vine_dockarea property
         // is only refreshed by addDockPanel()).
         auto* mgr = c->dockingManager();
         if (mgr) {
             switch (mgr->dockPositionOf(c)) {
-            case DockingPaneManager::dockLeft:   return DockAreas::Left;
-            case DockingPaneManager::dockRight:  return DockAreas::Right;
-            case DockingPaneManager::dockTop:    return DockAreas::Top;
+            case DockingPaneManager::dockLeft: return DockAreas::Left;
+            case DockingPaneManager::dockRight: return DockAreas::Right;
+            case DockingPaneManager::dockTop: return DockAreas::Top;
             case DockingPaneManager::dockBottom: return DockAreas::Bottom;
             default: break;
             }
@@ -199,8 +205,6 @@ DockAreas DockPanel::dockArea() const
     default: return DockAreas::None;
     }
 }
-
-// ---- State control ----
 
 void DockPanel::setFloating(bool floating)
 {
@@ -229,10 +233,10 @@ void DockPanel::setFloating(bool floating)
         const QVariant areaVar = c->property("_vine_dockarea");
         if (areaVar.isValid()) {
             switch (static_cast<DockAreas>(areaVar.toInt())) {
-            case DockAreas::Top:    pos = DockingPaneManager::dockTop;    break;
+            case DockAreas::Top: pos = DockingPaneManager::dockTop; break;
             case DockAreas::Bottom: pos = DockingPaneManager::dockBottom; break;
-            case DockAreas::Left:   pos = DockingPaneManager::dockLeft;   break;
-            default:                pos = DockingPaneManager::dockRight;  break;
+            case DockAreas::Left: pos = DockingPaneManager::dockLeft; break;
+            default: pos = DockingPaneManager::dockRight; break;
             }
         }
 
@@ -243,7 +247,8 @@ void DockPanel::setFloating(bool floating)
 void DockPanel::pin()
 {
     auto* c = impl<itype>();
-    if (!c) return;
+    if (!c)
+        return;
 
     if (c->state() != DockingPaneBase::Pinned) {
         // Real auto-hide: pull the pane out of the dock tree and create the
@@ -256,7 +261,8 @@ void DockPanel::pin()
 void DockPanel::unpin()
 {
     auto* c = impl<itype>();
-    if (!c) return;
+    if (!c)
+        return;
 
     if (c->state() == DockingPaneBase::Pinned) {
         if (auto* mgr = c->dockingManager())
@@ -267,7 +273,8 @@ void DockPanel::unpin()
 void DockPanel::collapse()
 {
     auto* c = impl<itype>();
-    if (!c) return;
+    if (!c)
+        return;
 
     if (c->state() == DockingPaneBase::Docked || c->state() == DockingPaneBase::Tabbed) {
         if (auto* mgr = c->dockingManager()) {
@@ -282,7 +289,8 @@ void DockPanel::collapse()
 void DockPanel::restore()
 {
     auto* c = impl<itype>();
-    if (!c) return;
+    if (!c)
+        return;
 
     if (c->state() != DockingPaneBase::Hidden)
         return;
@@ -298,10 +306,10 @@ void DockPanel::restore()
     const QVariant areaVar = c->property("_vine_dockarea");
     if (areaVar.isValid()) {
         switch (static_cast<DockAreas>(areaVar.toInt())) {
-        case DockAreas::Right:   pos = DockingPaneManager::dockRight;  break;
-        case DockAreas::Top:     pos = DockingPaneManager::dockTop;    break;
-        case DockAreas::Bottom:  pos = DockingPaneManager::dockBottom; break;
-        default:                 pos = DockingPaneManager::dockLeft;   break;
+        case DockAreas::Right: pos = DockingPaneManager::dockRight; break;
+        case DockAreas::Top: pos = DockingPaneManager::dockTop; break;
+        case DockAreas::Bottom: pos = DockingPaneManager::dockBottom; break;
+        default: pos = DockingPaneManager::dockLeft; break;
         }
     }
 

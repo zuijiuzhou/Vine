@@ -32,11 +32,11 @@ using itype = SARibbonBar;
 SARibbonBar::RibbonStyles toSarRibbonStyle(RibbonStyle s)
 {
     switch (s) {
-    case RibbonStyle::ThreeRowLoose:    return SARibbonBar::RibbonStyleLooseThreeRow;
-    case RibbonStyle::ThreeRowCompact:  return SARibbonBar::RibbonStyleCompactThreeRow;
-    case RibbonStyle::TwoRowLoose:      return SARibbonBar::RibbonStyleLooseTwoRow;
-    case RibbonStyle::TwoRowCompact:    return SARibbonBar::RibbonStyleCompactTwoRow;
-    case RibbonStyle::SingleRowLoose:   return SARibbonBar::RibbonStyleLooseSingleRow;
+    case RibbonStyle::ThreeRowLoose: return SARibbonBar::RibbonStyleLooseThreeRow;
+    case RibbonStyle::ThreeRowCompact: return SARibbonBar::RibbonStyleCompactThreeRow;
+    case RibbonStyle::TwoRowLoose: return SARibbonBar::RibbonStyleLooseTwoRow;
+    case RibbonStyle::TwoRowCompact: return SARibbonBar::RibbonStyleCompactTwoRow;
+    case RibbonStyle::SingleRowLoose: return SARibbonBar::RibbonStyleLooseSingleRow;
     case RibbonStyle::SingleRowCompact: return SARibbonBar::RibbonStyleCompactSingleRow;
     }
 
@@ -54,7 +54,7 @@ RibbonStyle fromSarRibbonStyle(SARibbonBar::RibbonStyles s)
     return s.testFlag(SARibbonBar::RibbonStyleCompact) ? RibbonStyle::ThreeRowCompact : RibbonStyle::ThreeRowLoose;
 }
 
-}
+} // namespace
 
 RibbonBar::RibbonBar(MainWindow* wnd)
   : Control(new RibbonBar::Data(), static_cast<SARibbonMainWindow*>(wnd->impl())->ribbonBar(), /*owns=*/false)
@@ -106,7 +106,7 @@ int RibbonBar::currentIndex() const
     return w ? w->currentIndex() : -1;
 }
 
-void RibbonBar::currentIndex(int idx)
+void RibbonBar::setCurrentIndex(int idx)
 {
     auto w = impl<itype>();
     w->setCurrentIndex(idx);
@@ -117,7 +117,7 @@ void RibbonBar::appendApplicationMenu(RibbonAction* mi)
     dptr()->application_menu->addAction(mi->impl<QAction>());
 }
 
-void RibbonBar::applicationButtonVisible(bool on)
+void RibbonBar::setApplicationButtonVisible(bool on)
 {
     auto* bar = impl<itype>();
     if (bar && bar->applicationButton())
@@ -130,7 +130,7 @@ bool RibbonBar::applicationButtonVisible() const
     return bar && bar->applicationButton() && bar->applicationButton()->isVisible();
 }
 
-void RibbonBar::applicationIcon(const Icon& ic)
+void RibbonBar::setApplicationIcon(const Icon& ic)
 {
     auto* bar = impl<itype>();
     if (!bar)
@@ -149,7 +149,7 @@ Icon RibbonBar::applicationIcon() const
     return {};
 }
 
-void RibbonBar::applicationText(const String& t)
+void RibbonBar::setApplicationText(const String& t)
 {
     auto* bar = impl<itype>();
     if (!bar)
@@ -192,7 +192,7 @@ void RibbonBar::addQuickAccessSeparator()
         qab->addSeparator();
 }
 
-void RibbonBar::quickAccessVisible(bool on)
+void RibbonBar::setQuickAccessVisible(bool on)
 {
     auto* bar = impl<itype>();
     if (!bar)
@@ -207,7 +207,7 @@ bool RibbonBar::quickAccessVisible() const
     return bar && bar->quickAccessBar() && bar->quickAccessBar()->isVisible();
 }
 
-void RibbonBar::ribbonStyle(RibbonStyle s)
+void RibbonBar::setRibbonStyle(RibbonStyle s)
 {
     auto w = impl<itype>();
     if (w)
@@ -222,7 +222,7 @@ RibbonStyle RibbonBar::ribbonStyle() const
     return fromSarRibbonStyle(w->currentRibbonStyle());
 }
 
-void RibbonBar::minimumMode(bool on)
+void RibbonBar::setMinimumMode(bool on)
 {
     auto w = impl<itype>();
     if (w)
@@ -235,7 +235,7 @@ bool RibbonBar::minimumMode() const
     return w && w->isMinimumMode();
 }
 
-void RibbonBar::panelTitleVisible(bool on)
+void RibbonBar::setPanelTitleVisible(bool on)
 {
     auto w = impl<itype>();
     if (w)
@@ -248,7 +248,7 @@ bool RibbonBar::panelTitleVisible() const
     return w && w->isEnableShowPanelTitle();
 }
 
-void RibbonBar::wordWrap(bool on)
+void RibbonBar::setWordWrap(bool on)
 {
     auto w = impl<itype>();
     if (w)
@@ -261,7 +261,7 @@ bool RibbonBar::wordWrap() const
     return w && w->isEnableWordWrap();
 }
 
-void RibbonBar::iconRightText(bool on)
+void RibbonBar::setIconRightText(bool on)
 {
     auto w = impl<itype>();
     if (w)

@@ -1,10 +1,10 @@
 #include <vine/appfw/gui/RibbonGroup.hpp>
 
-#include <SARibbon.h>
 #include <QToolButton>
+#include <SARibbon.h>
+#include <vine/appfw/gui/Control.hpp>
 #include <vine/appfw/gui/RibbonAction.hpp>
 #include <vine/appfw/gui/RibbonButton.hpp>
-#include <vine/appfw/gui/Control.hpp>
 
 #include "UIElementData.hpp"
 
@@ -15,22 +15,22 @@ V_OBJECT_META_IMPL(RibbonGroup, Control)
 namespace
 {
 
-/// 条目尺寸 -> 面板行占比
+/// Item size -> panel row proportion
 SARibbonPanelItem::RowProportion rowProportionFor(RibbonItemSize s)
 {
     switch (s) {
-    case RibbonItemSize::Large:  return SARibbonPanelItem::Large;
+    case RibbonItemSize::Large: return SARibbonPanelItem::Large;
     case RibbonItemSize::Medium: return SARibbonPanelItem::Medium;
-    default:                     return SARibbonPanelItem::Small;
+    default: return SARibbonPanelItem::Small;
     }
 }
 
 SARibbonPanel::PanelLayoutMode toSarPanelLayoutMode(RibbonPanelLayoutMode m)
 {
     switch (m) {
-    case RibbonPanelLayoutMode::TwoRow:    return SARibbonPanel::TwoRowMode;
+    case RibbonPanelLayoutMode::TwoRow: return SARibbonPanel::TwoRowMode;
     case RibbonPanelLayoutMode::SingleRow: return SARibbonPanel::SingleRowMode;
-    case RibbonPanelLayoutMode::ThreeRow:  break;
+    case RibbonPanelLayoutMode::ThreeRow: break;
     }
 
     return SARibbonPanel::ThreeRowMode;
@@ -39,9 +39,9 @@ SARibbonPanel::PanelLayoutMode toSarPanelLayoutMode(RibbonPanelLayoutMode m)
 RibbonPanelLayoutMode fromSarPanelLayoutMode(SARibbonPanel::PanelLayoutMode m)
 {
     switch (m) {
-    case SARibbonPanel::TwoRowMode:    return RibbonPanelLayoutMode::TwoRow;
+    case SARibbonPanel::TwoRowMode: return RibbonPanelLayoutMode::TwoRow;
     case SARibbonPanel::SingleRowMode: return RibbonPanelLayoutMode::SingleRow;
-    default:                           break;
+    default: break;
     }
 
     return RibbonPanelLayoutMode::ThreeRow;
@@ -51,9 +51,9 @@ RibbonPanelLayoutMode fromSarPanelLayoutMode(SARibbonPanel::PanelLayoutMode m)
 
 struct RibbonGroup::Data : public UIElementData {
     String                  title;
-    bool                    word_wrap = false;
+    bool                    word_wrap   = false;
     RibbonAction*           option_item = nullptr;
-    QMetaObject::Connection option_conn;   // 选项按钮 QAction 销毁回调
+    QMetaObject::Connection option_conn; // option-button QAction destruction callback
 };
 
 RibbonGroup::RibbonGroup()
@@ -62,12 +62,13 @@ RibbonGroup::RibbonGroup()
 
 RibbonGroup::~RibbonGroup()
 {
-    // 断开选项按钮 QAction 的销毁回调，避免面板销毁后回调访问已释放对象
+    // Disconnect the option-button QAction destruction callback so the callback
+    // cannot access a freed object after the panel is destroyed.
     QObject::disconnect(dptr()->option_conn);
     // d is deleted by UIElement
 }
 
-void RibbonGroup::title(const String& t)
+void RibbonGroup::setTitle(const String& t)
 {
     dptr()->title = t;
     auto* pnl     = impl<SARibbonPanel>();
@@ -154,7 +155,7 @@ void RibbonGroup::addSeparator()
         pnl->addSeparator();
 }
 
-void RibbonGroup::layoutMode(RibbonPanelLayoutMode m)
+void RibbonGroup::setLayoutMode(RibbonPanelLayoutMode m)
 {
     auto* pnl = impl<SARibbonPanel>();
     if (pnl)
@@ -169,7 +170,7 @@ RibbonPanelLayoutMode RibbonGroup::layoutMode() const
     return fromSarPanelLayoutMode(pnl->panelLayoutMode());
 }
 
-void RibbonGroup::expanding(bool on)
+void RibbonGroup::setExpanding(bool on)
 {
     auto* pnl = impl<SARibbonPanel>();
     if (pnl)
@@ -182,7 +183,7 @@ bool RibbonGroup::expanding() const
     return pnl && pnl->isExpanding();
 }
 
-void RibbonGroup::canCustomize(bool on)
+void RibbonGroup::setCanCustomize(bool on)
 {
     auto* pnl = impl<SARibbonPanel>();
     if (pnl)
@@ -195,7 +196,7 @@ bool RibbonGroup::canCustomize() const
     return pnl && pnl->isCanCustomize();
 }
 
-void RibbonGroup::largeIconSize(const Size& s)
+void RibbonGroup::setLargeIconSize(const Size& s)
 {
     auto* pnl = impl<SARibbonPanel>();
     if (pnl)
@@ -211,7 +212,7 @@ Size RibbonGroup::largeIconSize() const
     return Size(qs.width(), qs.height());
 }
 
-void RibbonGroup::smallIconSize(const Size& s)
+void RibbonGroup::setSmallIconSize(const Size& s)
 {
     auto* pnl = impl<SARibbonPanel>();
     if (pnl)
@@ -227,7 +228,7 @@ Size RibbonGroup::smallIconSize() const
     return Size(qs.width(), qs.height());
 }
 
-void RibbonGroup::iconRightText(bool on)
+void RibbonGroup::setIconRightText(bool on)
 {
     auto* pnl = impl<SARibbonPanel>();
     if (pnl)
@@ -240,10 +241,11 @@ bool RibbonGroup::iconRightText() const
     return pnl && pnl->isEnableIconRightText();
 }
 
-void RibbonGroup::wordWrap(bool on)
+void RibbonGroup::setWordWrap(bool on)
 {
-    // SARibbonPanel::setEnableWordWrap 是 protected（仅供 SARibbonBar/Category
-    // 同步），面板层无法直接调用；改为遍历按钮逐个设置。
+    // SARibbonPanel::setEnableWordWrap is protected (for SARibbonBar/Category
+    // synchronization only), so the panel layer cannot call it directly; instead
+    // iterate over the buttons and set them one by one.
     dptr()->word_wrap = on;
 
     auto* pnl = impl<SARibbonPanel>();
@@ -261,7 +263,7 @@ bool RibbonGroup::wordWrap() const
 
 void RibbonGroup::setOptionAction(RibbonAction* item)
 {
-    // 断开旧回调，避免重复连接
+    // Disconnect the old callback to avoid duplicate connections
     if (dptr()->option_conn) {
         QObject::disconnect(dptr()->option_conn);
         dptr()->option_conn = {};
@@ -275,7 +277,8 @@ void RibbonGroup::setOptionAction(RibbonAction* item)
     QAction* act = item ? item->impl<QAction>() : nullptr;
     pnl->setOptionAction(act);
 
-    // item 被销毁时同步清掉面板的选项按钮，避免悬垂指针
+    // When the item is destroyed, clear the panel's option button to avoid a
+    // dangling pointer.
     if (act) {
         dptr()->option_conn = QObject::connect(act, &QObject::destroyed, [this, pnl](QObject*) {
             if (dptr()->option_item) {

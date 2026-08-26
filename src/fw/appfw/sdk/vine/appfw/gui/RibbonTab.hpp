@@ -8,9 +8,10 @@ V_APPFWGUI_NS_BEGIN
 class RibbonGroup;
 
 /**
- * \brief 功能区标签页（包装 SARibbonCategory）：一组面板（RibbonGroup）的容器。
+ * @brief Ribbon tab (wraps SARibbonCategory): a container for a set of panels
+ * (RibbonGroup).
  *
- * \note 本头文件不包含、不暴露 Qt 类型。
+ * @note This header includes and exposes no Qt types.
  */
 class V_APPFW_API RibbonTab : public Control {
     V_OBJECT_META_DECL
@@ -20,30 +21,27 @@ class V_APPFW_API RibbonTab : public Control {
     virtual ~RibbonTab();
 
   public:
-    // ---- 标题 ----
-    void title(const String& t);
+    void   setTitle(const String& t);
     String title() const;
 
   public:
-    // ---- 组 ----
     void addGroup(RibbonGroup* g);
     void removeGroup(RibbonGroup* g);
-    /// 组数量。
+    /// Number of groups.
     int numGroups() const;
-    /// 按索引获取组（越界返回 nullptr）。
+    /// Gets the group by index (out of range returns nullptr).
     RibbonGroup* groupAt(int i) const;
 
   public:
-    // ---- 面板外观（作用于本页所有面板）----
-    /// 设置本页所有面板的布局模式（三行/两行/单行）。
-    void panelLayoutMode(RibbonPanelLayoutMode m);
+    /// Sets the layout mode for all panels on this tab (three/two/single row).
+    void                  setPanelLayoutMode(RibbonPanelLayoutMode m);
     RibbonPanelLayoutMode panelLayoutMode() const;
-    /// 显示/隐藏本页所有面板标题。
-    void panelTitleVisible(bool on);
+    /// Shows/hides the titles of all panels on this tab.
+    void setPanelTitleVisible(bool on);
     bool panelTitleVisible() const;
-    /// 本页所有面板的按钮间距。
-    void panelSpacing(int n);
-    int panelSpacing() const;
+    /// Button spacing for all panels on this tab.
+    void setPanelSpacing(int n);
+    int  panelSpacing() const;
 
   private:
     struct Data;

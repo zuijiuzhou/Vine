@@ -25,54 +25,57 @@
 class QPoint;
 
 /**
- * \brief 窗格标题栏：绘制标题文字 + 右侧点状纹理，并负责拖动。
+ * @brief Pane title bar: draws the title text + dotted pattern on the right, and handles dragging.
  *
- * 按下时 grabMouse() 抓取鼠标以在整个拖动期间持续收到事件（含光标压到顶层停靠指示器上时）。通过三个信号把拖动事件上抛给容器。
+ * On press it calls grabMouse() to keep receiving events for the whole drag (including when the
+ * cursor moves over the top-level docking indicators). The drag events are forwarded to the
+ * container through three signals.
  *
- * \note 拖动机制注意事项：
- *  - 停靠窗格拖过阈值后 floatPane() 会重建原生窗口，抓取随之丢失，需要在重建后调用 reacquireGrab() 重新抓取。
- *  - flyout 拖出转浮动时 flyout 隐藏会释放抓取，用 takeGrab() 由本标题接管。
- *  - 鼠标释放（release）只对左键处理，且用 m_grabbing 记录抓取状态避免重复 releaseMouse()。
+ * @note Drag mechanism notes:
+ *  - After a docked pane drags past the threshold, floatPane() rebuilds the native window and the
+ *    grab is lost; call reacquireGrab() after the rebuild to re-grab.
+ *  - When a flyout drag turns floating, hiding the flyout releases the grab; use takeGrab() to take it over.
+ *  - Mouse release is only handled for the left button, and m_grabbing records the grab state to avoid a duplicate releaseMouse().
  */
 class DockingPaneTitleWidget : public QWidget {
     Q_OBJECT
 
   public:
     /**
-     * \brief 构造标题栏。
-     * \param text 初始标题文本。
-     * \param parent
+     * @brief Constructs a title bar.
+     * @param text Initial title text.
+     * @param parent
      */
     explicit DockingPaneTitleWidget(const QString& text = QString(), QWidget* parent = nullptr);
     ~DockingPaneTitleWidget() override;
 
   public:
     /**
-     * \brief 设置标题文本。
+     * @brief Sets the title text.
      */
     void setText(const QString& text);
 
     /**
-     * \brief 设置激活态（影响前景/纹理颜色）。
+     * @brief Sets the active state (affects the foreground/pattern colours).
      */
     void setActive(bool active);
 
     /**
-     * \brief 重新抓取鼠标（停靠窗格转浮动重建窗口后调用）。
-     * \note 仅在仍处于抓取状态（m_grabbing）时重新 grabMouse()。
+     * @brief Re-acquires the mouse grab (called after a docked pane is rebuilt as floating).
+     * @note Only re-grabs with grabMouse() while still in the grabbing state (m_grabbing).
      */
     void reacquireGrab();
 
     /**
-     * \brief 接管拖动：抓取鼠标并进入抓取状态。
-     *        用于 flyout 中途隐藏、由本标题继续拖动。
+     * @brief Takes over the drag: grabs the mouse and enters the grabbing state.
+     *        Used when the flyout is hidden mid-drag and this title continues the drag.
      */
     void takeGrab();
 
   Q_SIGNALS:
-    void titleBarStartMove(QPoint pos); ///< 按下标题（全局坐标）。
-    void titleBarEndMove(QPoint pos);   ///< 松开标题（全局坐标）。
-    void titleBarMoved(QPoint pos);     ///< 拖动移动（全局坐标）。
+    void titleBarStartMove(QPoint pos); ///< Title pressed (global coordinates).
+    void titleBarEndMove(QPoint pos);   ///< Title released (global coordinates).
+    void titleBarMoved(QPoint pos);     ///< Drag move (global coordinates).
 
   protected:
     void paintEvent(QPaintEvent* event) override;
@@ -89,7 +92,7 @@ class DockingPaneTitleWidget : public QWidget {
   private:
     QString m_text;
     bool    m_active;
-    bool    m_grabbing = false; // 当前是否持有鼠标抓取。
+    bool    m_grabbing = false; // Whether the mouse grab is currently held.
 };
 
 #endif // DOCKINGPANETITLEWIDGET_H

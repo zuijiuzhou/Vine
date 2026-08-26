@@ -23,11 +23,14 @@
 #include <QWidget>
 
 /**
- * \brief 浮动窗格边缘的缩放手柄（几乎透明的窄条）。
+ * @brief Resize handle on the edge of a floating pane (a nearly transparent thin strip).
  *
- * 9px 宽/高的边缘窗口，光标进入显示相应缩放光标；按下拖动即可调整浮动窗格尺寸（上/下边还支持左右拖动实现四角缩放）。
+ * A 9px wide/tall edge window that shows the appropriate resize cursor on hover; pressing and
+ * dragging resizes the floating pane (the top/bottom edges also support horizontal dragging
+ * for corner resizing).
  *
- * \note 窗口透明度 0.01，视觉上几乎不可见，仅作为命中区使用；依赖 QCursor::pos()，Wayland 下失效。
+ * @note Window opacity is 0.01, so it is nearly invisible and serves purely as a hit area;
+ * relies on QCursor::pos(), which fails under Wayland.
  */
 class DockingPaneGlowWidget : public QWidget {
     Q_OBJECT
@@ -46,12 +49,12 @@ class DockingPaneGlowWidget : public QWidget {
 
   public:
     /**
-     * \brief 按浮动窗格当前位置/尺寸重排本光晕窗口。
+     * @brief Repositions this glow window according to the floating pane's current position/size.
      */
     void updatePosition();
 
   Q_SIGNALS:
-    // 尺寸被拖动改变（通知 DockingPaneGlow 重排其它边）。
+    // The size was changed by dragging (notifies DockingPaneGlow to rearrange the other edges).
     void glowResized();
 
   protected:
@@ -66,13 +69,13 @@ class DockingPaneGlowWidget : public QWidget {
     void updateCursor();
 
   private:
-    QWidget* m_floatingPane; // 被缩放的浮动窗格。
-    QRect    m_paneGeometry; // 按下时窗格几何（用于限制最小尺寸）。
-    QPoint   m_Pos;          // 上一次全局光标位置。
-    int      m_position;     // 本手柄的 Position。
-    int      m_cursorDelta;  // 按下时相对手柄左缘的偏移。
-    int      m_cornerState;  // 上/下边：0=中部 1=左角 2=右角。
-    bool     m_dragging;     // 是否正在拖动。
+    QWidget* m_floatingPane; // The floating pane being resized.
+    QRect    m_paneGeometry; // Pane geometry at press time (used to enforce the minimum size).
+    QPoint   m_Pos;          // Last global cursor position.
+    int      m_position;     // This handle's Position.
+    int      m_cursorDelta;  // Offset relative to the handle's left edge at press time.
+    int      m_cornerState;  // Top/bottom edge: 0=centre 1=left corner 2=right corner.
+    bool     m_dragging;     // Whether a drag is in progress.
 };
 
 #endif // DOCKINGPANEGLOWWIDGET_H

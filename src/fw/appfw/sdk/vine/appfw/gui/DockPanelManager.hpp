@@ -1,7 +1,7 @@
 ﻿#pragma once
 
-#include <vine/appfw/appfw_global.hpp>
 #include <vine/Ptr.hpp>
+#include <vine/appfw/appfw_global.hpp>
 
 #include <vector>
 
@@ -35,23 +35,17 @@ class V_APPFW_API DockPanelManager final {
     /** Get the root widget to embed in a window's central area */
     UIElement* root() const;
 
-    // ---- Factory ----
-
     /** Create and dock a DockPanel with title and content at the given area. */
     DockPanel* createDockPanel(const String& title, DockAreas area);
 
     /** Create and dock a DockPanel with title, content widget, and area. */
     DockPanel* createDockPanel(const String& title, UIElement* content, DockAreas area);
 
-    // ---- Registration ----
-
     /** Add and dock a DockPanel at the given area (area is always required). */
     void addDockPanel(DockPanel* panel, DockAreas area);
 
     /** Remove and delete a DockPanel from the managed list */
     void removeDockPanel(DockPanel* panel);
-
-    // ---- Queries ----
 
     /** Find a DockPanel by its unique id */
     DockPanel* findById(const String& id) const;

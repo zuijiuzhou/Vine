@@ -225,8 +225,9 @@ DockingPaneFlyoutWidget* DockingPaneTabbedContainer::openFlyout(bool hasFocus, Q
 
 void DockingPaneTabbedContainer::setClientWidget(QWidget* widget)
 {
-    // 注意: 与基类语义不同——tabbed 容器没有单一 client, 这里只在 widget 属于
-    // 某个 pane 时把它插回对应索引, 其余情况静默忽略
+    // Note: semantics differ from the base class — a tabbed container has no single
+    // client; this only re-inserts the widget at its pane's index when it belongs to
+    // a pane, and silently ignores it otherwise.
     int i = 0, insertIndex = -1;
 
     foreach (DockingPaneContainer* pane, m_paneList) {
@@ -707,7 +708,7 @@ void DockingPaneTabbedContainer::onMoveDragTitle(QPoint pos)
 
             m_dockingManager->floatingPaneStartMove(this, pos);
 
-            // floatPane() 重建了原生窗口, 鼠标抓取随窗口重建释放; 重新抓取以继续拖动
+            // floatPane() rebuilt the native window, releasing the mouse grab; re-grab to continue the drag.
             m_titleWidget->reacquireGrab();
         }
     }
@@ -746,7 +747,7 @@ void DockingPaneTabbedContainer::onEndDragFlyoutTitle(QPoint pos)
 
         dockingManager()->deletePane(this);
 
-        // deletePane(this) 已调度本对象销毁, 之后不要再访问成员
+        // deletePane(this) has scheduled this object for destruction; do not access members afterwards.
         return;
     }
 
@@ -813,8 +814,9 @@ void DockingPaneTabbedContainer::onMoveDragFlyoutTitle(QPoint pos)
 
             dockingManager()->floatingPaneStartMove(m_draggedPane, top_left_pos);
 
-            // flyout 已隐藏且鼠标抓取随隐藏释放, moveDragFlyoutTitle 不再触发;
-            // 由被拖出的 pane 的标题接管抓取, 让转浮动后的拖动继续
+            // The flyout is hidden and the mouse grab was released with it, so
+            // moveDragFlyoutTitle will not fire again; the dragged pane's title
+            // takes over the grab so the drag continues after floating.
             m_draggedPane->continueDrag(top_left_pos);
         }
     }

@@ -33,10 +33,10 @@ Window::Window(QWidget* native, bool owns)
 
 Window::~Window()
 {
-    // d 由 UIElement 释放
+    // d is released by UIElement
 }
 
-void Window::windowTitle(const String& t)
+void Window::setWindowTitle(const String& t)
 {
     if (auto* w = impl<QWidget>())
         w->setWindowTitle(toQString(t));
@@ -48,7 +48,7 @@ String Window::windowTitle() const
     return w ? fromQString(w->windowTitle()) : String();
 }
 
-void Window::modal(bool on)
+void Window::setModal(bool on)
 {
     if (auto* w = impl<QWidget>())
         w->setWindowModality(on ? Qt::WindowModal : Qt::NonModal);
@@ -85,7 +85,7 @@ void Window::resize(int w, int h)
         widget->resize(w, h);
 }
 
-void Window::windowState(WindowState state)
+void Window::setWindowState(WindowState state)
 {
     auto* w = impl<QWidget>();
     if (!w)
@@ -118,7 +118,7 @@ WindowState Window::windowState() const
     return state;
 }
 
-void Window::startupPosition(StartupPosition position)
+void Window::setStartupPosition(StartupPosition position)
 {
     if (auto* w = impl<QWidget>())
         w->setProperty("vine.startupPosition", static_cast<int>(position));

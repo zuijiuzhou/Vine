@@ -1,8 +1,8 @@
 ﻿#pragma once
 
 #include "Control.hpp"
-#include "Icon.hpp"
 #include "Gui.hpp"
+#include "Icon.hpp"
 
 V_APPFWGUI_NS_BEGIN
 
@@ -11,9 +11,9 @@ class RibbonAction;
 class MainWindow;
 
 /**
- * \brief 功能区条（包装 SARibbonBar）：管理标签页与应用菜单。
+ * @brief Ribbon bar (wraps SARibbonBar): manages tabs and the application menu.
  *
- * \note 本头文件不包含、不暴露 Qt 类型。
+ * @note This header includes and exposes no Qt types.
  */
 class V_APPFW_API RibbonBar : public Control {
     V_OBJECT_META_DECL
@@ -25,61 +25,62 @@ class V_APPFW_API RibbonBar : public Control {
     virtual ~RibbonBar();
 
   public:
-    // ---- 标签页 ----
     int        numTabs() const;
     RibbonTab* tabAt(int idx) const;
     void       addTab(RibbonTab* tab);
     void       removeTab(RibbonTab* tab);
     int        currentIndex() const;
-    void       currentIndex(int idx);
+    void       setCurrentIndex(int idx);
 
-    // ---- 应用按钮 / 菜单 ----
-    /// 追加一个应用菜单项（左上角 File 按钮）。
+    /// Appends an application menu item (top-left File button).
     void appendApplicationMenu(RibbonAction* mi);
-    /// 应用按钮是否可见。
-    void applicationButtonVisible(bool on);
+    /// Whether the application button is visible.
+    void setApplicationButtonVisible(bool on);
     bool applicationButtonVisible() const;
-    /// 应用按钮图标。
-    void applicationIcon(const Icon& ic);
+    /// Application button icon.
+    void setApplicationIcon(const Icon& ic);
     Icon applicationIcon() const;
-    /// 应用按钮文字。
-    void applicationText(const String& t);
+    /// Application button text.
+    void   setApplicationText(const String& t);
     String applicationText() const;
 
   public:
-    // ---- 标题栏快捷访问栏（Quick Access Bar）----
-    /// 追加一个快捷动作（标题栏左侧；其 QAction 归快捷栏持有）。
+    /// Appends a quick access action (left of the title bar; its QAction is
+    /// owned by the quick access bar).
     void addQuickAccessItem(RibbonAction* item);
-    /// 在快捷访问栏插入分隔线。
+    /// Inserts a separator in the quick access bar.
     void addQuickAccessSeparator();
-    /// 快捷访问栏是否可见。
-    void quickAccessVisible(bool on);
+    /// Whether the quick access bar is visible.
+    void setQuickAccessVisible(bool on);
     bool quickAccessVisible() const;
 
   public:
-    // ---- 全局风格 ----
-    /// 设置 Ribbon 全局风格（行数 × 宽松/紧凑）。
-    void ribbonStyle(RibbonStyle s);
+    /// Sets the Ribbon global style (row count x loose/compact).
+    void        setRibbonStyle(RibbonStyle s);
     RibbonStyle ribbonStyle() const;
-    /// 折叠/展开 Ribbon（最小化模式）。
-    void minimumMode(bool on);
+    /// Collapses/expands the Ribbon (minimized mode).
+    void setMinimumMode(bool on);
     bool minimumMode() const;
-    /// 全局显示/隐藏所有面板标题。
-    void panelTitleVisible(bool on);
+    /// Globally shows/hides all panel titles.
+    void setPanelTitleVisible(bool on);
     bool panelTitleVisible() const;
     /**
-     * \brief 全局批量：按钮文字自动换行。
-     * \note 仅对 RibbonButton（SARibbonToolButton）生效；addControl 添加的
-     * 普通控件不受影响。级联到所有面板/按钮，会覆盖组级/按钮级 wordWrap。
+     * @brief Global batch setting: auto-wrap button text.
+     *
+     * @note Applies only to RibbonButton (SARibbonToolButton); plain controls
+     * added via addControl are unaffected. Cascades to all panels/buttons and
+     * overrides group-level/button-level wordWrap.
      */
-    void wordWrap(bool on);
+    void setWordWrap(bool on);
     bool wordWrap() const;
     /**
-     * \brief 全局批量：文字放图标右侧。
-     * \note 仅对 RibbonButton（SARibbonToolButton）生效；addControl 添加的
-     * 普通控件不受影响。级联到所有面板/按钮，会覆盖组级/按钮级 iconRightText。
+     * @brief Global batch setting: place text to the right of the icon.
+     *
+     * @note Applies only to RibbonButton (SARibbonToolButton); plain controls
+     * added via addControl are unaffected. Cascades to all panels/buttons and
+     * overrides group-level/button-level iconRightText.
      */
-    void iconRightText(bool on);
+    void setIconRightText(bool on);
     bool iconRightText() const;
 
   private:

@@ -29,14 +29,18 @@ class DockingToolButton;
 class DockingPaneTitleWidget;
 
 /**
- * \brief 自动隐藏（Pinned）窗格的弹出窗口（flyout）。
+ * @brief Popup window (flyout) for an auto-hidden (Pinned) pane.
  *
- * 点击/悬停边缘自动隐藏按钮时从对应边弹出，带标题栏（可拖动）与 6px 宽的缩放边缘。聚焦丢失（onFocusChanged）或 beginDrag/endDrag 会通知管理器关闭自身。
+ * Pops out from the corresponding edge when the edge auto-hide button is clicked or
+ * hovered; it has a draggable title bar and a 6px wide resize edge. Focus loss
+ * (onFocusChanged) or beginDrag/endDrag notifies the manager to close itself.
  *
- * \note 注意事项：
- *  - 依赖 QCursor::pos() 计算光标位置，Wayland 下失效（宿主强制 xcb 规避）。
- *  - 无聚焦打开时 1s 后触发 autoHideFlyout 信号，但该信号当前未被连接（自动隐藏只依赖焦点丢失）。
- *  - 对象所有权归 DockingPaneManager/容器（QPointer 管理），不要自行 delete。
+ * @note Notes:
+ *  - Relies on QCursor::pos() to compute the cursor position, which fails under
+ *    Wayland (the host forces xcb to avoid this).
+ *  - When opened without focus, the autoHideFlyout signal fires after 1s, but it is
+ *    currently not connected (auto-hide only relies on focus loss).
+ *  - Ownership belongs to DockingPaneManager/container (managed via QPointer); do not delete it yourself.
  */
 class DockingPaneFlyoutWidget : public QWidget {
     Q_OBJECT
@@ -52,13 +56,13 @@ class DockingPaneFlyoutWidget : public QWidget {
 
   public:
     /**
-     * \brief 构造 flyout。
-     * \param hasFocus 是否立即取得焦点。
-     * \param container 所属容器（用于取 flyout 尺寸 / 归还客户区）。
-     * \param pane      被弹出的子窗格。
-     * \param pos       弹出方向。
-     * \param widget    要显示的客户区控件。
-     * \param parent
+     * @brief Constructs a flyout.
+     * @param hasFocus Whether to take focus immediately.
+     * @param container The owning container (used for the flyout size / restoring the client area).
+     * @param pane      The child pane being popped out.
+     * @param pos       Popup direction.
+     * @param widget    The client-area widget to show.
+     * @param parent
      */
     explicit DockingPaneFlyoutWidget(bool                  hasFocus,
                                      DockingPaneContainer* container,
@@ -70,43 +74,43 @@ class DockingPaneFlyoutWidget : public QWidget {
 
   public:
     /**
-     * \brief 把客户区控件归还给所属容器（关闭/拖动时调用）。
+     * @brief Returns the client-area widget to the owning container (called when closing/dragging).
      */
     void restorePaneWidget();
 
     /**
-     * \brief 当前被弹出的子窗格。
+     * @brief The child pane currently popped out.
      */
     DockingPaneContainer* pane();
 
     /**
-     * \brief 开始拖出（隐藏自身并把客户区归还容器）。
+     * @brief Begins dragging out (hides itself and returns the client area to the container).
      */
     void beginDrag();
 
     /**
-     * \brief 结束拖出（发射 flyoutFocusLost 通知管理器清理）。
+     * @brief Ends dragging out (emits flyoutFocusLost to notify the manager to clean up).
      */
     void endDrag();
 
     /**
-     * \brief 客户区控件。
+     * @brief The client-area widget.
      */
     QWidget* clientWidget();
 
     /**
-     * \brief 可视内容矩形（去掉 5~6px 缩放边缘后的区域）。
+     * @brief Visible content rectangle (the area after removing the 5~6px resize edge).
      */
     QRect paneRect();
 
   Q_SIGNALS:
-    void unpinContainer(); ///< 固定按钮被点击。
-    void closeContainer(); ///< 关闭按钮被点击。
+    void unpinContainer(); ///< The pin button was clicked.
+    void closeContainer(); ///< The close button was clicked.
     void startDragFlyoutTitle(QPoint pos);
     void endDragFlyoutTitle(QPoint pos);
     void moveDragFlyoutTitle(QPoint pos);
-    void flyoutFocusLost(); ///< 焦点丢失 / 拖出结束（管理器据此清理）。
-    void autoHideFlyout();  ///< 无焦点超时自动隐藏（当前未连接）。
+    void flyoutFocusLost(); ///< Focus lost / drag ended (the manager cleans up accordingly).
+    void autoHideFlyout();  ///< Auto-hide after a no-focus timeout (currently not connected).
 
   public:
     bool eventFilter(QObject* obj, QEvent* event) override;

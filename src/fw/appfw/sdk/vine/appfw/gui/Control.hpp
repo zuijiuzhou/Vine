@@ -8,14 +8,19 @@ class QWidget;
 V_APPFWGUI_NS_BEGIN
 
 /**
- * \brief 通用控件容器：包装任意原生 QWidget，使其能被框架的 UIElement 体系容纳。
+ * @brief Generic control container: wraps any native QWidget so it fits into
+ * the framework's UIElement system.
  *
- * 用于把第三方/自定义控件（QComboBox、QLineEdit、自绘控件等）挂到功能区组、
- * 停靠面板等任何接受 UIElement 的地方；也是 RibbonButton/RibbonGroup/RibbonTab/
- * RibbonBar/DockPanel/StatusBar 等控件包装的公共基类，统一提供 QWidget 级通用属性。
- * \note 本头文件仅前置声明 QWidget，不包含 Qt 头；owns=true（默认）时由本容器
- * 持有原生控件；控件被宿主（如 SARibbonPanel）接管后，宿主销毁控件时会自动
- * 触发本容器释放。
+ * Used to attach third-party/custom controls (QComboBox, QLineEdit,
+ * self-drawn controls, etc.) to ribbon groups, dock panels, or anywhere that
+ * accepts a UIElement; it is also the common base class for control wrappers
+ * such as RibbonButton/RibbonGroup/RibbonTab/RibbonBar/DockPanel/StatusBar,
+ * uniformly providing QWidget-level common properties.
+ *
+ * @note This header only forward-declares QWidget and includes no Qt headers;
+ * with owns=true (default) this container owns the native control. Once the
+ * control is taken over by a host (e.g. SARibbonPanel), destroying the
+ * control triggers this container's release automatically.
  */
 class V_APPFW_API Control : public UIElement {
     V_OBJECT_META_DECL
@@ -25,26 +30,26 @@ class V_APPFW_API Control : public UIElement {
     virtual ~Control();
 
   public:
-    // ---- 通用控件属性（基于 impl<QWidget>()）----
-    /// 是否可用。
-    void enabled(bool on);
+    /// Whether the control is enabled.
+    void setEnabled(bool on);
     bool enabled() const;
-    /// 是否可见。
-    void visible(bool on);
+    /// Whether the control is visible.
+    void setVisible(bool on);
     bool visible() const;
-    /// 悬停提示文本。
-    void tooltip(const String& t);
+    /// Tooltip text.
+    void   setTooltip(const String& t);
     String tooltip() const;
-    /// 控件宽度。
+    /// Control width.
     int width() const;
-    /// 控件高度。
+    /// Control height.
     int height() const;
-    /// 控件尺寸。
+    /// Control size.
     Size size() const;
-    void size(const Size& s);
+    void setSize(const Size& s);
 
   protected:
-    // 供派生类（RibbonButton 等）传入自定义 Data，维持继承链扩展。
+    // Lets derived classes (RibbonButton, etc.) pass custom Data to keep the
+    // inheritance chain extensible.
     Control(UIElementData* data, QWidget* native, bool owns = true);
 
   private:

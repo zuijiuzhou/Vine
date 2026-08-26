@@ -114,7 +114,8 @@ DockingPaneContainer::DockingPaneContainer(QWidget* parent)
 
 DockingPaneContainer::~DockingPaneContainer()
 {
-    // 析构期间焦点可能变化，提前断开避免基类析构后仍被调用（assertObjectType 断言）。
+    // Focus may change during destruction; disconnect early so the base destructor is not
+    // invoked afterwards (assertObjectType assertion).
     disconnect(qApp, &QApplication::focusChanged, this, &DockingPaneContainer::onFocusChanged);
 }
 
@@ -452,12 +453,13 @@ void DockingPaneContainer::onMoveDragFlyoutTitle(QPoint pos)
 
             m_draggingFlyout = true;
 
-            // flyout 已隐藏且鼠标抓取随隐藏释放, endDragFlyoutTitle 不会再触发;
-            // 立即清理 flyout, 否则会遗留到退出时才析构(焦点变化触发断言)
+            // Flyout is already hidden and the mouse grab was released with it, so
+            // endDragFlyoutTitle will not fire again; clean up the flyout immediately,
+            // otherwise it would linger until exit (assertion on focus change).
             m_flyoutWidget->endDrag();
             m_flyoutWidget = nullptr;
 
-            // 由容器标题接管鼠标抓取, 让转浮动后的拖动继续
+            // Let the container title take over the mouse grab so the drag continues after floating.
             m_titleWidget->takeGrab();
         }
     }

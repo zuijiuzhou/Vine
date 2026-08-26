@@ -23,24 +23,26 @@
 #include <QWidget>
 
 /**
- * \brief 停靠指示器的四角帧指示小窗口（可停靠到停靠区边缘）。
+ * @brief Small corner frame indicator window of the docking indicators (can dock
+ * to the edge of the docking area).
  *
- * 独立的 Qt::ToolTip 置顶透明窗口，随光标进入/离开切换激活/非激活位图。
- * 由 DockingFrameStickers 统一摆放与驱动。
+ * A standalone Qt::ToolTip topmost transparent window that switches between the
+ * active/inactive bitmaps as the cursor enters/leaves. Positioned and driven by
+ * DockingFrameStickers.
  */
 class DockingFrameFrameSticker : public QWidget {
     Q_OBJECT
 
   public:
     /**
-     * \brief 构造。
-     * \param image 位图前缀（如 "frame_left"，实际加载 _active/_inactive 两张）。
-     * \param parent
+     * @brief Constructs a frame sticker.
+     * @param image Bitmap prefix (e.g. "frame_left"; loads the _active/_inactive variants).
+     * @param parent
      */
     explicit DockingFrameFrameSticker(const QString& image, QWidget* parent = nullptr);
 
     /**
-     * \brief 更新激活态（光标是否落在本指示上）。
+     * @brief Updates the active state (whether the cursor is over this sticker).
      */
     void updateCursorPos(QPoint pos);
 

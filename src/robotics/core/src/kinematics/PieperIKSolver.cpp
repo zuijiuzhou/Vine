@@ -500,8 +500,8 @@ bool PieperIKSolver::solve(const math::Isometry3d& target, std::vector<Q>& solut
     if (!is_valid_)
         return false;
 
-    const auto&        dofs = getDofs();
-    const DHParameter* mdh  = mdh_.data();
+    const auto&        dof_list = dofs();
+    const DHParameter* mdh      = mdh_.data();
 
     const double d4 = mdh[3].d, d6 = mdh[5].d;
     const double ca3 = std::cos(mdh[3].alpha), sa3 = std::sin(mdh[3].alpha);
@@ -520,7 +520,7 @@ bool PieperIKSolver::solve(const math::Isometry3d& target, std::vector<Q>& solut
     for (size_t i = 0; i < seed.size() && i < 6; ++i) seed_arr[i] = seed[i];
 
     solutions.clear();
-    solveArm(mdh, p_w_des, p_w4, target, dofs, seed_arr, solutions);
+    solveArm(mdh, p_w_des, p_w4, target, dof_list, seed_arr, solutions);
 
     // Sort by angular distance from seed
     std::sort(solutions.begin(), solutions.end(), [&seed_arr](const Q& a, const Q& b) {

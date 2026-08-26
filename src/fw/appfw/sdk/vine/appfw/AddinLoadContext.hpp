@@ -8,18 +8,19 @@ class Application;
 class ConfigRegistry;
 
 /**
- * \brief 插件加载上下文：Addin::load() 时传入，暴露宿主能力。
+ * @brief Addin load context: passed to Addin::load(), exposing host capabilities.
  *
- * 插件在 load() 里经 configs() 取得配置注册表并注册可显示配置项。
- * 后续可继续补 commandManager()/serviceManager() 等访问器。
+ * Inside load(), the addin obtains the config registry via configs() and
+ * registers displayable config items there. More accessors such as
+ * commandManager()/serviceManager() can be added later.
  */
 class V_APPFW_API AddinLoadContext {
   public:
-    /// 以 Application 为宿主构造加载上下文。
+    /// Constructs the load context with Application as the host.
     explicit AddinLoadContext(Application* app);
     ~AddinLoadContext();
 
-    /// 配置注册表：插件在此注册配置项（ConfigItem）。
+    /// Config registry: addins register config items (ConfigItem) here.
     ConfigRegistry* configs() const;
 
   private:

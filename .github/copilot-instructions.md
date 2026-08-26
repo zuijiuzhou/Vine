@@ -17,8 +17,14 @@
 
 ### Property Access (Getters / Setters)
 
-* Property access uses Java-style `getXXX()` / `setXXX()`.
-* Do NOT use Qt-style accessors (e.g. `name()` / `setName()`, `isEnabled()`).
+* Use Qt-style accessors:
+  * Getters use the plain property name without a `get` prefix (e.g. `name()`, `width()`).
+  * Boolean getters use an `is` / `has` prefix (e.g. `isEnabled()`, `hasDefault()`).
+  * Setters use a `set` prefix (e.g. `setName(...)`, `setEnabled(bool)`).
+* Do NOT use Java-style `getXXX()` / `setXXX()` getters.
+* Exception: fluent builder APIs are exempt from this rule. A setter that returns the
+  object itself for chaining uses the property name without a `set` prefix and returns
+  a reference (e.g. `ConfigItem& description(const String&)`, `ConfigItem& range(int, int)`).
 
 
 ### Fields
@@ -122,6 +128,7 @@ Headers with special requirements (e.g. `GL.h` which must be included first) may
 * Public interfaces must use Doxygen-style comments.
 * Do not create section comments.
 * Use `/** @brief ... */` format with `@`-prefixed tags.
+* Any function with a return value must document it with `@return`.
 * Prefer multi-line comments; do not condense them into a single line.
 * Keep each sentence on one line: wrap to a new line after a sentence completes, so a full sentence occupies one line. A line should generally not exceed 160 characters (you may break earlier to keep a sentence on its own line).
 

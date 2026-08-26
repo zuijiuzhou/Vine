@@ -52,6 +52,8 @@ endif()
 if(MSVC)
     # equivalent to /source-charset:utf-8 /execution-charset:utf-8
     add_compile_options(/utf-8)
+    # Enable C++ exceptions (std::get on std::variant throws std::bad_variant_access)
+    add_compile_options(/EHsc)
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
     add_compile_options(-finput-charset=UTF-8 -fexec-charset=UTF-8)
 endif()

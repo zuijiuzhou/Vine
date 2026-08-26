@@ -1,6 +1,10 @@
 #include <gtest/gtest.h>
 #include <vine/String.hpp>
 
+#include <array>
+#include <cstdint>
+#include <vector>
+
 TEST(String, CaseConversion)
 {
     const vine::String input(u8"AbC123");
@@ -37,6 +41,20 @@ TEST(String, EqualsStartsWithEndsWith)
     EXPECT_TRUE(value.endsWith(vine::String(u8"dEf")));
     EXPECT_TRUE(value.endsWith(vine::String(u8"DEF"), true));
     EXPECT_FALSE(value.endsWith(vine::String(u8"xyz")));
+}
+
+TEST(String, Hex)
+{
+    // Byte sequence -> lowercase hex string.
+    const std::array<std::uint8_t, 3> bytes{ 0xBA, 0x78, 0x16 };
+    EXPECT_EQ(vine::String::hex(bytes).stdu8str(), std::u8string(u8"ba7816"));
+
+    // std::vector and edge values are accepted too.
+    const std::vector<unsigned char> vec{ 0x00, 0x0F, 0xFF };
+    EXPECT_EQ(vine::String::hex(vec).stdu8str(), std::u8string(u8"000fff"));
+
+    // Empty input yields an empty string.
+    EXPECT_EQ(vine::String::hex(std::span<const std::uint8_t>()).stdu8str(), std::u8string());
 }
 
 TEST(String, SplitBySingleDelimiter)

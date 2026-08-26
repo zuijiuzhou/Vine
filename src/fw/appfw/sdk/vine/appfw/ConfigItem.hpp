@@ -1,35 +1,61 @@
 #pragma once
 
 #include "appfw_global.hpp"
-#include <vine/String.hpp>
 
+#include <any>
+#include <initializer_list>
+#include <utility>
+#include <variant>
 #include <vector>
+
+#include <vine/String.hpp>
 
 V_APPFW_NS_BEGIN
 
 /**
- * \brief 可配置项类型：面板据此选择编辑器。
+ * @brief A choice option: a typed value paired with its display description.
+ *
+ * The value is held in std::any and stores an int, double or String depending
+ * on which choices() overload set it. Qt-free.
  */
-enum class ConfigItemType {
-    String,  ///< 单行文本 → QLineEdit
-    Bool,    ///< 开关 → QCheckBox
-    Int,     ///< 整数 → QSpinBox
-    Double,  ///< 浮点 → QDoubleSpinBox
-    Choice,  ///< 枚举选择（存储为 String）→ QComboBox
+struct ConfigChoice {
+    std::any value; // int / double / String
+    String   description;
 };
 
 /**
- * \brief 配置项描述符：描述一个可配置项如何展示与编辑。
+ * @brief Configurable item type; the panel picks the editor widget from it.
+ */
+enum class ConfigItemType
+{
+    String, ///< Single-line text -> QLineEdit
+    Bool,   ///< Toggle -> QCheckBox
+    Int,    ///< Integer -> QSpinBox
+    Double, ///< Floating point -> QDoubleSpinBox
+    Choice, ///< Enum choice (stored as String) -> QComboBox
+};
+
+/**
+ * @brief Configuration item descriptor: describes how an item is shown and edited.
  *
- * 纯数据、Qt-free。key 为 ConfigManager 中的点分路径；label/description/group
- * 供面板展示；type 决定编辑器；defaultValue/range/step/choices 为编辑约束。
- * 插件经 AddinLoadContext::configs() 或直接向 ConfigRegistry 注册。
+ * Pure data, Qt-free. key is the dot-separated path in ConfigManager; label and
+ * description are shown by the panel; type selects the editor; defaultValue,
+ * range, step and choices constrain editing. The display placement (category and
+ * group) is decided by the ConfigGroup tree, not stored here. Plugins register
+ * items through AddinLoadContext::configs() or directly with ConfigRegistry.
  *
- * \note 流式构建（setter 返回自身引用），如：
- * item.group(u8"编辑器").range(8, 72).defaultValue(14)
+ * @note Fluent builders return the object itself, e.g.
+ * item.range(8, 72).defaultValue(14)
  */
 class V_APPFW_API ConfigItem {
   public:
+    /**
+     * @brief Constructs an item.
+     *
+     * @param key   Dot-separated ConfigManager path.
+     * @param label Display name.
+     * @param type  Item type.
+     */
     ConfigItem(String key, String label, ConfigItemType type);
 
     ConfigItem(const ConfigItem& other);
@@ -39,55 +65,169 @@ class V_APPFW_API ConfigItem {
     ~ConfigItem();
 
   public:
-    // ---- 只读 ----
-    /// 点分 key（ConfigManager 路径）。
+    /**
+     * @brief Dot-separated key (ConfigManager path).
+     */
     const String& key() const;
-    /// 显示名。
+    /**
+     * @brief Display name.
+     */
     const String& label() const;
-    /// 说明（面板 tooltip）。
+    /**
+     * @brief Description (panel tooltip).
+     */
     const String& description() const;
-    /// 分组名（空串 = 未分组）。
-    const String& group() const;
-    /// 类型。
+    /**
+     * @brief Item type.
+     */
     ConfigItemType type() const;
 
-    /// 是否配置了默认值。
+    /**
+     * @brief Whether a default value is configured.
+     */
     bool hasDefault() const;
-    /// 默认值（hasDefault 为 true 时有效）。
+    /**
+     * @brief Default value; valid when hasDefault() is true.
+     *
+     * @throws std::bad_any_cast if no default is set or the stored type differs.
+     */
     const String& defaultString() const;
+    /**
+     * @brief Default bool value.
+     *
+     * @throws std::bad_any_cast if no default is set or the stored type differs.
+     */
     bool defaultBool() const;
+    /**
+     * @brief Default int value.
+     *
+     * @throws std::bad_any_cast if no default is set or the stored type differs.
+     */
     int defaultInt() const;
+    /**
+     * @brief Default double value.
+     *
+     * @throws std::bad_any_cast if no default is set or the stored type differs.
+     */
     double defaultDouble() const;
+    /**
+     * @brief The stored type of the default value (Int/Double/String; String when unset).
+     */
+    ConfigItemType defaultType() const;
 
-    /// 是否配置了数值范围。
+    /**
+     * @brief Whether a numeric range is configured.
+     */
     bool hasRange() const;
+    /**
+     * @brief Minimum int value.
+     *
+     * @throws std::bad_any_cast if no range is set.
+     */
     int minInt() const;
+    /**
+     * @brief Maximum int value.
+     *
+     * @throws std::bad_any_cast if no range is set.
+     */
     int maxInt() const;
+    /**
+     * @brief Minimum double value.
+     *
+     * @throws std::bad_any_cast if no range is set.
+     */
     double minDouble() const;
+    /**
+     * @brief Maximum double value.
+     *
+     * @throws std::bad_any_cast if no range is set.
+     */
     double maxDouble() const;
-    /// 步进（Int/Double）。
+    /**
+     * @brief Step (Int/Double).
+     *
+     * @note Returns 1.0 when no range is configured.
+     */
     double step() const;
 
-    /// Choice 的选项列表。
-    const std::vector<String>& choices() const;
-    /// 是否只读（仅显示不可编辑）。
+    /**
+     * @brief Choice options (value-description pairs).
+     */
+    const std::vector<ConfigChoice>& choices() const;
+    /**
+     * @brief Whether read-only (display only, not editable).
+     */
     bool readOnly() const;
 
   public:
-    // ---- 流式构建 ----
+    /**
+     * @brief Sets the description.
+     */
     ConfigItem& description(const String& d);
-    ConfigItem& group(const String& g);
+    /**
+     * @brief Sets the default string value (valid for String and Choice).
+     *
+     * @throws std::invalid_argument if the item type does not match.
+     */
     ConfigItem& defaultValue(const String& v);
+    /**
+     * @brief Sets the default string value from a u8 literal.
+     */
     ConfigItem& defaultValue(const char8_t* v);
+    /**
+     * @brief Sets the default bool value.
+     *
+     * @throws std::invalid_argument if the item type does not match.
+     */
     ConfigItem& defaultValue(bool v);
+    /**
+     * @brief Sets the default int value (Int, or Choice with int-valued options).
+     *
+     * @throws std::invalid_argument if the item type does not match.
+     */
     ConfigItem& defaultValue(int v);
+    /**
+     * @brief Sets the default double value (Double, or Choice with double-valued options).
+     *
+     * @throws std::invalid_argument if the item type does not match.
+     */
     ConfigItem& defaultValue(double v);
+    /**
+     * @brief Sets an int range.
+     *
+     * @throws std::invalid_argument if the item type is not Int/Double.
+     */
     ConfigItem& range(int min, int max);
+    /**
+     * @brief Sets a double range.
+     *
+     * @throws std::invalid_argument if the item type is not Int/Double.
+     */
     ConfigItem& range(double min, double max);
-    ConfigItem& range(int min, double max);
-    ConfigItem& range(double min, int max);
+    /**
+     * @brief Sets an int step.
+     *
+     * @throws std::invalid_argument if the item type is not Int/Double or no range has been set.
+     */
+    ConfigItem& step(int s);
+    /**
+     * @brief Sets a double step.
+     *
+     * @throws std::invalid_argument if the item type is not Int/Double or no range has been set.
+     */
     ConfigItem& step(double s);
-    ConfigItem& choices(std::vector<String> cs);
+    /**
+     * @brief Sets the choice options (value equals description for each entry).
+     */
+    ConfigItem& choices(std::initializer_list<const char8_t*> cs);
+    /**
+     * @brief Sets choice options as value-description pairs; the value type
+     * (int/double/String) is inferred from each literal.
+     */
+    ConfigItem& choices(std::initializer_list<std::pair<std::variant<int, double, String>, String>> cs);
+    /**
+     * @brief Sets the read-only flag.
+     */
     ConfigItem& readOnly(bool on);
 
   private:

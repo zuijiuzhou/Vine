@@ -1,8 +1,8 @@
 #include <vine/appfw/gui/RibbonAction.hpp>
 
+#include "UIElementData.hpp"
 #include <QAction>
 #include <QIcon>
-#include "UIElementData.hpp"
 
 V_APPFWGUI_NS_BEGIN
 
@@ -21,7 +21,7 @@ RibbonAction::~RibbonAction()
     // d is deleted by UIElement
 }
 
-void RibbonAction::text(const String& t)
+void RibbonAction::setText(const String& t)
 {
     auto* act = impl<QAction>();
     if (!act)
@@ -39,7 +39,7 @@ String RibbonAction::text() const
     return String::fromUtf16((const char16_t*)qs.utf16(), qs.size());
 }
 
-void RibbonAction::icon(const Icon& ic)
+void RibbonAction::setIcon(const Icon& ic)
 {
     auto* act = impl<QAction>();
     if (!act)
@@ -55,7 +55,7 @@ Icon RibbonAction::icon() const
     return Icon(act->icon());
 }
 
-void RibbonAction::tooltip(const String& t)
+void RibbonAction::setTooltip(const String& t)
 {
     auto* act = impl<QAction>();
     if (!act)
@@ -73,7 +73,7 @@ String RibbonAction::tooltip() const
     return String::fromUtf16((const char16_t*)qs.utf16(), qs.size());
 }
 
-void RibbonAction::enabled(bool on)
+void RibbonAction::setEnabled(bool on)
 {
     auto* act = impl<QAction>();
     if (!act)
@@ -87,7 +87,7 @@ bool RibbonAction::enabled() const
     return act && act->isEnabled();
 }
 
-void RibbonAction::checkable(bool on)
+void RibbonAction::setCheckable(bool on)
 {
     auto* act = impl<QAction>();
     if (!act)
@@ -101,7 +101,7 @@ bool RibbonAction::checkable() const
     return act && act->isCheckable();
 }
 
-void RibbonAction::checked(bool on)
+void RibbonAction::setChecked(bool on)
 {
     auto* act = impl<QAction>();
     if (!act)

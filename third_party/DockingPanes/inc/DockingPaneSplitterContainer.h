@@ -27,11 +27,14 @@ class QSplitter;
 class DockingPaneManager;
 
 /**
- * \brief 停靠树中的分割器节点（包装 QSplitter）。
+ * @brief Splitter node in the docking tree (wraps a QSplitter).
  *
- * 停靠时按方向创建分割器，把邻居与停靠窗格并排。含两个子节点时是二叉树形态的停靠树中间节点；不含客户端分支的子分割器会优先收缩（updateAllSplitters）。
+ * When docking, a splitter is created according to the direction and places the neighbour
+ * and the docked pane side by side. With two children it is an intermediate node of the
+ * binary-tree docking tree; sub-splitters without a client branch shrink first (updateAllSplitters).
  *
- * \note 分割方向与停靠方位对应：splitVertical=上下堆叠，splitHorizontal=左右并排（命名与直觉相反，注意区分）。
+ * @note Split direction maps to dock position: splitVertical = stacked vertically,
+ * splitHorizontal = side by side horizontally (the naming is counter-intuitive, mind the distinction).
  */
 class DockingPaneSplitterContainer : public DockingPaneBase {
     Q_OBJECT
@@ -41,8 +44,8 @@ class DockingPaneSplitterContainer : public DockingPaneBase {
   public:
     enum SplitterDirection
     {
-        splitVertical,  // QSplitter 垂直方向（子窗格上下堆叠）。
-        splitHorizontal // QSplitter 水平方向（子窗格左右并排）。
+        splitVertical,  // QSplitter vertical orientation (children stacked vertically).
+        splitHorizontal // QSplitter horizontal orientation (children side by side).
     };
 
   public:
@@ -51,14 +54,14 @@ class DockingPaneSplitterContainer : public DockingPaneBase {
 
   public:
     /**
-     * \brief 当前分割方向。
+     * @brief Current split direction.
      */
     SplitterDirection direction();
 
     void saveLayout(QDomNode* parentNode, bool includeGeometry = false) override;
 
   private:
-    QSplitter* m_splitterWidget; ///< 实际的分割控件。
+    QSplitter* m_splitterWidget; ///< The actual splitter widget.
 };
 
 #endif // DOCKINGPANESPLITTERCONTAINER_H

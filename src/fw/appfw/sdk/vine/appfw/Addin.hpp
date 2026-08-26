@@ -16,7 +16,7 @@ class V_APPFW_API Addin : public Object {
     void unload();
 
   public:
-    String getName() const;
+    String name() const;
 };
 
 V_APPFW_NS_END

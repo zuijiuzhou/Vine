@@ -35,26 +35,33 @@ class DockingPaneFlyoutWidget;
 class DockAutoHideButton;
 
 /**
- * \brief 停靠系统的核心管理器。
+ * @brief Core manager of the docking system.
  *
- * 持有整棵停靠树（根节点 m_rootPane）、中央客户区（DockingPaneClient）、四个自动隐藏按钮条、拖放指示器（DockingFrameStickers / DockingTargetWidget）以及当前
- * flyout。 负责窗格的创建、停靠、关闭、隐藏/显示、浮动、自动隐藏，以及布局的保存与恢复。宿主通过 widget() 取得顶层控件嵌入主窗口。
+ * Owns the whole docking tree (root node m_rootPane), the central client area
+ * (DockingPaneClient), the four auto-hide button strips, the drag-and-drop indicators
+ * (DockingFrameStickers / DockingTargetWidget) and the current flyout. It handles pane
+ * creation, docking, closing, hide/show, floating, auto-hiding, and layout save/restore.
+ * The host embeds the top-level widget returned by widget() into the main window.
  *
- * \note 注意事项：
- *  - widget() 未调用前四个自动隐藏条未创建，此时调用 saveLayout() / updateAutohideButton() / removePinnedButton() 会解引用空指针。
- *  - closePane() 对“已提交的 Tab 子窗格”（state()==Tabbed）会路由到所属DockingPaneTabbedContainer::closePane() 完成标签移除；
- *    applyLayout() 恢复期间（m_closingAll）不路由，避免触发 close 回调与过早拆组。
- *  - createPane() 使用重复 id 会直接覆盖 m_dockingPaneMap 中的旧条目。
- *  - 本类不删除停靠树（m_dockingWidget / m_thisWidget / m_clientPane），它们归宿主（如 setCentralWidget）所有，析构时仅清理内部指示器与 flyout。
+ * @note Notes:
+ *  - The four auto-hide strips are only created after widget() is called; calling
+ *    saveLayout() / updateAutohideButton() / removePinnedButton() before that dereferences null pointers.
+ *  - closePane() routes "committed tab children" (state()==Tabbed) to the owning
+ *    DockingPaneTabbedContainer::closePane() to remove the tab; during applyLayout() restore
+ *    (m_closingAll) it does not route, to avoid close callbacks and premature tab teardown.
+ *  - createPane() with a duplicate id overwrites the existing entry in m_dockingPaneMap.
+ *  - This class does not delete the docking tree (m_dockingWidget / m_thisWidget / m_clientPane);
+ *    they belong to the host (e.g. via setCentralWidget); the destructor only cleans up the
+ *    internal indicators and the flyout.
  */
 class DockingPaneManager : public QObject {
     Q_OBJECT
 
   public:
     /**
-     * \brief 停靠方位。
+     * @brief Dock position.
      *
-     * dockTab 表示并入某个窗格的标签组（或与之合并成新标签组）。
+     * dockTab means joining a pane's tab group (or merging into a new tab group).
      */
     enum DockPosition
     {
@@ -68,43 +75,43 @@ class DockingPaneManager : public QObject {
 
   public:
     /**
-     * \brief 构造管理器。
+     * @brief Constructs the manager.
      *
-     * 仅创建内部结构（根/客户窗格/指示器），不创建自动隐藏条
-     * （见 widget()）。
+     * Only creates the internal structure (root/client panes and indicators);
+     * the auto-hide strips are created by widget().
      */
     DockingPaneManager();
 
     /**
-     * \brief 析构。释放内部指示器与当前 flyout；停靠树归宿主所有。
+     * @brief Destructor. Releases the internal indicators and the current flyout; the docking tree belongs to the host.
      */
     ~DockingPaneManager() override;
 
   public:
     /**
-     * \brief 返回容纳停靠系统的顶层 QWidget（懒创建）。
+     * @brief Returns the top-level QWidget hosting the docking system (lazily created).
      *
-     * 首次调用会创建四个自动隐藏按钮条并安装事件过滤器。
-     * \return 可嵌入主窗口（如 QMainWindow::setCentralWidget）的控件。
+     * The first call creates the four auto-hide button strips and installs the event filters.
+     * @return A widget that can be embedded into the main window (e.g. via QMainWindow::setCentralWidget).
      */
     QWidget* widget();
 
     /**
-     * \brief 设置中央客户区控件。
-     * \param widget 客户区内容（不能为 nullptr）。
-     * \return 客户端窗格（DockingPaneClient）。
+     * @brief Sets the central client-area widget.
+     * @param widget The client-area content (must not be nullptr).
+     * @return The client pane (DockingPaneClient).
      */
     DockingPaneBase* setClientWidget(QWidget* widget);
 
     /**
-     * \brief 创建一个窗格并按方位停靠（或浮动）。
-     * \param id           唯一标识（重复会覆盖 map）。
-     * \param title        标题。
-     * \param widget       客户区内容。
-     * \param initialSize  初始尺寸。
-     * \param dockPosition 停靠方位；dockFloat 时直接浮动显示。
-     * \param neighbourPane 邻居窗格（dockTab / 相对停靠时使用）。
-     * \return 新建的 DockingPaneContainer。
+     * @brief Creates a pane and docks it (or floats it) at the given position.
+     * @param id           Unique identifier (a duplicate overwrites the map).
+     * @param title        Title.
+     * @param widget       Client-area content.
+     * @param initialSize  Initial size.
+     * @param dockPosition Dock position; dockFloat floats and shows it immediately.
+     * @param neighbourPane Neighbour pane (used for dockTab / relative docking).
+     * @return The newly created DockingPaneContainer.
      */
     DockingPaneBase* createPane(const QString&                   id,
                                 const QString&                   title,
@@ -114,136 +121,136 @@ class DockingPaneManager : public QObject {
                                 DockingPaneBase*                 neighbourPane = nullptr);
 
     /**
-     * \brief 按 id 关闭窗格。
-     * \see closePane(DockingPaneBase*)
+     * @brief Closes the pane with the given id.
+     * @see closePane(DockingPaneBase*)
      */
     void closePane(const QString& id);
 
     /**
-     * \brief 关闭窗格：隐藏并置为 Hidden，从停靠树摘除。
+     * @brief Closes a pane: hides it, sets it to Hidden and detaches it from the docking tree.
      *
-     * \note 对 Tab 子窗格会路由到所属 tabbed 容器（见类说明）；
-     * 只关闭、不删除对象，也不从 m_dockingPaneMap 移除。
+     * @note Tab children are routed to their tabbed container (see the class description);
+     * only closes the pane — it does not delete the object nor remove it from m_dockingPaneMap.
      */
     void closePane(DockingPaneBase* dockingPane);
 
     /**
-     * \brief 隐藏窗格并转为自动隐藏（Pinned）：创建边缘按钮。
-     * \note 需要窗格位于分割器内；浮动窗格为静默 no-op。
+     * @brief Hides a pane and switches it to auto-hide (Pinned): creates an edge button.
+     * @note Requires the pane to be inside a splitter; silently a no-op for floating panes.
      */
     void hidePane(DockingPaneBase* dockingPane);
 
     /**
-     * \brief 按状态恢复显示窗格。
-     * \note Hidden → 重新浮动；Pinned → 打开 flyout；Docked/Floating → 激活。
+     * @brief Restores the visibility of a pane according to its state.
+     * @note Hidden → re-float; Pinned → open the flyout; Docked/Floating → activate.
      */
     void showPane(DockingPaneBase* dockingPane);
 
     /**
-     * \brief 从管理器记账移除并调度删除窗格对象（deleteLater）。
+     * @brief Removes a pane from the manager's bookkeeping and schedules its deletion (deleteLater).
      */
     void deletePane(DockingPaneBase* pane);
 
     /**
-     * \brief 取消固定（unpin）：恢复显示并移除自动隐藏按钮。
+     * @brief Unpins a pane: restores its visibility and removes the auto-hide button.
      */
     void unpinPane(DockingPaneBase* pane);
 
     /**
-     * \brief 关闭已固定的（Pinned）窗格并关闭其 flyout。
+     * @brief Closes a pinned pane and its flyout.
      */
     void closePinnedPane(DockingPaneBase* pane);
 
     /**
-     * \brief 打开某个自动隐藏按钮对应的 flyout（自动隐藏弹出窗格）。
-     * \note 同一 flyout 已打开且指向同一窗格时直接返回。
+     * @brief Opens the flyout for an auto-hide button (the auto-hidden popup pane).
+     * @note Returns immediately when the same flyout is already open for the same pane.
      */
     void openFlyout(DockAutoHideButton* button);
 
     /**
-     * \brief 用 newPane 替换停靠树中的 oldPane（如折叠 Tab 组为单窗格）。
+     * @brief Replaces oldPane with newPane in the docking tree (e.g. collapsing a tab group into a single pane).
      */
     void replacePane(DockingPaneBase* oldPane, DockingPaneBase* newPane);
 
     /**
-     * \brief 停靠操作后更新自动隐藏按钮所指向的容器/窗格。
+     * @brief Updates the container/pane pointed to by auto-hide buttons after a docking operation.
      */
     void updateAutohideButton(DockingPaneBase* oldContainer, DockingPaneBase* oldPane, DockingPaneBase* newContainer, DockingPaneBase* newPane);
 
     /**
-     * \brief 核心停靠逻辑。
+     * @brief Core docking logic.
      *
-     * dockTab 时并入 neighbourPane 的标签组或新建标签组；其余方位创建
-     * 新分割器并插入停靠树。
-     * \note 对已是 Tab 的窗格会先经 closePane 从旧组摘除再入新组。
-     * \return 停靠完成后的容器。
+     * For dockTab, joins neighbourPane's tab group or creates a new one; other positions
+     * create a new splitter and insert it into the docking tree.
+     * @note Panes that are already tabs are first detached from their old group via closePane before joining the new one.
+     * @return The container after docking completes.
      */
     DockingPaneBase* dockPane(DockingPaneBase* newPane, DockingPaneManager::DockPosition dockPosition, DockingPaneBase* neighbourPane);
 
     /**
-     * \brief 序列化当前布局（停靠树 + 固定 + 浮动）为 XML。
-     * \note 需要先调用 widget() 以创建自动隐藏条，否则崩溃。
+     * @brief Serializes the current layout (docking tree + pinned + floating) as XML.
+     * @note widget() must be called first to create the auto-hide strips, otherwise it crashes.
      */
     QString saveLayout(const QString& id);
 
     /**
-     * \brief 从 XML 恢复布局。
-     * \return 成功与否；失败时回退到仅含客户区。
+     * @brief Restores the layout from XML.
+     * @return Whether it succeeded; on failure it falls back to a client-only layout.
      */
     bool applyLayout(const QString& layout);
 
     /**
-     * \brief 设置主窗口；浮动窗格将以其为父窗口。
+     * @brief Sets the main window; floating panes use it as their parent window.
      */
     void setMainWindow(QWidget* window);
 
     /**
-     * \brief 返回主窗口。
+     * @brief Returns the main window.
      */
     QWidget* mainWindow();
 
     /**
-     * \brief 调试：向 qDebug 输出所有窗格及其状态。
+     * @brief Debugging: prints all panes and their states to qDebug.
      */
     void dumpPaneList();
 
     /**
-     * \brief 按索引取窗格。
+     * @brief Returns the pane at the given index.
      */
     DockingPaneBase* pane(int index) const;
 
     /**
-     * \brief 窗格总数。
+     * @brief Total number of panes.
      */
     int paneCount() const;
 
     /**
-     * \brief 查询窗格当前所处停靠方位（动态计算）。
+     * @brief Queries the pane's current dock position (computed dynamically).
      *
-     * Docked → 相对客户区的方位；Tabbed → 所属标签组的方位；
-     * Floating/Pinned/Hidden → dockFloat。
-     * \note 供宿主实时查询（如 dockArea）；不要用于决定停靠目标。
+     * Docked → position relative to the client area; Tabbed → position of the owning tab group;
+     * Floating/Pinned/Hidden → dockFloat.
+     * @note For the host to query live (e.g. dockArea); not for deciding a docking target.
      */
     DockPosition dockPositionOf(DockingPaneBase* pane);
 
   public:
     /**
-     * \brief 拖动浮动窗格时更新停靠指示器（由容器拖动回调调用）。
+     * @brief Updates the docking indicators while a floating pane is dragged (called by the container's drag callbacks).
      */
     void floatingPaneMoved(DockingPaneBase* pane, QPoint cursorPos);
 
     /**
-     * \brief 拖动结束：用松手位置重新命中检测并停靠。
+     * @brief Drag end: re-runs hit testing at the release position and docks.
      */
     void floatingPaneEndMove(DockingPaneBase* pane, QPoint cursorPos);
 
     /**
-     * \brief 拖动开始：初始化指示器。
+     * @brief Drag start: initializes the indicators.
      */
     void floatingPaneStartMove(DockingPaneBase* pane, QPoint cursorPos);
 
     /**
-     * \brief 移除指定容器的自动隐藏按钮（dockingPane 为空时移除全部）。
+     * @brief Removes the auto-hide buttons of the given container (all of them when dockingPane is null).
      */
     void removePinnedButton(DockingPaneBase* dockingPaneContainer, DockingPaneBase* dockingPane = nullptr);
 

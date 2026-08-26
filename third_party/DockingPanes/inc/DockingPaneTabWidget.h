@@ -27,10 +27,10 @@ class QStackedWidget;
 class DockingPaneContainer;
 
 /**
- * \brief 遗留的简易 Tab 容器（QStackedWidget 包装）。
+ * @brief Legacy simple Tab container (a QStackedWidget wrapper).
  *
- * 仅提供 addPane() 把窗格客户区加入堆叠控件；没有标签条绘制/交互。
- * \note 当前停靠库实际使用 DockingPaneTabbedContainer，本类为历史遗留。
+ * Only provides addPane() to add a pane's client area to the stacked widget; no tab strip drawing/interaction.
+ * @note The docking library actually uses DockingPaneTabbedContainer; this class is a historical leftover.
  */
 class DockingPaneTabWidget : public QWidget {
     Q_OBJECT
@@ -39,7 +39,7 @@ class DockingPaneTabWidget : public QWidget {
 
   public:
     /**
-     * \brief 把窗格的客户区加入堆叠控件。
+     * @brief Adds a pane's client area to the stacked widget.
      */
     void addPane(DockingPaneContainer* pane);
 

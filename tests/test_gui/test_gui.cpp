@@ -26,6 +26,7 @@
 #include <QLineEdit>
 #include <QPixmap>
 #include <QSpinBox>
+#include <QTabWidget>
 #include <QToolBar>
 #include <QToolButton>
 #include <QWidget>
@@ -40,38 +41,43 @@
 #include <vine/appfw/ConfigRegistry.hpp>
 
 #include <vine/appfw/gui/ConfigWindow.hpp>
+#include <vine/appfw/gui/Control.hpp>
 #include <vine/appfw/gui/DockPanel.hpp>
 #include <vine/appfw/gui/DockPanelManager.hpp>
 #include <vine/appfw/gui/GuiApplication.hpp>
 #include <vine/appfw/gui/MainWindow.hpp>
+#include <vine/appfw/gui/RibbonAction.hpp>
 #include <vine/appfw/gui/RibbonBar.hpp>
 #include <vine/appfw/gui/RibbonButton.hpp>
-#include <vine/appfw/gui/RibbonAction.hpp>
 #include <vine/appfw/gui/RibbonGroup.hpp>
 #include <vine/appfw/gui/RibbonTab.hpp>
-#include <vine/appfw/gui/Control.hpp>
 
+#include <any>
 #include <memory>
+#include <stdexcept>
 
 namespace guifw = vine::appfw::gui;
 
-namespace {
+namespace
+{
 
 // 整个测试进程共享一个 GuiApplication（必须在任何 QWidget 之前创建）。
-class GuiEnv : public ::testing::Environment
-{
+class GuiEnv : public ::testing::Environment {
   public:
     void SetUp() override
     {
         guifw::GuiApplication::desc();
         static char  arg0[] = "test_gui";
         static char* argv[] = { arg0, nullptr };
-        int          argc  = 1;
-        app                = std::make_unique<guifw::GuiApplication>(argc, argv);
-        app->init();   // 创建 QApplication
+        int          argc   = 1;
+        app                 = std::make_unique<guifw::GuiApplication>(argc, argv);
+        app->init(); // 创建 QApplication
     }
 
-    void TearDown() override { app.reset(); }
+    void TearDown() override
+    {
+        app.reset();
+    }
 
     static std::unique_ptr<guifw::GuiApplication> app;
 };
@@ -86,8 +92,7 @@ std::unique_ptr<guifw::GuiApplication> GuiEnv::app;
 // ---------------------------------------------------------------------------
 // 每用例独立构建一个 MainWindow + 功能区 + 停靠面板，互不干扰。
 // ---------------------------------------------------------------------------
-class GuiTest : public ::testing::Test
-{
+class GuiTest : public ::testing::Test {
   protected:
     void SetUp() override
     {
@@ -105,15 +110,15 @@ class GuiTest : public ::testing::Test
     }
 
     // ---------- 功能区成员 ----------
-    guifw::RibbonTab*          tabHome   = nullptr;
-    guifw::RibbonGroup*        groupClip = nullptr;
-    guifw::RibbonGroup*        groupView = nullptr;
-    guifw::RibbonButton*       btnPaste  = nullptr;
-    guifw::RibbonButton*       btnCut    = nullptr;
-    guifw::RibbonButton*       btnInsert = nullptr;
-    guifw::RibbonButton*       btnStyle  = nullptr;
-    guifw::RibbonButton*       btnBig    = nullptr;
-    guifw::RibbonButton*       btnMid    = nullptr;
+    guifw::RibbonTab*    tabHome   = nullptr;
+    guifw::RibbonGroup*  groupClip = nullptr;
+    guifw::RibbonGroup*  groupView = nullptr;
+    guifw::RibbonButton* btnPaste  = nullptr;
+    guifw::RibbonButton* btnCut    = nullptr;
+    guifw::RibbonButton* btnInsert = nullptr;
+    guifw::RibbonButton* btnStyle  = nullptr;
+    guifw::RibbonButton* btnBig    = nullptr;
+    guifw::RibbonButton* btnMid    = nullptr;
     guifw::RibbonAction* miPic     = nullptr;
     guifw::RibbonAction* miTable   = nullptr;
     guifw::RibbonAction* miChart   = nullptr;
@@ -124,33 +129,33 @@ class GuiTest : public ::testing::Test
 
         // tab 1: Home
         tabHome = new guifw::RibbonTab();
-        tabHome->title(u8"Home");
+        tabHome->setTitle(u8"Home");
         bar->addTab(tabHome);
 
         // 组 1: Clipboard —— 普通按钮 + 下拉按钮
         groupClip = new guifw::RibbonGroup();
-        groupClip->title(u8"Clipboard");
+        groupClip->setTitle(u8"Clipboard");
         tabHome->addGroup(groupClip);
 
         btnPaste = new guifw::RibbonButton();
-        btnPaste->text(u8"Paste");
-        btnPaste->icon(guifw::Icon(u8":/img/docking_bitmaps/tab.png"));
+        btnPaste->setText(u8"Paste");
+        btnPaste->setIcon(guifw::Icon(u8":/img/docking_bitmaps/tab.png"));
         groupClip->addButton(btnPaste);
 
         btnCut = new guifw::RibbonButton();
-        btnCut->text(u8"Cut");
+        btnCut->setText(u8"Cut");
         groupClip->addButton(btnCut);
 
         btnInsert = new guifw::RibbonButton();
-        btnInsert->text(u8"Insert");
+        btnInsert->setText(u8"Insert");
 
         miPic = new guifw::RibbonAction();
-        miPic->text(u8"Picture");
+        miPic->setText(u8"Picture");
         miTable = new guifw::RibbonAction();
-        miTable->text(u8"Table");
+        miTable->setText(u8"Table");
         miChart = new guifw::RibbonAction();
-        miChart->text(u8"Chart");
-        miChart->icon(guifw::Icon(u8":/img/docking_bitmaps/tab.png"));
+        miChart->setText(u8"Chart");
+        miChart->setIcon(guifw::Icon(u8":/img/docking_bitmaps/tab.png"));
 
         btnInsert->addDropDownItem(miPic);
         btnInsert->addDropDownItem(miTable);
@@ -159,45 +164,45 @@ class GuiTest : public ::testing::Test
 
         // 组 2: View —— 样式/尺寸/事件测试按钮
         groupView = new guifw::RibbonGroup();
-        groupView->title(u8"View");
+        groupView->setTitle(u8"View");
         tabHome->addGroup(groupView);
 
         btnStyle = new guifw::RibbonButton();
-        btnStyle->text(u8"Style");
-        btnStyle->icon(guifw::Icon(u8":/img/docking_bitmaps/tab.png"));
-        btnStyle->style(guifw::RibbonButtonStyle::TextBesideIcon);
-        btnStyle->iconRightText(true);
-        btnStyle->tooltip(u8"style tooltip");
-        btnStyle->checkable(true);
-        btnStyle->checked(true);
+        btnStyle->setText(u8"Style");
+        btnStyle->setIcon(guifw::Icon(u8":/img/docking_bitmaps/tab.png"));
+        btnStyle->setStyle(guifw::RibbonButtonStyle::TextBesideIcon);
+        btnStyle->setIconRightText(true);
+        btnStyle->setTooltip(u8"style tooltip");
+        btnStyle->setCheckable(true);
+        btnStyle->setChecked(true);
         groupView->addButton(btnStyle);
 
         QPixmap bigPm(64, 64);
         bigPm.fill(QColor(42, 130, 218));
         btnBig = new guifw::RibbonButton();
-        btnBig->text(u8"Big");
-        btnBig->icon(guifw::Icon(QIcon(bigPm)));
-        btnBig->buttonSize(guifw::RibbonItemSize::Large);
-        btnBig->largeIconSize(guifw::Size(64, 64));
+        btnBig->setText(u8"Big");
+        btnBig->setIcon(guifw::Icon(QIcon(bigPm)));
+        btnBig->setButtonSize(guifw::RibbonItemSize::Large);
+        btnBig->setLargeIconSize(guifw::Size(64, 64));
         groupView->addButton(btnBig);
 
         btnMid = new guifw::RibbonButton();
-        btnMid->text(u8"Mid");
-        btnMid->icon(guifw::Icon(u8":/img/docking_bitmaps/tab.png"));
-        btnMid->buttonSize(guifw::RibbonItemSize::Medium);
+        btnMid->setText(u8"Mid");
+        btnMid->setIcon(guifw::Icon(u8":/img/docking_bitmaps/tab.png"));
+        btnMid->setButtonSize(guifw::RibbonItemSize::Medium);
         groupView->addButton(btnMid);
 
         // tab 2: Tools
         auto* tab2 = new guifw::RibbonTab();
-        tab2->title(u8"Tools");
+        tab2->setTitle(u8"Tools");
         bar->addTab(tab2);
 
         auto* groupOpt = new guifw::RibbonGroup();
-        groupOpt->title(u8"Options");
+        groupOpt->setTitle(u8"Options");
         tab2->addGroup(groupOpt);
 
         auto* btn4 = new guifw::RibbonButton();
-        btn4->text(u8"Settings");
+        btn4->setText(u8"Settings");
         groupOpt->addButton(btn4);
     }
 
@@ -213,33 +218,33 @@ class GuiTest : public ::testing::Test
         auto* mgr = wnd->dockPanelManager();
 
         panelLeft = new guifw::DockPanel();
-        panelLeft->title(u8"Project");
-        panelLeft->id(u8"dock_project");
-        panelLeft->features(guifw::DockFeatures::None);
+        panelLeft->setTitle(u8"Project");
+        panelLeft->setId(u8"dock_project");
+        panelLeft->setFeatures(guifw::DockFeatures::None);
         mgr->addDockPanel(panelLeft, guifw::DockAreas::Left);
 
         panelRight = new guifw::DockPanel();
-        panelRight->title(u8"Properties");
-        panelRight->id(u8"dock_properties");
-        panelRight->features(guifw::DockFeatures::Closable);
+        panelRight->setTitle(u8"Properties");
+        panelRight->setId(u8"dock_properties");
+        panelRight->setFeatures(guifw::DockFeatures::Closable);
         mgr->addDockPanel(panelRight, guifw::DockAreas::Right);
 
         panelBottom = new guifw::DockPanel();
-        panelBottom->title(u8"Output");
-        panelBottom->id(u8"dock_output");
-        panelBottom->features(guifw::DockFeatures::Closable);
+        panelBottom->setTitle(u8"Output");
+        panelBottom->setId(u8"dock_output");
+        panelBottom->setFeatures(guifw::DockFeatures::Closable);
         mgr->addDockPanel(panelBottom, guifw::DockAreas::Bottom);
 
         panelTop = new guifw::DockPanel();
-        panelTop->title(u8"Toolbox");
-        panelTop->id(u8"dock_toolbox");
-        panelTop->features(guifw::DockFeatures::All);
+        panelTop->setTitle(u8"Toolbox");
+        panelTop->setId(u8"dock_toolbox");
+        panelTop->setFeatures(guifw::DockFeatures::All);
         mgr->addDockPanel(panelTop, guifw::DockAreas::Top);
 
         panelBottom2 = new guifw::DockPanel();
-        panelBottom2->title(u8"Log");
-        panelBottom2->id(u8"dock_log");
-        panelBottom2->features(guifw::DockFeatures::None);
+        panelBottom2->setTitle(u8"Log");
+        panelBottom2->setId(u8"dock_log");
+        panelBottom2->setFeatures(guifw::DockFeatures::None);
         mgr->addDockPanel(panelBottom2, guifw::DockAreas::Bottom);
 
         QCoreApplication::processEvents();
@@ -264,27 +269,27 @@ TEST_F(GuiTest, RibbonBar_GlobalSettings)
     auto* bar = wnd->ribbonBar();
 
     // 全局风格往返
-    bar->ribbonStyle(guifw::RibbonStyle::TwoRowCompact);
+    bar->setRibbonStyle(guifw::RibbonStyle::TwoRowCompact);
     EXPECT_EQ(bar->ribbonStyle(), guifw::RibbonStyle::TwoRowCompact);
-    bar->ribbonStyle(guifw::RibbonStyle::ThreeRowLoose);
+    bar->setRibbonStyle(guifw::RibbonStyle::ThreeRowLoose);
     EXPECT_EQ(bar->ribbonStyle(), guifw::RibbonStyle::ThreeRowLoose);
 
     // 折叠模式
-    bar->minimumMode(true);
+    bar->setMinimumMode(true);
     EXPECT_TRUE(bar->minimumMode());
-    bar->minimumMode(false);
+    bar->setMinimumMode(false);
     EXPECT_FALSE(bar->minimumMode());
 
     // 面板标题
-    bar->panelTitleVisible(false);
+    bar->setPanelTitleVisible(false);
     EXPECT_FALSE(bar->panelTitleVisible());
-    bar->panelTitleVisible(true);
+    bar->setPanelTitleVisible(true);
     EXPECT_TRUE(bar->panelTitleVisible());
 
     // 全局批量换行 / 图标右侧
-    bar->wordWrap(true);
+    bar->setWordWrap(true);
     EXPECT_TRUE(bar->wordWrap());
-    bar->iconRightText(true);
+    bar->setIconRightText(true);
     EXPECT_TRUE(bar->iconRightText());
 }
 
@@ -293,15 +298,15 @@ TEST_F(GuiTest, RibbonBar_ApplicationButton)
     auto* bar = wnd->ribbonBar();
 
     // 可见性往返
-    bar->applicationButtonVisible(false);
+    bar->setApplicationButtonVisible(false);
     EXPECT_FALSE(bar->applicationButtonVisible());
-    bar->applicationButtonVisible(true);
+    bar->setApplicationButtonVisible(true);
     EXPECT_TRUE(bar->applicationButtonVisible());
 
     // 图标 / 文字
-    bar->applicationIcon(guifw::Icon(u8":/img/docking_bitmaps/tab.png"));
+    bar->setApplicationIcon(guifw::Icon(u8":/img/docking_bitmaps/tab.png"));
     EXPECT_FALSE(bar->applicationIcon().isNull());
-    bar->applicationText(u8"File");
+    bar->setApplicationText(u8"File");
     EXPECT_TRUE(bar->applicationText() == u8"File");
 }
 
@@ -310,7 +315,7 @@ TEST_F(GuiTest, RibbonBar_QuickAccess)
     auto* bar = wnd->ribbonBar();
 
     auto* act = new guifw::RibbonAction();
-    act->text(u8"Save");
+    act->setText(u8"Save");
     bar->addQuickAccessItem(act);
     bar->addQuickAccessSeparator();
 
@@ -320,17 +325,21 @@ TEST_F(GuiTest, RibbonBar_QuickAccess)
     bool foundSave = false, foundSep = false;
     for (QToolBar* tb : root->findChildren<QToolBar*>()) {
         for (QAction* a : tb->actions()) {
-            if (a->text() == QStringLiteral("Save")) { foundSave = true; }
-            if (a->isSeparator()) { foundSep = true; }
+            if (a->text() == QStringLiteral("Save")) {
+                foundSave = true;
+            }
+            if (a->isSeparator()) {
+                foundSep = true;
+            }
         }
     }
     EXPECT_TRUE(foundSave);
     EXPECT_TRUE(foundSep);
 
     // 可见性往返
-    bar->quickAccessVisible(false);
+    bar->setQuickAccessVisible(false);
     EXPECT_FALSE(bar->quickAccessVisible());
-    bar->quickAccessVisible(true);
+    bar->setQuickAccessVisible(true);
     EXPECT_TRUE(bar->quickAccessVisible());
 }
 
@@ -372,18 +381,18 @@ TEST_F(GuiTest, RibbonTab_Groups)
 TEST_F(GuiTest, RibbonTab_PanelSettings)
 {
     // 该页所有面板的布局模式往返
-    tabHome->panelLayoutMode(guifw::RibbonPanelLayoutMode::TwoRow);
+    tabHome->setPanelLayoutMode(guifw::RibbonPanelLayoutMode::TwoRow);
     EXPECT_EQ(tabHome->panelLayoutMode(), guifw::RibbonPanelLayoutMode::TwoRow);
-    tabHome->panelLayoutMode(guifw::RibbonPanelLayoutMode::ThreeRow);
+    tabHome->setPanelLayoutMode(guifw::RibbonPanelLayoutMode::ThreeRow);
     EXPECT_EQ(tabHome->panelLayoutMode(), guifw::RibbonPanelLayoutMode::ThreeRow);
 
     // 面板标题 / 间距
-    tabHome->panelTitleVisible(false);
+    tabHome->setPanelTitleVisible(false);
     EXPECT_FALSE(tabHome->panelTitleVisible());
-    tabHome->panelTitleVisible(true);
+    tabHome->setPanelTitleVisible(true);
     EXPECT_TRUE(tabHome->panelTitleVisible());
 
-    tabHome->panelSpacing(4);
+    tabHome->setPanelSpacing(4);
     EXPECT_EQ(tabHome->panelSpacing(), 4);
 }
 
@@ -455,7 +464,7 @@ TEST_F(GuiTest, RibbonButton_DropDownSeparator)
     // 移除一项后重建，顺序与分隔线仍正确
     btnInsert->removeDropDownItem(miTable);
     EXPECT_EQ(btnInsert->dropDownItemCount(), before - 1);
-    EXPECT_EQ(menu->actions().size(), static_cast<int>(before));   // 2 项 + 1 分隔线
+    EXPECT_EQ(menu->actions().size(), static_cast<int>(before)); // 2 项 + 1 分隔线
 
     // 清理后可重新加入，分隔线被释放、菜单只剩真实项
     btnInsert->clearDropDownItems();
@@ -469,10 +478,10 @@ TEST_F(GuiTest, RibbonButton_DropDownSeparator)
 
     // ---- 全条目索引接口（项与分隔线统一计数）----
     btnInsert->clearDropDownItems();
-    btnInsert->addDropDownItem(miPic);    // entry 0
-    btnInsert->addSeparator();            // entry 1
-    btnInsert->addDropDownItem(miTable);  // entry 2
-    btnInsert->addDropDownItem(miChart);  // entry 3
+    btnInsert->addDropDownItem(miPic);   // entry 0
+    btnInsert->addSeparator();           // entry 1
+    btnInsert->addDropDownItem(miTable); // entry 2
+    btnInsert->addDropDownItem(miChart); // entry 3
     EXPECT_EQ(btnInsert->dropDownEntryCount(), 4u);
     EXPECT_EQ(btnInsert->dropDownItemCount(), 3u);
 
@@ -495,9 +504,8 @@ TEST_F(GuiTest, RibbonButton_DropDownSeparator)
 
 TEST_F(GuiTest, RibbonButton_ClickedEvent)
 {
-    int clicks = 0;
-    auto id = btnStyle->clicked.addHandler(
-        [&clicks](guifw::RibbonButton&, vine::EventArgs&) { ++clicks; });
+    int  clicks = 0;
+    auto id     = btnStyle->clicked.addHandler([&clicks](guifw::RibbonButton&, vine::EventArgs&) { ++clicks; });
 
     auto* tb = btnStyle->impl<SARibbonToolButton>();
     ASSERT_NE(tb, nullptr);
@@ -509,30 +517,30 @@ TEST_F(GuiTest, RibbonButton_ClickedEvent)
 
     btnStyle->clicked.removeHandler(id);
     tb->click();
-    EXPECT_EQ(clicks, 3);   // 移除后不再触发
+    EXPECT_EQ(clicks, 3); // 移除后不再触发
 }
 
 TEST_F(GuiTest, RibbonGroup_Methods)
 {
     // ---- 布局模式（默认值取决于 SARibbon 全局风格，显式设置后再读回）----
-    groupClip->layoutMode(guifw::RibbonPanelLayoutMode::TwoRow);
+    groupClip->setLayoutMode(guifw::RibbonPanelLayoutMode::TwoRow);
     EXPECT_EQ(groupClip->layoutMode(), guifw::RibbonPanelLayoutMode::TwoRow);
-    groupClip->layoutMode(guifw::RibbonPanelLayoutMode::ThreeRow);
+    groupClip->setLayoutMode(guifw::RibbonPanelLayoutMode::ThreeRow);
     EXPECT_EQ(groupClip->layoutMode(), guifw::RibbonPanelLayoutMode::ThreeRow);
 
     // ---- 扩展 / 自定义 ----
-    groupClip->expanding(true);
+    groupClip->setExpanding(true);
     EXPECT_TRUE(groupClip->expanding());
-    groupClip->expanding(false);
+    groupClip->setExpanding(false);
 
-    groupClip->canCustomize(false);
+    groupClip->setCanCustomize(false);
     EXPECT_FALSE(groupClip->canCustomize());
-    groupClip->canCustomize(true);
+    groupClip->setCanCustomize(true);
     EXPECT_TRUE(groupClip->canCustomize());
 
     // ---- 面板级图标尺寸往返 ----
-    groupClip->largeIconSize(guifw::Size(40, 40));
-    groupClip->smallIconSize(guifw::Size(16, 16));
+    groupClip->setLargeIconSize(guifw::Size(40, 40));
+    groupClip->setSmallIconSize(guifw::Size(16, 16));
     auto ls = groupClip->largeIconSize();
     auto ss = groupClip->smallIconSize();
     EXPECT_EQ(ls.x, 40);
@@ -541,9 +549,9 @@ TEST_F(GuiTest, RibbonGroup_Methods)
     EXPECT_EQ(ss.y, 16);
 
     // ---- 批量样式 ----
-    groupClip->iconRightText(true);
+    groupClip->setIconRightText(true);
     EXPECT_TRUE(groupClip->iconRightText());
-    groupClip->wordWrap(true);
+    groupClip->setWordWrap(true);
     EXPECT_TRUE(groupClip->wordWrap());
 
     // ---- 分隔线 ----
@@ -555,7 +563,7 @@ TEST_F(GuiTest, RibbonGroup_Methods)
 
     // ---- 选项按钮 ----
     auto* mi = new guifw::RibbonAction();
-    mi->text(u8"More");
+    mi->setText(u8"More");
     groupClip->setOptionAction(mi);
     EXPECT_EQ(groupClip->optionAction(), mi);
     groupClip->setOptionAction(nullptr);
@@ -584,20 +592,20 @@ TEST_F(GuiTest, Control_CommonProps)
 {
     // 通用控件容器暴露 QWidget 级属性（enabled/tooltip/size 等）
     auto* combo = new QComboBox();
-    auto* ctrl = new guifw::Control(combo);
+    auto* ctrl  = new guifw::Control(combo);
 
-    ctrl->enabled(false);
+    ctrl->setEnabled(false);
     EXPECT_FALSE(ctrl->enabled());
-    ctrl->enabled(true);
+    ctrl->setEnabled(true);
     EXPECT_TRUE(ctrl->enabled());
 
-    ctrl->visible(false);
+    ctrl->setVisible(false);
     EXPECT_FALSE(ctrl->visible());
 
-    ctrl->tooltip(u8"hi");
+    ctrl->setTooltip(u8"hi");
     EXPECT_TRUE(ctrl->tooltip() == u8"hi");
 
-    ctrl->size(guifw::Size(400, 40));
+    ctrl->setSize(guifw::Size(400, 40));
     EXPECT_EQ(ctrl->width(), 400);
     EXPECT_EQ(ctrl->height(), 40);
     EXPECT_EQ(ctrl->size().x, 400);
@@ -620,7 +628,7 @@ TEST_F(GuiTest, ConfigManager_Basic)
     EXPECT_EQ(cfg->getInt(u8"max"), 100);
     EXPECT_TRUE(cfg->getBool(u8"flag"));
     EXPECT_DOUBLE_EQ(cfg->getDouble(u8"ratio"), 1.5);
-    EXPECT_EQ(cfg->getInt(u8"missing"), 0);   // 缺省返回默认值
+    EXPECT_EQ(cfg->getInt(u8"missing"), 0); // 缺省返回默认值
     EXPECT_FALSE(cfg->contains(u8"missing"));
 
     // 数组
@@ -657,19 +665,15 @@ TEST_F(GuiTest, ConfigManager_Basic)
     EXPECT_TRUE(cfg->getString(u8"editor.font.name") == u8"Consolas");
 
     // 序列化为嵌套 JSON 对象（非点分扁平 key）
-    const auto json = cfg->toJson();
-    QJsonParseError pe;
-    const QJsonDocument nested = QJsonDocument::fromJson(
-        QByteArray(reinterpret_cast<const char*>(json.data()), static_cast<int>(json.size())), &pe);
+    const auto          json = cfg->toJson();
+    QJsonParseError     pe;
+    const QJsonDocument nested = QJsonDocument::fromJson(QByteArray(reinterpret_cast<const char*>(json.data()), static_cast<int>(json.size())), &pe);
     ASSERT_EQ(pe.error, QJsonParseError::NoError);
     const QJsonObject root = nested.object();
     EXPECT_TRUE(root.contains(QStringLiteral("window")));
     EXPECT_TRUE(root.value(QStringLiteral("window")).toObject().contains(QStringLiteral("x")));
-    EXPECT_TRUE(root.value(QStringLiteral("window")).toObject()
-                     .value(QStringLiteral("state"))
-                     .toObject()
-                     .contains(QStringLiteral("maximized")));
-    EXPECT_FALSE(root.contains(QStringLiteral("window.x")));   // 不出现扁平点分 key
+    EXPECT_TRUE(root.value(QStringLiteral("window")).toObject().value(QStringLiteral("state")).toObject().contains(QStringLiteral("maximized")));
+    EXPECT_FALSE(root.contains(QStringLiteral("window.x"))); // 不出现扁平点分 key
 
     // 层级 JSON 往返
     auto* cfg3 = new vine::appfw::ConfigManager();
@@ -702,15 +706,10 @@ TEST_F(GuiTest, ConfigItem_Descriptor)
     using vine::appfw::ConfigItemType;
 
     ConfigItem item(u8"editor.font.size", u8"字号", ConfigItemType::Int);
-    item.description(u8"编辑器字号")
-        .group(u8"编辑器")
-        .range(8, 72)
-        .defaultValue(14)
-        .step(2);
+    item.description(u8"编辑器字号").range(8, 72).defaultValue(14).step(2);
     EXPECT_TRUE(item.key() == u8"editor.font.size");
     EXPECT_TRUE(item.label() == u8"字号");
     EXPECT_TRUE(item.description() == u8"编辑器字号");
-    EXPECT_TRUE(item.group() == u8"编辑器");
     EXPECT_EQ(item.type(), ConfigItemType::Int);
     EXPECT_TRUE(item.hasRange());
     EXPECT_EQ(item.minInt(), 8);
@@ -728,8 +727,109 @@ TEST_F(GuiTest, ConfigItem_Descriptor)
     ConfigItem c(u8"theme", u8"主题", ConfigItemType::Choice);
     c.choices({ u8"浅色", u8"深色" });
     EXPECT_EQ(c.choices().size(), 2u);
-    EXPECT_TRUE(c.choices()[1] == u8"深色");
+    EXPECT_TRUE(c.choices()[1].description == u8"深色");
     EXPECT_FALSE(c.hasDefault());
+}
+
+TEST_F(GuiTest, ConfigItem_DefaultTypeCheck)
+{
+    using vine::appfw::ConfigItem;
+    using vine::appfw::ConfigItemType;
+
+    // No default set -> hasDefault() false; wrong-type getter throws.
+    ConfigItem none(u8"k", u8"K", ConfigItemType::Int);
+    EXPECT_FALSE(none.hasDefault());
+    EXPECT_THROW(none.defaultInt(), std::bad_any_cast);
+
+    // Correct type accepted.
+    ConfigItem i(u8"size", u8"大小", ConfigItemType::Int);
+    i.defaultValue(10);
+    EXPECT_TRUE(i.hasDefault());
+    EXPECT_EQ(i.defaultInt(), 10);
+
+    // String default is valid for Choice too.
+    ConfigItem c(u8"theme", u8"主题", ConfigItemType::Choice);
+    c.defaultValue(u8"浅色");
+    EXPECT_TRUE(c.hasDefault());
+    EXPECT_TRUE(c.defaultString() == u8"浅色");
+
+    // Wrong-type setter throws std::invalid_argument.
+    ConfigItem b(u8"flag", u8"开关", ConfigItemType::Bool);
+    EXPECT_THROW(b.defaultValue(3), std::invalid_argument);
+    EXPECT_THROW(ConfigItem(u8"x", u8"X", ConfigItemType::Double).defaultValue(true), std::invalid_argument);
+}
+
+TEST_F(GuiTest, ConfigItem_RangeAny)
+{
+    using vine::appfw::ConfigItem;
+    using vine::appfw::ConfigItemType;
+
+    // No range -> hasRange() false; min/max getters throw; step() falls back to 1.0.
+    ConfigItem none(u8"k", u8"K", ConfigItemType::Int);
+    EXPECT_FALSE(none.hasRange());
+    EXPECT_THROW(none.minInt(), std::bad_any_cast);
+    EXPECT_EQ(none.step(), 1.0);
+
+    // Int range with default step, then override.
+    ConfigItem i(u8"size", u8"大小", ConfigItemType::Int);
+    i.range(8, 72);
+    EXPECT_TRUE(i.hasRange());
+    EXPECT_EQ(i.minInt(), 8);
+    EXPECT_EQ(i.maxInt(), 72);
+    EXPECT_EQ(i.step(), 1.0);
+    i.step(2);
+    EXPECT_EQ(i.step(), 2.0);
+
+    // Double range.
+    ConfigItem d(u8"ratio", u8"比例", ConfigItemType::Double);
+    d.range(0.0, 10.0);
+    EXPECT_DOUBLE_EQ(d.minDouble(), 0.0);
+    EXPECT_DOUBLE_EQ(d.maxDouble(), 10.0);
+
+    // Wrong usage throws.
+    ConfigItem s(u8"name", u8"名称", ConfigItemType::String);
+    EXPECT_THROW(s.range(1, 2), std::invalid_argument);
+    EXPECT_THROW(ConfigItem(u8"x", u8"X", ConfigItemType::Int).step(0.5), std::invalid_argument);
+}
+
+TEST_F(GuiTest, ConfigItem_TypedChoices)
+{
+    using vine::String;
+    using vine::appfw::ConfigItem;
+    using vine::appfw::ConfigItemType;
+
+    // Int-valued choices with descriptions.
+    ConfigItem i(u8"theme", u8"主题", ConfigItemType::Choice);
+    i.choices({
+                { 0, u8"浅色"     },
+                { 1, u8"深色"     },
+                { 2, u8"跟随系统" }
+    })
+        .defaultValue(1);
+    ASSERT_EQ(i.choices().size(), 3u);
+    EXPECT_TRUE(i.choices()[0].description == u8"浅色");
+    EXPECT_EQ(*std::any_cast<int>(&i.choices()[1].value), 1);
+    EXPECT_TRUE(i.hasDefault());
+    EXPECT_EQ(i.defaultType(), ConfigItemType::Int);
+    EXPECT_EQ(i.defaultInt(), 1);
+
+    // Double-valued choices.
+    ConfigItem d(u8"size", u8"大小", ConfigItemType::Choice);
+    d.choices({
+      { 12.0, u8"小" },
+      { 14.0, u8"中" }
+    });
+    ASSERT_EQ(d.choices().size(), 2u);
+    EXPECT_EQ(*std::any_cast<double>(&d.choices()[1].value), 14.0);
+
+    // String-valued choices (value + description).
+    ConfigItem s(u8"enc", u8"编码", ConfigItemType::Choice);
+    s.choices({
+      { u8"utf8", u8"UTF-8" },
+      { u8"gbk",  u8"GBK"   }
+    });
+    EXPECT_TRUE(*std::any_cast<String>(&s.choices()[0].value) == u8"utf8");
+    EXPECT_TRUE(s.choices()[0].description == u8"UTF-8");
 }
 
 TEST_F(GuiTest, ConfigRegistry_Register)
@@ -739,31 +839,52 @@ TEST_F(GuiTest, ConfigRegistry_Register)
     using vine::appfw::ConfigRegistry;
 
     ConfigRegistry reg;
-    EXPECT_TRUE(reg.addItem(ConfigItem(u8"a", u8"A", ConfigItemType::String).group(u8"G1")));
-    EXPECT_TRUE(reg.addItem(ConfigItem(u8"b", u8"B", ConfigItemType::Bool).group(u8"G2")));
-    EXPECT_TRUE(reg.addItem(ConfigItem(u8"c", u8"C", ConfigItemType::Int).group(u8"G1")));
-    // 重复 key 拒绝
-    EXPECT_FALSE(reg.addItem(ConfigItem(u8"a", u8"A2", ConfigItemType::String)));
+    auto*          cat1 = reg.addCategory(u8"C1");
+    ASSERT_NE(cat1, nullptr);
+    auto* g1 = cat1->addGroup(u8"G1");
+    ASSERT_NE(g1, nullptr);
+    EXPECT_TRUE(g1->addItem(ConfigItem(u8"a", u8"A", ConfigItemType::String)));
+    EXPECT_TRUE(g1->addItem(ConfigItem(u8"c", u8"C", ConfigItemType::Int)));
+    auto* g2 = cat1->addGroup(u8"G2");
+    ASSERT_NE(g2, nullptr);
+    EXPECT_TRUE(g2->addItem(ConfigItem(u8"b", u8"B", ConfigItemType::Bool)));
+
+    // Duplicate name rejected
+    EXPECT_EQ(cat1->addGroup(u8"G1"), nullptr);
+    EXPECT_EQ(reg.addCategory(u8"C1"), nullptr);
+
+    // Duplicate key rejected (whole tree)
+    EXPECT_FALSE(g2->addItem(ConfigItem(u8"a", u8"A2", ConfigItemType::String)));
+
     EXPECT_EQ(reg.itemCount(), 3);
 
+    // Whole-tree lookup
     EXPECT_TRUE(reg.item(u8"b")->label() == u8"B");
     EXPECT_EQ(reg.item(u8"nope"), nullptr);
-    EXPECT_TRUE(reg.itemAt(0)->key() == u8"a");
-    EXPECT_EQ(reg.itemAt(99), nullptr);
+    EXPECT_TRUE(reg.item(u8"c")->key() == u8"c");
+    // In-group lookup
+    EXPECT_TRUE(g1->item(u8"a") != nullptr);
+    EXPECT_EQ(g1->item(u8"b"), nullptr);
 
-    // 分组去重、保序
-    auto groups = reg.groups();
+    // Category/group order preserved
+    ASSERT_EQ(reg.categories().size(), 1u);
+    auto groups = cat1->groups();
     ASSERT_EQ(groups.size(), 2u);
-    EXPECT_TRUE(groups[0] == u8"G1");
-    EXPECT_TRUE(groups[1] == u8"G2");
+    EXPECT_TRUE(groups[0]->name() == u8"G1");
+    EXPECT_TRUE(groups[1]->name() == u8"G2");
 
-    // 移除 / 清空
+    // Removal / clear
     EXPECT_TRUE(reg.removeItem(u8"b"));
     EXPECT_FALSE(reg.removeItem(u8"b"));
     EXPECT_EQ(reg.itemCount(), 2);
     EXPECT_EQ(reg.item(u8"b"), nullptr);
-    reg.clear();
+    EXPECT_TRUE(cat1->removeGroup(u8"G2"));
+    EXPECT_FALSE(cat1->removeGroup(u8"G2"));
+    EXPECT_TRUE(reg.removeCategory(u8"C1"));
+    EXPECT_FALSE(reg.removeCategory(u8"C1"));
     EXPECT_EQ(reg.itemCount(), 0);
+    reg.clear();
+    EXPECT_EQ(reg.categories().size(), 0u);
 }
 
 TEST_F(GuiTest, ConfigWindow_EditorsAndLiveWrite)
@@ -774,21 +895,17 @@ TEST_F(GuiTest, ConfigWindow_EditorsAndLiveWrite)
     using vine::appfw::ConfigRegistry;
 
     ConfigRegistry reg;
-    reg.addItem(ConfigItem(u8"name", u8"名称", ConfigItemType::String).group(u8"通用"));
-    reg.addItem(ConfigItem(u8"flag", u8"启用", ConfigItemType::Bool).group(u8"通用"));
-    reg.addItem(ConfigItem(u8"size", u8"大小", ConfigItemType::Int)
-                    .group(u8"通用")
-                    .range(1, 100)
-                    .defaultValue(10));
-    reg.addItem(ConfigItem(u8"ratio", u8"比例", ConfigItemType::Double)
-                    .group(u8"通用")
-                    .range(0.0, 10.0)
-                    .step(0.5)
-                    .defaultValue(1.0));
-    reg.addItem(ConfigItem(u8"theme", u8"主题", ConfigItemType::Choice)
-                    .group(u8"外观")
-                    .choices({ u8"浅色", u8"深色" })
-                    .defaultValue(u8"浅色"));
+    auto*          general = reg.addCategory(u8"通用");
+    ASSERT_NE(general, nullptr);
+    auto* common = general->addGroup(u8"通用");
+    ASSERT_NE(common, nullptr);
+    common->addItem(ConfigItem(u8"name", u8"名称", ConfigItemType::String));
+    common->addItem(ConfigItem(u8"flag", u8"启用", ConfigItemType::Bool));
+    common->addItem(ConfigItem(u8"size", u8"大小", ConfigItemType::Int).range(1, 100).defaultValue(10));
+    common->addItem(ConfigItem(u8"ratio", u8"比例", ConfigItemType::Double).range(0.0, 10.0).step(0.5).defaultValue(1.0));
+    auto* appearance = reg.addCategory(u8"外观");
+    ASSERT_NE(appearance, nullptr);
+    appearance->addGroup(u8"主题")->addItem(ConfigItem(u8"theme", u8"主题", ConfigItemType::Choice).choices({ u8"浅色", u8"深色" }).defaultValue(u8"浅色"));
 
     auto* config = new ConfigManager();
     config->setString(u8"name", u8"Vine");
@@ -813,21 +930,21 @@ TEST_F(GuiTest, ConfigWindow_EditorsAndLiveWrite)
     ASSERT_NE(combo, nullptr);
 
     // 窗口级能力（Window 基类）
-    panel->windowTitle(u8"设置");
+    panel->setWindowTitle(u8"设置");
     EXPECT_TRUE(panel->windowTitle() == u8"设置");
     panel->resize(480, 360);
-    panel->modal(false);
+    panel->setModal(false);
     EXPECT_FALSE(panel->modal());
 
     // 启动位置 / 窗口状态（Window 基类）
-    panel->startupPosition(guifw::StartupPosition::CenterScreen);
+    panel->setStartupPosition(guifw::StartupPosition::CenterScreen);
     EXPECT_EQ(panel->startupPosition(), guifw::StartupPosition::CenterScreen);
-    panel->startupPosition(guifw::StartupPosition::Manual);
+    panel->setStartupPosition(guifw::StartupPosition::Manual);
     EXPECT_EQ(panel->startupPosition(), guifw::StartupPosition::Manual);
-    panel->windowState(guifw::WindowState::Minimized);
+    panel->setWindowState(guifw::WindowState::Minimized);
     QCoreApplication::processEvents();
     EXPECT_EQ(panel->windowState(), guifw::WindowState::Minimized);
-    panel->windowState(guifw::WindowState::Normal);
+    panel->setWindowState(guifw::WindowState::Normal);
     QCoreApplication::processEvents();
 
     panel->show();
@@ -869,20 +986,98 @@ TEST_F(GuiTest, ConfigWindow_EditorsAndLiveWrite)
     EXPECT_FALSE(config->contains(u8"name"));
     EXPECT_FALSE(config->contains(u8"flag"));
 
-    delete panel;   // owns=true，销毁原生控件树
+    delete panel; // owns=true，销毁原生控件树
+    delete config;
+}
+
+TEST_F(GuiTest, ConfigRegistry_MetaAndOrder)
+{
+    using vine::appfw::ConfigRegistry;
+
+    ConfigRegistry reg;
+    auto*          a = reg.addCategory(u8"a");
+    ASSERT_NE(a, nullptr);
+    a->label(u8"AA").description(u8"desc").order(3);
+    EXPECT_TRUE(a->label() == u8"AA");
+    EXPECT_TRUE(a->description() == u8"desc");
+    EXPECT_EQ(a->order(), 3);
+
+    auto* g = a->addGroup(u8"g");
+    ASSERT_NE(g, nullptr);
+    g->label(u8"GG").order(1);
+    EXPECT_TRUE(g->label() == u8"GG");
+    EXPECT_EQ(g->order(), 1);
+
+    // Display order: smaller order first (ties keep insertion order)
+    auto* b = reg.addCategory(u8"b");
+    ASSERT_NE(b, nullptr);
+    b->order(0);
+    auto cats = reg.categories();
+    ASSERT_EQ(cats.size(), 2u);
+    EXPECT_TRUE(cats[0]->name() == u8"b");
+    EXPECT_TRUE(cats[1]->name() == u8"a");
+}
+
+TEST_F(GuiTest, ConfigWindow_Tabs)
+{
+    using vine::appfw::ConfigItem;
+    using vine::appfw::ConfigItemType;
+    using vine::appfw::ConfigManager;
+    using vine::appfw::ConfigRegistry;
+
+    auto* config = new ConfigManager();
+
+    // Single category: the tab bar auto-hides (same look as the old single-page layout)
+    ConfigRegistry reg;
+    auto*          single = reg.addCategory(u8"单");
+    ASSERT_NE(single, nullptr);
+    single->addGroup(u8"G")->addItem(ConfigItem(u8"x", u8"X", ConfigItemType::Bool));
+
+    auto* win1  = new guifw::ConfigWindow(&reg, config);
+    auto* tabs1 = win1->impl<QWidget>()->findChild<QTabWidget*>();
+    ASSERT_NE(tabs1, nullptr);
+    win1->show();
+    QCoreApplication::processEvents();
+    EXPECT_EQ(tabs1->count(), 1);
+    EXPECT_FALSE(tabs1->tabBar()->isVisible());
+    win1->close();
+    delete win1;
+
+    // Multiple categories: tab bar shown; title = label (falls back to name, or "General" if empty)
+    auto* a = reg.addCategory(u8"catA");
+    ASSERT_NE(a, nullptr);
+    a->label(u8"标签A").description(u8"说明A");
+    a->addGroup(u8"g1")->addItem(ConfigItem(u8"a1", u8"A1", ConfigItemType::String));
+    auto* empty = reg.addCategory(u8"");
+    ASSERT_NE(empty, nullptr);
+    empty->addGroup(u8"g2")->addItem(ConfigItem(u8"e1", u8"E1", ConfigItemType::Int));
+
+    auto* win2  = new guifw::ConfigWindow(&reg, config);
+    auto* tabs2 = win2->impl<QWidget>()->findChild<QTabWidget*>();
+    ASSERT_NE(tabs2, nullptr);
+    win2->show();
+    QCoreApplication::processEvents();
+    EXPECT_EQ(tabs2->count(), 3);
+    EXPECT_TRUE(tabs2->tabBar()->isVisible());
+    EXPECT_EQ(tabs2->tabText(0), QString::fromUtf8("单"));
+    EXPECT_EQ(tabs2->tabText(1), QString::fromUtf8("标签A"));
+    EXPECT_EQ(tabs2->tabText(2), QString::fromUtf8("通用"));
+    EXPECT_EQ(tabs2->tabToolTip(1), QString::fromUtf8("说明A"));
+
+    win2->close();
+    delete win2;
     delete config;
 }
 
 TEST_F(GuiTest, ConfigManager_ChangedEvent)
 {
-    auto* cfg = new vine::appfw::ConfigManager();
-    int   fired  = 0;
+    auto*        cfg   = new vine::appfw::ConfigManager();
+    int          fired = 0;
     vine::String lastKey;
-    auto id = cfg->changed.addHandler(
-        [&](vine::appfw::ConfigManager&, vine::appfw::ConfigChangedEventArgs& args) {
-            ++fired;
-            lastKey = args.key();
-        });
+    auto         id = cfg->changed.addHandler([&](vine::appfw::ConfigManager&, vine::appfw::ConfigChangedEventArgs& args) {
+        ++fired;
+        lastKey = args.key();
+    });
 
     cfg->setInt(u8"window.x", 1);
     cfg->setBool(u8"flag", true);
@@ -898,7 +1093,7 @@ TEST_F(GuiTest, ConfigManager_ChangedEvent)
 
     cfg->changed.removeHandler(id);
     cfg->setInt(u8"after", 9);
-    EXPECT_EQ(fired, 6);   // 已移除 handler
+    EXPECT_EQ(fired, 6); // 已移除 handler
 
     delete cfg;
 }
@@ -912,11 +1107,13 @@ TEST_F(GuiTest, AddinLoadContext_Configs)
     ASSERT_NE(ctx.configs(), nullptr);
     EXPECT_EQ(ctx.configs(), app->configRegistry());
 
-    // 经上下文注册 = 注册到 Application 的同一注册表
-    EXPECT_TRUE(ctx.configs()->addItem(
-        vine::appfw::ConfigItem(u8"plugin.opt", u8"插件选项", vine::appfw::ConfigItemType::Bool)));
+    // Registering through the context targets the same registry as Application
+    auto* pluginCat = ctx.configs()->addCategory(u8"插件");
+    ASSERT_NE(pluginCat, nullptr);
+    pluginCat->addGroup(u8"常规")->addItem(vine::appfw::ConfigItem(u8"plugin.opt", u8"插件选项", vine::appfw::ConfigItemType::Bool));
     EXPECT_NE(app->configRegistry()->item(u8"plugin.opt"), nullptr);
     EXPECT_TRUE(ctx.configs()->removeItem(u8"plugin.opt"));
+    EXPECT_TRUE(ctx.configs()->removeCategory(u8"插件"));
 }
 
 // ============================ 停靠面板 ============================
@@ -967,7 +1164,7 @@ TEST_F(GuiTest, DockPanel_CollapseRestore)
     p->restore();
     QCoreApplication::processEvents();
     EXPECT_FALSE(p->isCollapsed());
-    EXPECT_EQ(p->dockArea(), guifw::DockAreas::Left);   // 恢复到原区域
+    EXPECT_EQ(p->dockArea(), guifw::DockAreas::Left); // 恢复到原区域
 }
 
 TEST_F(GuiTest, DockPanel_PinUnpin)

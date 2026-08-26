@@ -46,10 +46,10 @@ class V_APPFW_API Application : public Object {
 
     ServiceManager* serviceManager() const;
 
-    /// 应用级配置管理器（唯一实例，随 Application 生命周期）。
+    /// Application-level config manager (single instance, lives with Application).
     ConfigManager* configManager() const;
 
-    /// 配置项注册表（唯一实例，随 Application 生命周期）。
+    /// Config item registry (single instance, lives with Application).
     ConfigRegistry* configRegistry() const;
 
     int argc() const;
