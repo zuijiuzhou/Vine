@@ -55,19 +55,14 @@ struct RibbonButton::Data : public UIElementData {
     EventArgs             clickedArgs;
 };
 
-inline auto RibbonButton::dptr() -> Data* { return static_cast<Data*>(UIElement::d); }
-inline auto RibbonButton::dptr() const -> const Data* { return static_cast<const Data*>(UIElement::d); }
-
 RibbonButton::RibbonButton()
-    : Control(new Data(), new SARibbonToolButton(static_cast<QWidget*>(nullptr)))
+  : Control(new Data(), new SARibbonToolButton(static_cast<QWidget*>(nullptr)))
 {
     auto* btn = impl<SARibbonToolButton>();
 
     if (btn) {
         // Bridge the Qt clicked signal to the framework's `clicked` event.
-        QObject::connect(btn, &QToolButton::clicked, [this](bool) {
-            clicked.trigger(*this, dptr()->clickedArgs);
-        });
+        QObject::connect(btn, &QToolButton::clicked, [this](bool) { clicked.trigger(*this, dptr()->clickedArgs); });
     }
 }
 
@@ -79,7 +74,8 @@ RibbonButton::~RibbonButton()
 void RibbonButton::text(const String& t)
 {
     auto* btn = impl<SARibbonToolButton>();
-    if (!btn) return;
+    if (!btn)
+        return;
     auto utf16 = t.toUtf16();
     btn->setText(QString::fromStdU16String(utf16));
 }
@@ -87,7 +83,8 @@ void RibbonButton::text(const String& t)
 String RibbonButton::text() const
 {
     auto* btn = impl<SARibbonToolButton>();
-    if (!btn) return {};
+    if (!btn)
+        return {};
     auto qs = btn->text();
     return String::fromUtf16((const char16_t*)qs.utf16(), qs.size());
 }
@@ -95,21 +92,24 @@ String RibbonButton::text() const
 void RibbonButton::icon(const Icon& ic)
 {
     auto* btn = impl<SARibbonToolButton>();
-    if (!btn) return;
+    if (!btn)
+        return;
     btn->setIcon(ic.value());
 }
 
 Icon RibbonButton::icon() const
 {
     auto* btn = impl<SARibbonToolButton>();
-    if (!btn) return {};
+    if (!btn)
+        return {};
     return Icon(btn->icon());
 }
 
 void RibbonButton::checkable(bool on)
 {
     auto* btn = impl<SARibbonToolButton>();
-    if (!btn) return;
+    if (!btn)
+        return;
     btn->setCheckable(on);
 }
 
@@ -122,7 +122,8 @@ bool RibbonButton::checkable() const
 void RibbonButton::checked(bool on)
 {
     auto* btn = impl<SARibbonToolButton>();
-    if (!btn) return;
+    if (!btn)
+        return;
     btn->setChecked(on);
 }
 
@@ -137,12 +138,12 @@ void RibbonButton::buttonSize(RibbonItemSize s)
     dptr()->buttonSize = s;
 
     auto* btn = impl<SARibbonToolButton>();
-    if (!btn) return;
+    if (!btn)
+        return;
 
     // SARibbon 按钮类型只有 Large/Small 两档：Medium 走 SmallButton，
     // 中等占位由面板行比例（RowProportion::Medium）决定。
-    btn->setButtonType(s == RibbonItemSize::Large ? SARibbonToolButton::LargeButton
-                                                  : SARibbonToolButton::SmallButton);
+    btn->setButtonType(s == RibbonItemSize::Large ? SARibbonToolButton::LargeButton : SARibbonToolButton::SmallButton);
 }
 
 RibbonItemSize RibbonButton::buttonSize() const
@@ -153,28 +154,32 @@ RibbonItemSize RibbonButton::buttonSize() const
 void RibbonButton::style(RibbonButtonStyle s)
 {
     auto* btn = impl<SARibbonToolButton>();
-    if (!btn) return;
+    if (!btn)
+        return;
     btn->setToolButtonStyle(toQtStyle(s));
 }
 
 RibbonButtonStyle RibbonButton::style() const
 {
     auto* btn = impl<SARibbonToolButton>();
-    if (!btn) return RibbonButtonStyle::IconOnly;
+    if (!btn)
+        return RibbonButtonStyle::IconOnly;
     return fromQtStyle(btn->toolButtonStyle());
 }
 
 void RibbonButton::largeIconSize(const Size& s)
 {
     auto* btn = impl<SARibbonToolButton>();
-    if (!btn) return;
+    if (!btn)
+        return;
     btn->setLargeIconSize(QSize(s.x, s.y));
 }
 
 Size RibbonButton::largeIconSize() const
 {
     auto* btn = impl<SARibbonToolButton>();
-    if (!btn) return {};
+    if (!btn)
+        return {};
     const QSize qs = btn->largeIconSize();
     return Size(qs.width(), qs.height());
 }
@@ -182,14 +187,16 @@ Size RibbonButton::largeIconSize() const
 void RibbonButton::smallIconSize(const Size& s)
 {
     auto* btn = impl<SARibbonToolButton>();
-    if (!btn) return;
+    if (!btn)
+        return;
     btn->setSmallIconSize(QSize(s.x, s.y));
 }
 
 Size RibbonButton::smallIconSize() const
 {
     auto* btn = impl<SARibbonToolButton>();
-    if (!btn) return {};
+    if (!btn)
+        return {};
     const QSize qs = btn->smallIconSize();
     return Size(qs.width(), qs.height());
 }
@@ -197,7 +204,8 @@ Size RibbonButton::smallIconSize() const
 void RibbonButton::wordWrap(bool on)
 {
     auto* btn = impl<SARibbonToolButton>();
-    if (!btn) return;
+    if (!btn)
+        return;
     btn->setEnableWordWrap(on);
 }
 
@@ -210,7 +218,8 @@ bool RibbonButton::wordWrap() const
 void RibbonButton::iconRightText(bool on)
 {
     auto* btn = impl<SARibbonToolButton>();
-    if (!btn) return;
+    if (!btn)
+        return;
     btn->setEnableIconRightText(on);
 }
 
@@ -222,12 +231,15 @@ bool RibbonButton::iconRightText() const
 
 void RibbonButton::addDropDownItem(RibbonAction* item)
 {
-    if (!item) return;
+    if (!item)
+        return;
 
     auto& entries = dptr()->entries;
 
     for (const auto& e : entries) {
-        if (e.item == item) { return; }   // 已存在则忽略
+        if (e.item == item) {
+            return;
+        } // 已存在则忽略
     }
 
     entries.push_back({ item });
@@ -235,22 +247,17 @@ void RibbonButton::addDropDownItem(RibbonAction* item)
     rebuildMenu();
 }
 
-void RibbonButton::addSeparator()
-{
-    dptr()->entries.push_back({ nullptr });
-
-    rebuildMenu();
-}
-
 void RibbonButton::removeDropDownItem(RibbonAction* item)
 {
-    if (!item) return;
+    if (!item)
+        return;
 
     auto& entries = dptr()->entries;
-    auto  it      = std::find_if(entries.begin(), entries.end(),
-                                 [item](const Data::Entry& e) { return e.item == item; });
+    auto  it      = std::find_if(entries.begin(), entries.end(), [item](const Data::Entry& e) { return e.item == item; });
 
-    if (it == entries.end()) { return; }
+    if (it == entries.end()) {
+        return;
+    }
 
     entries.erase(it);
 
@@ -265,14 +272,25 @@ void RibbonButton::clearDropDownItems()
 {
     auto& entries = dptr()->entries;
 
-    if (entries.empty()) { return; }
+    if (entries.empty()) {
+        return;
+    }
 
     // 把每个 item 的 QAction 所有权交还后再清空。
     for (const auto& e : entries) {
-        if (e.item) { e.item->setOwnsImpl(true); }
+        if (e.item) {
+            e.item->setOwnsImpl(true);
+        }
     }
 
     entries.clear();
+
+    rebuildMenu();
+}
+
+void RibbonButton::addSeparator()
+{
+    dptr()->entries.push_back({ nullptr });
 
     rebuildMenu();
 }
@@ -282,7 +300,9 @@ size_t RibbonButton::dropDownItemCount() const
     // 只统计真实项，分隔线不计入
     size_t n = 0;
     for (const auto& e : dptr()->entries) {
-        if (e.item) { ++n; }
+        if (e.item) {
+            ++n;
+        }
     }
     return n;
 }
@@ -293,8 +313,12 @@ RibbonAction* RibbonButton::dropDownItemAt(size_t i) const
 
     size_t idx = 0;
     for (const auto& e : entries) {
-        if (!e.item) { continue; }
-        if (idx == i) { return e.item; }
+        if (!e.item) {
+            continue;
+        }
+        if (idx == i) {
+            return e.item;
+        }
         ++idx;
     }
 
@@ -311,28 +335,46 @@ void RibbonButton::removeDropDownEntryAt(size_t i)
 {
     auto& entries = dptr()->entries;
 
-    if (i >= entries.size()) { return; }   // 越界安全
+    if (i >= entries.size()) {
+        return;
+    } // 越界安全
 
     auto it = entries.begin() + i;
 
     // 移除真实项时交还 QAction 所有权；分隔线无需处理（由本按钮持有）
-    if (it->item) { it->item->setOwnsImpl(true); }
+    if (it->item) {
+        it->item->setOwnsImpl(true);
+    }
 
     entries.erase(it);
 
     rebuildMenu();
 }
 
+void RibbonButton::setData(void* data)
+{
+    dptr()->user = data;
+}
+
+void* RibbonButton::data() const
+{
+    return dptr()->user;
+}
+
 void RibbonButton::rebuildMenu()
 {
     auto* btn = impl<SARibbonToolButton>();
-    if (!btn) { return; }
+    if (!btn) {
+        return;
+    }
 
     auto& entries = dptr()->entries;
 
     // 释放上次构建的分隔线 QAction（由本按钮创建，需要自行管理）。
     // 它们虽是菜单的子对象，但重建后不再出现在菜单 action 列表里。
-    for (QAction* s : dptr()->separators) { delete s; }
+    for (QAction* s : dptr()->separators) {
+        delete s;
+    }
     dptr()->separators.clear();
 
     if (entries.empty()) {
@@ -344,11 +386,15 @@ void RibbonButton::rebuildMenu()
         return;
     }
 
-    if (!dptr()->menu) { dptr()->menu = new SARibbonMenu(btn); }
+    if (!dptr()->menu) {
+        dptr()->menu = new SARibbonMenu(btn);
+    }
 
     // 摘除当前所有 action 后按条目顺序重建。绝不使用 QMenu::clear()：
     // 它会删除 item 的 QAction（item 的 UIElement 也引用它）。
-    for (QAction* a : dptr()->menu->actions()) { dptr()->menu->removeAction(a); }
+    for (QAction* a : dptr()->menu->actions()) {
+        dptr()->menu->removeAction(a);
+    }
 
     for (const auto& e : entries) {
         if (!e.item) {
@@ -356,8 +402,10 @@ void RibbonButton::rebuildMenu()
             continue;
         }
         QAction* act = e.item->impl<QAction>();
-        if (!act) { continue; }
-        e.item->setOwnsImpl(false);   // the menu now owns the action
+        if (!act) {
+            continue;
+        }
+        e.item->setOwnsImpl(false); // the menu now owns the action
         dptr()->menu->addAction(act);
     }
 
@@ -365,14 +413,14 @@ void RibbonButton::rebuildMenu()
     btn->setPopupMode(QToolButton::InstantPopup);
 }
 
-void RibbonButton::setData(void* data)
+inline auto RibbonButton::dptr() -> Data*
 {
-    dptr()->user = data;
+    return static_cast<Data*>(UIElement::d);
 }
 
-void* RibbonButton::data() const
+inline auto RibbonButton::dptr() const -> const Data*
 {
-    return dptr()->user;
+    return static_cast<const Data*>(UIElement::d);
 }
 
 V_APPFWGUI_NS_END

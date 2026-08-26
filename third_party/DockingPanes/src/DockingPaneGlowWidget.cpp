@@ -39,37 +39,43 @@ DockingPaneGlowWidget::DockingPaneGlowWidget(QWidget* floatingPane, DockingPaneG
     updatePosition();
 }
 
-void DockingPaneGlowWidget::updatePosition(void)
+void DockingPaneGlowWidget::updatePosition()
 {
-    QSize  size = m_floatingPane->size();
-    QPoint pos  = m_floatingPane->pos();
+    const QSize  size = m_floatingPane->size();
+    const QPoint pos  = m_floatingPane->pos();
 
     switch (m_position) {
-    case DockingPaneGlowWidget::Left:
+    case Left:
     {
         this->move(pos.x() - 9, pos.y());
         this->resize(9, size.height());
         break;
     }
-    case DockingPaneGlowWidget::Right:
+    case Right:
     {
         this->move(pos.x() + size.width(), pos.y());
         this->resize(9, size.height());
         break;
     }
-    case DockingPaneGlowWidget::Top:
+    case Top:
     {
         this->move(pos.x() - 9, pos.y() - 9);
         this->resize(size.width() + 18, 9);
         break;
     }
-    case DockingPaneGlowWidget::Bottom:
+    case Bottom:
     {
         this->move(pos.x() - 9, pos.y() + size.height());
         this->resize(size.width() + 18, 9);
         break;
     }
+    default: throw std::runtime_error("Invalid position."); ;
     }
+}
+
+void DockingPaneGlowWidget::paintEvent(QPaintEvent*)
+{
+    return;
 }
 
 void DockingPaneGlowWidget::mousePressEvent(QMouseEvent* event)
@@ -78,7 +84,7 @@ void DockingPaneGlowWidget::mousePressEvent(QMouseEvent* event)
         m_cursorDelta = mapToGlobal(event->pos()).x() - this->pos().x();
         m_cornerState = 0;
 
-        if ((m_position == DockingPaneGlowWidget::Top) || (m_position == DockingPaneGlowWidget::Bottom)) {
+        if ((m_position == Top) || (m_position == Bottom)) {
             if (m_cursorDelta < 9) {
                 m_cornerState = 1;
             }
@@ -90,79 +96,20 @@ void DockingPaneGlowWidget::mousePressEvent(QMouseEvent* event)
         m_Pos          = QCursor::pos();
         m_paneGeometry = m_floatingPane->geometry();
         m_dragging     = true;
-        qApp->setActiveWindow(m_floatingPane);
+        m_floatingPane->activateWindow();
         grabMouse();
     }
-}
-
-void DockingPaneGlowWidget::updateCursor()
-{
-    int cursorPos = QCursor::pos().x() - this->pos().x();
-
-    switch (m_position) {
-    case DockingPaneGlowWidget::Left:
-    {
-        setCursor(Qt::SizeHorCursor);
-        break;
-    }
-    case DockingPaneGlowWidget::Right:
-    {
-        setCursor(Qt::SizeHorCursor);
-        break;
-    }
-    case DockingPaneGlowWidget::Top:
-    {
-        if (cursorPos < 9) {
-            setCursor(Qt::SizeFDiagCursor);
-        }
-        else {
-            if (cursorPos > this->width() - 9) {
-                setCursor(Qt::SizeBDiagCursor);
-            }
-            else {
-                setCursor(Qt::SizeVerCursor);
-            }
-        }
-        break;
-    }
-    case DockingPaneGlowWidget::Bottom:
-    {
-        if (cursorPos < 9) {
-            setCursor(Qt::SizeBDiagCursor);
-        }
-        else {
-            if (cursorPos > this->width() - 9) {
-                setCursor(Qt::SizeFDiagCursor);
-            }
-            else {
-                setCursor(Qt::SizeVerCursor);
-            }
-        }
-        break;
-    }
-    }
-}
-
-void DockingPaneGlowWidget::enterEvent(QEnterEvent*)
-{
-    updateCursor();
-}
-
-void DockingPaneGlowWidget::leaveEvent(QEvent*)
-{
-    this->unsetCursor();
 }
 
 void DockingPaneGlowWidget::mouseMoveEvent(QMouseEvent*)
 {
     if (m_dragging) {
-        QPoint delta;
-        QPoint pos = QCursor::pos();
-        delta      = m_Pos - pos;
-        QRect rc   = m_floatingPane->geometry();
+        const QPoint pos   = QCursor::pos();
+        const QPoint delta = m_Pos - pos;
+        QRect        rc    = m_floatingPane->geometry();
 
         switch (m_position) {
-        case DockingPaneGlowWidget::Left:
+        case Left:
         {
             rc.adjust(-delta.x(), 0, 0, 0);
             if (rc.left() <= m_paneGeometry.right() - m_floatingPane->minimumWidth()) {
@@ -170,13 +117,13 @@ void DockingPaneGlowWidget::mouseMoveEvent(QMouseEvent*)
             }
             break;
         }
-        case DockingPaneGlowWidget::Right:
+        case Right:
         {
             rc.adjust(0, 0, -delta.x(), 0);
             m_floatingPane->setGeometry(rc);
             break;
         }
-        case DockingPaneGlowWidget::Top:
+        case Top:
         {
             rc.adjust(0, -delta.y(), 0, 0);
             if (m_cornerState == 1) {
@@ -194,7 +141,7 @@ void DockingPaneGlowWidget::mouseMoveEvent(QMouseEvent*)
             }
             break;
         }
-        case DockingPaneGlowWidget::Bottom:
+        case Bottom:
         {
             rc.adjust(0, 0, 0, -delta.y());
             if (m_cornerState == 1) {
@@ -210,6 +157,7 @@ void DockingPaneGlowWidget::mouseMoveEvent(QMouseEvent*)
             m_floatingPane->setGeometry(rc);
             break;
         }
+        default: throw std::runtime_error("Invalid position.");
         }
 
         updatePosition();
@@ -227,7 +175,61 @@ void DockingPaneGlowWidget::mouseReleaseEvent(QMouseEvent*)
     releaseMouse();
 }
 
-void DockingPaneGlowWidget::paintEvent(QPaintEvent*)
+void DockingPaneGlowWidget::enterEvent(QEnterEvent*)
 {
-    return;
+    updateCursor();
+}
+
+void DockingPaneGlowWidget::leaveEvent(QEvent*)
+{
+    this->unsetCursor();
+}
+
+void DockingPaneGlowWidget::updateCursor()
+{
+    const int cursorPos = QCursor::pos().x() - this->pos().x();
+
+    switch (m_position) {
+    case Left:
+    {
+        setCursor(Qt::SizeHorCursor);
+        break;
+    }
+    case Right:
+    {
+        setCursor(Qt::SizeHorCursor);
+        break;
+    }
+    case Top:
+    {
+        if (cursorPos < 9) {
+            setCursor(Qt::SizeFDiagCursor);
+        }
+        else {
+            if (cursorPos > this->width() - 9) {
+                setCursor(Qt::SizeBDiagCursor);
+            }
+            else {
+                setCursor(Qt::SizeVerCursor);
+            }
+        }
+        break;
+    }
+    case Bottom:
+    {
+        if (cursorPos < 9) {
+            setCursor(Qt::SizeBDiagCursor);
+        }
+        else {
+            if (cursorPos > this->width() - 9) {
+                setCursor(Qt::SizeFDiagCursor);
+            }
+            else {
+                setCursor(Qt::SizeVerCursor);
+            }
+        }
+        break;
+    }
+    default: throw std::runtime_error("Invalid position."); ;
+    }
 }

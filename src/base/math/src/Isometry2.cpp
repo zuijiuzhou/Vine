@@ -4,10 +4,6 @@
 
 V_MATH_NS_BEGIN
 
-// ---------------------------------------------------------------------------
-// Inversion
-// ---------------------------------------------------------------------------
-
 template <typename T>
 Isometry2<T> Isometry2<T>::inverted() const
 {
@@ -33,10 +29,6 @@ void Isometry2<T>::invert()
     translation.y = -(s * tx + c * ty);
 }
 
-// ---------------------------------------------------------------------------
-// Translation composition
-// ---------------------------------------------------------------------------
-
 template <typename T>
 Isometry2<T>& Isometry2<T>::preTranslate(const Vector2<T>& dt)
 {
@@ -55,10 +47,6 @@ Isometry2<T>& Isometry2<T>::postTranslate(const Vector2<T>& dt)
     translation.y += s * dt.x + c * dt.y;
     return *this;
 }
-
-// ---------------------------------------------------------------------------
-// Rotation composition
-// ---------------------------------------------------------------------------
 
 template <typename T>
 Isometry2<T>& Isometry2<T>::preRotate(T a)
@@ -82,10 +70,6 @@ Isometry2<T>& Isometry2<T>::postRotate(T a)
     return *this;
 }
 
-// ---------------------------------------------------------------------------
-// Transform composition
-// ---------------------------------------------------------------------------
-
 template <typename T>
 Isometry2<T> Isometry2<T>::operator*(const Isometry2<T>& right) const
 {
@@ -106,10 +90,6 @@ Isometry2<T>& Isometry2<T>::operator*=(const Isometry2<T>& right)
     return *this;
 }
 
-// ---------------------------------------------------------------------------
-// Point / vector transformation (global operators)
-// ---------------------------------------------------------------------------
-
 template <typename T>
 Point2<T> operator*(const Isometry2<T>& t, const Point2<T>& p)
 {
@@ -129,10 +109,6 @@ Vector2<T> operator*(const Isometry2<T>& t, const Vector2<T>& v)
     return Vector2<T>(c * v.x - s * v.y,
                       s * v.x + c * v.y);
 }
-
-// ---------------------------------------------------------------------------
-// Explicit instantiations
-// ---------------------------------------------------------------------------
 
 template class V_MATH_API Isometry2<float>;
 template class V_MATH_API Isometry2<double>;

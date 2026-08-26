@@ -26,7 +26,7 @@
 #include "DockAutoHideButton.h"
 #include "DockingPaneTheme.h"
 
-DockAutoHideButton::DockAutoHideButton(DockAutoHideButton::Position pos, QWidget* parent)
+DockAutoHideButton::DockAutoHideButton(Position pos, QWidget* parent)
   : QPushButton(parent)
   , m_pos(pos)
 {
@@ -45,35 +45,9 @@ DockAutoHideButton::DockAutoHideButton(const QIcon& icon, const QString& text, Q
     init();
 }
 
-void DockAutoHideButton::init()
-{
-    m_orientation   = Qt::Horizontal;
-    m_mirrored      = false;
-    m_swapDirection = false;
-
-    this->setFont(QFont("Segoe UI", 9));
-
-    this->setFocusPolicy(Qt::NoFocus);
-
-    setMouseTracking(true);
-
-    m_hovered = false;
-
-    m_hoverTimer = new QTimer(this);
-
-    m_hoverTimer->setInterval(1000);
-
-    connect(m_hoverTimer, &QTimer::timeout, this, &DockAutoHideButton::onTimerElapsed);
-}
-
 Qt::Orientation DockAutoHideButton::orientation() const
 {
     return m_orientation;
-}
-
-void DockAutoHideButton::swapDirection(bool state)
-{
-    m_swapDirection = state;
 }
 
 void DockAutoHideButton::setOrientation(Qt::Orientation orientation)
@@ -105,6 +79,11 @@ void DockAutoHideButton::setMirrored(bool mirrored)
     m_mirrored = mirrored;
 }
 
+void DockAutoHideButton::swapDirection(bool state)
+{
+    m_swapDirection = state;
+}
+
 QSize DockAutoHideButton::sizeHint() const
 {
     QSize        size;
@@ -120,46 +99,25 @@ QSize DockAutoHideButton::sizeHint() const
     return size;
 }
 
-void DockAutoHideButton::enterEvent(QEnterEvent* event)
+DockAutoHideButton::Position DockAutoHideButton::position()
 {
-    m_hoverTimer->start();
-
-    m_hovered = true;
-
-    update();
-
-    QWidget::enterEvent(event);
+    return (m_pos);
 }
 
-void DockAutoHideButton::leaveEvent(QEvent* event)
+void DockAutoHideButton::setPane(DockingPaneContainer* container, DockingPaneBase* pane)
 {
-    m_hoverTimer->stop();
-
-    m_hovered = false;
-
-    update();
-
-    QWidget::leaveEvent(event);
+    m_paneContainer = container;
+    m_dockingPane   = pane;
 }
 
-void DockAutoHideButton::onTimerElapsed(void)
+DockingPaneBase* DockAutoHideButton::pane()
 {
-    if (this->rect().contains(mapFromGlobal(QCursor::pos()))) {
-        QTimer* timer = qobject_cast<QTimer*>(this->sender());
-
-        timer->stop();
-
-        Q_EMIT openFlyout();
-    }
+    return (m_dockingPane);
 }
 
-void DockAutoHideButton::changeEvent(QEvent* event)
+DockingPaneContainer* DockAutoHideButton::container()
 {
-    if (event->type() == QEvent::PaletteChange || event->type() == QEvent::ApplicationPaletteChange) {
-        update();
-    }
-
-    QPushButton::changeEvent(event);
+    return (m_paneContainer);
 }
 
 void DockAutoHideButton::paintEvent(QPaintEvent*)
@@ -225,9 +183,61 @@ void DockAutoHideButton::paintEvent(QPaintEvent*)
     }
 }
 
+void DockAutoHideButton::changeEvent(QEvent* event)
+{
+    if (event->type() == QEvent::PaletteChange || event->type() == QEvent::ApplicationPaletteChange) {
+        update();
+    }
+
+    QPushButton::changeEvent(event);
+}
+
+void DockAutoHideButton::enterEvent(QEnterEvent* event)
+{
+    m_hoverTimer->start();
+
+    m_hovered = true;
+
+    update();
+
+    QWidget::enterEvent(event);
+}
+
+void DockAutoHideButton::leaveEvent(QEvent* event)
+{
+    m_hoverTimer->stop();
+
+    m_hovered = false;
+
+    update();
+
+    QWidget::leaveEvent(event);
+}
+
+void DockAutoHideButton::init()
+{
+    m_orientation   = Qt::Horizontal;
+    m_mirrored      = false;
+    m_swapDirection = false;
+
+    this->setFont(QFont("Segoe UI", 9));
+
+    this->setFocusPolicy(Qt::NoFocus);
+
+    setMouseTracking(true);
+
+    m_hovered = false;
+
+    m_hoverTimer = new QTimer(this);
+
+    m_hoverTimer->setInterval(1000);
+
+    connect(m_hoverTimer, &QTimer::timeout, this, &DockAutoHideButton::onTimerElapsed);
+}
+
 QStyleOptionButton* DockAutoHideButton::getStyleOption() const
 {
-    QStyleOptionButton* opt = new QStyleOptionButton();
+    auto* opt = new QStyleOptionButton();
 
     opt->initFrom(this);
 
@@ -248,23 +258,13 @@ QStyleOptionButton* DockAutoHideButton::getStyleOption() const
     return opt;
 }
 
-void DockAutoHideButton::setPane(DockingPaneContainer* container, DockingPaneBase* pane)
+void DockAutoHideButton::onTimerElapsed()
 {
-    m_paneContainer = container;
-    m_dockingPane   = pane;
-}
+    if (this->rect().contains(mapFromGlobal(QCursor::pos()))) {
+        auto* timer = qobject_cast<QTimer*>(this->sender());
 
-DockingPaneBase* DockAutoHideButton::pane(void)
-{
-    return (m_dockingPane);
-}
+        timer->stop();
 
-DockingPaneContainer* DockAutoHideButton::container(void)
-{
-    return (m_paneContainer);
-}
-
-DockAutoHideButton::Position DockAutoHideButton::position(void)
-{
-    return (m_pos);
+        Q_EMIT openFlyout();
+    }
 }

@@ -34,19 +34,19 @@ class DockingPaneManager;
  *
  * \note 是停靠树的叶子，不含标题栏；永远存在，不应被关闭。
  */
-class DockingPaneClient : public DockingPaneBase
-{
+class DockingPaneClient : public DockingPaneBase {
     Q_OBJECT
 
-    public:
-        DockingPaneClient(QWidget *parent = nullptr);
+    friend class DockingPaneManager;
 
-        friend class DockingPaneManager;
+  public:
+    explicit DockingPaneClient(QWidget* parent = nullptr);
 
-        virtual void saveLayout(QDomNode *parentNode, bool includeGeometry=false) override;
+  public:
+    void saveLayout(QDomNode* parentNode, bool includeGeometry = false) override;
 
-    private:
-        void setWidget(QWidget *widget);
+  private:
+    void setWidget(QWidget* widget);
 };
 
 #endif // DOCKINGPANECLIENT_H

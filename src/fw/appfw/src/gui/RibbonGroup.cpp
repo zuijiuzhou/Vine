@@ -56,13 +56,9 @@ struct RibbonGroup::Data : public UIElementData {
     QMetaObject::Connection option_conn;   // 选项按钮 QAction 销毁回调
 };
 
-inline auto RibbonGroup::dptr() -> Data* { return static_cast<Data*>(UIElement::d); }
-inline auto RibbonGroup::dptr() const -> const Data* { return static_cast<const Data*>(UIElement::d); }
-
 RibbonGroup::RibbonGroup()
-    : Control(new Data(), new SARibbonPanel())
-{
-}
+  : Control(new Data(), new SARibbonPanel())
+{}
 
 RibbonGroup::~RibbonGroup()
 {
@@ -74,7 +70,7 @@ RibbonGroup::~RibbonGroup()
 void RibbonGroup::title(const String& t)
 {
     dptr()->title = t;
-    auto* pnl = impl<SARibbonPanel>();
+    auto* pnl     = impl<SARibbonPanel>();
     if (pnl) {
         auto utf16 = t.toUtf16();
         pnl->setPanelName(QString::fromStdU16String(utf16));
@@ -88,47 +84,21 @@ String RibbonGroup::title() const
 
 void RibbonGroup::addButton(RibbonButton* b)
 {
-    if (!b) return;
-    auto w = b->impl<QWidget>();
+    if (!b)
+        return;
+    auto  w   = b->impl<QWidget>();
     auto* pnl = impl<SARibbonPanel>();
     if (w && pnl)
         pnl->addWidget(w, rowProportionFor(b->buttonSize()));
 }
 
-void RibbonGroup::addControl(Control* w, RibbonItemSize size)
-{
-    if (!w) return;
-    auto wgt = w->impl<QWidget>();
-    auto* pnl = impl<SARibbonPanel>();
-    if (wgt && pnl)
-        pnl->addWidget(wgt, rowProportionFor(size));
-}
-
-void RibbonGroup::removeControl(Control* w)
-{
-    if (!w) return;
-    auto* pnl = impl<SARibbonPanel>();
-    if (!pnl) return;
-    auto* wgt = w->impl<QWidget>();
-    if (!wgt) return;
-
-    auto* action = wgt->findChild<QAction*>(QString(), Qt::FindDirectChildrenOnly);
-    if (!action) {
-        if (auto* tb = qobject_cast<QToolButton*>(wgt))
-            action = tb->defaultAction();
-    }
-    if (action)
-        pnl->removeAction(action);
-
-    wgt->setParent(nullptr);
-    wgt->deleteLater();
-}
-
 void RibbonGroup::removeButton(RibbonButton* b)
 {
-    if (!b) return;
+    if (!b)
+        return;
     auto* pnl = impl<SARibbonPanel>();
-    if (!pnl) return;
+    if (!pnl)
+        return;
     auto* w = b->impl<QWidget>();
     if (w) {
         auto* action = w->findChild<QAction*>(QString(), Qt::FindDirectChildrenOnly);
@@ -142,6 +112,39 @@ void RibbonGroup::removeButton(RibbonButton* b)
         w->setParent(nullptr);
         w->deleteLater();
     }
+}
+
+void RibbonGroup::addControl(Control* w, RibbonItemSize size)
+{
+    if (!w)
+        return;
+    auto  wgt = w->impl<QWidget>();
+    auto* pnl = impl<SARibbonPanel>();
+    if (wgt && pnl)
+        pnl->addWidget(wgt, rowProportionFor(size));
+}
+
+void RibbonGroup::removeControl(Control* w)
+{
+    if (!w)
+        return;
+    auto* pnl = impl<SARibbonPanel>();
+    if (!pnl)
+        return;
+    auto* wgt = w->impl<QWidget>();
+    if (!wgt)
+        return;
+
+    auto* action = wgt->findChild<QAction*>(QString(), Qt::FindDirectChildrenOnly);
+    if (!action) {
+        if (auto* tb = qobject_cast<QToolButton*>(wgt))
+            action = tb->defaultAction();
+    }
+    if (action)
+        pnl->removeAction(action);
+
+    wgt->setParent(nullptr);
+    wgt->deleteLater();
 }
 
 void RibbonGroup::addSeparator()
@@ -248,8 +251,7 @@ void RibbonGroup::wordWrap(bool on)
         return;
 
     const auto btns = pnl->ribbonToolButtons();
-    for (auto* b : btns)
-        b->setEnableWordWrap(on);
+    for (auto* b : btns) b->setEnableWordWrap(on);
 }
 
 bool RibbonGroup::wordWrap() const
@@ -288,6 +290,16 @@ void RibbonGroup::setOptionAction(RibbonAction* item)
 RibbonAction* RibbonGroup::optionAction() const
 {
     return dptr()->option_item;
+}
+
+inline auto RibbonGroup::dptr() -> Data*
+{
+    return static_cast<Data*>(UIElement::d);
+}
+
+inline auto RibbonGroup::dptr() const -> const Data*
+{
+    return static_cast<const Data*>(UIElement::d);
 }
 
 V_APPFWGUI_NS_END

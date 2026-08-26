@@ -27,42 +27,40 @@ class DockingPaneGlowWidget;
 /**
  * \brief 浮动窗格边缘缩放光晕的管理者。
  *
- * 为某个浮动窗格创建四个 DockingPaneGlowWidget（左/右/上/下），
- * 用于拖动窗格边缘调整大小。窗格移动/尺寸变化时调用 update() 重排。
+ * 为某个浮动窗格创建四个 DockingPaneGlowWidget（左/右/上/下），用于拖动窗格边缘调整大小。窗格移动/尺寸变化时调用 update() 重排。
  *
- * \note 生命周期：归所属窗格管理（DockingPaneContainer::m_floatingGlow），
- * 由 setState()/floatPane() 释放；窗格被销毁而未走这些路径时会泄漏。
+ * \note 生命周期：归所属窗格管理（DockingPaneContainer::m_floatingGlow），由 setState()/floatPane() 释放；窗格被销毁而未走这些路径时会泄漏。
  */
-class DockingPaneGlow : public QObject
-{
+class DockingPaneGlow : public QObject {
     Q_OBJECT
 
-    public:
-        /**
-         * \brief 构造。
-         * \param floatingPane 要加光晕的浮动窗格。
-         * \param parent       光晕窗口的父窗口（通常为主窗口）。
-         */
-        explicit DockingPaneGlow(QWidget* floatingPane, QObject* parent = nullptr);
-        ~DockingPaneGlow();
+  public:
+    /**
+     * \brief 构造。
+     * \param floatingPane 要加光晕的浮动窗格。
+     * \param parent       光晕窗口的父窗口（通常为主窗口）。
+     */
+    explicit DockingPaneGlow(QWidget* floatingPane, QObject* parent = nullptr);
+    ~DockingPaneGlow() override;
 
-        /**
-         * \brief 把四个光晕窗口置顶。
-         */
-        void raise(void);
+  public:
+    /**
+     * \brief 把四个光晕窗口置顶。
+     */
+    void raise();
 
-        /**
-         * \brief 按浮动窗格当前位置/尺寸重排四个光晕窗口。
-         */
-        void update(void);
+    /**
+     * \brief 按浮动窗格当前位置/尺寸重排四个光晕窗口。
+     */
+    void update();
 
-    private:
-        void onGlowResized(void);
+  private:
+    void onGlowResized();
 
-        DockingPaneGlowWidget* m_leftGlow;
-        DockingPaneGlowWidget* m_rightGlow;
-        DockingPaneGlowWidget* m_topGlow;
-        DockingPaneGlowWidget* m_bottomGlow;
+    DockingPaneGlowWidget* m_leftGlow;
+    DockingPaneGlowWidget* m_rightGlow;
+    DockingPaneGlowWidget* m_topGlow;
+    DockingPaneGlowWidget* m_bottomGlow;
 };
 
 #endif // DOCKINGPANEGLOW_H

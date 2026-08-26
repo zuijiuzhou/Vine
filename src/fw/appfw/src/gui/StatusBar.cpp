@@ -9,16 +9,12 @@ V_OBJECT_META_IMPL(StatusBar, Control)
 
 struct StatusBar::Data : public UIElementData {};
 
-inline auto StatusBar::dptr() -> Data* { return static_cast<Data*>(UIElement::d); }
-inline auto StatusBar::dptr() const -> const Data* { return static_cast<const Data*>(UIElement::d); }
-
 StatusBar::StatusBar()
-    : Control(new Data(), new QStatusBar())
-{
-}
+  : Control(new Data(), new QStatusBar())
+{}
 
 StatusBar::StatusBar(UIElement* parent)
-    : Control(new Data(), new QStatusBar())
+  : Control(new Data(), new QStatusBar())
 {
     // Attach to the parent widget if provided
     if (parent) {
@@ -37,9 +33,20 @@ StatusBar::~StatusBar()
 void StatusBar::showMessage(const String& msg, int timeout_ms)
 {
     auto* sb = impl<QStatusBar>();
-    if (!sb) return;
+    if (!sb)
+        return;
     auto utf16 = msg.toUtf16();
     sb->showMessage(QString::fromStdU16String(utf16));
+}
+
+inline auto StatusBar::dptr() -> Data*
+{
+    return static_cast<Data*>(UIElement::d);
+}
+
+inline auto StatusBar::dptr() const -> const Data*
+{
+    return static_cast<const Data*>(UIElement::d);
 }
 
 V_APPFWGUI_NS_END

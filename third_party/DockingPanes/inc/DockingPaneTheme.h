@@ -35,21 +35,21 @@
 /**
  * \brief 调色板驱动的主题颜色辅助（命名空间内联函数集合）。
  *
- * 所有颜色从 QApplication::palette() 派生，因此窗格颜色自动跟随主题/
- * 深色模式变化，无需硬编码亮/暗色。相关控件在收到
- * QEvent::PaletteChange / ApplicationPaletteChange 后 update() 重绘。
+ * 所有颜色从 QApplication::palette() 派生，因此窗格颜色自动跟随主题/深色模式变化，无需硬编码亮/暗色。
+ * 相关控件在收到QEvent::PaletteChange / ApplicationPaletteChange 后 update() 重绘。
  *
  * \note 颜色语义约定：
  *  - 边框（border/floatingBorder）由 Window 亮度派生（亮主题加深、暗主题加亮）。
  *  - 标题栏背景：激活用 Base（与内容融合）、非激活用 Window。
  *  - 标题文字/图标用 WindowText；悬停/指示用 Highlight。
  */
-namespace DockingPaneTheme {
+namespace DockingPaneTheme
+{
 
 /**
  * \brief 当前应用调色板。
  */
-inline QPalette appPalette(void)
+inline QPalette appPalette()
 {
     return QApplication::palette();
 }
@@ -57,7 +57,7 @@ inline QPalette appPalette(void)
 /**
  * \brief 1px 窗格边框色（亮主题略深、暗主题略亮的 Window）。
  */
-inline QColor borderColor(void)
+inline QColor borderColor()
 {
     const QColor window = appPalette().color(QPalette::Window);
 
@@ -67,7 +67,7 @@ inline QColor borderColor(void)
 /**
  * \brief 浮动窗格边框色。
  */
-inline QColor floatingBorderColor(void)
+inline QColor floatingBorderColor()
 {
     const QColor window = appPalette().color(QPalette::Window);
 
@@ -77,7 +77,7 @@ inline QColor floatingBorderColor(void)
 /**
  * \brief 激活标题栏背景（用 Base 与面板内容融合）。
  */
-inline QColor activeHeaderColor(void)
+inline QColor activeHeaderColor()
 {
     return appPalette().color(QPalette::Base);
 }
@@ -85,7 +85,7 @@ inline QColor activeHeaderColor(void)
 /**
  * \brief 非激活标题栏背景（用 Window）。
  */
-inline QColor inactiveHeaderColor(void)
+inline QColor inactiveHeaderColor()
 {
     return appPalette().color(QPalette::Window);
 }
@@ -109,7 +109,7 @@ inline QColor titlePatternColor(bool)
 /**
  * \brief 自动隐藏按钮条底色（同边框色）。
  */
-inline QColor autoHideStripColor(void)
+inline QColor autoHideStripColor()
 {
     return borderColor();
 }
@@ -117,7 +117,7 @@ inline QColor autoHideStripColor(void)
 /**
  * \brief 自动隐藏按钮悬停色（Highlight）。
  */
-inline QColor autoHideHoverColor(void)
+inline QColor autoHideHoverColor()
 {
     return appPalette().color(QPalette::Highlight);
 }

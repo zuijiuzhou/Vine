@@ -10,17 +10,8 @@ V_OBJECT_META_IMPL(Control, UIElement)
 
 struct Control::Data : public UIElementData {};
 
-inline auto Control::dptr() -> Data* { return static_cast<Data*>(UIElement::d); }
-inline auto Control::dptr() const -> const Data* { return static_cast<const Data*>(UIElement::d); }
-
 Control::Control(QWidget* native, bool owns)
-    : UIElement(new Data(), native)
-{
-    setOwnsImpl(owns);
-}
-
-Control::Control(UIElementData* data, QWidget* native, bool owns)
-    : UIElement(data, native)
+  : UIElement(new Data(), native)
 {
     setOwnsImpl(owns);
 }
@@ -57,7 +48,8 @@ bool Control::visible() const
 void Control::tooltip(const String& t)
 {
     auto* w = impl<QWidget>();
-    if (!w) return;
+    if (!w)
+        return;
     auto utf16 = t.toUtf16();
     w->setToolTip(QString::fromStdU16String(utf16));
 }
@@ -65,7 +57,8 @@ void Control::tooltip(const String& t)
 String Control::tooltip() const
 {
     auto* w = impl<QWidget>();
-    if (!w) return {};
+    if (!w)
+        return {};
     auto qs = w->toolTip();
     return String::fromUtf16((const char16_t*)qs.utf16(), qs.size());
 }
@@ -93,6 +86,22 @@ void Control::size(const Size& s)
     auto* w = impl<QWidget>();
     if (w)
         w->resize(QSize(s.x, s.y));
+}
+
+Control::Control(UIElementData* data, QWidget* native, bool owns)
+  : UIElement(data, native)
+{
+    setOwnsImpl(owns);
+}
+
+inline auto Control::dptr() -> Data*
+{
+    return static_cast<Data*>(UIElement::d);
+}
+
+inline auto Control::dptr() const -> const Data*
+{
+    return static_cast<const Data*>(UIElement::d);
 }
 
 V_APPFWGUI_NS_END

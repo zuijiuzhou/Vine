@@ -50,15 +50,7 @@ DockingPaneGlow::~DockingPaneGlow()
     delete m_bottomGlow;
 }
 
-void DockingPaneGlow::onGlowResized(void)
-{
-    m_leftGlow->updatePosition();
-    m_rightGlow->updatePosition();
-    m_topGlow->updatePosition();
-    m_bottomGlow->updatePosition();
-}
-
-void DockingPaneGlow::raise(void)
+void DockingPaneGlow::raise()
 {
     this->m_leftGlow->raise();
     this->m_rightGlow->raise();
@@ -66,7 +58,15 @@ void DockingPaneGlow::raise(void)
     this->m_bottomGlow->raise();
 }
 
-void DockingPaneGlow::update(void)
+void DockingPaneGlow::update()
+{
+    m_leftGlow->updatePosition();
+    m_rightGlow->updatePosition();
+    m_topGlow->updatePosition();
+    m_bottomGlow->updatePosition();
+}
+
+void DockingPaneGlow::onGlowResized()
 {
     m_leftGlow->updatePosition();
     m_rightGlow->updatePosition();

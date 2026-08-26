@@ -32,19 +32,19 @@ class DockingPaneContainer;
  * 仅提供 addPane() 把窗格客户区加入堆叠控件；没有标签条绘制/交互。
  * \note 当前停靠库实际使用 DockingPaneTabbedContainer，本类为历史遗留。
  */
-class DockingPaneTabWidget : public QWidget
-{
+class DockingPaneTabWidget : public QWidget {
     Q_OBJECT
-    public:
-        explicit DockingPaneTabWidget(QWidget *parent = nullptr);
+  public:
+    explicit DockingPaneTabWidget(QWidget* parent = nullptr);
 
-        /**
-         * \brief 把窗格的客户区加入堆叠控件。
-         */
-        void addPane(DockingPaneContainer *pane);
+  public:
+    /**
+     * \brief 把窗格的客户区加入堆叠控件。
+     */
+    void addPane(DockingPaneContainer* pane);
 
-    private:
-        QStackedWidget *m_stackedWidget;
+  private:
+    QStackedWidget* m_stackedWidget;
 };
 
 #endif // DOCKINGPANETABWIDGET_H

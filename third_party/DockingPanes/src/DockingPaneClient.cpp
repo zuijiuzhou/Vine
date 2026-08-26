@@ -28,6 +28,13 @@ DockingPaneClient::DockingPaneClient(QWidget* parent)
     this->setLayout(new QGridLayout());
 }
 
+void DockingPaneClient::saveLayout(QDomNode* parentNode, bool)
+{
+    QDomDocument doc        = parentNode->ownerDocument();
+    QDomElement  domElement = doc.createElement(this->metaObject()->className());
+    parentNode->appendChild(domElement);
+}
+
 void DockingPaneClient::setWidget(QWidget* widget)
 {
     delete this->layout();
@@ -35,11 +42,4 @@ void DockingPaneClient::setWidget(QWidget* widget)
     this->layout()->setContentsMargins(0, 0, 0, 0);
     this->layout()->setSpacing(0);
     this->layout()->addWidget(widget);
-}
-
-void DockingPaneClient::saveLayout(QDomNode* parentNode, bool)
-{
-    QDomDocument doc        = parentNode->ownerDocument();
-    QDomElement  domElement = doc.createElement(this->metaObject()->className());
-    parentNode->appendChild(domElement);
 }

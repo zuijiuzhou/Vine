@@ -56,15 +56,12 @@ RibbonStyle fromSarRibbonStyle(SARibbonBar::RibbonStyles s)
 
 }
 
-inline auto RibbonBar::dptr() -> Data* { return static_cast<Data*>(UIElement::d); }
-inline auto RibbonBar::dptr() const -> const Data* { return static_cast<const Data*>(UIElement::d); }
-
 RibbonBar::RibbonBar(MainWindow* wnd)
-    : Control(new RibbonBar::Data(), static_cast<SARibbonMainWindow*>(wnd->impl())->ribbonBar(), /*owns=*/false)
+  : Control(new RibbonBar::Data(), static_cast<SARibbonMainWindow*>(wnd->impl())->ribbonBar(), /*owns=*/false)
 {
-    dptr()->wnd       = wnd;
+    dptr()->wnd              = wnd;
     dptr()->application_menu = new QMenu();
-    auto app_btn = qobject_cast<SARibbonApplicationButton*>(impl<itype>()->applicationButton());
+    auto app_btn             = qobject_cast<SARibbonApplicationButton*>(impl<itype>()->applicationButton());
     app_btn->setMenu(dptr()->application_menu);
 }
 
@@ -74,7 +71,9 @@ RibbonBar::~RibbonBar()
 }
 
 int RibbonBar::numTabs() const
-{ return (int)dptr()->tabs.size(); }
+{
+    return (int)dptr()->tabs.size();
+}
 
 RibbonTab* RibbonBar::tabAt(int idx) const
 {
@@ -114,73 +113,8 @@ void RibbonBar::currentIndex(int idx)
 }
 
 void RibbonBar::appendApplicationMenu(RibbonAction* mi)
-{ dptr()->application_menu->addAction(mi->impl<QAction>()); }
-
-void RibbonBar::ribbonStyle(RibbonStyle s)
 {
-    auto w = impl<itype>();
-    if (w)
-        w->setRibbonStyle(toSarRibbonStyle(s));
-}
-
-RibbonStyle RibbonBar::ribbonStyle() const
-{
-    auto w = impl<itype>();
-    if (!w)
-        return RibbonStyle::ThreeRowLoose;
-    return fromSarRibbonStyle(w->currentRibbonStyle());
-}
-
-void RibbonBar::minimumMode(bool on)
-{
-    auto w = impl<itype>();
-    if (w)
-        w->setMinimumMode(on);
-}
-
-bool RibbonBar::minimumMode() const
-{
-    auto w = impl<itype>();
-    return w && w->isMinimumMode();
-}
-
-void RibbonBar::panelTitleVisible(bool on)
-{
-    auto w = impl<itype>();
-    if (w)
-        w->setEnableShowPanelTitle(on);
-}
-
-bool RibbonBar::panelTitleVisible() const
-{
-    auto w = impl<itype>();
-    return w && w->isEnableShowPanelTitle();
-}
-
-void RibbonBar::wordWrap(bool on)
-{
-    auto w = impl<itype>();
-    if (w)
-        w->setEnableWordWrap(on);
-}
-
-bool RibbonBar::wordWrap() const
-{
-    auto w = impl<itype>();
-    return w && w->isEnableWordWrap();
-}
-
-void RibbonBar::iconRightText(bool on)
-{
-    auto w = impl<itype>();
-    if (w)
-        w->setEnableIconRightText(on);
-}
-
-bool RibbonBar::iconRightText() const
-{
-    auto w = impl<itype>();
-    return w && w->isEnableIconRightText();
+    dptr()->application_menu->addAction(mi->impl<QAction>());
 }
 
 void RibbonBar::applicationButtonVisible(bool on)
@@ -271,6 +205,83 @@ bool RibbonBar::quickAccessVisible() const
 {
     auto* bar = impl<itype>();
     return bar && bar->quickAccessBar() && bar->quickAccessBar()->isVisible();
+}
+
+void RibbonBar::ribbonStyle(RibbonStyle s)
+{
+    auto w = impl<itype>();
+    if (w)
+        w->setRibbonStyle(toSarRibbonStyle(s));
+}
+
+RibbonStyle RibbonBar::ribbonStyle() const
+{
+    auto w = impl<itype>();
+    if (!w)
+        return RibbonStyle::ThreeRowLoose;
+    return fromSarRibbonStyle(w->currentRibbonStyle());
+}
+
+void RibbonBar::minimumMode(bool on)
+{
+    auto w = impl<itype>();
+    if (w)
+        w->setMinimumMode(on);
+}
+
+bool RibbonBar::minimumMode() const
+{
+    auto w = impl<itype>();
+    return w && w->isMinimumMode();
+}
+
+void RibbonBar::panelTitleVisible(bool on)
+{
+    auto w = impl<itype>();
+    if (w)
+        w->setEnableShowPanelTitle(on);
+}
+
+bool RibbonBar::panelTitleVisible() const
+{
+    auto w = impl<itype>();
+    return w && w->isEnableShowPanelTitle();
+}
+
+void RibbonBar::wordWrap(bool on)
+{
+    auto w = impl<itype>();
+    if (w)
+        w->setEnableWordWrap(on);
+}
+
+bool RibbonBar::wordWrap() const
+{
+    auto w = impl<itype>();
+    return w && w->isEnableWordWrap();
+}
+
+void RibbonBar::iconRightText(bool on)
+{
+    auto w = impl<itype>();
+    if (w)
+        w->setEnableIconRightText(on);
+}
+
+bool RibbonBar::iconRightText() const
+{
+    auto w = impl<itype>();
+    return w && w->isEnableIconRightText();
+}
+
+inline auto RibbonBar::dptr() -> Data*
+{
+    return static_cast<Data*>(UIElement::d);
+}
+
+inline auto RibbonBar::dptr() const -> const Data*
+{
+    return static_cast<const Data*>(UIElement::d);
 }
 
 V_APPFWGUI_NS_END

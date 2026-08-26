@@ -1,8 +1,8 @@
 #pragma once
 
 #include "Control.hpp"
-#include "Icon.hpp"
 #include "Gui.hpp"
+#include "Icon.hpp"
 
 #include <vector>
 
@@ -27,7 +27,7 @@ class V_APPFW_API RibbonButton : public Control {
 
   public:
     RibbonButton();
-    virtual ~RibbonButton();
+    ~RibbonButton() override;
 
   public:
     // ---- 文本 ----
@@ -53,7 +53,7 @@ class V_APPFW_API RibbonButton : public Control {
      * \brief 设置按钮尺寸：大 / 中 / 小。
      * \note Medium 由面板行占比体现，按钮本身按小按钮渲染（SARibbon 仅有两档）。
      */
-    void buttonSize(RibbonItemSize s);
+    void           buttonSize(RibbonItemSize s);
     RibbonItemSize buttonSize() const;
 
     // ---- 显示样式 / 图标尺寸 ----
@@ -61,7 +61,7 @@ class V_APPFW_API RibbonButton : public Control {
      * \brief 设置图标与文字的排布（含只显示图标）。
      * \note 大按钮默认即"图标在上、文字在下"，style() 主要对小按钮/特殊排布生效。
      */
-    void style(RibbonButtonStyle s);
+    void              style(RibbonButtonStyle s);
     RibbonButtonStyle style() const;
     /// 设置大按钮图标尺寸（配合 buttonSize(Large) 使用）。
     void largeIconSize(const Size& s);
@@ -103,7 +103,7 @@ class V_APPFW_API RibbonButton : public Control {
 
     // ---- 自定义数据 ----
     /// 绑定用户自定义数据指针（框架不管理其生命周期）。
-    void setData(void* dptr);
+    void  setData(void* dptr);
     void* data() const;
 
   public:

@@ -44,13 +44,11 @@
 DockingPaneTabbedContainer::DockingPaneTabbedContainer(QWidget* parent)
   : DockingPaneContainer(parent)
 {
-    QVBoxLayout* vLayout;
-    QHBoxLayout* hLayout;
 
     m_draggedPane  = nullptr;
     m_floatingGlow = nullptr;
 
-    vLayout = new QVBoxLayout();
+    auto* vLayout = new QVBoxLayout();
 
     m_isActive = false;
 
@@ -61,7 +59,7 @@ DockingPaneTabbedContainer::DockingPaneTabbedContainer(QWidget* parent)
     m_headerWidget->setAccessibleName("headerWidget");
     m_headerWidget->setObjectName("headerWidget");
 
-    hLayout = new QHBoxLayout();
+    auto* hLayout = new QHBoxLayout();
 
     m_titleWidget = new DockingPaneTitleWidget("Widget");
 
@@ -129,28 +127,9 @@ DockingPaneTabbedContainer::~DockingPaneTabbedContainer()
     disconnect(qApp, &QApplication::focusChanged, this, &DockingPaneTabbedContainer::onFocusChanged);
 }
 
-void DockingPaneTabbedContainer::onPinButtonClicked(void)
-{
-    m_dockingManager->hidePane(this);
-}
-
-void DockingPaneTabbedContainer::restoreChildWidgets(void)
-{
-    int             i;
-    QList<QWidget*> widgets;
-
-    for (i = 0; i < m_stackedWidget->count(); i++) {
-        widgets.append(m_stackedWidget->widget(i));
-    }
-
-    for (i = 0; i < m_paneList.count(); i++) {
-        m_paneList.at(i)->setClientWidget(widgets.at(i));
-    }
-}
-
 bool DockingPaneTabbedContainer::addPane(DockingPaneContainer* child)
 {
-    if (DockingPaneTabbedContainer* tabbedPane = qobject_cast<DockingPaneTabbedContainer*>(child)) {
+    if (auto* tabbedPane = qobject_cast<DockingPaneTabbedContainer*>(child)) {
         int                          i;
         QList<DockingPaneContainer*> paneList;
 
@@ -186,472 +165,7 @@ bool DockingPaneTabbedContainer::addPane(DockingPaneContainer* child)
     return (false);
 }
 
-void DockingPaneTabbedContainer::resizeEvent(QResizeEvent*)
-{
-    updateMargins();
-}
-
-void DockingPaneTabbedContainer::paintEvent(QPaintEvent*)
-{
-    int i;
-
-    QPainter p(this);
-
-    QPen pen(DockingPaneTheme::borderColor());
-
-    calculateButtonsRectangles();
-
-    pen.setWidth(1);
-
-    p.setPen(pen);
-
-    QRect clientRect = this->rect();
-
-    if (state() == DockingPaneBase::Floating) {
-        p.setPen(DockingPaneTheme::floatingBorderColor());
-        p.drawLine(clientRect.topLeft(), clientRect.topRight());
-        p.drawLine(clientRect.topLeft(), clientRect.bottomLeft());
-        p.drawLine(clientRect.topRight(), clientRect.bottomRight());
-        p.drawLine(clientRect.bottomLeft(), clientRect.bottomRight());
-
-        clientRect.adjust(1, 1, -1, -1);
-    }
-
-    QRect rc = clientRect;
-
-    if (m_paneList.count() > 1) {
-        rc.adjust(0, 0, 0, -(5 + this->fontMetrics().height()));
-    }
-
-    p.drawLine(rc.topLeft(), rc.topRight());
-    p.drawLine(rc.topLeft(), rc.bottomLeft());
-    p.drawLine(rc.topRight(), rc.bottomRight());
-
-    if (m_paneList.count() <= 1) {
-        p.drawLine(rc.bottomLeft(), rc.bottomRight());
-
-        return;
-    }
-
-    QFont f = this->font();
-
-    p.setFont(f);
-
-    QFontMetrics fm(f);
-
-    int x = 0;
-
-    QRect tr = rc;
-
-    for (i = 0; i < m_tabWidths.count(); i++) {
-        p.setRenderHint(QPainter::Antialiasing, true);
-
-        tr.setLeft(x);
-        tr.setTop(rc.bottom());
-        tr.setRight(x + m_tabWidths.at(i));
-        tr.setBottom(clientRect.bottom());
-
-        p.setPen(DockingPaneTheme::titleTextColor(false));
-        p.setRenderHint(QPainter::Antialiasing, true);
-        p.drawText(tr, Qt::AlignHCenter | Qt::AlignVCenter, fm.elidedText(m_paneList.at(i)->name(), Qt::ElideRight, tr.width()));
-
-        p.setRenderHint(QPainter::Antialiasing, false);
-        p.setPen(pen);
-
-        if (m_stackedWidget->currentIndex() == i) {
-            p.drawLine(tr.topLeft(), tr.bottomLeft());
-            p.drawLine(tr.bottomLeft(), tr.bottomRight());
-            p.drawLine(tr.bottomRight(), tr.topRight());
-        }
-        else {
-            p.drawLine(tr.topLeft(), tr.topRight());
-        }
-
-        x += m_tabWidths.at(i);
-    }
-
-    p.drawLine(tr.topRight(), rc.bottomRight());
-}
-
-void DockingPaneTabbedContainer::calculateButtonsRectangles(void)
-{
-    int availableWidth, currentIndex;
-    int tabGap = 5, i;
-
-    QFontMetrics fm = this->fontMetrics();
-
-    m_tabWidths.clear();
-
-    if (m_paneList.isEmpty()) {
-        return;
-    }
-
-    availableWidth = this->rect().width();
-
-    currentIndex = m_stackedWidget->currentIndex();
-
-    if (currentIndex == 0) {
-        int selectedWidth = (fm.horizontalAdvance(m_paneList.at(currentIndex)->name()) + (tabGap * 2));
-        int spaceAfter    = availableWidth - selectedWidth;
-        int requiredSpace = 0;
-
-        for (i = 1; i < m_paneList.count(); i++) {
-            requiredSpace += fm.horizontalAdvance(m_paneList.at(i)->name()) + (tabGap * 2);
-        }
-
-        m_tabWidths.append(selectedWidth);
-
-        if (requiredSpace > spaceAfter) {
-            int itemSpace;
-
-            if (m_paneList.count() > 1) {
-                itemSpace = spaceAfter / (m_paneList.count() - 1);
-
-                for (i = 1; i < m_paneList.count(); i++) {
-                    m_tabWidths.append(itemSpace);
-                }
-            }
-        }
-        else {
-            for (i = 1; i < m_paneList.count(); i++) {
-                m_tabWidths.append(fm.horizontalAdvance(m_paneList.at(i)->name()) + (tabGap * 2));
-            }
-        }
-
-        return;
-    }
-
-    if (m_stackedWidget->currentIndex() == m_stackedWidget->count() - 1) {
-        int selectedWidth = (fm.horizontalAdvance(m_paneList.at(currentIndex)->name()) + (tabGap * 2));
-        int spaceBefore   = availableWidth - selectedWidth;
-        int requiredSpace = 0;
-
-        for (i = 0; i < m_paneList.count() - 1; i++) {
-            requiredSpace += fm.horizontalAdvance(m_paneList.at(i)->name()) + (tabGap * 2);
-        }
-
-        if (requiredSpace > spaceBefore) {
-            int itemSpace;
-
-            itemSpace = spaceBefore / (m_paneList.count() - 1);
-
-            for (i = 0; i < m_paneList.count() - 1; i++) {
-                m_tabWidths.append(itemSpace);
-            }
-        }
-        else {
-            for (i = 0; i < m_paneList.count() - 1; i++) {
-                m_tabWidths.append(fm.horizontalAdvance(m_paneList.at(i)->name()) + (tabGap * 2));
-            }
-        }
-
-        m_tabWidths.append(selectedWidth);
-
-        return;
-    }
-
-    int selectedWidth    = (fm.horizontalAdvance(m_paneList.at(currentIndex)->name()) + (tabGap * 2));
-    int spaceBeforeAfter = availableWidth - selectedWidth;
-    int requiredSpace    = 0;
-
-    for (i = 0; i < m_paneList.count(); i++) {
-        if (i != currentIndex) {
-            requiredSpace += fm.horizontalAdvance(m_paneList.at(i)->name()) + (tabGap * 2);
-        }
-    }
-
-    if (requiredSpace > spaceBeforeAfter) {
-        int itemSpace;
-
-        itemSpace = spaceBeforeAfter / (m_paneList.count() - 1);
-
-        for (i = 0; i < m_paneList.count(); i++) {
-            if (i == currentIndex) {
-                m_tabWidths.append(selectedWidth);
-            }
-            else {
-                m_tabWidths.append(itemSpace);
-            }
-        }
-    }
-    else {
-        for (i = 0; i < m_paneList.count(); i++) {
-            if (i == currentIndex) {
-                m_tabWidths.append(selectedWidth);
-            }
-            else {
-                m_tabWidths.append(fm.horizontalAdvance(m_paneList.at(i)->name()) + (tabGap * 2));
-            }
-        }
-    }
-}
-
-void DockingPaneTabbedContainer::mousePressEvent(QMouseEvent* e)
-{
-    QRect buttonRect;
-    int   x = 0, i;
-
-    if (e->button() == Qt::LeftButton) {
-        calculateButtonsRectangles();
-
-        buttonRect.setTop(this->rect().bottom() - (5 + this->fontMetrics().height()));
-        buttonRect.setBottom(this->rect().bottom());
-
-        for (i = 0; i < m_tabWidths.count(); i++) {
-            buttonRect.setLeft(x);
-            buttonRect.setRight(x + m_tabWidths.at(i));
-
-            if (buttonRect.contains(e->pos())) {
-                m_fromMousePressEvent = true;
-
-                e->accept();
-
-                m_stackedWidget->setCurrentIndex(i);
-
-                grabMouse();
-
-                setName(m_paneList.at(i)->name());
-
-                // Keep the close button in sync with the newly selected tab's
-                // closability (setVisiblePane() does this for the programmatic
-                // path; tab clicks must do the same).
-                syncFeaturesFromCurrentPane();
-
-                update();
-
-                m_clientWidget->setFocus();
-
-                m_invalidTabRect = QRect();
-
-                m_originalClickPos = mapToGlobal(e->pos());
-
-                return;
-            }
-
-            x += m_tabWidths.at(i);
-        }
-    }
-}
-
-void DockingPaneTabbedContainer::mouseReleaseEvent(QMouseEvent* e)
-{
-    m_fromMousePressEvent = false;
-
-    if (e->button() == Qt::LeftButton) {
-        if (m_draggedPane) {
-            dockingManager()->floatingPaneEndMove(m_draggedPane, this->mapToGlobal(e->pos()));
-        }
-
-        m_draggedPane = nullptr;
-
-        releaseMouse();
-
-        e->accept();
-
-        if (m_paneList.isEmpty()) {
-            hide();
-
-            dockingManager()->deletePane(this);
-
-            return;
-        }
-
-        if (m_paneList.count() <= 1) {
-            restoreChildWidgets();
-
-            if (state() == DockingPaneBase::Floating) {
-                m_paneList.at(0)->move(this->pos());
-                m_paneList.at(0)->resize(this->size());
-
-                if (m_floatingGlow) {
-                    delete m_floatingGlow;
-                    m_floatingGlow = nullptr;
-                }
-            }
-            else {
-                dockingManager()->replacePane(this, m_paneList.at(0));
-            }
-
-            if (state() == DockingPaneBase::Floating) {
-                m_paneList.at(0)->floatPane(m_paneList.at(0)->rect());
-            }
-
-            m_paneList.at(0)->show();
-
-            if (m_paneList.at(0)->floatingGlow()) {
-                m_paneList.at(0)->floatingGlow()->update();
-            }
-
-            m_paneList.clear();
-
-            hide();
-
-            dockingManager()->deletePane(this);
-        }
-    }
-}
-
-QRect DockingPaneTabbedContainer::getButtonRect(int pos)
-{
-    QRect buttonRect;
-    int   i;
-    int   x = 0;
-
-    buttonRect.setTop(this->rect().bottom() - (5 + this->fontMetrics().height()));
-    buttonRect.setBottom(this->rect().bottom());
-
-    for (i = 0; i < m_tabWidths.count(); i++) {
-        buttonRect.setLeft(x);
-        buttonRect.setRight(x + m_tabWidths.at(i));
-
-        if (i == pos) {
-            return (buttonRect);
-        }
-
-        x += m_tabWidths.at(i);
-    }
-
-    return (QRect());
-}
-
-void DockingPaneTabbedContainer::mouseMoveEvent(QMouseEvent* e)
-{
-    QRect tabRect;
-
-    if (!m_fromMousePressEvent) {
-        return;
-    }
-
-    tabRect = this->rect();
-
-    tabRect.setTop(this->rect().bottom() - (5 + this->fontMetrics().height()));
-
-    tabRect.adjust(-10, -10, 10, 10);
-
-    if (!m_draggedPane) {
-        if (!tabRect.contains(e->pos())) {
-            QWidget* widget;
-
-            QPoint deltaPos = mapFromGlobal(m_originalClickPos);
-
-            QPoint pos = mapToGlobal(this->rect().topLeft());
-
-            int currentIndex = m_stackedWidget->currentIndex();
-
-            m_initialPos = this->mapToGlobal(e->pos());
-
-            m_draggedPane = m_paneList.at(currentIndex);
-
-            widget = m_stackedWidget->currentWidget();
-
-            m_draggedPane->setClientWidget(widget);
-            m_paneList.removeAt(currentIndex);
-            m_stackedWidget->removeWidget(widget);
-
-            updateMargins();
-
-            update();
-
-            setName(m_paneList.at(m_stackedWidget->currentIndex())->name());
-
-            m_draggedPane->resize(this->size());
-
-            m_draggedPane->move(pos);
-            m_draggedPane->floatPane(QPoint(-deltaPos.x(), -10));
-
-            // Reposition the floating pane under the mouse cursor.
-            // floatPane(QPoint) internally calls mapToGlobal(0,0)→translate,
-            // which places the panel at 'pos' offset by -deltaPos.  For the
-            // second (and subsequent) tabs this offset is different because
-            // deltaPos contains the tab-label's local X.  We correct that
-            // here by moving the panel so its title bar sits at the cursor.
-            QPoint grabGlobal = mapToGlobal(e->pos());
-            m_draggedPane->move(grabGlobal - QPoint(0, 10));
-
-            m_initialPos = grabGlobal;
-
-            dockingManager()->floatingPaneStartMove(m_draggedPane, m_initialPos);
-        }
-        else {
-            QRect buttonRect;
-            int   i, x = 0;
-
-            calculateButtonsRectangles();
-
-            buttonRect.setTop(this->rect().bottom() - (5 + this->fontMetrics().height()));
-            buttonRect.setBottom(this->rect().bottom());
-
-            for (i = 0; i < m_tabWidths.count(); i++) {
-                buttonRect.setLeft(x);
-                buttonRect.setRight(x + m_tabWidths.at(i));
-
-                buttonRect.adjust(1, 0, 0, -1);
-
-                if (buttonRect.contains(e->pos())) {
-                    if (i != m_stackedWidget->currentIndex()) {
-                        if (!m_invalidTabRect.isValid() || (m_invalidTabRect.isValid() && (!m_invalidTabRect.contains(e->pos())))) {
-                            QRect newRect;
-                            int   oldIndex;
-
-                            oldIndex = m_stackedWidget->currentIndex();
-
-                            std::swap(m_paneList[m_stackedWidget->currentIndex()], m_paneList[i]);
-                            // m_paneList.swap(m_stackedWidget->currentIndex(), i);
-                            m_stackedWidget->insertWidget(i, m_stackedWidget->currentWidget());
-                            m_stackedWidget->setCurrentIndex(i);
-
-                            update();
-
-                            calculateButtonsRectangles();
-
-                            newRect = getButtonRect(i);
-
-                            if (newRect.contains(e->pos())) {
-                                m_invalidTabRect = QRect();
-                            }
-                            else {
-                                if (i < oldIndex) {
-                                    m_invalidTabRect = getButtonRect(i + 1);
-                                    m_invalidTabRect.setLeft(newRect.right());
-                                }
-                                else {
-                                    m_invalidTabRect = getButtonRect(i - 1);
-                                    m_invalidTabRect.setRight(newRect.left());
-                                }
-                            }
-
-                            return;
-                        }
-                    }
-                    else {
-                        m_invalidTabRect = QRect();
-                    }
-                }
-
-                x += m_tabWidths.at(i);
-            }
-        }
-    }
-    else {
-        QPoint newPos;
-
-        newPos = this->mapToGlobal(e->pos());
-
-        QPoint deltaPos = newPos - m_initialPos;
-
-        m_draggedPane->move(m_draggedPane->pos() + deltaPos);
-
-        if (m_draggedPane->floatingGlow()) {
-            m_draggedPane->floatingGlow()->update();
-        }
-
-        m_initialPos = newPos;
-
-        dockingManager()->floatingPaneMoved(m_draggedPane, newPos);
-    }
-}
-
-int DockingPaneTabbedContainer::getPaneCount(void)
+int DockingPaneTabbedContainer::getPaneCount()
 {
     return (m_paneList.count());
 }
@@ -661,106 +175,32 @@ DockingPaneContainer* DockingPaneTabbedContainer::getPane(int index)
     return (m_paneList.at(index));
 }
 
-void DockingPaneTabbedContainer::onUnpinContainer(void)
+void DockingPaneTabbedContainer::saveLayout(QDomNode* parentNode, bool includeGeometry)
 {
-    m_flyoutWidget->close();
+    QDomDocument doc = parentNode->ownerDocument();
 
-    dockingManager()->unpinPane(this);
+    QDomElement domElement = doc.createElement(this->metaObject()->className());
 
-    m_flyoutWidget = nullptr;
-}
+    domElement.setAttribute("id", this->id());
+    domElement.setAttribute("selectedTab", this->m_paneList[this->m_stackedWidget->currentIndex()]->id());
 
-void DockingPaneTabbedContainer::onCloseContainer(void)
-{
-    QWidget*              clientWidget = m_flyoutWidget->clientWidget();
-    DockingPaneContainer* pane = m_flyoutWidget->pane();
-
-    m_flyoutWidget->beginDrag();
-
-    pane->setClientWidget(clientWidget);
-
-    m_paneList.removeOne(pane);
-    m_stackedWidget->removeWidget(pane->clientWidget());
-
-    dockingManager()->removePinnedButton(this, pane);
-
-    if (m_paneList.isEmpty()) {
-        // All panes closed — delete this tabbed container
-        m_flyoutWidget->endDrag();
-        m_flyoutWidget = nullptr;
-        hide();
-        dockingManager()->deletePane(this);
-        return;
+    if (includeGeometry) {
+        domElement.setAttribute("geometry", (QString)this->saveGeometry().toBase64());
     }
 
-    updateMargins();
-    update();
+    QDomElement panesElement = doc.createElement("panes");
 
-    setName(m_paneList.at(m_stackedWidget->currentIndex())->name());
+    domElement.appendChild(panesElement);
 
-    if (m_paneList.count() <= 1) {
-        restoreChildWidgets();
+    foreach (DockingPaneContainer* pane, m_paneList) {
+        QDomElement paneElement = doc.createElement("pane");
 
-        dockingManager()->updateAutohideButton(this, m_paneList.at(0), m_paneList.at(0), m_paneList.at(0));
+        paneElement.setAttribute("id", pane->id());
 
-        m_paneList.at(0)->setState(DockingPaneBase::Pinned);
-
-        m_paneList.clear();
-
-        hide();
-
-        dockingManager()->deletePane(this);
-
-        // Note: deletePane(this) destroys this object;
-        // flyout cleanup was handled before the delete
-        return;
+        panesElement.appendChild(paneElement);
     }
 
-    m_flyoutWidget->endDrag();
-    m_flyoutWidget = nullptr;
-}
-
-void DockingPaneTabbedContainer::onStartDragTitle(QPoint pos)
-{
-    m_dockingManager->floatingPaneStartMove(this, pos);
-
-    m_initialPos = pos;
-}
-
-void DockingPaneTabbedContainer::onEndDragTitle(QPoint pos)
-{
-    m_dockingManager->floatingPaneEndMove(this, pos);
-}
-
-void DockingPaneTabbedContainer::onMoveDragTitle(QPoint pos)
-{
-    QPoint deltaPos = pos - m_initialPos;
-
-    if (state() == DockingPaneBase::Floating) {
-        move(this->pos() + deltaPos);
-
-        if (m_floatingGlow) {
-            m_floatingGlow->update();
-        }
-
-        m_initialPos = pos;
-
-        m_dockingManager->floatingPaneMoved(this, pos);
-    }
-    else {
-        double trueLength = sqrt(pow(deltaPos.x(), 2) + pow(deltaPos.y(), 2));
-
-        if (trueLength > 5) {
-            floatPane(deltaPos);
-
-            m_initialPos = pos;
-
-            m_dockingManager->floatingPaneStartMove(this, pos);
-
-            // floatPane() 重建了原生窗口, 鼠标抓取随窗口重建释放; 重新抓取以继续拖动
-            m_titleWidget->reacquireGrab();
-        }
-    }
+    parentNode->appendChild(domElement);
 }
 
 DockingPaneFlyoutWidget* DockingPaneTabbedContainer::openFlyout(bool hasFocus, QWidget* parent, FlyoutPosition pos, DockingPaneContainer* pane)
@@ -768,7 +208,7 @@ DockingPaneFlyoutWidget* DockingPaneTabbedContainer::openFlyout(bool hasFocus, Q
     m_flyoutWidget = new DockingPaneFlyoutWidget(hasFocus,
                                                  this,
                                                  pane,
-                                                 (DockingPaneFlyoutWidget::FlyoutPosition)pos,
+                                                 static_cast<DockingPaneFlyoutWidget::FlyoutPosition>(pos),
                                                  m_stackedWidget->widget(m_paneList.indexOf(pane)),
                                                  parent);
 
@@ -781,124 +221,6 @@ DockingPaneFlyoutWidget* DockingPaneTabbedContainer::openFlyout(bool hasFocus, Q
     m_flyoutWidget->show();
 
     return (m_flyoutWidget);
-}
-
-void DockingPaneTabbedContainer::onStartDragFlyoutTitle(QPoint pos)
-{
-    m_draggedPane = nullptr;
-
-    dockingManager()->floatingPaneStartMove(m_flyoutWidget->pane(), pos);
-
-    m_initialPos = pos;
-
-    m_draggingFlyout = false;
-}
-
-void DockingPaneTabbedContainer::onEndDragFlyoutTitle(QPoint pos)
-{
-    dockingManager()->floatingPaneEndMove(m_flyoutWidget->pane(), pos);
-
-    if (m_paneList.count() <= 1) {
-        restoreChildWidgets();
-
-        if (!m_paneList.isEmpty()) {
-            dockingManager()->updateAutohideButton(this, m_paneList.at(0), m_paneList.at(0), m_paneList.at(0));
-        }
-
-        m_paneList.clear();
-
-        m_draggedPane = nullptr;
-
-        m_flyoutWidget->endDrag();
-        m_flyoutWidget = nullptr;
-
-        hide();
-
-        dockingManager()->deletePane(this);
-
-        // deletePane(this) 已调度本对象销毁, 之后不要再访问成员
-        return;
-    }
-
-    m_draggedPane = nullptr;
-
-    m_flyoutWidget->endDrag();
-
-    m_flyoutWidget = nullptr;
-}
-
-void DockingPaneTabbedContainer::onMoveDragFlyoutTitle(QPoint pos)
-{
-    QPoint deltaPos = pos - m_initialPos;
-
-    if (m_draggedPane) {
-        m_draggedPane->move(m_draggedPane->pos() + deltaPos);
-
-        if (m_draggedPane->floatingGlow()) {
-            m_draggedPane->floatingGlow()->update();
-        }
-
-        m_initialPos = pos;
-
-        dockingManager()->floatingPaneMoved(m_draggedPane, pos);
-    }
-    else {
-        double trueLength = sqrt(pow(deltaPos.x(), 2) + pow(deltaPos.y(), 2));
-
-        if (trueLength > 5) {
-            QWidget* clientWidget = m_flyoutWidget->clientWidget();
-            QSize    size         = m_flyoutWidget->paneRect().size();
-
-            deltaPos = m_flyoutWidget->mapFromGlobal(m_initialPos);
-
-            QPoint pos = m_flyoutWidget->paneRect().topLeft();
-
-            m_flyoutWidget->beginDrag();
-
-            m_draggedPane = m_flyoutWidget->pane();
-
-            m_draggedPane->setClientWidget(clientWidget);
-
-            m_paneList.removeOne(m_draggedPane);
-            m_stackedWidget->removeWidget(m_draggedPane->clientWidget());
-
-            updateMargins();
-
-            update();
-
-            if (!m_paneList.isEmpty()) {
-                int idx = m_stackedWidget->currentIndex();
-                setName(m_paneList.at(idx < m_paneList.count() ? idx : 0)->name());
-            }
-
-            dockingManager()->removePinnedButton(this, m_draggedPane);
-
-            m_draggedPane->move(pos);
-
-            m_draggedPane->floatPane(-deltaPos);
-
-            m_draggedPane->resize(size);
-
-            m_initialPos = pos;
-
-            dockingManager()->floatingPaneStartMove(m_draggedPane, pos);
-
-            // flyout 已隐藏且鼠标抓取随隐藏释放, moveDragFlyoutTitle 不再触发;
-            // 由被拖出的 pane 的标题接管抓取, 让转浮动后的拖动继续
-            m_draggedPane->continueDrag(pos);
-        }
-    }
-}
-
-void DockingPaneTabbedContainer::onFocusChanged(QWidget*, QWidget* now)
-{
-    this->setActivePane(this->isAncestorOf(now));
-
-    if (now == m_stackedWidget) {
-        if (m_stackedWidget->currentWidget()) {
-            m_stackedWidget->currentWidget()->setFocus();
-        }
-    }
 }
 
 void DockingPaneTabbedContainer::setClientWidget(QWidget* widget)
@@ -921,20 +243,38 @@ void DockingPaneTabbedContainer::setClientWidget(QWidget* widget)
     }
 }
 
-void DockingPaneTabbedContainer::updateMargins(void)
+void DockingPaneTabbedContainer::restoreChildWidgets()
 {
-    int framePixels = 1;
-    int tabSize     = 0;
+    int             i;
+    QList<QWidget*> widgets;
 
-    if (m_paneList.count() > 1) {
-        tabSize = 5 + this->fontMetrics().height();
+    for (i = 0; i < m_stackedWidget->count(); i++) {
+        widgets.append(m_stackedWidget->widget(i));
     }
 
-    if (state() == DockingPaneBase::Floating) {
-        framePixels++;
+    for (i = 0; i < m_paneList.count(); i++) {
+        m_paneList.at(i)->setClientWidget(widgets.at(i));
     }
+}
 
-    this->layout()->setContentsMargins(framePixels, framePixels, framePixels, tabSize + framePixels);
+void DockingPaneTabbedContainer::setVisiblePane(DockingPaneContainer* pane)
+{
+    if (m_paneList.contains(pane)) {
+        m_stackedWidget->setCurrentIndex(m_paneList.indexOf(pane));
+
+        setName(m_paneList.at(m_paneList.indexOf(pane))->name());
+
+        syncFeaturesFromCurrentPane();
+
+        update();
+
+        m_stackedWidget->currentWidget()->setFocus();
+    }
+}
+
+bool DockingPaneTabbedContainer::containsPane(DockingPaneContainer* pane)
+{
+    return (m_paneList.contains(pane));
 }
 
 void DockingPaneTabbedContainer::closePane(DockingPaneContainer* pane)
@@ -1007,61 +347,711 @@ void DockingPaneTabbedContainer::closePane(DockingPaneContainer* pane)
     }
 }
 
-void DockingPaneTabbedContainer::onCloseButtonClicked(void)
+void DockingPaneTabbedContainer::paintEvent(QPaintEvent*)
+{
+
+    QPainter p(this);
+
+    QPen pen(DockingPaneTheme::borderColor());
+
+    calculateButtonsRectangles();
+
+    pen.setWidth(1);
+
+    p.setPen(pen);
+
+    QRect clientRect = this->rect();
+
+    if (state() == Floating) {
+        p.setPen(DockingPaneTheme::floatingBorderColor());
+        p.drawLine(clientRect.topLeft(), clientRect.topRight());
+        p.drawLine(clientRect.topLeft(), clientRect.bottomLeft());
+        p.drawLine(clientRect.topRight(), clientRect.bottomRight());
+        p.drawLine(clientRect.bottomLeft(), clientRect.bottomRight());
+
+        clientRect.adjust(1, 1, -1, -1);
+    }
+
+    QRect rc = clientRect;
+
+    if (m_paneList.count() > 1) {
+        rc.adjust(0, 0, 0, -(5 + this->fontMetrics().height()));
+    }
+
+    p.drawLine(rc.topLeft(), rc.topRight());
+    p.drawLine(rc.topLeft(), rc.bottomLeft());
+    p.drawLine(rc.topRight(), rc.bottomRight());
+
+    if (m_paneList.count() <= 1) {
+        p.drawLine(rc.bottomLeft(), rc.bottomRight());
+
+        return;
+    }
+
+    const QFont f = this->font();
+
+    p.setFont(f);
+
+    const QFontMetrics fm(f);
+
+    int x = 0;
+
+    QRect tr = rc;
+
+    for (int i = 0; i < m_tabWidths.count(); i++) {
+        p.setRenderHint(QPainter::Antialiasing, true);
+
+        tr.setLeft(x);
+        tr.setTop(rc.bottom());
+        tr.setRight(x + m_tabWidths.at(i));
+        tr.setBottom(clientRect.bottom());
+
+        p.setPen(DockingPaneTheme::titleTextColor(false));
+        p.setRenderHint(QPainter::Antialiasing, true);
+        p.drawText(tr, Qt::AlignHCenter | Qt::AlignVCenter, fm.elidedText(m_paneList.at(i)->name(), Qt::ElideRight, tr.width()));
+
+        p.setRenderHint(QPainter::Antialiasing, false);
+        p.setPen(pen);
+
+        if (m_stackedWidget->currentIndex() == i) {
+            p.drawLine(tr.topLeft(), tr.bottomLeft());
+            p.drawLine(tr.bottomLeft(), tr.bottomRight());
+            p.drawLine(tr.bottomRight(), tr.topRight());
+        }
+        else {
+            p.drawLine(tr.topLeft(), tr.topRight());
+        }
+
+        x += m_tabWidths.at(i);
+    }
+
+    p.drawLine(tr.topRight(), rc.bottomRight());
+}
+
+void DockingPaneTabbedContainer::mousePressEvent(QMouseEvent* e)
+{
+    QRect buttonRect;
+    int   x = 0;
+
+    if (e->button() == Qt::LeftButton) {
+        calculateButtonsRectangles();
+
+        buttonRect.setTop(this->rect().bottom() - (5 + this->fontMetrics().height()));
+        buttonRect.setBottom(this->rect().bottom());
+
+        for (int i = 0; i < m_tabWidths.count(); i++) {
+            buttonRect.setLeft(x);
+            buttonRect.setRight(x + m_tabWidths.at(i));
+
+            if (buttonRect.contains(e->pos())) {
+                m_fromMousePressEvent = true;
+
+                e->accept();
+
+                m_stackedWidget->setCurrentIndex(i);
+
+                grabMouse();
+
+                setName(m_paneList.at(i)->name());
+
+                // Keep the close button in sync with the newly selected tab's
+                // closability (setVisiblePane() does this for the programmatic
+                // path; tab clicks must do the same).
+                syncFeaturesFromCurrentPane();
+
+                update();
+
+                m_clientWidget->setFocus();
+
+                m_invalidTabRect = QRect();
+
+                m_originalClickPos = mapToGlobal(e->pos());
+
+                return;
+            }
+
+            x += m_tabWidths.at(i);
+        }
+    }
+}
+
+void DockingPaneTabbedContainer::mouseReleaseEvent(QMouseEvent* event)
+{
+    m_fromMousePressEvent = false;
+
+    if (event->button() == Qt::LeftButton) {
+        if (m_draggedPane) {
+            dockingManager()->floatingPaneEndMove(m_draggedPane, this->mapToGlobal(event->pos()));
+        }
+
+        m_draggedPane = nullptr;
+
+        releaseMouse();
+
+        event->accept();
+
+        if (m_paneList.isEmpty()) {
+            hide();
+
+            dockingManager()->deletePane(this);
+
+            return;
+        }
+
+        if (m_paneList.count() <= 1) {
+            restoreChildWidgets();
+
+            if (state() == Floating) {
+                m_paneList.at(0)->move(this->pos());
+                m_paneList.at(0)->resize(this->size());
+
+                if (m_floatingGlow) {
+                    delete m_floatingGlow;
+                    m_floatingGlow = nullptr;
+                }
+            }
+            else {
+                dockingManager()->replacePane(this, m_paneList.at(0));
+            }
+
+            if (state() == Floating) {
+                m_paneList.at(0)->floatPane(m_paneList.at(0)->rect());
+            }
+
+            m_paneList.at(0)->show();
+
+            if (m_paneList.at(0)->floatingGlow()) {
+                m_paneList.at(0)->floatingGlow()->update();
+            }
+
+            m_paneList.clear();
+
+            hide();
+
+            dockingManager()->deletePane(this);
+        }
+    }
+}
+
+void DockingPaneTabbedContainer::mouseMoveEvent(QMouseEvent* e)
+{
+
+    if (!m_fromMousePressEvent) {
+        return;
+    }
+
+    QRect tabRect = this->rect();
+
+    tabRect.setTop(this->rect().bottom() - (5 + this->fontMetrics().height()));
+
+    tabRect.adjust(-10, -10, 10, 10);
+
+    if (!m_draggedPane) {
+        if (!tabRect.contains(e->pos())) {
+
+            const QPoint deltaPos = mapFromGlobal(m_originalClickPos);
+
+            const QPoint pos = mapToGlobal(this->rect().topLeft());
+
+            const int currentIndex = m_stackedWidget->currentIndex();
+
+            m_initialPos = this->mapToGlobal(e->pos());
+
+            m_draggedPane = m_paneList.at(currentIndex);
+
+            QWidget* widget = m_stackedWidget->currentWidget();
+
+            m_draggedPane->setClientWidget(widget);
+            m_paneList.removeAt(currentIndex);
+            m_stackedWidget->removeWidget(widget);
+
+            updateMargins();
+
+            update();
+
+            setName(m_paneList.at(m_stackedWidget->currentIndex())->name());
+
+            m_draggedPane->resize(this->size());
+
+            m_draggedPane->move(pos);
+            m_draggedPane->floatPane(QPoint(-deltaPos.x(), -10));
+
+            // Reposition the floating pane under the mouse cursor.
+            // floatPane(QPoint) internally calls mapToGlobal(0,0)→translate,
+            // which places the panel at 'pos' offset by -deltaPos.  For the
+            // second (and subsequent) tabs this offset is different because
+            // deltaPos contains the tab-label's local X.  We correct that
+            // here by moving the panel so its title bar sits at the cursor.
+            const QPoint grabGlobal = mapToGlobal(e->pos());
+            m_draggedPane->move(grabGlobal - QPoint(0, 10));
+
+            m_initialPos = grabGlobal;
+
+            dockingManager()->floatingPaneStartMove(m_draggedPane, m_initialPos);
+        }
+        else {
+            QRect buttonRect;
+            int   x = 0;
+
+            calculateButtonsRectangles();
+
+            buttonRect.setTop(this->rect().bottom() - (5 + this->fontMetrics().height()));
+            buttonRect.setBottom(this->rect().bottom());
+
+            for (int i = 0; i < m_tabWidths.count(); i++) {
+                buttonRect.setLeft(x);
+                buttonRect.setRight(x + m_tabWidths.at(i));
+
+                buttonRect.adjust(1, 0, 0, -1);
+
+                if (buttonRect.contains(e->pos())) {
+                    if (i != m_stackedWidget->currentIndex()) {
+                        if (!m_invalidTabRect.isValid() || (m_invalidTabRect.isValid() && (!m_invalidTabRect.contains(e->pos())))) {
+
+                            const int oldIndex = m_stackedWidget->currentIndex();
+
+                            std::swap(m_paneList[m_stackedWidget->currentIndex()], m_paneList[i]);
+                            // m_paneList.swap(m_stackedWidget->currentIndex(), i);
+                            m_stackedWidget->insertWidget(i, m_stackedWidget->currentWidget());
+                            m_stackedWidget->setCurrentIndex(i);
+
+                            update();
+
+                            calculateButtonsRectangles();
+
+                            const QRect newRect = getButtonRect(i);
+
+                            if (newRect.contains(e->pos())) {
+                                m_invalidTabRect = QRect();
+                            }
+                            else {
+                                if (i < oldIndex) {
+                                    m_invalidTabRect = getButtonRect(i + 1);
+                                    m_invalidTabRect.setLeft(newRect.right());
+                                }
+                                else {
+                                    m_invalidTabRect = getButtonRect(i - 1);
+                                    m_invalidTabRect.setRight(newRect.left());
+                                }
+                            }
+
+                            return;
+                        }
+                    }
+                    else {
+                        m_invalidTabRect = QRect();
+                    }
+                }
+
+                x += m_tabWidths.at(i);
+            }
+        }
+    }
+    else {
+
+        const QPoint newPos = this->mapToGlobal(e->pos());
+
+        const QPoint deltaPos = newPos - m_initialPos;
+
+        m_draggedPane->move(m_draggedPane->pos() + deltaPos);
+
+        if (m_draggedPane->floatingGlow()) {
+            m_draggedPane->floatingGlow()->update();
+        }
+
+        m_initialPos = newPos;
+
+        dockingManager()->floatingPaneMoved(m_draggedPane, newPos);
+    }
+}
+
+void DockingPaneTabbedContainer::resizeEvent(QResizeEvent*)
+{
+    updateMargins();
+}
+
+void DockingPaneTabbedContainer::onStartDragTitle(QPoint pos)
+{
+    m_dockingManager->floatingPaneStartMove(this, pos);
+
+    m_initialPos = pos;
+}
+
+void DockingPaneTabbedContainer::onEndDragTitle(QPoint pos)
+{
+    m_dockingManager->floatingPaneEndMove(this, pos);
+}
+
+void DockingPaneTabbedContainer::onMoveDragTitle(QPoint pos)
+{
+    QPoint deltaPos = pos - m_initialPos;
+
+    if (state() == DockingPaneBase::Floating) {
+        move(this->pos() + deltaPos);
+
+        if (m_floatingGlow) {
+            m_floatingGlow->update();
+        }
+
+        m_initialPos = pos;
+
+        m_dockingManager->floatingPaneMoved(this, pos);
+    }
+    else {
+        double trueLength = sqrt(pow(deltaPos.x(), 2) + pow(deltaPos.y(), 2));
+
+        if (trueLength > 5) {
+            floatPane(deltaPos);
+
+            m_initialPos = pos;
+
+            m_dockingManager->floatingPaneStartMove(this, pos);
+
+            // floatPane() 重建了原生窗口, 鼠标抓取随窗口重建释放; 重新抓取以继续拖动
+            m_titleWidget->reacquireGrab();
+        }
+    }
+}
+
+void DockingPaneTabbedContainer::onStartDragFlyoutTitle(QPoint pos)
+{
+    m_draggedPane = nullptr;
+
+    dockingManager()->floatingPaneStartMove(m_flyoutWidget->pane(), pos);
+
+    m_initialPos = pos;
+
+    m_draggingFlyout = false;
+}
+
+void DockingPaneTabbedContainer::onEndDragFlyoutTitle(QPoint pos)
+{
+    dockingManager()->floatingPaneEndMove(m_flyoutWidget->pane(), pos);
+
+    if (m_paneList.count() <= 1) {
+        restoreChildWidgets();
+
+        if (!m_paneList.isEmpty()) {
+            dockingManager()->updateAutohideButton(this, m_paneList.at(0), m_paneList.at(0), m_paneList.at(0));
+        }
+
+        m_paneList.clear();
+
+        m_draggedPane = nullptr;
+
+        m_flyoutWidget->endDrag();
+        m_flyoutWidget = nullptr;
+
+        hide();
+
+        dockingManager()->deletePane(this);
+
+        // deletePane(this) 已调度本对象销毁, 之后不要再访问成员
+        return;
+    }
+
+    m_draggedPane = nullptr;
+
+    m_flyoutWidget->endDrag();
+
+    m_flyoutWidget = nullptr;
+}
+
+void DockingPaneTabbedContainer::onMoveDragFlyoutTitle(QPoint pos)
+{
+    QPoint deltaPos = pos - m_initialPos;
+
+    if (m_draggedPane) {
+        m_draggedPane->move(m_draggedPane->pos() + deltaPos);
+
+        if (m_draggedPane->floatingGlow()) {
+            m_draggedPane->floatingGlow()->update();
+        }
+
+        m_initialPos = pos;
+
+        dockingManager()->floatingPaneMoved(m_draggedPane, pos);
+    }
+    else {
+        const double trueLength = sqrt(pow(deltaPos.x(), 2) + pow(deltaPos.y(), 2));
+
+        if (trueLength > 5) {
+            QWidget*    clientWidget = m_flyoutWidget->clientWidget();
+            const QSize size         = m_flyoutWidget->paneRect().size();
+
+            deltaPos = m_flyoutWidget->mapFromGlobal(m_initialPos);
+
+            const QPoint top_left_pos = m_flyoutWidget->paneRect().topLeft();
+
+            m_flyoutWidget->beginDrag();
+
+            m_draggedPane = m_flyoutWidget->pane();
+
+            m_draggedPane->setClientWidget(clientWidget);
+
+            m_paneList.removeOne(m_draggedPane);
+            m_stackedWidget->removeWidget(m_draggedPane->clientWidget());
+
+            updateMargins();
+
+            update();
+
+            if (!m_paneList.isEmpty()) {
+                const int idx = m_stackedWidget->currentIndex();
+                setName(m_paneList.at(idx < m_paneList.count() ? idx : 0)->name());
+            }
+
+            dockingManager()->removePinnedButton(this, m_draggedPane);
+
+            m_draggedPane->move(top_left_pos);
+
+            m_draggedPane->floatPane(-deltaPos);
+
+            m_draggedPane->resize(size);
+
+            m_initialPos = top_left_pos;
+
+            dockingManager()->floatingPaneStartMove(m_draggedPane, top_left_pos);
+
+            // flyout 已隐藏且鼠标抓取随隐藏释放, moveDragFlyoutTitle 不再触发;
+            // 由被拖出的 pane 的标题接管抓取, 让转浮动后的拖动继续
+            m_draggedPane->continueDrag(top_left_pos);
+        }
+    }
+}
+
+void DockingPaneTabbedContainer::onCloseButtonClicked()
 {
     int currentIndex = m_stackedWidget->currentIndex();
 
-    if ((currentIndex < 0) || (currentIndex >= m_paneList.count())) { return; }
+    if ((currentIndex < 0) || (currentIndex >= m_paneList.count())) {
+        return;
+    }
 
     closePane(m_paneList.at(currentIndex));
 }
 
-void DockingPaneTabbedContainer::saveLayout(QDomNode* parentNode, bool includeGeometry)
+void DockingPaneTabbedContainer::onPinButtonClicked()
 {
-    QDomDocument doc = parentNode->ownerDocument();
-
-    QDomElement domElement = doc.createElement(this->metaObject()->className());
-
-    domElement.setAttribute("id", this->id());
-    domElement.setAttribute("selectedTab", this->m_paneList[this->m_stackedWidget->currentIndex()]->id());
-
-    if (includeGeometry) {
-        domElement.setAttribute("geometry", (QString)this->saveGeometry().toBase64());
-    }
-
-    QDomElement panesElement = doc.createElement("panes");
-
-    domElement.appendChild(panesElement);
-
-    foreach (DockingPaneContainer* pane, m_paneList) {
-        QDomElement paneElement = doc.createElement("pane");
-
-        paneElement.setAttribute("id", pane->id());
-
-        panesElement.appendChild(paneElement);
-    }
-
-    parentNode->appendChild(domElement);
+    m_dockingManager->hidePane(this);
 }
 
-void DockingPaneTabbedContainer::setVisiblePane(DockingPaneContainer* pane)
+void DockingPaneTabbedContainer::onUnpinContainer()
 {
-    if (m_paneList.contains(pane)) {
-        m_stackedWidget->setCurrentIndex(m_paneList.indexOf(pane));
+    m_flyoutWidget->close();
 
-        setName(m_paneList.at(m_paneList.indexOf(pane))->name());
+    dockingManager()->unpinPane(this);
 
-        syncFeaturesFromCurrentPane();
+    m_flyoutWidget = nullptr;
+}
 
-        update();
+void DockingPaneTabbedContainer::onCloseContainer()
+{
+    QWidget*              clientWidget = m_flyoutWidget->clientWidget();
+    DockingPaneContainer* pane         = m_flyoutWidget->pane();
 
-        m_stackedWidget->currentWidget()->setFocus();
+    m_flyoutWidget->beginDrag();
+
+    pane->setClientWidget(clientWidget);
+
+    m_paneList.removeOne(pane);
+    m_stackedWidget->removeWidget(pane->clientWidget());
+
+    dockingManager()->removePinnedButton(this, pane);
+
+    if (m_paneList.isEmpty()) {
+        // All panes closed — delete this tabbed container
+        m_flyoutWidget->endDrag();
+        m_flyoutWidget = nullptr;
+        hide();
+        dockingManager()->deletePane(this);
+        return;
+    }
+
+    updateMargins();
+    update();
+
+    setName(m_paneList.at(m_stackedWidget->currentIndex())->name());
+
+    if (m_paneList.count() <= 1) {
+        restoreChildWidgets();
+
+        dockingManager()->updateAutohideButton(this, m_paneList.at(0), m_paneList.at(0), m_paneList.at(0));
+
+        m_paneList.at(0)->setState(DockingPaneBase::Pinned);
+
+        m_paneList.clear();
+
+        hide();
+
+        dockingManager()->deletePane(this);
+
+        // Note: deletePane(this) destroys this object;
+        // flyout cleanup was handled before the delete
+        return;
+    }
+
+    m_flyoutWidget->endDrag();
+    m_flyoutWidget = nullptr;
+}
+
+void DockingPaneTabbedContainer::onFocusChanged(QWidget*, QWidget* now)
+{
+    this->setActivePane(this->isAncestorOf(now));
+
+    if (now == m_stackedWidget) {
+        if (m_stackedWidget->currentWidget()) {
+            m_stackedWidget->currentWidget()->setFocus();
+        }
     }
 }
 
-bool DockingPaneTabbedContainer::containsPane(DockingPaneContainer* pane)
+void DockingPaneTabbedContainer::calculateButtonsRectangles()
 {
-    return (m_paneList.contains(pane));
+    constexpr int tabGap = 5;
+    int           i;
+
+    const QFontMetrics fm = this->fontMetrics();
+
+    m_tabWidths.clear();
+
+    if (m_paneList.isEmpty()) {
+        return;
+    }
+
+    const int availableWidth = this->rect().width();
+
+    const int currentIndex = m_stackedWidget->currentIndex();
+
+    if (currentIndex == 0) {
+        const int selectedWidth = (fm.horizontalAdvance(m_paneList.at(currentIndex)->name()) + (tabGap * 2));
+        const int spaceAfter    = availableWidth - selectedWidth;
+        int       requiredSpace = 0;
+
+        for (i = 1; i < m_paneList.count(); i++) {
+            requiredSpace += fm.horizontalAdvance(m_paneList.at(i)->name()) + (tabGap * 2);
+        }
+
+        m_tabWidths.append(selectedWidth);
+
+        if (requiredSpace > spaceAfter) {
+
+            if (m_paneList.count() > 1) {
+                const int itemSpace = spaceAfter / (m_paneList.count() - 1);
+
+                for (i = 1; i < m_paneList.count(); i++) {
+                    m_tabWidths.append(itemSpace);
+                }
+            }
+        }
+        else {
+            for (i = 1; i < m_paneList.count(); i++) {
+                m_tabWidths.append(fm.horizontalAdvance(m_paneList.at(i)->name()) + (tabGap * 2));
+            }
+        }
+
+        return;
+    }
+
+    if (m_stackedWidget->currentIndex() == m_stackedWidget->count() - 1) {
+        const int selectedWidth = (fm.horizontalAdvance(m_paneList.at(currentIndex)->name()) + (tabGap * 2));
+        const int spaceBefore   = availableWidth - selectedWidth;
+        int       requiredSpace = 0;
+
+        for (i = 0; i < m_paneList.count() - 1; i++) {
+            requiredSpace += fm.horizontalAdvance(m_paneList.at(i)->name()) + (tabGap * 2);
+        }
+
+        if (requiredSpace > spaceBefore) {
+
+            const int itemSpace = spaceBefore / (m_paneList.count() - 1);
+
+            for (i = 0; i < m_paneList.count() - 1; i++) {
+                m_tabWidths.append(itemSpace);
+            }
+        }
+        else {
+            for (i = 0; i < m_paneList.count() - 1; i++) {
+                m_tabWidths.append(fm.horizontalAdvance(m_paneList.at(i)->name()) + (tabGap * 2));
+            }
+        }
+
+        m_tabWidths.append(selectedWidth);
+
+        return;
+    }
+
+    const int selectedWidth    = (fm.horizontalAdvance(m_paneList.at(currentIndex)->name()) + (tabGap * 2));
+    const int spaceBeforeAfter = availableWidth - selectedWidth;
+    int       requiredSpace    = 0;
+
+    for (i = 0; i < m_paneList.count(); i++) {
+        if (i != currentIndex) {
+            requiredSpace += fm.horizontalAdvance(m_paneList.at(i)->name()) + (tabGap * 2);
+        }
+    }
+
+    if (requiredSpace > spaceBeforeAfter) {
+
+        const int itemSpace = spaceBeforeAfter / (m_paneList.count() - 1);
+
+        for (i = 0; i < m_paneList.count(); i++) {
+            if (i == currentIndex) {
+                m_tabWidths.append(selectedWidth);
+            }
+            else {
+                m_tabWidths.append(itemSpace);
+            }
+        }
+    }
+    else {
+        for (i = 0; i < m_paneList.count(); i++) {
+            if (i == currentIndex) {
+                m_tabWidths.append(selectedWidth);
+            }
+            else {
+                m_tabWidths.append(fm.horizontalAdvance(m_paneList.at(i)->name()) + (tabGap * 2));
+            }
+        }
+    }
+}
+
+QRect DockingPaneTabbedContainer::getButtonRect(int pos)
+{
+    QRect buttonRect;
+    int   x = 0;
+
+    buttonRect.setTop(this->rect().bottom() - (5 + this->fontMetrics().height()));
+    buttonRect.setBottom(this->rect().bottom());
+
+    for (int i = 0; i < m_tabWidths.count(); i++) {
+        buttonRect.setLeft(x);
+        buttonRect.setRight(x + m_tabWidths.at(i));
+
+        if (i == pos) {
+            return (buttonRect);
+        }
+
+        x += m_tabWidths.at(i);
+    }
+
+    return (QRect());
+}
+
+void DockingPaneTabbedContainer::updateMargins()
+{
+    int framePixels = 1;
+    int tabSize     = 0;
+
+    if (m_paneList.count() > 1) {
+        tabSize = 5 + this->fontMetrics().height();
+    }
+
+    if (state() == DockingPaneBase::Floating) {
+        framePixels++;
+    }
+
+    this->layout()->setContentsMargins(framePixels, framePixels, framePixels, tabSize + framePixels);
 }
 
 void DockingPaneTabbedContainer::syncFeaturesFromCurrentPane()

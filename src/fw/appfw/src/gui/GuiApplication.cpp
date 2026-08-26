@@ -16,7 +16,7 @@ namespace
 {
 
 // Qt < 6.5 does not read the Windows colour scheme, so query it directly.
-bool isSystemDarkMode(void)
+bool isSystemDarkMode()
 {
     QSettings settings(QStringLiteral("HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize"), QSettings::NativeFormat);
 
@@ -34,7 +34,7 @@ namespace
 // neither of which the Wayland platform plugin supports. WSLg exposes both
 // DISPLAY and WAYLAND_DISPLAY and this Qt build prefers Wayland, so force
 // X11/XWayland when running under WSL unless the user chose a platform.
-void selectX11UnderWslg(void)
+void selectX11UnderWslg()
 {
     if (qEnvironmentVariableIsSet("QT_QPA_PLATFORM")) {
         return;
@@ -56,7 +56,7 @@ namespace
 {
 
 // Classic Fusion dark palette (matches the Qt >= 6.5 Fusion dark palette).
-QPalette createDarkPalette(void)
+QPalette createDarkPalette()
 {
     QPalette pal;
     pal.setColor(QPalette::Window, QColor(53, 53, 53));
@@ -76,7 +76,7 @@ QPalette createDarkPalette(void)
 }
 
 // Classic Fusion dark palette (matches the Qt >= 6.5 Fusion dark palette).
-QPalette createLightPalette(void)
+QPalette createLightPalette()
 {
     // 注意: Qt >= 6.5 的 Fusion 标准调色板会跟随系统亮/暗配色,
     // 不能直接用 style()->standardPalette() 当浅色板, 必须显式定义
@@ -99,7 +99,7 @@ QPalette createLightPalette(void)
 }
 
 // 将“系统当前主题”解析为 Theme 枚举值
-Theme resolveSystemTheme(void)
+Theme resolveSystemTheme()
 {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
     return QGuiApplication::styleHints()->colorScheme() == Qt::ColorScheme::Dark ? Theme::Dark : Theme::Light;
@@ -153,6 +153,12 @@ void GuiApplication::init()
     applyTheme(d->theme);
 }
 
+int GuiApplication::run()
+{
+    const auto* d = static_cast<GuiApplicationData*>(dptr());
+    return d->app->exec();
+}
+
 void GuiApplication::setTheme(Theme theme)
 {
     auto* d = static_cast<GuiApplicationData*>(dptr());
@@ -201,12 +207,6 @@ void GuiApplication::applyTheme(Theme theme)
     else {
         d->app->setPalette(createLightPalette());
     }
-}
-
-int GuiApplication::run()
-{
-    const auto* d = static_cast<GuiApplicationData*>(dptr());
-    return d->app->exec();
 }
 
 V_APPFWGUI_NS_END

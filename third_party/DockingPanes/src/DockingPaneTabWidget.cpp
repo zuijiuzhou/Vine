@@ -27,7 +27,7 @@ DockingPaneTabWidget::DockingPaneTabWidget(QWidget* parent)
   : QWidget(parent)
   , m_stackedWidget(new QStackedWidget())
 {
-    QGridLayout* layout = new QGridLayout();
+    auto* layout = new QGridLayout();
     layout->addWidget(m_stackedWidget);
     layout->setSpacing(0);
     layout->setContentsMargins(0, 0, 0, 0);

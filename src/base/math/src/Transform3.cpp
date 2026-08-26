@@ -8,142 +8,6 @@ V_MATH_NS_BEGIN
 
 #define TMPL_PREFIX template <typename T, typename Order>
 
-TMPL_PREFIX bool decompose(const Matrix4x4<T, Order>& m, Vector3<T>& t, Quaternion<T>& r, Vector3<T>& s)
-{
-    using namespace math;
-
-    // ---- translation --------------------------------------------------------
-    // Works for any affine matrix: translation, TRS, reflection, projection.
-    // For pure rotation / pure scale this simply reads (0,0,0).
-    t.x = m(0, 3);
-    t.y = m(1, 3);
-    t.z = m(2, 3);
-
-    // ---- reject non-affine --------------------------------------------------
-    // Projection / perspective matrices do not have the [0 0 0 1] bottom row
-    // and cannot be decomposed into TRS.
-    if (!m.isAffine(EPS<T>()))
-        return false;
-
-    // ---- scale --------------------------------------------------------------
-    // Column vectors of the 3×3 upper-left block.
-    //   Pure rotation:              columns are orthonormal → scale = (1,1,1)
-    //   Pure scale:                 columns are axis-aligned → scale = diag
-    //   Rotation × Scale (R·S):     column lengths are the true scale factors
-    //   Reflection (axis-aligned):  column lengths stay 1, the sign is recovered
-    //                               later via the handedness check
-    const Vector3<T> cx(m(0, 0), m(1, 0), m(2, 0));
-    const Vector3<T> cy(m(0, 1), m(1, 1), m(2, 1));
-    const Vector3<T> cz(m(0, 2), m(1, 2), m(2, 2));
-
-    const T col0_len = std::sqrt(cx.length2());
-    const T col1_len = std::sqrt(cy.length2());
-    const T col2_len = std::sqrt(cz.length2());
-
-    s.x = col0_len;
-    s.y = col1_len;
-    s.z = col2_len;
-
-    // ---- reject degenerate --------------------------------------------------
-    // A zero-length column means the matrix collapses a dimension (e.g. zero
-    // scale on an axis).  No meaningful decomposition possible.
-    if (math::isZero(col0_len, EPS<T>()) || math::isZero(col1_len, EPS<T>()) || math::isZero(col2_len, EPS<T>()))
-        return false;
-
-    // ---- normalize columns → orthonormal R ----------------------------------
-    // Dividing each column by its length factors out scale, leaving the
-    // rotation part R.  For pure rotation or reflection this is a no-op
-    // (lengths are already 1).
-    const T inv0 = T(1) / col0_len;
-    const T inv1 = T(1) / col1_len;
-    const T inv2 = T(1) / col2_len;
-
-    T m00 = cx.x * inv0, m10 = cx.y * inv0, m20 = cx.z * inv0;
-    T m01 = cy.x * inv1, m11 = cy.y * inv1, m21 = cy.z * inv1;
-    T m02 = cz.x * inv2, m12 = cz.y * inv2, m22 = cz.z * inv2;
-
-    // ---- reject shear -------------------------------------------------------
-    // After removing scale, columns must be mutually orthogonal.  If not, the
-    // matrix contains shear and cannot be expressed as R·S.
-    if (!math::isZero(m00 * m01 + m10 * m11 + m20 * m21, EPS<T>()) || !math::isZero(m00 * m02 + m10 * m12 + m20 * m22, EPS<T>()) ||
-        !math::isZero(m01 * m02 + m11 * m12 + m21 * m22, EPS<T>()))
-    {
-        r = Quaternion<T>(T(0), T(0), T(0), T(1));
-        return false;
-    }
-
-    // ---- handle reflection --------------------------------------------------
-    // A pure reflection (e.g. scale(-1, 1, 1)) yields an orthonormal matrix
-    // with determinant −1.  The trace method below assumes a right-handed
-    // rotation (det = +1).  We move the minus sign into s.x and flip the
-    // first column so that the remaining matrix is a proper rotation.
-    //   Reflection:          det < 0 → flip sign,    s contains the minus
-    //   Rotation × Reflection:  same handling; handedness check catches it
-    if (!math::isEqual(m00 * (m11 * m22 - m21 * m12) - m10 * (m01 * m22 - m21 * m02) + m20 * (m01 * m12 - m11 * m02), T(1), EPS<T>())) {
-        m00 = -m00;
-        m10 = -m10;
-        m20 = -m20;
-        s.x = -s.x;
-    }
-
-    // ---- rotation: orthonormal matrix → quaternion (trace method) ----------
-    //   trace(R) = 3 - 4(x² + y² + z²) = 4w² - 1  →  w = ½√(1 + trace)
-    //   Similarly, x = ½√(1 + m00 - m11 - m22), etc.
-    //   The largest component is computed first to avoid division by a small
-    //   number; the other three are derived from off-diagonal elements.
-    const auto trace = m00 + m11 + m22;
-
-    Quaternion<T> quat;
-    if (trace > T(0)) {
-        // w is the largest component; compute w first.
-        const auto s = T(2) * std::sqrt(trace + T(1)); // s = 4w
-        quat.w       = T(0.25) * s;                    // w = s/4
-        quat.x       = (m21 - m12) / s;                // x = (m21-m12)/(4w)
-        quat.y       = (m02 - m20) / s;
-        quat.z       = (m10 - m01) / s;
-    }
-    else if (m00 > m11 && m00 > m22) {
-        // x is the largest component; compute x first.
-        const auto s = T(2) * std::sqrt(T(1) + m00 - m11 - m22); // s = 4x
-        quat.w       = (m21 - m12) / s;
-        quat.x       = T(0.25) * s;
-        quat.y       = (m01 + m10) / s; // from m01+m10 = 4xy
-        quat.z       = (m02 + m20) / s;
-    }
-    else if (m11 > m22) {
-        // y is the largest component; compute y first.
-        const auto s = T(2) * std::sqrt(T(1) + m11 - m00 - m22); // s = 4y
-        quat.w       = (m02 - m20) / s;
-        quat.x       = (m01 + m10) / s;
-        quat.y       = T(0.25) * s;
-        quat.z       = (m12 + m21) / s;
-    }
-    else {
-        // z is the largest component; compute z first.
-        const auto s = T(2) * std::sqrt(T(1) + m22 - m00 - m11); // s = 4z
-        quat.w       = (m10 - m01) / s;
-        quat.x       = (m02 + m20) / s;
-        quat.y       = (m12 + m21) / s;
-        quat.z       = T(0.25) * s;
-    }
-
-    // Step 4: Normalize the quaternion to compensate for any accumulated
-    //         floating-point drift in the matrix.
-    const auto q_len2 = quat.x * quat.x + quat.y * quat.y + quat.z * quat.z + quat.w * quat.w;
-    if (math::isZero(q_len2, EPS<T>())) {
-        r = Quaternion<T>(T(0), T(0), T(0), T(1));
-        return false;
-    }
-
-    const auto inv_len = T(1) / std::sqrt(q_len2);
-    quat.x *= inv_len;
-    quat.y *= inv_len;
-    quat.z *= inv_len;
-    quat.w *= inv_len;
-    r = quat;
-    return true;
-}
-
 TMPL_PREFIX Matrix4x4<T, Order> rotate(const Vector3<T>& axis, T angle)
 {
     // Axis-angle → rotation matrix (Rodrigues' formula):
@@ -300,6 +164,142 @@ TMPL_PREFIX Matrix4x4<T, Order> reflect(const Vector3<T>& plane_normal, T plane_
     m(3, 3) = T(1);
 
     return m;
+}
+
+TMPL_PREFIX bool decompose(const Matrix4x4<T, Order>& m, Vector3<T>& t, Quaternion<T>& r, Vector3<T>& s)
+{
+    using namespace math;
+
+    // ---- translation --------------------------------------------------------
+    // Works for any affine matrix: translation, TRS, reflection, projection.
+    // For pure rotation / pure scale this simply reads (0,0,0).
+    t.x = m(0, 3);
+    t.y = m(1, 3);
+    t.z = m(2, 3);
+
+    // ---- reject non-affine --------------------------------------------------
+    // Projection / perspective matrices do not have the [0 0 0 1] bottom row
+    // and cannot be decomposed into TRS.
+    if (!m.isAffine(EPS<T>()))
+        return false;
+
+    // ---- scale --------------------------------------------------------------
+    // Column vectors of the 3×3 upper-left block.
+    //   Pure rotation:              columns are orthonormal → scale = (1,1,1)
+    //   Pure scale:                 columns are axis-aligned → scale = diag
+    //   Rotation × Scale (R·S):     column lengths are the true scale factors
+    //   Reflection (axis-aligned):  column lengths stay 1, the sign is recovered
+    //                               later via the handedness check
+    const Vector3<T> cx(m(0, 0), m(1, 0), m(2, 0));
+    const Vector3<T> cy(m(0, 1), m(1, 1), m(2, 1));
+    const Vector3<T> cz(m(0, 2), m(1, 2), m(2, 2));
+
+    const T col0_len = std::sqrt(cx.length2());
+    const T col1_len = std::sqrt(cy.length2());
+    const T col2_len = std::sqrt(cz.length2());
+
+    s.x = col0_len;
+    s.y = col1_len;
+    s.z = col2_len;
+
+    // ---- reject degenerate --------------------------------------------------
+    // A zero-length column means the matrix collapses a dimension (e.g. zero
+    // scale on an axis).  No meaningful decomposition possible.
+    if (math::isZero(col0_len, EPS<T>()) || math::isZero(col1_len, EPS<T>()) || math::isZero(col2_len, EPS<T>()))
+        return false;
+
+    // ---- normalize columns → orthonormal R ----------------------------------
+    // Dividing each column by its length factors out scale, leaving the
+    // rotation part R.  For pure rotation or reflection this is a no-op
+    // (lengths are already 1).
+    const T inv0 = T(1) / col0_len;
+    const T inv1 = T(1) / col1_len;
+    const T inv2 = T(1) / col2_len;
+
+    T m00 = cx.x * inv0, m10 = cx.y * inv0, m20 = cx.z * inv0;
+    T m01 = cy.x * inv1, m11 = cy.y * inv1, m21 = cy.z * inv1;
+    T m02 = cz.x * inv2, m12 = cz.y * inv2, m22 = cz.z * inv2;
+
+    // ---- reject shear -------------------------------------------------------
+    // After removing scale, columns must be mutually orthogonal.  If not, the
+    // matrix contains shear and cannot be expressed as R·S.
+    if (!math::isZero(m00 * m01 + m10 * m11 + m20 * m21, EPS<T>()) || !math::isZero(m00 * m02 + m10 * m12 + m20 * m22, EPS<T>()) ||
+        !math::isZero(m01 * m02 + m11 * m12 + m21 * m22, EPS<T>()))
+    {
+        r = Quaternion<T>(T(0), T(0), T(0), T(1));
+        return false;
+    }
+
+    // ---- handle reflection --------------------------------------------------
+    // A pure reflection (e.g. scale(-1, 1, 1)) yields an orthonormal matrix
+    // with determinant −1.  The trace method below assumes a right-handed
+    // rotation (det = +1).  We move the minus sign into s.x and flip the
+    // first column so that the remaining matrix is a proper rotation.
+    //   Reflection:          det < 0 → flip sign,    s contains the minus
+    //   Rotation × Reflection:  same handling; handedness check catches it
+    if (!math::isEqual(m00 * (m11 * m22 - m21 * m12) - m10 * (m01 * m22 - m21 * m02) + m20 * (m01 * m12 - m11 * m02), T(1), EPS<T>())) {
+        m00 = -m00;
+        m10 = -m10;
+        m20 = -m20;
+        s.x = -s.x;
+    }
+
+    // ---- rotation: orthonormal matrix → quaternion (trace method) ----------
+    //   trace(R) = 3 - 4(x² + y² + z²) = 4w² - 1  →  w = ½√(1 + trace)
+    //   Similarly, x = ½√(1 + m00 - m11 - m22), etc.
+    //   The largest component is computed first to avoid division by a small
+    //   number; the other three are derived from off-diagonal elements.
+    const auto trace = m00 + m11 + m22;
+
+    Quaternion<T> quat;
+    if (trace > T(0)) {
+        // w is the largest component; compute w first.
+        const auto s = T(2) * std::sqrt(trace + T(1)); // s = 4w
+        quat.w       = T(0.25) * s;                    // w = s/4
+        quat.x       = (m21 - m12) / s;                // x = (m21-m12)/(4w)
+        quat.y       = (m02 - m20) / s;
+        quat.z       = (m10 - m01) / s;
+    }
+    else if (m00 > m11 && m00 > m22) {
+        // x is the largest component; compute x first.
+        const auto s = T(2) * std::sqrt(T(1) + m00 - m11 - m22); // s = 4x
+        quat.w       = (m21 - m12) / s;
+        quat.x       = T(0.25) * s;
+        quat.y       = (m01 + m10) / s; // from m01+m10 = 4xy
+        quat.z       = (m02 + m20) / s;
+    }
+    else if (m11 > m22) {
+        // y is the largest component; compute y first.
+        const auto s = T(2) * std::sqrt(T(1) + m11 - m00 - m22); // s = 4y
+        quat.w       = (m02 - m20) / s;
+        quat.x       = (m01 + m10) / s;
+        quat.y       = T(0.25) * s;
+        quat.z       = (m12 + m21) / s;
+    }
+    else {
+        // z is the largest component; compute z first.
+        const auto s = T(2) * std::sqrt(T(1) + m22 - m00 - m11); // s = 4z
+        quat.w       = (m10 - m01) / s;
+        quat.x       = (m02 + m20) / s;
+        quat.y       = (m12 + m21) / s;
+        quat.z       = T(0.25) * s;
+    }
+
+    // Step 4: Normalize the quaternion to compensate for any accumulated
+    //         floating-point drift in the matrix.
+    const auto q_len2 = quat.x * quat.x + quat.y * quat.y + quat.z * quat.z + quat.w * quat.w;
+    if (math::isZero(q_len2, EPS<T>())) {
+        r = Quaternion<T>(T(0), T(0), T(0), T(1));
+        return false;
+    }
+
+    const auto inv_len = T(1) / std::sqrt(q_len2);
+    quat.x *= inv_len;
+    quat.y *= inv_len;
+    quat.z *= inv_len;
+    quat.w *= inv_len;
+    r = quat;
+    return true;
 }
 
 #undef TMPL_PREFIX

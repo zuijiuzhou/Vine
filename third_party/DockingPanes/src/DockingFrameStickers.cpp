@@ -64,18 +64,36 @@ DockingFrameStickers::DockingFrameStickers(QWidget* parent)
     m_frameBottomSticker = new DockingFrameFrameSticker("frame_bottom", this);
 }
 
-void DockingFrameStickers::paintEvent(QPaintEvent*)
+void DockingFrameStickers::setFrameRect(QRect rect)
 {
-    QPainter p(this);
+    m_frameLeftSticker->move(QPoint(rect.left(), rect.center().y() - (m_frameLeftSticker->height() / 2)));
+    m_frameTopSticker->move(QPoint(rect.center().x() - (m_frameTopSticker->width() / 2), rect.top()));
+    m_frameBottomSticker->move(QPoint(rect.center().x() - (m_frameTopSticker->width() / 2), rect.bottom() - m_frameBottomSticker->height()));
+    m_frameRightSticker->move(QPoint(rect.right() - m_frameRightSticker->width(), rect.center().y() - (m_frameLeftSticker->height() / 2)));
+}
 
-    p.drawImage(m_rcCentre, m_isActive ? m_activeStickers.value(Centre) : m_inactiveStickers.value(Centre));
-    p.drawImage(m_rcLeft, m_isActive ? m_activeStickers.value(Left) : m_inactiveStickers.value(Left));
-    p.drawImage(m_rcRight, m_isActive ? m_activeStickers.value(Right) : m_inactiveStickers.value(Right));
-    p.drawImage(m_rcTop, m_isActive ? m_activeStickers.value(Top) : m_inactiveStickers.value(Top));
-    p.drawImage(m_rcBottom, m_isActive ? m_activeStickers.value(Bottom) : m_inactiveStickers.value(Bottom));
+void DockingFrameStickers::updateCursorPos(QPoint pos)
+{
+    m_frameLeftSticker->updateCursorPos(pos);
+    m_frameRightSticker->updateCursorPos(pos);
+    m_frameTopSticker->updateCursorPos(pos);
+    m_frameBottomSticker->updateCursorPos(pos);
 
-    if (m_tabVisible) {
-        p.drawImage(m_rcTab, m_isActive ? m_activeStickers.value(Tab) : m_inactiveStickers.value(Tab));
+    if ((m_rcLeft.contains(this->mapFromGlobal(pos))) || (m_rcRight.contains(this->mapFromGlobal(pos))) || (m_rcTop.contains(this->mapFromGlobal(pos))) ||
+        (m_rcBottom.contains(this->mapFromGlobal(pos))) || (m_tabVisible && m_rcTab.contains(this->mapFromGlobal(pos))))
+    {
+        if (!m_isActive) {
+            m_isActive = true;
+
+            update();
+        }
+    }
+    else {
+        if (m_isActive) {
+            m_isActive = false;
+
+            update();
+        }
     }
 }
 
@@ -147,6 +165,21 @@ bool DockingFrameStickers::getHit(QPoint pos, DockingFrameStickers::DockingPosit
     return (false);
 }
 
+void DockingFrameStickers::paintEvent(QPaintEvent*)
+{
+    QPainter p(this);
+
+    p.drawImage(m_rcCentre, m_isActive ? m_activeStickers.value(Centre) : m_inactiveStickers.value(Centre));
+    p.drawImage(m_rcLeft, m_isActive ? m_activeStickers.value(Left) : m_inactiveStickers.value(Left));
+    p.drawImage(m_rcRight, m_isActive ? m_activeStickers.value(Right) : m_inactiveStickers.value(Right));
+    p.drawImage(m_rcTop, m_isActive ? m_activeStickers.value(Top) : m_inactiveStickers.value(Top));
+    p.drawImage(m_rcBottom, m_isActive ? m_activeStickers.value(Bottom) : m_inactiveStickers.value(Bottom));
+
+    if (m_tabVisible) {
+        p.drawImage(m_rcTab, m_isActive ? m_activeStickers.value(Tab) : m_inactiveStickers.value(Tab));
+    }
+}
+
 void DockingFrameStickers::hideEvent(QHideEvent*)
 {
     m_frameLeftSticker->hide();
@@ -178,37 +211,4 @@ void DockingFrameStickers::initializeStickersImages()
     m_inactiveStickers.insert(Top, QImage(":/img/docking_bitmaps/window_top_inactive.png"));
     m_inactiveStickers.insert(Bottom, QImage(":/img/docking_bitmaps/window_bottom_inactive.png"));
     m_inactiveStickers.insert(Tab, QImage(":/img/docking_bitmaps/tab.png"));
-}
-
-void DockingFrameStickers::setFrameRect(QRect rect)
-{
-    m_frameLeftSticker->move(QPoint(rect.left(), rect.center().y() - (m_frameLeftSticker->height() / 2)));
-    m_frameTopSticker->move(QPoint(rect.center().x() - (m_frameTopSticker->width() / 2), rect.top()));
-    m_frameBottomSticker->move(QPoint(rect.center().x() - (m_frameTopSticker->width() / 2), rect.bottom() - m_frameBottomSticker->height()));
-    m_frameRightSticker->move(QPoint(rect.right() - m_frameRightSticker->width(), rect.center().y() - (m_frameLeftSticker->height() / 2)));
-}
-
-void DockingFrameStickers::updateCursorPos(QPoint pos)
-{
-    m_frameLeftSticker->updateCursorPos(pos);
-    m_frameRightSticker->updateCursorPos(pos);
-    m_frameTopSticker->updateCursorPos(pos);
-    m_frameBottomSticker->updateCursorPos(pos);
-
-    if ((m_rcLeft.contains(this->mapFromGlobal(pos))) || (m_rcRight.contains(this->mapFromGlobal(pos))) || (m_rcTop.contains(this->mapFromGlobal(pos))) ||
-        (m_rcBottom.contains(this->mapFromGlobal(pos))) || (m_tabVisible && m_rcTab.contains(this->mapFromGlobal(pos))))
-    {
-        if (!m_isActive) {
-            m_isActive = true;
-
-            update();
-        }
-    }
-    else {
-        if (m_isActive) {
-            m_isActive = false;
-
-            update();
-        }
-    }
 }

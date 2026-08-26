@@ -222,6 +222,82 @@ String& String::trimEnd()
     return *this;
 }
 
+std::vector<String> String::split(value_type delimiter, bool keep_empty) const
+{
+    std::vector<String> result;
+    size_type           start = 0;
+
+    while (start <= stdstr_.size()) {
+        const size_type pos = stdstr_.find(delimiter, start);
+        const size_type end = (pos == impl_type::npos) ? stdstr_.size() : pos;
+        const size_type len = end - start;
+
+        if (keep_empty || len > 0) {
+            result.emplace_back(stdstr_.substr(start, len));
+        }
+
+        if (pos == impl_type::npos) {
+            break;
+        }
+        start = pos + 1;
+    }
+
+    return result;
+}
+
+std::vector<String> String::split(const std::initializer_list<value_type>& delimiters, bool keep_empty) const
+{
+    std::vector<String> result;
+    size_type           start = 0;
+
+    auto is_delimiter = [&](value_type ch) -> bool { return std::find(delimiters.begin(), delimiters.end(), ch) != delimiters.end(); };
+
+    for (size_type i = 0; i <= stdstr_.size(); ++i) {
+        const bool at_end    = (i == stdstr_.size());
+        const bool split_now = at_end || is_delimiter(stdstr_[i]);
+
+        if (!split_now) {
+            continue;
+        }
+
+        const size_type len = i - start;
+        if (keep_empty || len > 0) {
+            result.emplace_back(stdstr_.substr(start, len));
+        }
+        start = i + 1;
+    }
+
+    return result;
+}
+
+std::vector<String> String::split(const String& delimiter, bool keep_empty) const
+{
+    if (delimiter.empty()) {
+        return { *this };
+    }
+
+    std::vector<String> result;
+    size_type           start = 0;
+
+    while (start <= stdstr_.size()) {
+        const size_type pos = stdstr_.find(delimiter.stdstr_, start);
+        const size_type end = (pos == impl_type::npos) ? stdstr_.size() : pos;
+        const size_type len = end - start;
+
+        if (keep_empty || len > 0) {
+            result.emplace_back(stdstr_.substr(start, len));
+        }
+
+        if (pos == impl_type::npos) {
+            break;
+        }
+
+        start = pos + delimiter.size();
+    }
+
+    return result;
+}
+
 std::string String::toLocal8Bit() const
 {
 #if defined(_WIN32) || defined(_WIN64)
@@ -392,82 +468,6 @@ String String::fromUtf32(const char32_t* data, size_type count)
     }
 
     return String(std::move(out));
-}
-
-std::vector<String> String::split(value_type delimiter, bool keep_empty) const
-{
-    std::vector<String> result;
-    size_type           start = 0;
-
-    while (start <= stdstr_.size()) {
-        const size_type pos = stdstr_.find(delimiter, start);
-        const size_type end = (pos == impl_type::npos) ? stdstr_.size() : pos;
-        const size_type len = end - start;
-
-        if (keep_empty || len > 0) {
-            result.emplace_back(stdstr_.substr(start, len));
-        }
-
-        if (pos == impl_type::npos) {
-            break;
-        }
-        start = pos + 1;
-    }
-
-    return result;
-}
-
-std::vector<String> String::split(const std::initializer_list<value_type>& delimiters, bool keep_empty) const
-{
-    std::vector<String> result;
-    size_type           start = 0;
-
-    auto is_delimiter = [&](value_type ch) -> bool { return std::find(delimiters.begin(), delimiters.end(), ch) != delimiters.end(); };
-
-    for (size_type i = 0; i <= stdstr_.size(); ++i) {
-        const bool at_end    = (i == stdstr_.size());
-        const bool split_now = at_end || is_delimiter(stdstr_[i]);
-
-        if (!split_now) {
-            continue;
-        }
-
-        const size_type len = i - start;
-        if (keep_empty || len > 0) {
-            result.emplace_back(stdstr_.substr(start, len));
-        }
-        start = i + 1;
-    }
-
-    return result;
-}
-
-std::vector<String> String::split(const String& delimiter, bool keep_empty) const
-{
-    if (delimiter.empty()) {
-        return { *this };
-    }
-
-    std::vector<String> result;
-    size_type           start = 0;
-
-    while (start <= stdstr_.size()) {
-        const size_type pos = stdstr_.find(delimiter.stdstr_, start);
-        const size_type end = (pos == impl_type::npos) ? stdstr_.size() : pos;
-        const size_type len = end - start;
-
-        if (keep_empty || len > 0) {
-            result.emplace_back(stdstr_.substr(start, len));
-        }
-
-        if (pos == impl_type::npos) {
-            break;
-        }
-
-        start = pos + delimiter.size();
-    }
-
-    return result;
 }
 
 V_CORE_NS_END

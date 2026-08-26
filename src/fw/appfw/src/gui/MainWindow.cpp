@@ -63,16 +63,6 @@ void MainWindowImpl::applyAppTheme()
     setRibbonTheme(app->theme() == Theme::Dark ? SARibbonTheme::RibbonThemeDark : SARibbonTheme::RibbonThemeOffice2021Blue);
 }
 
-inline auto MainWindow::dptr() -> Data*
-{
-    return static_cast<Data*>(UIElement::d);
-}
-
-inline auto MainWindow::dptr() const -> const Data*
-{
-    return static_cast<const Data*>(UIElement::d);
-}
-
 MainWindow::MainWindow()
   : Window(new Data(), new MainWindowImpl(nullptr))
 {
@@ -114,6 +104,16 @@ StatusBar* MainWindow::statusBar() const
 DockPanelManager* MainWindow::dockPanelManager() const
 {
     return dptr()->dock_panel_mgr;
+}
+
+inline auto MainWindow::dptr() -> Data*
+{
+    return static_cast<Data*>(UIElement::d);
+}
+
+inline auto MainWindow::dptr() const -> const Data*
+{
+    return static_cast<const Data*>(UIElement::d);
 }
 
 V_APPFWGUI_NS_END

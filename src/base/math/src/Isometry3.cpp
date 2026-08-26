@@ -5,9 +5,13 @@
 
 V_MATH_NS_BEGIN
 
-// ---------------------------------------------------------------------------
-// Inversion
-// ---------------------------------------------------------------------------
+template <typename T>
+void Isometry3<T>::invert()
+{
+    // T = (q, t)  =>  T⁻¹ = (q⁻¹, -q⁻¹ * t)
+    rotation    = rotation.conj();
+    translation = -(rotation * translation);
+}
 
 template <typename T>
 Isometry3<T> Isometry3<T>::inverted() const
@@ -18,18 +22,6 @@ Isometry3<T> Isometry3<T>::inverted() const
     inv.translation = -(inv.rotation * translation);
     return inv;
 }
-
-template <typename T>
-void Isometry3<T>::invert()
-{
-    // T = (q, t)  =>  T⁻¹ = (q⁻¹, -q⁻¹ * t)
-    rotation = rotation.conj();
-    translation = -(rotation * translation);
-}
-
-// ---------------------------------------------------------------------------
-// Translation composition
-// ---------------------------------------------------------------------------
 
 template <typename T>
 Isometry3<T>& Isometry3<T>::preTranslate(const Vector3<T>& dt)
@@ -49,10 +41,6 @@ Isometry3<T>& Isometry3<T>::postTranslate(const Vector3<T>& dt)
     translation.z += rotated.z;
     return *this;
 }
-
-// ---------------------------------------------------------------------------
-// Rotation composition
-// ---------------------------------------------------------------------------
 
 template <typename T>
 Isometry3<T>& Isometry3<T>::preRotate(const Quaternion<T>& quat)
@@ -83,10 +71,6 @@ Isometry3<T>& Isometry3<T>::postRotate(const Vector3<T>& axis, T angle)
     return postRotate(Quaternion<T>(angle, axis));
 }
 
-// ---------------------------------------------------------------------------
-// Transform composition
-// ---------------------------------------------------------------------------
-
 template <typename T>
 Isometry3<T> Isometry3<T>::operator*(const Isometry3<T>& right) const
 {
@@ -107,10 +91,6 @@ Isometry3<T>& Isometry3<T>::operator*=(const Isometry3<T>& right)
     return *this;
 }
 
-// ---------------------------------------------------------------------------
-// Point / vector transformation
-// ---------------------------------------------------------------------------
-
 template <typename T>
 Point3<T> operator*(const Isometry3<T>& t, const Point3<T>& p)
 {
@@ -127,10 +107,6 @@ Vector3<T> operator*(const Isometry3<T>& t, const Vector3<T>& v)
     // v' = q * v  (pure rotation, no translation)
     return t.rotation * v;
 }
-
-// ---------------------------------------------------------------------------
-// Explicit instantiations
-// ---------------------------------------------------------------------------
 
 template class V_MATH_API Isometry3<float>;
 template class V_MATH_API Isometry3<double>;

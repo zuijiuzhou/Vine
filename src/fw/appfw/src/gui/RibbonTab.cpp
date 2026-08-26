@@ -42,13 +42,9 @@ struct RibbonTab::Data : public UIElementData {
     std::vector<RibbonGroup*>  groups;   // 已添加的组（框架层记账，供查询）
 };
 
-inline auto RibbonTab::dptr() -> Data* { return static_cast<Data*>(UIElement::d); }
-inline auto RibbonTab::dptr() const -> const Data* { return static_cast<const Data*>(UIElement::d); }
-
 RibbonTab::RibbonTab()
-    : Control(new Data(), new SARibbonCategory(QString()))
-{
-}
+  : Control(new Data(), new SARibbonCategory(QString()))
+{}
 
 RibbonTab::~RibbonTab()
 {
@@ -58,7 +54,7 @@ RibbonTab::~RibbonTab()
 void RibbonTab::title(const String& t)
 {
     dptr()->title = t;
-    auto* cat = impl<SARibbonCategory>();
+    auto* cat     = impl<SARibbonCategory>();
     if (cat) {
         auto utf16 = t.toUtf16();
         cat->setCategoryName(QString::fromStdU16String(utf16));
@@ -72,8 +68,9 @@ String RibbonTab::title() const
 
 void RibbonTab::addGroup(RibbonGroup* g)
 {
-    if (!g) return;
-    auto p = g->impl<SARibbonPanel>();
+    if (!g)
+        return;
+    auto  p   = g->impl<SARibbonPanel>();
     auto* cat = impl<SARibbonCategory>();
     if (p && cat)
         cat->addPanel(p);
@@ -84,8 +81,9 @@ void RibbonTab::addGroup(RibbonGroup* g)
 
 void RibbonTab::removeGroup(RibbonGroup* g)
 {
-    if (!g) return;
-    auto p = g->impl<SARibbonPanel>();
+    if (!g)
+        return;
+    auto  p   = g->impl<SARibbonPanel>();
     auto* cat = impl<SARibbonCategory>();
     if (p && cat)
         cat->removePanel(p);
@@ -141,6 +139,16 @@ int RibbonTab::panelSpacing() const
 {
     auto* cat = impl<SARibbonCategory>();
     return cat ? cat->panelSpacing() : 0;
+}
+
+inline auto RibbonTab::dptr() -> Data*
+{
+    return static_cast<Data*>(UIElement::d);
+}
+
+inline auto RibbonTab::dptr() const -> const Data*
+{
+    return static_cast<const Data*>(UIElement::d);
 }
 
 V_APPFWGUI_NS_END

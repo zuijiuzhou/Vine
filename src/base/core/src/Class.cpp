@@ -112,6 +112,16 @@ bool Class::isSubclassOf(const Class* cls) const noexcept
     return false;
 }
 
+bool Class::operator==(const Class& right) const noexcept
+{
+    return c_type_ == right.c_type_;
+}
+
+bool Class::operator!=(const Class& right) const noexcept
+{
+    return !(*this == right);
+}
+
 Class* Class::getClass(const std::type_info& c_type)
 {
     std::lock_guard<std::mutex> lock(s_classes_mutex);
@@ -128,16 +138,6 @@ Class* Class::getClass(const String& full_name)
     if (it == s_classes.end())
         return nullptr;
     return *it;
-}
-
-bool Class::operator==(const Class& right) const noexcept
-{
-    return c_type_ == right.c_type_;
-}
-
-bool Class::operator!=(const Class& right) const noexcept
-{
-    return !(*this == right);
 }
 
 V_CORE_NS_END

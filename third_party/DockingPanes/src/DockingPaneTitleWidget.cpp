@@ -26,7 +26,7 @@
 #include "DockingPaneTheme.h"
 #include "DockingPaneTitleWidget.h"
 
-DockingPaneTitleWidget::DockingPaneTitleWidget(QString text, QWidget* parent)
+DockingPaneTitleWidget::DockingPaneTitleWidget(const QString& text, QWidget* parent)
   : QWidget(parent)
   , m_text(text)
   , m_active(false)
@@ -43,10 +43,33 @@ DockingPaneTitleWidget::~DockingPaneTitleWidget()
     disconnect(qApp, &QApplication::focusChanged, this, &DockingPaneTitleWidget::onFocusChanged);
 }
 
-void DockingPaneTitleWidget::resizeEvent(QResizeEvent*)
+void DockingPaneTitleWidget::setText(const QString& text)
 {
-    this->setMinimumHeight(6 + this->fontMetrics().height());
-    this->setMaximumHeight(6 + this->fontMetrics().height());
+    m_text = text;
+}
+
+void DockingPaneTitleWidget::setActive(bool active)
+{
+    m_active = active;
+    update();
+}
+
+void DockingPaneTitleWidget::reacquireGrab()
+{
+    // The grab is lost when the owning window is recreated (docked pane is
+    // floated mid-drag); grab the new window to keep the drag alive.
+    if (m_grabbing) {
+        grabMouse();
+    }
+}
+
+void DockingPaneTitleWidget::takeGrab()
+{
+    // 飞窗拖出转浮动时飞窗被隐藏、抓取释放; 由本标题接管鼠标以继续拖动
+    if (!m_grabbing) {
+        grabMouse();
+        m_grabbing = true;
+    }
 }
 
 void DockingPaneTitleWidget::paintEvent(QPaintEvent*)
@@ -54,17 +77,15 @@ void DockingPaneTitleWidget::paintEvent(QPaintEvent*)
     QPainter p(this);
     QRect    drawnRect;
 
-    int leftMargin, rightMargin;
-
-    leftMargin  = 5;
-    rightMargin = 5;
+    constexpr int leftMargin  = 5;
+    constexpr int rightMargin = 5;
 
     p.setRenderHint(QPainter::Antialiasing, true);
     p.setRenderHint(QPainter::Antialiasing, true);
 
-    QFontMetrics fm(this->font());
+    const QFontMetrics fm(this->font());
 
-    QString elidedText = fm.elidedText(m_text, Qt::ElideRight, width() - 6);
+    const QString elidedText = fm.elidedText(m_text, Qt::ElideRight, width() - 6);
 
     p.setPen(DockingPaneTheme::titleTextColor(m_active));
 
@@ -75,27 +96,34 @@ void DockingPaneTitleWidget::paintEvent(QPaintEvent*)
     }
 }
 
-void DockingPaneTitleWidget::setText(QString text)
+void DockingPaneTitleWidget::changeEvent(QEvent* event)
 {
-    m_text = text;
+    if (event->type() == QEvent::PaletteChange || event->type() == QEvent::ApplicationPaletteChange) {
+        update();
+    }
+
+    QWidget::changeEvent(event);
 }
 
-void DockingPaneTitleWidget::drawPattern(QPainter* p, int x, int y, int w, int h)
+void DockingPaneTitleWidget::resizeEvent(QResizeEvent*)
 {
-    QPixmap pixMap(4, 5);
+    this->setMinimumHeight(6 + this->fontMetrics().height());
+    this->setMaximumHeight(6 + this->fontMetrics().height());
+}
 
-    pixMap.fill(Qt::transparent);
+void DockingPaneTitleWidget::mousePressEvent(QMouseEvent* event)
+{
+    if (event->button() == Qt::LeftButton) {
+        this->setFocus();
 
-    QPainter pp(&pixMap);
+        // Keep receiving mouse events for the whole drag, even when the
+        // cursor moves over the top-level docking indicator overlays.
+        grabMouse();
+        m_grabbing = true;
 
-    pp.setPen(DockingPaneTheme::titlePatternColor(m_active));
-
-    pp.drawPoint(0, 0);
-    pp.drawPoint(0, 4);
-    pp.drawPoint(2, 2);
-
-    p->setBrushOrigin(x, ((y + h) / 2) - 2);
-    p->fillRect(x, ((y + h) / 2) - 2, w, 5, QBrush(pixMap));
+        event->accept();
+        Q_EMIT titleBarStartMove(this->mapToGlobal(event->pos()));
+    }
 }
 
 void DockingPaneTitleWidget::mouseMoveEvent(QMouseEvent* event)
@@ -116,52 +144,22 @@ void DockingPaneTitleWidget::mouseReleaseEvent(QMouseEvent* event)
     }
 }
 
-void DockingPaneTitleWidget::mousePressEvent(QMouseEvent* event)
+void DockingPaneTitleWidget::drawPattern(QPainter* p, int x, int y, int w, int h)
 {
-    if (event->button() == Qt::LeftButton) {
-        this->setFocus();
+    QPixmap pixMap(4, 5);
 
-        // Keep receiving mouse events for the whole drag, even when the
-        // cursor moves over the top-level docking indicator overlays.
-        grabMouse();
-        m_grabbing = true;
+    pixMap.fill(Qt::transparent);
 
-        event->accept();
-        Q_EMIT titleBarStartMove(this->mapToGlobal(event->pos()));
-    }
-}
+    QPainter pp(&pixMap);
 
-void DockingPaneTitleWidget::reacquireGrab(void)
-{
-    // The grab is lost when the owning window is recreated (docked pane is
-    // floated mid-drag); grab the new window to keep the drag alive.
-    if (m_grabbing) {
-        grabMouse();
-    }
-}
+    pp.setPen(DockingPaneTheme::titlePatternColor(m_active));
 
-void DockingPaneTitleWidget::takeGrab(void)
-{
-    // 飞窗拖出转浮动时飞窗被隐藏、抓取释放; 由本标题接管鼠标以继续拖动
-    if (!m_grabbing) {
-        grabMouse();
-        m_grabbing = true;
-    }
-}
+    pp.drawPoint(0, 0);
+    pp.drawPoint(0, 4);
+    pp.drawPoint(2, 2);
 
-void DockingPaneTitleWidget::setActive(bool active)
-{
-    m_active = active;
-    update();
-}
-
-void DockingPaneTitleWidget::changeEvent(QEvent* event)
-{
-    if (event->type() == QEvent::PaletteChange || event->type() == QEvent::ApplicationPaletteChange) {
-        update();
-    }
-
-    QWidget::changeEvent(event);
+    p->setBrushOrigin(x, ((y + h) / 2) - 2);
+    p->fillRect(x, ((y + h) / 2) - 2, w, 5, QBrush(pixMap));
 }
 
 void DockingPaneTitleWidget::onFocusChanged(QWidget*, QWidget* now)

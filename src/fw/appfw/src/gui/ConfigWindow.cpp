@@ -102,13 +102,10 @@ struct ConfigWindow::Data : public UIElementData {
     std::vector<QWidget*> editors;   // 与 registry->items() 顺序一致
 };
 
-inline auto ConfigWindow::dptr() -> Data* { return static_cast<Data*>(Window::d); }
-inline auto ConfigWindow::dptr() const -> const Data* { return static_cast<const Data*>(Window::d); }
-
 ConfigWindow::ConfigWindow(ConfigRegistry* registry, ConfigManager* config)
-    : Window(new Data(), new QDialog())
+  : Window(new Data(), new QDialog())
 {
-    auto* data = dptr();
+    auto* data     = dptr();
     data->registry = registry;
     data->config   = config;
 
@@ -120,7 +117,7 @@ ConfigWindow::ConfigWindow(ConfigRegistry* registry, ConfigManager* config)
 
     // 分组容器：group -> QFormLayout（按首次出现顺序）
     std::vector<std::pair<String, QFormLayout*>> groups;
-    auto groupForm = [&](const String& g) -> QFormLayout* {
+    auto                                         groupForm = [&](const String& g) -> QFormLayout* {
         for (auto& entry : groups) {
             if (entry.first == g)
                 return entry.second;
@@ -164,31 +161,24 @@ ConfigWindow::~ConfigWindow()
 
 void ConfigWindow::refresh()
 {
-    auto* data        = dptr();
+    auto*       data  = dptr();
     const auto& items = data->registry->items();
     for (size_t i = 0; i < items.size() && i < data->editors.size(); ++i) {
-        const auto& item = items[i];
-        QWidget*    w    = data->editors[i];
-        const String key = item.key();
+        const auto&  item = items[i];
+        QWidget*     w    = data->editors[i];
+        const String key  = item.key();
         w->blockSignals(true);
         switch (item.type()) {
         case ConfigItemType::String:
-            static_cast<QLineEdit*>(w)->setText(
-                toQString(data->config->getString(key, item.hasDefault() ? item.defaultString() : String())));
+            static_cast<QLineEdit*>(w)->setText(toQString(data->config->getString(key, item.hasDefault() ? item.defaultString() : String())));
             break;
-        case ConfigItemType::Bool:
-            static_cast<QCheckBox*>(w)->setChecked(
-                data->config->getBool(key, item.hasDefault() && item.defaultBool()));
-            break;
-        case ConfigItemType::Int:
-            static_cast<QSpinBox*>(w)->setValue(
-                data->config->getInt(key, item.hasDefault() ? item.defaultInt() : 0));
-            break;
+        case ConfigItemType::Bool: static_cast<QCheckBox*>(w)->setChecked(data->config->getBool(key, item.hasDefault() && item.defaultBool())); break;
+        case ConfigItemType::Int: static_cast<QSpinBox*>(w)->setValue(data->config->getInt(key, item.hasDefault() ? item.defaultInt() : 0)); break;
         case ConfigItemType::Double:
-            static_cast<QDoubleSpinBox*>(w)->setValue(
-                data->config->getDouble(key, item.hasDefault() ? item.defaultDouble() : 0.0));
+            static_cast<QDoubleSpinBox*>(w)->setValue(data->config->getDouble(key, item.hasDefault() ? item.defaultDouble() : 0.0));
             break;
-        case ConfigItemType::Choice: {
+        case ConfigItemType::Choice:
+        {
             auto*      combo = static_cast<QComboBox*>(w);
             const auto v     = data->config->getString(key);
             const int  idx   = combo->findText(toQString(v));
@@ -206,23 +196,14 @@ void ConfigWindow::reset()
     for (const auto& item : data->registry->items()) {
         if (item.hasDefault()) {
             switch (item.type()) {
-            case ConfigItemType::String:
-                data->config->setString(item.key(), item.defaultString());
-                break;
-            case ConfigItemType::Bool:
-                data->config->setBool(item.key(), item.defaultBool());
-                break;
-            case ConfigItemType::Int:
-                data->config->setInt(item.key(), item.defaultInt());
-                break;
-            case ConfigItemType::Double:
-                data->config->setDouble(item.key(), item.defaultDouble());
-                break;
-            case ConfigItemType::Choice:
-                data->config->setString(item.key(), item.defaultString());
-                break;
+            case ConfigItemType::String: data->config->setString(item.key(), item.defaultString()); break;
+            case ConfigItemType::Bool: data->config->setBool(item.key(), item.defaultBool()); break;
+            case ConfigItemType::Int: data->config->setInt(item.key(), item.defaultInt()); break;
+            case ConfigItemType::Double: data->config->setDouble(item.key(), item.defaultDouble()); break;
+            case ConfigItemType::Choice: data->config->setString(item.key(), item.defaultString()); break;
             }
-        } else {
+        }
+        else {
             data->config->remove(item.key());
         }
     }
@@ -237,6 +218,16 @@ ConfigRegistry* ConfigWindow::registry() const
 ConfigManager* ConfigWindow::config() const
 {
     return dptr()->config;
+}
+
+inline auto ConfigWindow::dptr() -> Data*
+{
+    return static_cast<Data*>(Window::d);
+}
+
+inline auto ConfigWindow::dptr() const -> const Data*
+{
+    return static_cast<const Data*>(Window::d);
 }
 
 V_APPFWGUI_NS_END

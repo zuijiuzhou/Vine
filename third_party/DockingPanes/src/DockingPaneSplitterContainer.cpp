@@ -27,7 +27,7 @@
 DockingPaneSplitterContainer::DockingPaneSplitterContainer(QWidget* parent, SplitterDirection direction)
   : DockingPaneBase(parent)
 {
-    QGridLayout* layout = new QGridLayout();
+    auto* layout = new QGridLayout();
 
     m_splitterWidget = new QSplitter();
 
@@ -47,7 +47,10 @@ DockingPaneSplitterContainer::DockingPaneSplitterContainer(QWidget* parent, Spli
     this->setLayout(layout);
 }
 
-DockingPaneSplitterContainer::SplitterDirection DockingPaneSplitterContainer::direction(void)
+DockingPaneSplitterContainer::~DockingPaneSplitterContainer()
+{}
+
+DockingPaneSplitterContainer::SplitterDirection DockingPaneSplitterContainer::direction()
 {
     if (m_splitterWidget->orientation() == Qt::Vertical) {
         return (splitVertical);
@@ -63,10 +66,10 @@ void DockingPaneSplitterContainer::saveLayout(QDomNode* parentNode, bool)
 
     QDomElement domElement = doc.createElement(this->metaObject()->className());
 
-    domElement.setAttribute("state", (QString)m_splitterWidget->saveState().toBase64());
+    domElement.setAttribute("state", m_splitterWidget->saveState().toBase64());
 
     for (int i = 0; i < m_splitterWidget->count(); i++) {
-        DockingPaneBase* childPane = qobject_cast<DockingPaneBase*>(m_splitterWidget->widget(i));
+        auto* childPane = qobject_cast<DockingPaneBase*>(m_splitterWidget->widget(i));
 
         if (childPane) {
             childPane->saveLayout(&domElement);

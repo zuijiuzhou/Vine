@@ -31,12 +31,6 @@ struct DockPanel::Data : public UIElementData {
     UIElement*   content  = nullptr;
 };
 
-inline auto DockPanel::dptr() -> Data*
-{ return static_cast<Data*>(UIElement::d); }
-
-inline auto DockPanel::dptr() const -> const Data*
-{ return static_cast<const Data*>(UIElement::d); }
-
 DockPanel::DockPanel()
   : Control(new Data(), nullptr)
 {}
@@ -44,6 +38,16 @@ DockPanel::DockPanel()
 DockPanel::~DockPanel()
 {
     // UIElement::~UIElement() deletes d (Data)
+}
+
+inline auto DockPanel::dptr() -> Data*
+{
+    return static_cast<Data*>(UIElement::d);
+}
+
+inline auto DockPanel::dptr() const -> const Data*
+{
+    return static_cast<const Data*>(UIElement::d);
 }
 
 // ---- Close interception ----

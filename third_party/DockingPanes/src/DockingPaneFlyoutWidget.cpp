@@ -45,10 +45,8 @@ DockingPaneFlyoutWidget::DockingPaneFlyoutWidget(bool                  hasFocus,
   , m_dragMode(false)
   , m_resizeMode(false)
 {
-    QVBoxLayout* vLayout;
-    QHBoxLayout* hLayout;
 
-    vLayout = new QVBoxLayout();
+    auto* vLayout = new QVBoxLayout();
 
     setAutoFillBackground(true);
 
@@ -64,7 +62,7 @@ DockingPaneFlyoutWidget::DockingPaneFlyoutWidget(bool                  hasFocus,
     m_headerWidget->setMinimumHeight(6 + m_headerWidget->fontMetrics().height());
     m_headerWidget->setMaximumHeight(6 + m_headerWidget->fontMetrics().height());
 
-    hLayout = new QHBoxLayout();
+    auto* hLayout = new QHBoxLayout();
 
     m_titleWidget = new DockingPaneTitleWidget(m_pane->name());
     m_titleWidget->setFocusProxy(widget);
@@ -162,68 +160,87 @@ DockingPaneFlyoutWidget::~DockingPaneFlyoutWidget()
     }
 }
 
-void DockingPaneFlyoutWidget::resizeEvent(QResizeEvent*)
+void DockingPaneFlyoutWidget::restorePaneWidget()
 {
-    m_headerWidget->setMinimumHeight(6 + m_headerWidget->fontMetrics().height());
-    m_headerWidget->setMaximumHeight(6 + m_headerWidget->fontMetrics().height());
+    if (!this->m_dragMode) {
+        m_container->setClientWidget(m_clientWidget);
+    }
 }
 
-void DockingPaneFlyoutWidget::enterEvent(QEnterEvent*)
+DockingPaneContainer* DockingPaneFlyoutWidget::pane()
 {
-    updateCursor();
+    return (m_pane);
 }
 
-void DockingPaneFlyoutWidget::leaveEvent(QEvent*)
+void DockingPaneFlyoutWidget::beginDrag()
 {
-    this->unsetCursor();
+    this->m_dragMode = true;
+    this->hide();
+    restorePaneWidget();
 }
 
-void DockingPaneFlyoutWidget::updateCursor()
+void DockingPaneFlyoutWidget::endDrag()
 {
-    QPoint pt = mapFromGlobal(QCursor::pos());
+    Q_EMIT flyoutFocusLost();
+}
 
+QWidget* DockingPaneFlyoutWidget::clientWidget()
+{
+    return (m_clientWidget);
+}
+
+QRect DockingPaneFlyoutWidget::paneRect()
+{
+    QRect rc = this->rect();
     switch (m_pos) {
     case Left:
     {
-        if ((pt.x() >= this->width() - 6)) {
-            setCursor(Qt::SizeHorCursor);
-        }
-        else {
-            unsetCursor();
-        }
+        rc.adjust(0, 0, -5, 0);
         break;
     }
     case Right:
     {
-        if ((pt.x() >= 0) && (pt.x() <= 6)) {
-            setCursor(Qt::SizeHorCursor);
-        }
-        else {
-            unsetCursor();
-        }
-        break;
-    }
-    case Top:
-    {
-        if ((pt.y() >= this->height() - 6)) {
-            setCursor(Qt::SizeVerCursor);
-        }
-        else {
-            unsetCursor();
-        }
+        rc.adjust(5, 0, 0, 0);
         break;
     }
     case Bottom:
     {
-        if ((pt.y() >= 0) && (pt.y() <= 6)) {
-            setCursor(Qt::SizeVerCursor);
-        }
-        else {
-            unsetCursor();
-        }
+        rc.adjust(0, 5, 0, 0);
+        break;
+    }
+    case Top:
+    {
+        rc.adjust(0, 0, 0, -5);
         break;
     }
     }
+    return (rc);
+}
+
+bool DockingPaneFlyoutWidget::eventFilter(QObject* obj, QEvent* event)
+{
+    switch (event->type()) {
+    case QEvent::MouseMove:
+    {
+        if (this->underMouse()) {
+            updateCursor();
+        }
+        break;
+    }
+    case QEvent::Resize:
+    {
+        if (obj == this->parent()) {
+            setPositionAndSize();
+        }
+        break;
+    }
+    default:
+    {
+        break;
+    }
+    }
+
+    return QWidget::eventFilter(obj, event);
 }
 
 void DockingPaneFlyoutWidget::paintEvent(QPaintEvent*)
@@ -256,44 +273,16 @@ void DockingPaneFlyoutWidget::changeEvent(QEvent* event)
     QWidget::changeEvent(event);
 }
 
-QRect DockingPaneFlyoutWidget::paneRect(void)
+void DockingPaneFlyoutWidget::closeEvent(QCloseEvent* event)
 {
-    QRect rc = this->rect();
-    switch (m_pos) {
-    case Left:
-    {
-        rc.adjust(0, 0, -5, 0);
-        break;
-    }
-    case Right:
-    {
-        rc.adjust(5, 0, 0, 0);
-        break;
-    }
-    case Bottom:
-    {
-        rc.adjust(0, 5, 0, 0);
-        break;
-    }
-    case Top:
-    {
-        rc.adjust(0, 0, 0, -5);
-        break;
-    }
-    }
-    return (rc);
+    restorePaneWidget();
+    event->accept();
 }
 
-void DockingPaneFlyoutWidget::restorePaneWidget()
+void DockingPaneFlyoutWidget::resizeEvent(QResizeEvent*)
 {
-    if (!this->m_dragMode) {
-        m_container->setClientWidget(m_clientWidget);
-    }
-}
-
-DockingPaneContainer* DockingPaneFlyoutWidget::pane(void)
-{
-    return (m_pane);
+    m_headerWidget->setMinimumHeight(6 + m_headerWidget->fontMetrics().height());
+    m_headerWidget->setMaximumHeight(6 + m_headerWidget->fontMetrics().height());
 }
 
 void DockingPaneFlyoutWidget::mouseMoveEvent(QMouseEvent* event)
@@ -355,6 +344,26 @@ void DockingPaneFlyoutWidget::mousePressEvent(QMouseEvent* event)
     }
 }
 
+void DockingPaneFlyoutWidget::enterEvent(QEnterEvent*)
+{
+    updateCursor();
+}
+
+void DockingPaneFlyoutWidget::leaveEvent(QEvent*)
+{
+    this->unsetCursor();
+}
+
+void DockingPaneFlyoutWidget::onFocusChanged(QWidget*, QWidget* now)
+{
+    setActivePane(this->isAncestorOf(now));
+    if (!m_dragMode) {
+        if (!this->isAncestorOf(now)) {
+            Q_EMIT flyoutFocusLost();
+        }
+    }
+}
+
 void DockingPaneFlyoutWidget::setActivePane(bool active)
 {
     m_isActive = active;
@@ -372,49 +381,7 @@ void DockingPaneFlyoutWidget::setActivePane(bool active)
     update();
 }
 
-void DockingPaneFlyoutWidget::closeEvent(QCloseEvent* event)
-{
-    restorePaneWidget();
-    event->accept();
-}
-
-void DockingPaneFlyoutWidget::onFocusChanged(QWidget*, QWidget* now)
-{
-    setActivePane(this->isAncestorOf(now));
-    if (!m_dragMode) {
-        if (!this->isAncestorOf(now)) {
-            Q_EMIT flyoutFocusLost();
-        }
-    }
-}
-
-bool DockingPaneFlyoutWidget::eventFilter(QObject* obj, QEvent* event)
-{
-    switch (event->type()) {
-    case QEvent::MouseMove:
-    {
-        if (this->underMouse()) {
-            updateCursor();
-        }
-        break;
-    }
-    case QEvent::Resize:
-    {
-        if (obj == this->parent()) {
-            setPositionAndSize();
-        }
-        break;
-    }
-    default:
-    {
-        break;
-    }
-    }
-
-    return QWidget::eventFilter(obj, event);
-}
-
-void DockingPaneFlyoutWidget::setPositionAndSize(void)
+void DockingPaneFlyoutWidget::setPositionAndSize()
 {
     QRect rc = parentWidget()->rect();
 
@@ -451,26 +418,57 @@ void DockingPaneFlyoutWidget::setPositionAndSize(void)
     resize(size);
 }
 
-void DockingPaneFlyoutWidget::autoHideTimeout(void)
+void DockingPaneFlyoutWidget::updateCursor()
+{
+    QPoint pt = mapFromGlobal(QCursor::pos());
+
+    switch (m_pos) {
+    case Left:
+    {
+        if ((pt.x() >= this->width() - 6)) {
+            setCursor(Qt::SizeHorCursor);
+        }
+        else {
+            unsetCursor();
+        }
+        break;
+    }
+    case Right:
+    {
+        if ((pt.x() >= 0) && (pt.x() <= 6)) {
+            setCursor(Qt::SizeHorCursor);
+        }
+        else {
+            unsetCursor();
+        }
+        break;
+    }
+    case Top:
+    {
+        if ((pt.y() >= this->height() - 6)) {
+            setCursor(Qt::SizeVerCursor);
+        }
+        else {
+            unsetCursor();
+        }
+        break;
+    }
+    case Bottom:
+    {
+        if ((pt.y() >= 0) && (pt.y() <= 6)) {
+            setCursor(Qt::SizeVerCursor);
+        }
+        else {
+            unsetCursor();
+        }
+        break;
+    }
+    }
+}
+
+void DockingPaneFlyoutWidget::autoHideTimeout()
 {
     if (!m_isActive) {
         Q_EMIT autoHideFlyout();
     }
-}
-
-void DockingPaneFlyoutWidget::beginDrag(void)
-{
-    this->m_dragMode = true;
-    this->hide();
-    restorePaneWidget();
-}
-
-void DockingPaneFlyoutWidget::endDrag(void)
-{
-    Q_EMIT flyoutFocusLost();
-}
-
-QWidget* DockingPaneFlyoutWidget::clientWidget(void)
-{
-    return (m_clientWidget);
 }

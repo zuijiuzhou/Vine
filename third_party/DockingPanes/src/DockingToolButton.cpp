@@ -25,7 +25,7 @@
 #include "DockingPaneTheme.h"
 #include "DockingToolButton.h"
 
-DockingToolButton::DockingToolButton(DockingToolButton::ButtonType type, QWidget* parent)
+DockingToolButton::DockingToolButton(ButtonType type, QWidget* parent)
   : QPushButton(parent)
 {
     setMouseTracking(true);
@@ -34,18 +34,13 @@ DockingToolButton::DockingToolButton(DockingToolButton::ButtonType type, QWidget
     m_highlight  = false;
 }
 
-void DockingToolButton::enterEvent(QEnterEvent* event)
+DockingToolButton::~DockingToolButton()
+{}
+
+void DockingToolButton::setButton(DockingToolButton::ButtonType type)
 {
-    m_highlight = true;
-
-    QPushButton::enterEvent(event);
-}
-
-void DockingToolButton::leaveEvent(QEvent* event)
-{
-    m_highlight = false;
-
-    QPushButton::leaveEvent(event);
+    m_buttonType = type;
+    update();
 }
 
 void DockingToolButton::paintEvent(QPaintEvent*)
@@ -130,12 +125,6 @@ void DockingToolButton::paintEvent(QPaintEvent*)
     }
 }
 
-void DockingToolButton::setButton(DockingToolButton::ButtonType type)
-{
-    m_buttonType = type;
-    update();
-}
-
 void DockingToolButton::changeEvent(QEvent* event)
 {
     if (event->type() == QEvent::PaletteChange || event->type() == QEvent::ApplicationPaletteChange) {
@@ -143,4 +132,18 @@ void DockingToolButton::changeEvent(QEvent* event)
     }
 
     QPushButton::changeEvent(event);
+}
+
+void DockingToolButton::enterEvent(QEnterEvent* event)
+{
+    m_highlight = true;
+
+    QPushButton::enterEvent(event);
+}
+
+void DockingToolButton::leaveEvent(QEvent* event)
+{
+    m_highlight = false;
+
+    QPushButton::leaveEvent(event);
 }

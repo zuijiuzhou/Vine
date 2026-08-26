@@ -27,18 +27,9 @@ V_OBJECT_META_IMPL(Window, Control)
 
 struct Window::Data : public UIElementData {};
 
-inline auto Window::dptr() -> Data* { return static_cast<Data*>(UIElement::d); }
-inline auto Window::dptr() const -> const Data* { return static_cast<const Data*>(UIElement::d); }
-
 Window::Window(QWidget* native, bool owns)
-    : Control(new Data(), native, owns)
-{
-}
-
-Window::Window(UIElementData* data, QWidget* native, bool owns)
-    : Control(data, native, owns)
-{
-}
+  : Control(new Data(), native, owns)
+{}
 
 Window::~Window()
 {
@@ -83,8 +74,8 @@ void Window::close()
 
 int Window::exec()
 {
-    auto*  w   = impl<QWidget>();
-    auto*  dlg = qobject_cast<QDialog*>(w);
+    auto* w   = impl<QWidget>();
+    auto* dlg = qobject_cast<QDialog*>(w);
     return dlg ? dlg->exec() : 0;
 }
 
@@ -151,6 +142,20 @@ bool Window::isActive() const
 {
     auto* w = impl<QWidget>();
     return w && w->isActiveWindow();
+}
+
+Window::Window(UIElementData* data, QWidget* native, bool owns)
+  : Control(data, native, owns)
+{}
+
+inline auto Window::dptr() -> Data*
+{
+    return static_cast<Data*>(UIElement::d);
+}
+
+inline auto Window::dptr() const -> const Data*
+{
+    return static_cast<const Data*>(UIElement::d);
 }
 
 V_APPFWGUI_NS_END

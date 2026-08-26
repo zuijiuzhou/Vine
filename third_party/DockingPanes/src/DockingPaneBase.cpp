@@ -22,35 +22,30 @@
 
 DockingPaneBase::DockingPaneBase(QWidget* parent)
   : QWidget(parent)
+  , m_isClient(false)
+  , m_dockingManager(nullptr)
   , m_state(Hidden)
 {}
 
-QString DockingPaneBase::name(void)
+DockingPaneBase::~DockingPaneBase()
+{}
+
+const QString& DockingPaneBase::name()
 {
     return (m_name);
 }
 
-QString DockingPaneBase::id(void)
+const QString& DockingPaneBase::id()
 {
     return (m_id);
 }
 
-void DockingPaneBase::setName(QString name)
-{
-    m_name = name;
-}
-
-void DockingPaneBase::setId(QString id)
-{
-    m_id = id;
-}
-
-DockingPaneManager* DockingPaneBase::dockingManager(void)
+DockingPaneManager* DockingPaneBase::dockingManager()
 {
     return (m_dockingManager);
 }
 
-DockingPaneBase::State DockingPaneBase::state(void)
+DockingPaneBase::State DockingPaneBase::state()
 {
     return (m_state);
 }
@@ -58,4 +53,17 @@ DockingPaneBase::State DockingPaneBase::state(void)
 void DockingPaneBase::setState(DockingPaneBase::State state)
 {
     m_state = state;
+}
+
+void DockingPaneBase::saveLayout(QDomNode* parentNode, bool includeGeometry)
+{}
+
+void DockingPaneBase::setName(const QString& name)
+{
+    m_name = name;
+}
+
+void DockingPaneBase::setId(const QString& id)
+{
+    m_id = id;
 }

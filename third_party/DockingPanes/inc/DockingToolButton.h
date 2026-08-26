@@ -25,46 +25,44 @@
 /**
  * \brief 标题栏上的关闭/固定小按钮（位图 + 调色板着色）。
  *
- * 按状态（激活/非激活、关闭/固定/取消固定）从资源加载对应 PNG，
- * 非激活位图会被重着色为调色板 WindowText 色以适配深色主题；悬停时
- * 绘制半透明白色高亮块。
+ * 按状态（激活/非激活、关闭/固定/取消固定）从资源加载对应 PNG，非激活位图会被重着色为调色板 WindowText 色以适配深色主题；悬停时绘制半透明白色高亮块。
  *
- * \note 继承 QPushButton 但完全重写绘制，仅复用其点击/悬停语义；
- * 16px 最大宽度，命中区域较小。
+ * \note 继承 QPushButton 但完全重写绘制，仅复用其点击/悬停语义；16px 最大宽度，命中区域较小。
  */
-class DockingToolButton : public QPushButton
-{
+class DockingToolButton : public QPushButton {
     Q_OBJECT
 
-    public:
-        /// 按钮形态（图标 + 激活态组合）。
-        enum ButtonType
-        {
-            closeButtonActive,     ///< 关闭图标，激活态（白色）。
-            closeButtonInactive,   ///< 关闭图标，非激活态（着色）。
-            pinButtonActive,       ///< 固定图标，激活态。
-            pinButtonInactive,     ///< 固定图标，非激活态。
-            unpinButtonActive,     ///< 取消固定图标（旋转 90°）。
-            unpinButtonInactive    ///< 取消固定图标，非激活态。
-        };
+  public:
+    /// 按钮形态（图标 + 激活态组合）。
+    enum ButtonType
+    {
+        closeButtonActive,   // 关闭图标，激活态（白色）。
+        closeButtonInactive, // 关闭图标，非激活态（着色）。
+        pinButtonActive,     // 固定图标，激活态。
+        pinButtonInactive,   // 固定图标，非激活态。
+        unpinButtonActive,   // 取消固定图标（旋转 90°）。
+        unpinButtonInactive  // 取消固定图标，非激活态。
+    };
 
-        explicit DockingToolButton(ButtonType type, QWidget* parent = nullptr);
-        virtual ~DockingToolButton() = default;
+  public:
+    explicit DockingToolButton(ButtonType type, QWidget* parent = nullptr);
+    ~DockingToolButton() override;
 
-        /**
-         * \brief 切换按钮形态（激活/非激活、关闭/固定）。
-         */
-        void setButton(DockingToolButton::ButtonType type);
+  public:
+    /**
+     * \brief 切换按钮形态（激活/非激活、关闭/固定）。
+     */
+    void setButton(ButtonType type);
 
-    protected:
-        virtual void paintEvent(QPaintEvent* event) override;
-        virtual void changeEvent(QEvent* event) override;
-        virtual void enterEvent(QEnterEvent* event) override;
-        virtual void leaveEvent(QEvent* event) override;
+  protected:
+    void paintEvent(QPaintEvent* event) override;
+    void changeEvent(QEvent* event) override;
+    void enterEvent(QEnterEvent* event) override;
+    void leaveEvent(QEvent* event) override;
 
-    private:
-        ButtonType m_buttonType;
-        bool m_highlight;   ///< 悬停高亮。
+  private:
+    ButtonType m_buttonType;
+    bool       m_highlight; ///< 悬停高亮。
 };
 
 #endif // DOCKINGTOOLBUTTON_H

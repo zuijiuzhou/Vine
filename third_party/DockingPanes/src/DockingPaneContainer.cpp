@@ -35,18 +35,12 @@
 #include "DockingPaneTitleWidget.h"
 #include "DockingToolButton.h"
 
-DockingPaneContainer::DockingPaneContainer(QWidget* parent)
-  : DockingPaneBase(parent)
-{}
-
-DockingPaneContainer::DockingPaneContainer(QString title, QString id, QWidget* parent, QWidget* clientWidget)
+DockingPaneContainer::DockingPaneContainer(const QString& title, const QString& id, QWidget* parent, QWidget* clientWidget)
   : DockingPaneBase(parent)
   , m_clientWidget(clientWidget)
 {
-    QVBoxLayout* vLayout;
-    QHBoxLayout* hLayout;
 
-    vLayout = new QVBoxLayout();
+    auto* vLayout = new QVBoxLayout();
 
     m_isActive     = false;
     m_flyoutWidget = nullptr;
@@ -60,7 +54,7 @@ DockingPaneContainer::DockingPaneContainer(QString title, QString id, QWidget* p
     m_headerWidget->setAccessibleName("headerWidget");
     m_headerWidget->setObjectName("headerWidget");
 
-    hLayout = new QHBoxLayout();
+    auto* hLayout = new QHBoxLayout();
 
     m_titleWidget = new DockingPaneTitleWidget("Widget");
 
@@ -108,16 +102,207 @@ DockingPaneContainer::DockingPaneContainer(QString title, QString id, QWidget* p
 
     this->setLayout(vLayout);
 
-    setName(title);
-    setId(id);
+    DockingPaneContainer::setName(title);
+    DockingPaneBase::setId(id);
 
     connect(qApp, &QApplication::focusChanged, this, &DockingPaneContainer::onFocusChanged);
 }
+
+DockingPaneContainer::DockingPaneContainer(QWidget* parent)
+  : DockingPaneBase(parent)
+{}
 
 DockingPaneContainer::~DockingPaneContainer()
 {
     // 析构期间焦点可能变化，提前断开避免基类析构后仍被调用（assertObjectType 断言）。
     disconnect(qApp, &QApplication::focusChanged, this, &DockingPaneContainer::onFocusChanged);
+}
+
+void DockingPaneContainer::floatPane(QRect)
+{
+    this->setParent(dockingManager()->mainWindow());
+
+    setWindowFlags(Qt::ToolTip | Qt::FramelessWindowHint);
+
+    setState(DockingPaneBase::Floating);
+
+    if (m_floatingGlow) {
+        delete m_floatingGlow;
+    }
+
+    m_floatingGlow = new DockingPaneGlow(this, dockingManager()->mainWindow());
+}
+
+void DockingPaneContainer::floatPane(QPoint pos)
+{
+    QRect paneRect;
+
+    paneRect.setTopLeft(mapToGlobal(QPoint(0, 0)));
+    paneRect.setBottomRight(mapToGlobal(QPoint(width(), height())));
+
+    m_dockingManager->closePane(this);
+
+    setWindowFlags(Qt::ToolTip | Qt::FramelessWindowHint);
+
+    paneRect.translate(pos);
+
+    this->move(paneRect.topLeft());
+
+    floatPane(paneRect);
+
+    this->setParent(dockingManager()->mainWindow());
+
+    this->show();
+    this->activateWindow();
+}
+
+DockingPaneFlyoutWidget* DockingPaneContainer::openFlyout(bool hasFocus, QWidget* parent, FlyoutPosition pos, DockingPaneContainer* pane)
+{
+    m_flyoutWidget = new DockingPaneFlyoutWidget(hasFocus, pane, pane, static_cast<DockingPaneFlyoutWidget::FlyoutPosition>(pos), m_clientWidget, parent);
+
+    connect(m_flyoutWidget, &DockingPaneFlyoutWidget::unpinContainer, this, &DockingPaneContainer::onUnpinContainer);
+    connect(m_flyoutWidget, &DockingPaneFlyoutWidget::closeContainer, this, &DockingPaneContainer::onCloseContainer);
+    connect(m_flyoutWidget, &DockingPaneFlyoutWidget::startDragFlyoutTitle, this, &DockingPaneContainer::onStartDragFlyoutTitle);
+    connect(m_flyoutWidget, &DockingPaneFlyoutWidget::endDragFlyoutTitle, this, &DockingPaneContainer::onEndDragFlyoutTitle);
+    connect(m_flyoutWidget, &DockingPaneFlyoutWidget::moveDragFlyoutTitle, this, &DockingPaneContainer::onMoveDragFlyoutTitle);
+
+    m_flyoutWidget->show();
+
+    return (m_flyoutWidget);
+}
+
+void DockingPaneContainer::setState(DockingPaneBase::State state)
+{
+    if (state != DockingPaneBase::Floating) {
+        m_pinButton->show();
+
+        if (m_floatingGlow) {
+            delete m_floatingGlow;
+
+            m_floatingGlow = nullptr;
+        }
+    }
+    else {
+        m_pinButton->hide();
+    }
+
+    DockingPaneBase::setState(state);
+}
+
+int DockingPaneContainer::getPaneCount()
+{
+    return (1);
+}
+
+DockingPaneContainer* DockingPaneContainer::getPane(int)
+{
+    return (this);
+}
+
+QWidget* DockingPaneContainer::clientWidget()
+{
+    return (m_clientWidget);
+}
+
+void DockingPaneContainer::setClientWidget(QWidget* widget)
+{
+    while (m_clientLayout->count()) {
+        m_clientLayout->takeAt(0);
+    }
+
+    // A layout cannot hold a null widget (QGridLayout::addWidget(nullptr)
+    // asserts in debug and crashes in release). A null client means "clear",
+    // which is represented by leaving the layout empty.
+    if (!widget) {
+        return;
+    }
+
+    m_clientLayout->addWidget(widget);
+
+    widget->setVisible(true);
+}
+
+void DockingPaneContainer::saveLayout(QDomNode* parentNode, bool includeGeometry)
+{
+    QDomDocument doc = parentNode->ownerDocument();
+
+    QDomElement domElement = doc.createElement(this->metaObject()->className());
+
+    domElement.setAttribute("id", this->id());
+
+    if (includeGeometry) {
+        domElement.setAttribute("geometry", static_cast<QString>(this->saveGeometry().toBase64()));
+    }
+
+    parentNode->appendChild(domElement);
+}
+
+QSize DockingPaneContainer::flyoutSize()
+{
+    if (m_flyoutSize.isValid()) {
+        return (m_flyoutSize);
+    }
+
+    return (QSize(100, 100));
+}
+
+void DockingPaneContainer::setFlyoutSize(QSize flyoutSize)
+{
+    m_flyoutSize = flyoutSize;
+}
+
+DockingPaneGlow* DockingPaneContainer::floatingGlow()
+{
+    return (m_floatingGlow);
+}
+
+void DockingPaneContainer::setClosable(bool closable)
+{
+    m_closable = closable;
+    m_closeButton->setVisible(closable);
+}
+
+bool DockingPaneContainer::isClosable() const
+{
+    return m_closable;
+}
+
+void DockingPaneContainer::continueDrag(QPoint pos)
+{
+    m_initialPos = pos;
+
+    if (m_titleWidget) {
+        m_titleWidget->takeGrab();
+    }
+}
+
+void DockingPaneContainer::setName(const QString& name)
+{
+    m_titleWidget->setText(name);
+
+    DockingPaneBase::setName(name);
+}
+
+void DockingPaneContainer::setActivePane(bool active)
+{
+    m_isActive = active;
+
+    m_titleWidget->setActive(m_isActive);
+
+    if (m_isActive) {
+        this->m_pinButton->setButton(DockingToolButton::pinButtonActive);
+        this->m_closeButton->setButton(DockingToolButton::closeButtonActive);
+
+        if (m_floatingGlow) {
+            m_floatingGlow->raise();
+        }
+    }
+    else {
+        this->m_pinButton->setButton(DockingToolButton::pinButtonInactive);
+        this->m_closeButton->setButton(DockingToolButton::closeButtonInactive);
+    }
+
+    update();
 }
 
 void DockingPaneContainer::paintEvent(QPaintEvent*)
@@ -160,181 +345,6 @@ void DockingPaneContainer::changeEvent(QEvent* event)
     }
 
     DockingPaneBase::changeEvent(event);
-}
-
-void DockingPaneContainer::onCloseButtonClicked(void)
-{
-    if (m_closeCallback && !m_closeCallback(this))
-        return; // callback vetoed
-    m_dockingManager->closePane(this);
-}
-
-void DockingPaneContainer::onPinButtonClicked(void)
-{
-    m_dockingManager->hidePane(this);
-}
-
-void DockingPaneContainer::setName(QString name)
-{
-    m_titleWidget->setText(name);
-
-    DockingPaneBase::setName(name);
-}
-
-void DockingPaneContainer::onFocusChanged(QWidget*, QWidget* now)
-{
-    this->setActivePane(this->isAncestorOf(now));
-}
-
-void DockingPaneContainer::setActivePane(bool active)
-{
-    m_isActive = active;
-
-    m_titleWidget->setActive(m_isActive);
-
-    if (m_isActive) {
-        this->m_pinButton->setButton(DockingToolButton::pinButtonActive);
-        this->m_closeButton->setButton(DockingToolButton::closeButtonActive);
-
-        if (m_floatingGlow) {
-            m_floatingGlow->raise();
-        }
-    }
-    else {
-        this->m_pinButton->setButton(DockingToolButton::pinButtonInactive);
-        this->m_closeButton->setButton(DockingToolButton::closeButtonInactive);
-    }
-
-    update();
-}
-
-void DockingPaneContainer::floatPane(QRect)
-{
-    this->setParent(dockingManager()->mainWindow());
-
-    setWindowFlags(Qt::ToolTip | Qt::FramelessWindowHint);
-
-    setState(DockingPaneBase::Floating);
-
-    if (m_floatingGlow) {
-        delete m_floatingGlow;
-    }
-
-    m_floatingGlow = new DockingPaneGlow(this, dockingManager()->mainWindow());
-}
-
-void DockingPaneContainer::floatPane(QPoint pos)
-{
-    QRect paneRect;
-
-    paneRect.setTopLeft(mapToGlobal(QPoint(0, 0)));
-    paneRect.setBottomRight(mapToGlobal(QPoint(width(), height())));
-
-    m_dockingManager->closePane(this);
-
-    setWindowFlags(Qt::ToolTip | Qt::FramelessWindowHint);
-
-    paneRect.translate(pos);
-
-    this->move(paneRect.topLeft());
-
-    floatPane(paneRect);
-
-    this->setParent(dockingManager()->mainWindow());
-
-    this->show();
-
-    qApp->setActiveWindow(this);
-}
-
-void DockingPaneContainer::saveLayout(QDomNode* parentNode, bool includeGeometry)
-{
-    QDomDocument doc = parentNode->ownerDocument();
-
-    QDomElement domElement = doc.createElement(this->metaObject()->className());
-
-    domElement.setAttribute("id", this->id());
-
-    if (includeGeometry) {
-        domElement.setAttribute("geometry", static_cast<QString>(this->saveGeometry().toBase64()));
-    }
-
-    parentNode->appendChild(domElement);
-}
-
-QWidget* DockingPaneContainer::clientWidget(void)
-{
-    return (m_clientWidget);
-}
-
-void DockingPaneContainer::setClientWidget(QWidget* widget)
-{
-    while (m_clientLayout->count()) {
-        m_clientLayout->takeAt(0);
-    }
-
-    // A layout cannot hold a null widget (QGridLayout::addWidget(nullptr)
-    // asserts in debug and crashes in release). A null client means "clear",
-    // which is represented by leaving the layout empty.
-    if (!widget) { return; }
-
-    m_clientLayout->addWidget(widget);
-
-    widget->setVisible(true);
-}
-
-int DockingPaneContainer::getPaneCount(void)
-{
-    return (1);
-}
-
-DockingPaneContainer* DockingPaneContainer::getPane(int)
-{
-    return (this);
-}
-
-void DockingPaneContainer::onUnpinContainer(void)
-{
-    m_flyoutWidget->restorePaneWidget();
-
-    dockingManager()->unpinPane(m_flyoutWidget->pane());
-
-    m_flyoutWidget = nullptr;
-}
-
-void DockingPaneContainer::onCloseContainer(void)
-{
-    m_flyoutWidget->restorePaneWidget();
-
-    dockingManager()->closePinnedPane(m_flyoutWidget->pane());
-
-    m_flyoutWidget = nullptr;
-}
-
-DockingPaneFlyoutWidget* DockingPaneContainer::openFlyout(bool hasFocus, QWidget* parent, FlyoutPosition pos, DockingPaneContainer* pane)
-{
-    m_flyoutWidget = new DockingPaneFlyoutWidget(hasFocus, pane, pane, (DockingPaneFlyoutWidget::FlyoutPosition)pos, m_clientWidget, parent);
-
-    connect(m_flyoutWidget, &DockingPaneFlyoutWidget::unpinContainer, this, &DockingPaneContainer::onUnpinContainer);
-    connect(m_flyoutWidget, &DockingPaneFlyoutWidget::closeContainer, this, &DockingPaneContainer::onCloseContainer);
-    connect(m_flyoutWidget, &DockingPaneFlyoutWidget::startDragFlyoutTitle, this, &DockingPaneContainer::onStartDragFlyoutTitle);
-    connect(m_flyoutWidget, &DockingPaneFlyoutWidget::endDragFlyoutTitle, this, &DockingPaneContainer::onEndDragFlyoutTitle);
-    connect(m_flyoutWidget, &DockingPaneFlyoutWidget::moveDragFlyoutTitle, this, &DockingPaneContainer::onMoveDragFlyoutTitle);
-
-    m_flyoutWidget->show();
-
-    return (m_flyoutWidget);
-}
-
-void DockingPaneContainer::setClosable(bool closable)
-{
-    m_closable = closable;
-    m_closeButton->setVisible(closable);
-}
-
-bool DockingPaneContainer::isClosable() const
-{
-    return m_closable;
 }
 
 void DockingPaneContainer::onStartDragTitle(QPoint pos)
@@ -401,15 +411,6 @@ void DockingPaneContainer::onEndDragFlyoutTitle(QPoint pos)
     }
 }
 
-void DockingPaneContainer::continueDrag(QPoint pos)
-{
-    m_initialPos = pos;
-
-    if (m_titleWidget) {
-        m_titleWidget->takeGrab();
-    }
-}
-
 void DockingPaneContainer::onMoveDragFlyoutTitle(QPoint pos)
 {
     QPoint deltaPos = pos - m_initialPos;
@@ -426,15 +427,15 @@ void DockingPaneContainer::onMoveDragFlyoutTitle(QPoint pos)
         dockingManager()->floatingPaneMoved(this, pos);
     }
     else {
-        double trueLength = sqrt(pow(deltaPos.x(), 2) + pow(deltaPos.y(), 2));
+        const double trueLength = sqrt(pow(deltaPos.x(), 2) + pow(deltaPos.y(), 2));
 
         if (trueLength > 5) {
-            QWidget* widget = m_flyoutWidget->clientWidget();
-            QSize    size   = m_flyoutWidget->paneRect().size();
-            m_initialPos    = pos;
-            deltaPos        = m_flyoutWidget->mapFromGlobal(m_initialPos);
+            QWidget*    widget = m_flyoutWidget->clientWidget();
+            const QSize size   = m_flyoutWidget->paneRect().size();
+            m_initialPos       = pos;
+            deltaPos           = m_flyoutWidget->mapFromGlobal(m_initialPos);
 
-            QPoint pos = m_flyoutWidget->mapToGlobal(m_flyoutWidget->paneRect().topLeft());
+            const QPoint global_pos = m_flyoutWidget->mapToGlobal(m_flyoutWidget->paneRect().topLeft());
 
             m_flyoutWidget->beginDrag();
 
@@ -446,8 +447,8 @@ void DockingPaneContainer::onMoveDragFlyoutTitle(QPoint pos)
 
             floatPane(deltaPos);
 
-            move(pos);
-            dockingManager()->floatingPaneStartMove(this, pos);
+            move(global_pos);
+            dockingManager()->floatingPaneStartMove(this, global_pos);
 
             m_draggingFlyout = true;
 
@@ -462,44 +463,42 @@ void DockingPaneContainer::onMoveDragFlyoutTitle(QPoint pos)
     }
 }
 
-QSize DockingPaneContainer::flyoutSize(void)
+void DockingPaneContainer::onCloseButtonClicked()
 {
-    if (m_flyoutSize.isValid()) {
-        return (m_flyoutSize);
-    }
-
-    return (QSize(100, 100));
+    if (m_closeCallback && !m_closeCallback(this))
+        return; // callback vetoed
+    m_dockingManager->closePane(this);
 }
 
-void DockingPaneContainer::setFlyoutSize(QSize flyoutSize)
+void DockingPaneContainer::onCloseContainer()
 {
-    m_flyoutSize = flyoutSize;
+    m_flyoutWidget->restorePaneWidget();
+
+    dockingManager()->closePinnedPane(m_flyoutWidget->pane());
+
+    m_flyoutWidget = nullptr;
 }
 
-void DockingPaneContainer::onFClicked(void)
+void DockingPaneContainer::onFocusChanged(QWidget*, QWidget* now)
+{
+    this->setActivePane(this->isAncestorOf(now));
+}
+
+void DockingPaneContainer::onPinButtonClicked()
+{
+    m_dockingManager->hidePane(this);
+}
+
+void DockingPaneContainer::onUnpinContainer()
+{
+    m_flyoutWidget->restorePaneWidget();
+
+    dockingManager()->unpinPane(m_flyoutWidget->pane());
+
+    m_flyoutWidget = nullptr;
+}
+
+void DockingPaneContainer::onFClicked()
 {
     dockingManager()->dumpPaneList();
-}
-
-void DockingPaneContainer::setState(DockingPaneBase::State state)
-{
-    if (state != DockingPaneBase::Floating) {
-        m_pinButton->show();
-
-        if (m_floatingGlow) {
-            delete m_floatingGlow;
-
-            m_floatingGlow = nullptr;
-        }
-    }
-    else {
-        m_pinButton->hide();
-    }
-
-    DockingPaneBase::setState(state);
-}
-
-DockingPaneGlow* DockingPaneContainer::floatingGlow(void)
-{
-    return (m_floatingGlow);
 }
