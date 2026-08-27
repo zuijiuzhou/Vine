@@ -11,6 +11,7 @@ class AddinManager;
 class ServiceManager;
 class ConfigManager;
 class ConfigRegistry;
+class UserIO;
 class ApplicationData;
 
 class V_APPFW_API Application : public Object {
@@ -51,6 +52,8 @@ class V_APPFW_API Application : public Object {
 
     /// Config item registry (single instance, lives with Application).
     ConfigRegistry* configRegistry() const;
+
+    UserIO* userIO() const;
 
     int argc() const;
 

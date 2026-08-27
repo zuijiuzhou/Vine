@@ -1,0 +1,239 @@
+#include <gtest/gtest.h>
+
+#include <filesystem>
+#include <fstream>
+#include <sstream>
+#include <string>
+
+#include <vine/logging/Log.hpp>
+#include <vine/logging/LogLevel.hpp>
+#include <vine/logging/LogSink.hpp>
+#include <vine/logging/Logger.hpp>
+
+using base::logging::Log;
+using base::logging::LogLevel;
+using base::logging::LogSink;
+using base::logging::Logger;
+using base::logging::levelName;
+using base::logging::parseLevel;
+
+namespace
+{
+
+TEST(LogLevelTest, LevelNameIsLowerCase)
+{
+    EXPECT_EQ(levelName(LogLevel::Trace), "trace");
+    EXPECT_EQ(levelName(LogLevel::Debug), "debug");
+    EXPECT_EQ(levelName(LogLevel::Info), "info");
+    EXPECT_EQ(levelName(LogLevel::Warn), "warn");
+    EXPECT_EQ(levelName(LogLevel::Error), "error");
+    EXPECT_EQ(levelName(LogLevel::Critical), "critical");
+    EXPECT_EQ(levelName(LogLevel::Off), "off");
+}
+
+TEST(LogLevelTest, ParseLevelIsCaseInsensitive)
+{
+    EXPECT_EQ(parseLevel("trace"), LogLevel::Trace);
+    EXPECT_EQ(parseLevel("DEBUG"), LogLevel::Debug);
+    EXPECT_EQ(parseLevel("Info"), LogLevel::Info);
+    EXPECT_EQ(parseLevel("wArN"), LogLevel::Warn);
+    EXPECT_EQ(parseLevel("ERROR"), LogLevel::Error);
+    EXPECT_EQ(parseLevel("critical"), LogLevel::Critical);
+    EXPECT_EQ(parseLevel("off"), LogLevel::Off);
+}
+
+TEST(LogLevelTest, ParseLevelUnknownMapsToInfo)
+{
+    EXPECT_EQ(parseLevel("verbose"), LogLevel::Info);
+    EXPECT_EQ(parseLevel(""), LogLevel::Info);
+}
+
+struct Capture
+{
+    LogLevel     level{ LogLevel::Off };
+    std::string  line;
+};
+
+TEST(LoggerTest, NameAndLevel)
+{
+    Logger logger("unit", LogLevel::Warn);
+    EXPECT_EQ(logger.name(), "unit");
+    EXPECT_EQ(logger.level(), LogLevel::Warn);
+}
+
+TEST(LoggerTest, SetLevelRoundTrips)
+{
+    Logger logger("unit");
+    logger.setLevel(LogLevel::Error);
+    EXPECT_EQ(logger.level(), LogLevel::Error);
+}
+
+TEST(LoggerTest, IsEnabledReflectsLevel)
+{
+    Logger logger("unit", LogLevel::Warn);
+    EXPECT_TRUE(logger.isEnabled(LogLevel::Warn));
+    EXPECT_TRUE(logger.isEnabled(LogLevel::Error));
+    EXPECT_FALSE(logger.isEnabled(LogLevel::Info));
+    EXPECT_FALSE(logger.isEnabled(LogLevel::Debug));
+}
+
+TEST(LoggerTest, DefaultLoggerProducesNoOutput)
+{
+    Logger logger;
+    EXPECT_EQ(logger.name(), "");
+    EXPECT_NO_THROW(logger.info("hello"));
+}
+
+TEST(LoggerTest, LogSendsFormattedMessageToSink)
+{
+    Capture capture;
+    auto sink = LogSink::function(
+        [&capture](LogLevel level, const std::string& line) {
+            capture.level = level;
+            capture.line  = line;
+        });
+    Logger logger("unit", LogLevel::Trace, { sink }, "%v");
+    logger.error("boom {}", 42);
+    EXPECT_EQ(capture.level, LogLevel::Error);
+    EXPECT_EQ(capture.line, "boom 42");
+}
+
+TEST(LoggerTest, LevelFilteringSuppressesBelowThreshold)
+{
+    Capture capture;
+    auto sink = LogSink::function(
+        [&capture](LogLevel, const std::string& line) { capture.line = line; });
+    Logger logger("unit", LogLevel::Error, { sink }, "%v");
+    logger.warn("should not appear");
+    EXPECT_TRUE(capture.line.empty());
+    logger.error("appears");
+    EXPECT_EQ(capture.line, "appears");
+}
+
+TEST(LoggerTest, VariadicLevelMethodsForwardMessage)
+{
+    Capture capture;
+    auto sink = LogSink::function(
+        [&capture](LogLevel level, const std::string& line) {
+            capture.level = level;
+            capture.line  = line;
+        });
+    Logger logger("unit", LogLevel::Trace, { sink }, "%v");
+
+    logger.trace("t {}", 1);
+    EXPECT_EQ(capture.level, LogLevel::Trace);
+    EXPECT_EQ(capture.line, "t 1");
+
+    logger.debug("d {}", 2);
+    EXPECT_EQ(capture.level, LogLevel::Debug);
+
+    logger.info("i {}", 3);
+    EXPECT_EQ(capture.level, LogLevel::Info);
+
+    logger.warn("w {}", 4);
+    EXPECT_EQ(capture.level, LogLevel::Warn);
+
+    logger.error("e {}", 5);
+    EXPECT_EQ(capture.level, LogLevel::Error);
+
+    logger.critical("c {}", 6);
+    EXPECT_EQ(capture.level, LogLevel::Critical);
+}
+
+TEST(LoggerTest, LogWithExplicitLevelAndMessage)
+{
+    Capture capture;
+    auto sink = LogSink::function(
+        [&capture](LogLevel level, const std::string& line) {
+            capture.level = level;
+            capture.line  = line;
+        });
+    Logger logger("unit", LogLevel::Trace, { sink }, "%v");
+    logger.log(LogLevel::Warn, "raw message");
+    EXPECT_EQ(capture.level, LogLevel::Warn);
+    EXPECT_EQ(capture.line, "raw message");
+}
+
+TEST(LoggerTest, PatternControlsFormatting)
+{
+    Capture capture;
+    auto sink = LogSink::function(
+        [&capture](LogLevel, const std::string& line) { capture.line = line; });
+    Logger logger("unit", LogLevel::Info, { sink }, "[%n] %v");
+    logger.info("hello");
+    EXPECT_EQ(capture.line, "[unit] hello");
+}
+
+TEST(LoggerTest, SetPatternChangesOutput)
+{
+    Capture capture;
+    auto sink = LogSink::function(
+        [&capture](LogLevel, const std::string& line) { capture.line = line; });
+    Logger logger("unit", LogLevel::Info, { sink }, "%v");
+    logger.setPattern("%n:%v");
+    logger.info("msg");
+    EXPECT_EQ(capture.line, "unit:msg");
+}
+
+TEST(LoggerTest, FlushDoesNotThrow)
+{
+    Logger logger("unit", LogLevel::Info);
+    EXPECT_NO_THROW(logger.flush());
+}
+
+TEST(LogSinkTest, StreamSinkWritesToStream)
+{
+    std::ostringstream out;
+    auto sink = LogSink::stream(out);
+    Logger logger("unit", LogLevel::Info, { sink }, "%v");
+    logger.info("to stream");
+    EXPECT_EQ(out.str(), "to stream\n");
+}
+
+TEST(LogSinkTest, FileSinkWritesToFile)
+{
+    const auto path = std::filesystem::temp_directory_path() / "vine_test_log.txt";
+    std::filesystem::remove(path);
+
+    auto sink = LogSink::file(path);
+    Logger logger("unit", LogLevel::Info, { sink }, "%v");
+    logger.info("file line");
+    logger.flush();
+
+    std::ifstream in(path);
+    ASSERT_TRUE(in.good());
+    std::string line;
+    std::getline(in, line);
+    EXPECT_EQ(line, "file line");
+
+    std::filesystem::remove(path);
+}
+
+TEST(LogTest, DefaultLoggerHasVineName)
+{
+    EXPECT_EQ(Log::defaultLogger().name(), "vine");
+}
+
+TEST(LogTest, InitWithFunctionSinkCapturesMacro)
+{
+    std::string line;
+    auto sink = LogSink::function(
+        [&line](LogLevel, const std::string& l) { line = l; });
+    Log::init(LogLevel::Info, { sink }, "%v");
+    V_LOGI("hello {} from macro", 42);
+    EXPECT_EQ(line, "hello 42 from macro");
+}
+
+TEST(LogTest, SetLevelControlsDefaultLogger)
+{
+    std::string line;
+    auto sink = LogSink::function(
+        [&line](LogLevel, const std::string& l) { line = l; });
+    Log::init(LogLevel::Error, { sink }, "%v");
+    V_LOGI("suppressed");
+    EXPECT_TRUE(line.empty());
+    V_LOGE("visible");
+    EXPECT_EQ(line, "visible");
+}
+
+} // namespace

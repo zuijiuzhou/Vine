@@ -17,27 +17,33 @@ UIElement::UIElement(UIElementData* data, QObject* impl)
 {
     d->impl = impl;
 
-    d->impl_destroyed_connection = QObject::connect(impl, &QObject::destroyed, [this, data](QObject* obj) {
-        data->impl         = nullptr; // prevent dtor from double-deleting
-        data->impl_deleted = true;
-        if (data->owns_impl) {
-            delete this; // self-destruct when impl goes away
-        }
-    });
+    // A null impl is valid for detached elements (e.g. DockPanel) whose native
+    // widget is attached later; skip the destroyed hook in that case.
+    if (impl) {
+        d->impl_destroyed_connection = QObject::connect(impl, &QObject::destroyed, [this, data](QObject* obj) {
+            data->impl         = nullptr; // prevent dtor from double-deleting
+            data->impl_deleted = true;
+            if (data->owns_impl) {
+                delete this; // self-destruct when impl goes away
+            }
+        });
+    }
 }
 
 UIElement::UIElement(UIObject* impl)
   : d(new UIElementData())
 {
-    d->impl                      = impl;
-    UIElementData* dptr          = d;
-    d->impl_destroyed_connection = QObject::connect(impl, &QObject::destroyed, [this, dptr](QObject* obj) {
-        dptr->impl         = nullptr; // prevent dtor from double-deleting
-        dptr->impl_deleted = true;
-        if (dptr->owns_impl) {
-            delete this; // self-destruct when impl goes away
-        }
-    });
+    d->impl             = impl;
+    UIElementData* dptr = d;
+    if (impl) {
+        d->impl_destroyed_connection = QObject::connect(impl, &QObject::destroyed, [this, dptr](QObject* obj) {
+            dptr->impl         = nullptr; // prevent dtor from double-deleting
+            dptr->impl_deleted = true;
+            if (dptr->owns_impl) {
+                delete this; // self-destruct when impl goes away
+            }
+        });
+    }
 }
 
 UIElement::~UIElement()

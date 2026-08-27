@@ -15,17 +15,45 @@ struct ThreadPool::Impl {
     std::queue<std::function<void()>> tasks;
     std::mutex                        mutex;
     std::condition_variable           cv;
-    bool                              stop = false;
+    bool                              stop  = true;
+    std::size_t                       count = 1;
 };
+
+ThreadPool::ThreadPool()
+  : ThreadPool(std::thread::hardware_concurrency())
+{}
 
 ThreadPool::ThreadPool(std::size_t thread_count)
   : d(new Impl)
 {
-    if (thread_count == 0) {
-        thread_count = 1;
+    d->count = thread_count == 0 ? 1 : thread_count;
+    start();
+}
+
+ThreadPool::~ThreadPool()
+{
+    stop();
+    delete d;
+}
+
+ThreadPool& ThreadPool::defaultPool()
+{
+    static ThreadPool s_pool;
+    return s_pool;
+}
+
+void ThreadPool::start()
+{
+    std::lock_guard<std::mutex> lock(d->mutex);
+
+    if (!d->stop) {
+        return;
     }
-    d->workers.reserve(thread_count);
-    for (std::size_t i = 0; i < thread_count; ++i) {
+
+    d->workers.clear();
+    d->stop = false;
+
+    for (std::size_t i = 0; i < d->count; ++i) {
         d->workers.emplace_back([this]() {
             for (;;) {
                 std::function<void()> task;
@@ -44,19 +72,20 @@ ThreadPool::ThreadPool(std::size_t thread_count)
     }
 }
 
-ThreadPool::~ThreadPool()
+void ThreadPool::stop()
 {
     {
         std::lock_guard<std::mutex> lock(d->mutex);
         d->stop = true;
     }
     d->cv.notify_all();
+
     for (auto& worker : d->workers) {
         if (worker.joinable()) {
             worker.join();
         }
     }
-    delete d;
+    d->workers.clear();
 }
 
 void ThreadPool::enqueueTask(std::function<void()> task)
@@ -73,7 +102,7 @@ void ThreadPool::enqueueTask(std::function<void()> task)
 
 std::size_t ThreadPool::threadCount() const
 {
-    return d->workers.size();
+    return d->count;
 }
 
 V_CORE_NS_END

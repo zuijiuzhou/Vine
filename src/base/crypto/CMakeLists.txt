@@ -1,5 +1,7 @@
 v_add_library(CRYPTO_TARGET_NAME Crypto)
 
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 include(FetchContent)
 # libsodium is a pure autotools project (no CMakeLists.txt), so it cannot be
 # consumed via FetchContent. wolfSSL ships a CMake build, exposes a single

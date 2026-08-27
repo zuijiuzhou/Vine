@@ -14,15 +14,20 @@ V_CORE_NS_BEGIN
  * @brief A fixed-size thread pool that executes queued tasks concurrently.
  *
  * Tasks are submitted with enqueue() and may return a result through a
- * std::future. Worker threads are started by the constructor and joined by
- * the destructor, so the pool must outlive any task it runs. The pool is not
- * copyable or movable.
+ * std::future. The pool starts its workers in the constructor, stops and
+ * drains them in stop() or the destructor, and can be restarted with start().
+ * The pool is not copyable or movable.
  *
  * Qt-free; relies only on the C++ standard library.
  */
 class V_CORE_API ThreadPool {
 
   public:
+    /**
+     * @brief Creates a thread pool sized to the hardware concurrency.
+     */
+    ThreadPool();
+
     /**
      * @brief Creates a thread pool with the given number of worker threads.
      *
@@ -59,6 +64,23 @@ class V_CORE_API ThreadPool {
      * @return The worker thread count.
      */
     std::size_t threadCount() const;
+
+    /**
+     * @brief Starts the worker threads if the pool is stopped.
+     */
+    void start();
+
+    /**
+     * @brief Stops accepting tasks, drains the queue and joins all workers.
+     */
+    void stop();
+
+    /**
+     * @brief Returns the process-wide default thread pool.
+     *
+     * @return The default pool singleton.
+     */
+    static ThreadPool& defaultPool();
 
   private:
     /**
