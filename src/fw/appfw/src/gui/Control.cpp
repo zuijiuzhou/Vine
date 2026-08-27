@@ -2,7 +2,7 @@
 
 #include <QWidget>
 
-#include "UIElementData.hpp"
+#include <vine/appfw/gui/UIElementData.hpp>
 
 V_APPFWGUI_NS_BEGIN
 

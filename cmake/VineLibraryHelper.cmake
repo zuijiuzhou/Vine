@@ -35,8 +35,16 @@ function(v_add_library target_name_var short_name)
     add_library(${target_alias} ALIAS ${target_name})
     # 设置输出文件名
     set_target_properties(${target_name} PROPERTIES OUTPUT_NAME ${lib_file_name})
-    # 设置输出分组
-    set_target_properties(${target_name} PROPERTIES FOLDER vi)
+    # 设置输出分组：按 src 下一级目录自动归组（src/base/logging -> vine/base）
+    set(target_folder "vi")
+    file(RELATIVE_PATH src_rel_dir ${CMAKE_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR})
+    string(REPLACE "\\" "/" src_rel_dir "${src_rel_dir}")
+    if(NOT src_rel_dir STREQUAL "" AND NOT src_rel_dir MATCHES "^[.][.]/")
+        string(REPLACE "/" ";" src_rel_parts "${src_rel_dir}")
+        list(GET src_rel_parts 0 group_level)
+        set(target_folder "vine/${group_level}")
+    endif()
+    set_target_properties(${target_name} PROPERTIES FOLDER ${target_folder})
 
     set_target_properties(${target_name} PROPERTIES PREFIX "")
     # 设置源文件分组

@@ -17,7 +17,7 @@
 #include <vine/appfw/gui/StatusBar.hpp>
 
 #include "MainWindowImpl.hpp"
-#include "UIElementData.hpp"
+#include <vine/appfw/gui/UIElementData.hpp>
 
 V_APPFWGUI_NS_BEGIN
 
@@ -33,6 +33,8 @@ namespace
 {
 
 using itype = MainWindowImpl;
+
+MainWindow* s_current_main_window = nullptr;
 
 } // namespace
 
@@ -67,6 +69,8 @@ void MainWindowImpl::applyAppTheme()
 MainWindow::MainWindow()
   : Window(new Data(), new MainWindowImpl(nullptr))
 {
+    s_current_main_window = this;
+
     dptr()->ribbon_bar     = new RibbonBar(this);
     dptr()->status_bar     = new StatusBar(this);
     dptr()->dock_panel_mgr = new DockPanelManager();
@@ -86,10 +90,18 @@ MainWindow::MainWindow()
 
 MainWindow::~MainWindow()
 {
+    if (s_current_main_window == this) {
+        s_current_main_window = nullptr;
+    }
     delete dptr()->dock_panel_mgr;
     delete dptr()->ribbon_bar;
     delete dptr()->status_bar;
     // d is deleted by UIElement
+}
+
+MainWindow* MainWindow::current()
+{
+    return s_current_main_window;
 }
 
 RibbonBar* MainWindow::ribbonBar() const

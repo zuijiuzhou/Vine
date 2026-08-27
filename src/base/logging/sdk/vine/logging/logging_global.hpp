@@ -9,11 +9,10 @@
 #endif
 
 #define V_LOGGING_NS_BEGIN \
-    namespace base         \
-    {                      \
+    V_ROOT_NS_BEGIN        \
     namespace logging      \
     {
 
 #define V_LOGGING_NS_END \
     }                    \
-    }
+    V_ROOT_NS_END

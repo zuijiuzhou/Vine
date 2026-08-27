@@ -5,7 +5,7 @@
 #include <vector>
 #include <vine/appfw/gui/RibbonGroup.hpp>
 
-#include "UIElementData.hpp"
+#include <vine/appfw/gui/UIElementData.hpp>
 V_APPFWGUI_NS_BEGIN
 
 V_OBJECT_META_IMPL(RibbonTab, Control)

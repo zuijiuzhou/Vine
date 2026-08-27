@@ -22,6 +22,14 @@ class V_APPFW_API MainWindow : public Window {
     ~MainWindow() override;
 
   public:
+    /**
+     * @brief Returns the currently shown main window, or nullptr if none.
+     *
+     * @return The main window instance.
+     */
+    static MainWindow* current();
+
+  public:
     RibbonBar*        ribbonBar() const;
     StatusBar*        statusBar() const;
     DockPanelManager* dockPanelManager() const;

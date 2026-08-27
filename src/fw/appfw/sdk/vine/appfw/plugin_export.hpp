@@ -1,0 +1,84 @@
+#pragma once
+
+#include "appfw_global.hpp"
+
+#include "command_export.hpp"
+#include "Plugin.hpp"
+
+/**
+ * @brief Export visibility for plugin entry points.
+ *
+ * Vine plugin DLLs use this to export their entry points. The header is meant
+ * for plugin authors only; it must not be included by appfw itself.
+ */
+#if defined(_WIN32) || defined(_WIN64)
+#    define V_PLUGIN_EXPORT __declspec(dllexport)
+#else
+#    define V_PLUGIN_EXPORT __attribute__((visibility("default")))
+#endif
+
+extern "C" {
+    /**
+     * @brief Plugin query entry point; returns the plugin metadata.
+     *
+     * No side effects; doubles as the "is this a Vine plugin" detection.
+     *
+     * @return The plugin metadata, or nullptr.
+     */
+    V_PLUGIN_EXPORT const vine::appfw::PluginInfo* vinePluginQuery();
+
+    /**
+     * @brief Plugin create entry point; returns the DLL-global plugin instance.
+     *
+     * The instance is owned by the DLL and returned on every call.
+     *
+     * @return The plugin instance.
+     */
+    V_PLUGIN_EXPORT vine::appfw::Plugin* vinePluginCreate();
+
+    /**
+     * @brief Registers the plugin's commands (V_DECLARE_COMMAND) with the host.
+     *
+     * Runs inside the plugin module so its per-module command queue is flushed
+     * into the given CommandManager. Called by the PluginManager on load.
+     *
+     * @param manager Command manager to register into.
+     */
+    V_PLUGIN_EXPORT void vinePluginRegisterCommands(vine::appfw::CommandManager* manager);
+}
+
+/**
+ * @brief Defines a plugin's entry points in a plugin DLL.
+ *
+ * Usage (PluginDependencies is a braced list, empty when the plugin has no
+ * dependencies):
+ * @code
+ * V_PLUGIN_DECLARE(MyPlugin, u8"myPlugin", u8"1.0.0", u8"Demo plugin", u8"Vine", { u8"base_plugin" })
+ * @endcode
+ *
+ * @param PluginClass The plugin class (default-constructible, derives Plugin).
+ * @param PluginName Unique plugin name.
+ * @param PluginVersion Plugin version.
+ * @param PluginDescription Plugin description.
+ * @param PluginVendor Plugin vendor/author.
+ * @param PluginDependencies Braced list of plugin names this plugin requires.
+ */
+#define V_PLUGIN_DECLARE(PluginClass, PluginName, PluginVersion, PluginDescription, PluginVendor, PluginDependencies) \
+    extern "C" V_PLUGIN_EXPORT const vine::appfw::PluginInfo* vinePluginQuery()                                      \
+    {                                                                                                                \
+        static const vine::appfw::PluginInfo s_info{ PluginName, PluginVersion, PluginDescription, PluginVendor,     \
+                                                     PluginDependencies };                                           \
+        return &s_info;                                                                                              \
+    }                                                                                                                \
+    extern "C" V_PLUGIN_EXPORT vine::appfw::Plugin* vinePluginCreate()                                               \
+    {                                                                                                                \
+        static vine::appfw::Plugin* s_instance = nullptr;                                                            \
+        if (s_instance == nullptr) {                                                                                 \
+            s_instance = new PluginClass();                                                                          \
+        }                                                                                                            \
+        return s_instance;                                                                                           \
+    }                                                                                                                \
+    extern "C" V_PLUGIN_EXPORT void vinePluginRegisterCommands(vine::appfw::CommandManager* manager)                \
+    {                                                                                                                \
+        vine::appfw::detail::registerModuleCommands(manager);                                                        \
+    }

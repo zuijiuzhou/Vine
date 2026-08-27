@@ -10,12 +10,12 @@
 #include <vine/logging/LogSink.hpp>
 #include <vine/logging/Logger.hpp>
 
-using base::logging::Log;
-using base::logging::LogLevel;
-using base::logging::LogSink;
-using base::logging::Logger;
-using base::logging::levelName;
-using base::logging::parseLevel;
+using vine::logging::Log;
+using vine::logging::LogLevel;
+using vine::logging::LogSink;
+using vine::logging::Logger;
+using vine::logging::levelName;
+using vine::logging::parseLevel;
 
 namespace
 {
@@ -187,7 +187,14 @@ TEST(LogSinkTest, StreamSinkWritesToStream)
     auto sink = LogSink::stream(out);
     Logger logger("unit", LogLevel::Info, { sink }, "%v");
     logger.info("to stream");
-    EXPECT_EQ(out.str(), "to stream\n");
+
+    // spdlog appends the platform EOL (\r\n on Windows, \n elsewhere), so
+    // compare the payload ignoring the trailing line terminator.
+    std::string line = out.str();
+    while (!line.empty() && (line.back() == '\r' || line.back() == '\n')) {
+        line.pop_back();
+    }
+    EXPECT_EQ(line, "to stream");
 }
 
 TEST(LogSinkTest, FileSinkWritesToFile)
@@ -195,16 +202,21 @@ TEST(LogSinkTest, FileSinkWritesToFile)
     const auto path = std::filesystem::temp_directory_path() / "vine_test_log.txt";
     std::filesystem::remove(path);
 
-    auto sink = LogSink::file(path);
-    Logger logger("unit", LogLevel::Info, { sink }, "%v");
-    logger.info("file line");
-    logger.flush();
+    // Scope the logger/sink so the file handle is released before removal;
+    // Windows cannot delete a file that is still open.
+    {
+        auto sink = LogSink::file(path);
+        Logger logger("unit", LogLevel::Info, { sink }, "%v");
+        logger.info("file line");
+        logger.flush();
+    }
 
     std::ifstream in(path);
     ASSERT_TRUE(in.good());
     std::string line;
     std::getline(in, line);
     EXPECT_EQ(line, "file line");
+    in.close();
 
     std::filesystem::remove(path);
 }

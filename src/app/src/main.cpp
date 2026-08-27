@@ -13,10 +13,11 @@
 #include <vine/di/Container.hpp>
 #include <vine/di/Registration.hpp>
 
-#include <vine/appfw/AddinManager.hpp>
+#include <vine/logging/Log.hpp>
+
+#include <vine/appfw/PluginManager.hpp>
 #include <vine/appfw/ConfigItem.hpp>
 #include <vine/appfw/ConfigRegistry.hpp>
-#include <vine/appfw/gui/ConfigWindow.hpp>
 #include <vine/appfw/gui/GuiApplication.hpp>
 #include <vine/appfw/gui/MainWindow.hpp>
 
@@ -36,6 +37,10 @@ namespace guifw = fw::gui;
 int main(int argc, char** argv)
 {
     using namespace guifw;
+
+    // 初始化日志（默认 console + Info；可按需调整级别/sink）
+    ::vine::logging::Log::init();
+
     GuiApplication::desc();
     GuiApplication app(argc, argv);
     app.init();
@@ -167,10 +172,10 @@ int main(int argc, char** argv)
                        .step(0.05)
                        .defaultValue(1.0));
 
-    auto* settingsWin = new ConfigWindow(configs, config);
-    settingsWin->setWindowTitle(u8"设置");
-    settingsWin->resize(480, 360);
-    settingsWin->show();
+    // 加载插件：plugin_manager 会在 Ribbon 上添加两个按钮，test_plugin 依赖它。
+    if (!app.pluginManager()->loadAll()) {
+        std::cout << "Some plugins failed to load" << std::endl;
+    }
 
     // 中央客户区
     struct CentralWidget : UIElement {

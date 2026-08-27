@@ -6,8 +6,7 @@
 #include <vine/logging/LogLevel.hpp>
 #include <vine/logging/LogSink.hpp>
 
-namespace base
-{
+V_ROOT_NS_BEGIN
 namespace logging
 {
 
@@ -46,9 +45,9 @@ inline LogLevel toLogLevel(spdlog::level::level_enum level) noexcept
 }
 
 } // namespace logging
-} // namespace base
+V_ROOT_NS_END
 
-struct base::logging::LogSink::Impl
+struct vine::logging::LogSink::Impl
 {
     spdlog::sink_ptr sink;
 };

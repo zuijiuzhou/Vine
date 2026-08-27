@@ -1,6 +1,6 @@
 #include <vine/appfw/gui/RibbonAction.hpp>
 
-#include "UIElementData.hpp"
+#include <vine/appfw/gui/UIElementData.hpp>
 #include <QAction>
 #include <QIcon>
 

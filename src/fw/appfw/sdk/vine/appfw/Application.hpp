@@ -7,7 +7,7 @@
 V_APPFW_NS_BEGIN
 
 class CommandManager;
-class AddinManager;
+class PluginManager;
 class ServiceManager;
 class ConfigManager;
 class ConfigRegistry;
@@ -43,7 +43,7 @@ class V_APPFW_API Application : public Object {
 
     CommandManager* commandManager() const;
 
-    AddinManager* addinManager() const;
+    PluginManager* pluginManager() const;
 
     ServiceManager* serviceManager() const;
 

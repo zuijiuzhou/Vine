@@ -1,4 +1,4 @@
-#include <vine/appfw/gui/ConfigWindow.hpp>
+#include "ConfigWindow.hpp"
 
 #include <any>
 #include <vector>
@@ -19,7 +19,7 @@
 #include <vine/appfw/ConfigCategory.hpp>
 #include <vine/appfw/ConfigGroup.hpp>
 
-#include "UIElementData.hpp"
+#include <vine/appfw/gui/UIElementData.hpp>
 
 V_APPFWGUI_NS_BEGIN
 

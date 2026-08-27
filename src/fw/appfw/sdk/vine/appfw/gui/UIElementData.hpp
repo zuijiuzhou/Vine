@@ -1,5 +1,6 @@
 #pragma once
 
+#include <vine/appfw/appfw_global.hpp>
 #include <vine/String.hpp>
 
 #include <QObject>

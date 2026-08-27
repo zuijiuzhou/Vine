@@ -3,7 +3,7 @@
 #include <vine/appfw/ConfigManager.hpp>
 #include <vine/appfw/ConfigRegistry.hpp>
 
-#include "Window.hpp"
+#include <vine/appfw/gui/Window.hpp>
 
 V_APPFWGUI_NS_BEGIN
 
@@ -18,7 +18,7 @@ V_APPFWGUI_NS_BEGIN
  * refresh() reloads values from storage and reset() restores defaults.
  * Inherits Window; show() non-modally or exec() modally.
  */
-class V_APPFW_API ConfigWindow : public Window {
+class ConfigWindow : public Window {
     V_OBJECT_META_DECL
 
   public:

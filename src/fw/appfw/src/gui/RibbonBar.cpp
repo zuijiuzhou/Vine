@@ -7,7 +7,7 @@
 #include <vine/appfw/gui/RibbonAction.hpp>
 #include <vine/appfw/gui/RibbonTab.hpp>
 
-#include "UIElementData.hpp"
+#include <vine/appfw/gui/UIElementData.hpp>
 
 V_APPFWGUI_NS_BEGIN
 

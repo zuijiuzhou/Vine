@@ -42,7 +42,7 @@ enum class ConfigItemType
  * description are shown by the panel; type selects the editor; defaultValue,
  * range, step and choices constrain editing. The display placement (category and
  * group) is decided by the ConfigGroup tree, not stored here. Plugins register
- * items through AddinLoadContext::configs() or directly with ConfigRegistry.
+ * items through PluginLoadContext::configs() or directly with ConfigRegistry.
  *
  * @note Fluent builders return the object itself, e.g.
  * item.range(8, 72).defaultValue(14)

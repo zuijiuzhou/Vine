@@ -3,7 +3,7 @@
 #include <vine/Exception.hpp>
 #include <vine/Ptr.hpp>
 
-#include <vine/appfw/AddinManager.hpp>
+#include <vine/appfw/PluginManager.hpp>
 #include <vine/appfw/Application.hpp>
 #include <vine/appfw/CommandManager.hpp>
 #include <vine/appfw/ConfigManager.hpp>
@@ -41,9 +41,9 @@ Application::Application(ApplicationData* data, int argc, char** argv)
 
     s_current_app = this;
 
-    dptr()->addin_manager   = new AddinManager;
+    dptr()->plugin_manager  = new PluginManager;
     dptr()->service_manager = new ServiceManager;
-    dptr()->command_manager = new CommandManager;
+    dptr()->command_manager = new CommandManager(this);
     dptr()->config_manager  = new ConfigManager;
     dptr()->config_registry = new ConfigRegistry;
     dptr()->argc            = argc;
@@ -52,7 +52,7 @@ Application::Application(ApplicationData* data, int argc, char** argv)
 
 Application::~Application()
 {
-    delete dptr()->addin_manager;
+    delete dptr()->plugin_manager;
     delete dptr()->service_manager;
     delete dptr()->command_manager;
     delete dptr()->config_manager;
@@ -83,9 +83,9 @@ CommandManager* Application::commandManager() const
     return dptr()->command_manager;
 }
 
-AddinManager* Application::addinManager() const
+PluginManager* Application::pluginManager() const
 {
-    return dptr()->addin_manager;
+    return dptr()->plugin_manager;
 }
 
 ServiceManager* Application::serviceManager() const

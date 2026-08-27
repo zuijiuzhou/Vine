@@ -17,6 +17,8 @@ set_target_properties(${APPFW_TARGET_NAME} PROPERTIES
 target_link_libraries(${APPFW_TARGET_NAME}
     PUBLIC vi::Core vi::Di vi::Math vi::Global
     PRIVATE
+    vi::Logging
+    vi::Runtime
     tp::SARibbon
     tp::DockingPanes
     Qt6::Core Qt6::Gui Qt6::Widgets)

@@ -35,12 +35,11 @@
 
 #include <vine/vi_global.hpp>
 
-#include <vine/appfw/AddinLoadContext.hpp>
+#include <vine/appfw/PluginLoadContext.hpp>
 #include <vine/appfw/ConfigItem.hpp>
 #include <vine/appfw/ConfigManager.hpp>
 #include <vine/appfw/ConfigRegistry.hpp>
 
-#include <vine/appfw/gui/ConfigWindow.hpp>
 #include <vine/appfw/gui/Control.hpp>
 #include <vine/appfw/gui/DockPanel.hpp>
 #include <vine/appfw/gui/DockPanelManager.hpp>
@@ -887,109 +886,6 @@ TEST_F(GuiTest, ConfigRegistry_Register)
     EXPECT_EQ(reg.categories().size(), 0u);
 }
 
-TEST_F(GuiTest, ConfigWindow_EditorsAndLiveWrite)
-{
-    using vine::appfw::ConfigItem;
-    using vine::appfw::ConfigItemType;
-    using vine::appfw::ConfigManager;
-    using vine::appfw::ConfigRegistry;
-
-    ConfigRegistry reg;
-    auto*          general = reg.addCategory(u8"通用");
-    ASSERT_NE(general, nullptr);
-    auto* common = general->addGroup(u8"通用");
-    ASSERT_NE(common, nullptr);
-    common->addItem(ConfigItem(u8"name", u8"名称", ConfigItemType::String));
-    common->addItem(ConfigItem(u8"flag", u8"启用", ConfigItemType::Bool));
-    common->addItem(ConfigItem(u8"size", u8"大小", ConfigItemType::Int).range(1, 100).defaultValue(10));
-    common->addItem(ConfigItem(u8"ratio", u8"比例", ConfigItemType::Double).range(0.0, 10.0).step(0.5).defaultValue(1.0));
-    auto* appearance = reg.addCategory(u8"外观");
-    ASSERT_NE(appearance, nullptr);
-    appearance->addGroup(u8"主题")->addItem(ConfigItem(u8"theme", u8"主题", ConfigItemType::Choice).choices({ u8"浅色", u8"深色" }).defaultValue(u8"浅色"));
-
-    auto* config = new ConfigManager();
-    config->setString(u8"name", u8"Vine");
-    config->setBool(u8"flag", true);
-    config->setInt(u8"size", 5);
-    config->setDouble(u8"ratio", 2.0);
-    config->setString(u8"theme", u8"深色");
-
-    auto* panel = new guifw::ConfigWindow(&reg, config);
-    auto* root  = panel->impl<QWidget>();
-    ASSERT_NE(root, nullptr);
-
-    auto* lineEdit = root->findChild<QLineEdit*>();
-    auto* check    = root->findChild<QCheckBox*>();
-    auto* spin     = root->findChild<QSpinBox*>();
-    auto* dspin    = root->findChild<QDoubleSpinBox*>();
-    auto* combo    = root->findChild<QComboBox*>();
-    ASSERT_NE(lineEdit, nullptr);
-    ASSERT_NE(check, nullptr);
-    ASSERT_NE(spin, nullptr);
-    ASSERT_NE(dspin, nullptr);
-    ASSERT_NE(combo, nullptr);
-
-    // 窗口级能力（Window 基类）
-    panel->setWindowTitle(u8"设置");
-    EXPECT_TRUE(panel->windowTitle() == u8"设置");
-    panel->resize(480, 360);
-    panel->setModal(false);
-    EXPECT_FALSE(panel->modal());
-
-    // 启动位置 / 窗口状态（Window 基类）
-    panel->setStartupPosition(guifw::StartupPosition::CenterScreen);
-    EXPECT_EQ(panel->startupPosition(), guifw::StartupPosition::CenterScreen);
-    panel->setStartupPosition(guifw::StartupPosition::Manual);
-    EXPECT_EQ(panel->startupPosition(), guifw::StartupPosition::Manual);
-    panel->setWindowState(guifw::WindowState::Minimized);
-    QCoreApplication::processEvents();
-    EXPECT_EQ(panel->windowState(), guifw::WindowState::Minimized);
-    panel->setWindowState(guifw::WindowState::Normal);
-    QCoreApplication::processEvents();
-
-    panel->show();
-    QCoreApplication::processEvents();
-    EXPECT_TRUE(panel->visible());
-    panel->close();
-    QCoreApplication::processEvents();
-    EXPECT_FALSE(panel->visible());
-
-    // 初始值从 ConfigManager 载入（refresh）
-    EXPECT_EQ(lineEdit->text(), QString::fromUtf8("Vine"));
-    EXPECT_TRUE(check->isChecked());
-    EXPECT_EQ(spin->value(), 5);
-    EXPECT_DOUBLE_EQ(dspin->value(), 2.0);
-    EXPECT_EQ(combo->currentText(), QString::fromUtf8("深色"));
-
-    // 编辑即写回
-    lineEdit->setText(QString::fromUtf8("NewName"));
-    check->setChecked(false);
-    spin->setValue(42);
-    dspin->setValue(3.5);
-    combo->setCurrentText(QString::fromUtf8("浅色"));
-    EXPECT_TRUE(config->getString(u8"name") == u8"NewName");
-    EXPECT_FALSE(config->getBool(u8"flag"));
-    EXPECT_EQ(config->getInt(u8"size"), 42);
-    EXPECT_DOUBLE_EQ(config->getDouble(u8"ratio"), 3.5);
-    EXPECT_TRUE(config->getString(u8"theme") == u8"浅色");
-
-    // refresh() 重新载入
-    config->setInt(u8"size", 7);
-    panel->refresh();
-    EXPECT_EQ(spin->value(), 7);
-
-    // reset() 恢复默认（有默认者写回默认值，无默认者移除）
-    panel->reset();
-    EXPECT_EQ(config->getInt(u8"size"), 10);
-    EXPECT_DOUBLE_EQ(config->getDouble(u8"ratio"), 1.0);
-    EXPECT_TRUE(config->getString(u8"theme") == u8"浅色");
-    EXPECT_FALSE(config->contains(u8"name"));
-    EXPECT_FALSE(config->contains(u8"flag"));
-
-    delete panel; // owns=true，销毁原生控件树
-    delete config;
-}
-
 TEST_F(GuiTest, ConfigRegistry_MetaAndOrder)
 {
     using vine::appfw::ConfigRegistry;
@@ -1016,57 +912,6 @@ TEST_F(GuiTest, ConfigRegistry_MetaAndOrder)
     ASSERT_EQ(cats.size(), 2u);
     EXPECT_TRUE(cats[0]->name() == u8"b");
     EXPECT_TRUE(cats[1]->name() == u8"a");
-}
-
-TEST_F(GuiTest, ConfigWindow_Tabs)
-{
-    using vine::appfw::ConfigItem;
-    using vine::appfw::ConfigItemType;
-    using vine::appfw::ConfigManager;
-    using vine::appfw::ConfigRegistry;
-
-    auto* config = new ConfigManager();
-
-    // Single category: the tab bar auto-hides (same look as the old single-page layout)
-    ConfigRegistry reg;
-    auto*          single = reg.addCategory(u8"单");
-    ASSERT_NE(single, nullptr);
-    single->addGroup(u8"G")->addItem(ConfigItem(u8"x", u8"X", ConfigItemType::Bool));
-
-    auto* win1  = new guifw::ConfigWindow(&reg, config);
-    auto* tabs1 = win1->impl<QWidget>()->findChild<QTabWidget*>();
-    ASSERT_NE(tabs1, nullptr);
-    win1->show();
-    QCoreApplication::processEvents();
-    EXPECT_EQ(tabs1->count(), 1);
-    EXPECT_FALSE(tabs1->tabBar()->isVisible());
-    win1->close();
-    delete win1;
-
-    // Multiple categories: tab bar shown; title = label (falls back to name, or "General" if empty)
-    auto* a = reg.addCategory(u8"catA");
-    ASSERT_NE(a, nullptr);
-    a->label(u8"标签A").description(u8"说明A");
-    a->addGroup(u8"g1")->addItem(ConfigItem(u8"a1", u8"A1", ConfigItemType::String));
-    auto* empty = reg.addCategory(u8"");
-    ASSERT_NE(empty, nullptr);
-    empty->addGroup(u8"g2")->addItem(ConfigItem(u8"e1", u8"E1", ConfigItemType::Int));
-
-    auto* win2  = new guifw::ConfigWindow(&reg, config);
-    auto* tabs2 = win2->impl<QWidget>()->findChild<QTabWidget*>();
-    ASSERT_NE(tabs2, nullptr);
-    win2->show();
-    QCoreApplication::processEvents();
-    EXPECT_EQ(tabs2->count(), 3);
-    EXPECT_TRUE(tabs2->tabBar()->isVisible());
-    EXPECT_EQ(tabs2->tabText(0), QString::fromUtf8("单"));
-    EXPECT_EQ(tabs2->tabText(1), QString::fromUtf8("标签A"));
-    EXPECT_EQ(tabs2->tabText(2), QString::fromUtf8("通用"));
-    EXPECT_EQ(tabs2->tabToolTip(1), QString::fromUtf8("说明A"));
-
-    win2->close();
-    delete win2;
-    delete config;
 }
 
 TEST_F(GuiTest, ConfigManager_ChangedEvent)
@@ -1098,12 +943,12 @@ TEST_F(GuiTest, ConfigManager_ChangedEvent)
     delete cfg;
 }
 
-TEST_F(GuiTest, AddinLoadContext_Configs)
+TEST_F(GuiTest, PluginLoadContext_Configs)
 {
     auto* app = GuiEnv::app.get();
     ASSERT_NE(app, nullptr);
 
-    vine::appfw::AddinLoadContext ctx(app);
+    vine::appfw::PluginLoadContext ctx(app);
     ASSERT_NE(ctx.configs(), nullptr);
     EXPECT_EQ(ctx.configs(), app->configRegistry());
 

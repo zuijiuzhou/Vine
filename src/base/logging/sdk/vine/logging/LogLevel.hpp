@@ -29,7 +29,7 @@ enum class LogLevel
  * @param level Log level.
  * @return The level name.
  */
-std::string_view levelName(LogLevel level) noexcept;
+V_LOGGING_API std::string_view levelName(LogLevel level) noexcept;
 
 /**
  * @brief Parses a log level name, case-insensitively.
@@ -39,6 +39,6 @@ std::string_view levelName(LogLevel level) noexcept;
  * @param name Level name.
  * @return The parsed level.
  */
-LogLevel parseLevel(std::string_view name) noexcept;
+V_LOGGING_API LogLevel parseLevel(std::string_view name) noexcept;
 
 V_LOGGING_NS_END
