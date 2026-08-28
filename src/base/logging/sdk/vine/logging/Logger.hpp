@@ -43,7 +43,7 @@ class V_LOGGING_API Logger
      *
      * @param name Logger name.
      * @param level Initial level.
-     * @param sinks Destinations; an empty list adds a console sink.
+     * @param sinks Destinations; an empty list produces no output.
      * @param pattern Format pattern; an empty string uses the spdlog default.
      */
     Logger(std::string name, LogLevel level, std::vector<LogSink> sinks, std::string pattern = {});

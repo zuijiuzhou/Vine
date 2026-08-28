@@ -949,8 +949,11 @@ TEST_F(GuiTest, PluginLoadContext_Configs)
     ASSERT_NE(app, nullptr);
 
     vine::appfw::PluginLoadContext ctx(app);
+    EXPECT_EQ(ctx.application(), app);
     ASSERT_NE(ctx.configs(), nullptr);
     EXPECT_EQ(ctx.configs(), app->configRegistry());
+    EXPECT_NE(ctx.eventBus(), nullptr);
+    EXPECT_EQ(ctx.eventBus(), app->eventBus());
 
     // Registering through the context targets the same registry as Application
     auto* pluginCat = ctx.configs()->addCategory(u8"插件");

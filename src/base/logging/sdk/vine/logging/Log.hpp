@@ -12,64 +12,44 @@
 V_LOGGING_NS_BEGIN
 
 /**
- * @brief Static facade over the process-wide default logger.
+ * @brief Configuration for the process-wide default logger.
  *
- * init() configures the default logger; defaultLogger() returns it. The
- * V_LOGT..V_LOGC macros log to the default logger with the current source
- * location.
+ * sinks holds the explicit destinations (console, stream, rotating file,
+ * custom). When sinks is empty, initDefault adds a colored console sink so
+ * the default logger always has at least one sink.
  */
-class V_LOGGING_API Log
-{
-  public:
-    /**
-     * @brief Reconfigures the default logger as console + Info level.
-     */
-    static void init();
+struct LogConfig {
+    /// Minimum level of records to log.
+    LogLevel level = LogLevel::Info;
 
-    /**
-     * @brief Reconfigures the default logger as console with the given level.
-     *
-     * @param level Initial level.
-     */
-    static void init(LogLevel level);
+    /// Format pattern; empty uses the spdlog default.
+    std::string pattern;
 
-    /**
-     * @brief Reconfigures the default logger with the given sinks and pattern.
-     *
-     * @param level Initial level.
-     * @param sinks Destinations; an empty list adds a console sink.
-     * @param pattern Format pattern; see Logger::setPattern() for the flags.
-     */
-    static void init(LogLevel level, std::vector<LogSink> sinks, std::string pattern = {});
-
-    /**
-     * @brief Returns the process-wide default logger.
-     *
-     * @return The default logger.
-     */
-    static Logger& defaultLogger();
-
-    /**
-     * @brief Sets the minimum level of the default logger.
-     *
-     * @param level Minimum level.
-     */
-    static void setLevel(LogLevel level);
-
-    /**
-     * @brief Sets the format pattern of the default logger.
-     *
-     * See Logger::setPattern() for the pattern flags.
-     *
-     * @param pattern Format pattern.
-     */
-    static void setPattern(const std::string& pattern);
-
-    /**
-     * @brief Flushes the default logger.
-     */
-    static void flush();
+    /// Explicit destinations; empty adds a console sink.
+    std::vector<LogSink> sinks;
 };
+
+/**
+ * @brief Reconfigures the process-wide default logger.
+ *
+ * Rebuilds the logger from config, adding a colored console sink when sinks
+ * is empty so the default logger always has at least one sink.
+ *
+ * @param config Logger configuration; defaults to console + Info level.
+ */
+V_LOGGING_API void initDefault(LogConfig config = {});
+
+/**
+ * @brief Returns the process-wide default logger.
+ *
+ * @return The default logger.
+ */
+V_LOGGING_API Logger& defaultLogger();
+
+/**
+ * @brief Flushes the default logger.
+ */
+V_LOGGING_API void flushDefault();
 
 V_LOGGING_NS_END
 
@@ -84,9 +64,9 @@ V_LOGGING_NS_END
  * Levels: V_LOGT(trace) V_LOGD(debug) V_LOGI(info)
  *         V_LOGW(warn)  V_LOGE(error) V_LOGC(critical)
  */
-#define V_LOGT(...) ::vine::logging::Log::defaultLogger().trace(::std::source_location::current(), __VA_ARGS__)
-#define V_LOGD(...) ::vine::logging::Log::defaultLogger().debug(::std::source_location::current(), __VA_ARGS__)
-#define V_LOGI(...) ::vine::logging::Log::defaultLogger().info(::std::source_location::current(), __VA_ARGS__)
-#define V_LOGW(...) ::vine::logging::Log::defaultLogger().warn(::std::source_location::current(), __VA_ARGS__)
-#define V_LOGE(...) ::vine::logging::Log::defaultLogger().error(::std::source_location::current(), __VA_ARGS__)
-#define V_LOGC(...) ::vine::logging::Log::defaultLogger().critical(::std::source_location::current(), __VA_ARGS__)
+#define V_LOGT(...) ::vine::logging::defaultLogger().trace(::std::source_location::current(), __VA_ARGS__)
+#define V_LOGD(...) ::vine::logging::defaultLogger().debug(::std::source_location::current(), __VA_ARGS__)
+#define V_LOGI(...) ::vine::logging::defaultLogger().info(::std::source_location::current(), __VA_ARGS__)
+#define V_LOGW(...) ::vine::logging::defaultLogger().warn(::std::source_location::current(), __VA_ARGS__)
+#define V_LOGE(...) ::vine::logging::defaultLogger().error(::std::source_location::current(), __VA_ARGS__)
+#define V_LOGC(...) ::vine::logging::defaultLogger().critical(::std::source_location::current(), __VA_ARGS__)

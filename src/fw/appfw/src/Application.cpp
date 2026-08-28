@@ -8,7 +8,10 @@
 #include <vine/appfw/CommandManager.hpp>
 #include <vine/appfw/ConfigManager.hpp>
 #include <vine/appfw/ConfigRegistry.hpp>
+#include <vine/appfw/EventBus.hpp>
 #include <vine/appfw/ServiceManager.hpp>
+
+#include <vine/appfw/MainThreadDispatcher.hpp>
 
 #include "ApplicationData.hpp"
 
@@ -46,6 +49,8 @@ Application::Application(ApplicationData* data, int argc, char** argv)
     dptr()->command_manager = new CommandManager(this);
     dptr()->config_manager  = new ConfigManager;
     dptr()->config_registry = new ConfigRegistry;
+    dptr()->main_dispatcher = new MainThreadDispatcher;
+    dptr()->event_bus       = new EventBus;
     dptr()->argc            = argc;
     dptr()->argv            = argv;
 }
@@ -57,6 +62,8 @@ Application::~Application()
     delete dptr()->command_manager;
     delete dptr()->config_manager;
     delete dptr()->config_registry;
+    delete dptr()->event_bus;
+    delete dptr()->main_dispatcher;
     delete d;
     s_current_app = nullptr;
 }
@@ -101,6 +108,16 @@ ConfigManager* Application::configManager() const
 ConfigRegistry* Application::configRegistry() const
 {
     return dptr()->config_registry;
+}
+
+EventBus* Application::eventBus() const
+{
+    return dptr()->event_bus;
+}
+
+MainThreadDispatcher* Application::mainThreadDispatcher() const
+{
+    return dptr()->main_dispatcher;
 }
 
 Application* Application::current()

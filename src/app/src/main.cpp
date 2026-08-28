@@ -39,7 +39,7 @@ int main(int argc, char** argv)
     using namespace guifw;
 
     // 初始化日志（默认 console + Info；可按需调整级别/sink）
-    ::vine::logging::Log::init();
+    ::vine::logging::initDefault();
 
     GuiApplication::desc();
     GuiApplication app(argc, argv);

@@ -4,38 +4,21 @@
 
 V_LOGGING_NS_BEGIN
 
-Logger& Log::defaultLogger()
+Logger& defaultLogger()
 {
     static Logger s_logger("vine");
     return s_logger;
 }
 
-void Log::init()
+void initDefault(LogConfig config)
 {
-    defaultLogger() = Logger("vine");
+    if (config.sinks.empty()) {
+        config.sinks.push_back(LogSink::console());
+    }
+    defaultLogger() = Logger("vine", config.level, std::move(config.sinks), std::move(config.pattern));
 }
 
-void Log::init(LogLevel level)
-{
-    defaultLogger() = Logger("vine", level);
-}
-
-void Log::init(LogLevel level, std::vector<LogSink> sinks, std::string pattern)
-{
-    defaultLogger() = Logger("vine", level, std::move(sinks), std::move(pattern));
-}
-
-void Log::setLevel(LogLevel level)
-{
-    defaultLogger().setLevel(level);
-}
-
-void Log::setPattern(const std::string& pattern)
-{
-    defaultLogger().setPattern(pattern);
-}
-
-void Log::flush()
+void flushDefault()
 {
     defaultLogger().flush();
 }

@@ -20,6 +20,11 @@ PluginLoadContext::~PluginLoadContext()
     delete d;
 }
 
+Application* PluginLoadContext::application() const
+{
+    return d->app;
+}
+
 ConfigRegistry* PluginLoadContext::configs() const
 {
     return d->app ? d->app->configRegistry() : nullptr;
@@ -28,6 +33,11 @@ ConfigRegistry* PluginLoadContext::configs() const
 CommandManager* PluginLoadContext::commandManager() const
 {
     return d->app ? d->app->commandManager() : nullptr;
+}
+
+EventBus* PluginLoadContext::eventBus() const
+{
+    return d->app ? d->app->eventBus() : nullptr;
 }
 
 V_APPFW_NS_END

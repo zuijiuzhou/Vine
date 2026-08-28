@@ -55,7 +55,7 @@ class V_PROGRESS_API ProgressScope
      *
      * @return true if the operation should stop.
      */
-    bool isCanceled() const;
+    bool isCancelled() const;
 
     /**
      * @brief Returns whether the scope is attached to an indicator.

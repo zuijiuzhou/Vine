@@ -23,13 +23,8 @@ ProgressRange ProgressIndicator::start()
 {
     position_           = 0.0;
     root_scope_->value_ = 0.0;
-    token_.reset();
+    cancelled_.store(false);
     return root_scope_->next();
-}
-
-ProgressRange ProgressIndicator::start(ProgressIndicator* indicator)
-{
-    return indicator != nullptr ? indicator->start() : ProgressRange();
 }
 
 double ProgressIndicator::position() const
@@ -37,24 +32,14 @@ double ProgressIndicator::position() const
     return position_;
 }
 
-bool ProgressIndicator::isCanceled() const
+bool ProgressIndicator::isCancelled() const
 {
-    return token_.isCancellationRequested();
-}
-
-vine::CancellationToken& ProgressIndicator::cancellationToken()
-{
-    return token_;
-}
-
-const vine::CancellationToken& ProgressIndicator::cancellationToken() const
-{
-    return token_;
+    return cancelled_.load();
 }
 
 void ProgressIndicator::cancel()
 {
-    token_.cancel();
+    cancelled_.store(true);
 }
 
 void ProgressIndicator::increment(double step)

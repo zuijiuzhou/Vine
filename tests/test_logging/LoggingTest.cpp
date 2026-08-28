@@ -10,10 +10,13 @@
 #include <vine/logging/LogSink.hpp>
 #include <vine/logging/Logger.hpp>
 
-using vine::logging::Log;
+using vine::logging::LogConfig;
 using vine::logging::LogLevel;
 using vine::logging::LogSink;
 using vine::logging::Logger;
+using vine::logging::defaultLogger;
+using vine::logging::flushDefault;
+using vine::logging::initDefault;
 using vine::logging::levelName;
 using vine::logging::parseLevel;
 
@@ -223,7 +226,14 @@ TEST(LogSinkTest, FileSinkWritesToFile)
 
 TEST(LogTest, DefaultLoggerHasVineName)
 {
-    EXPECT_EQ(Log::defaultLogger().name(), "vine");
+    EXPECT_EQ(defaultLogger().name(), "vine");
+}
+
+TEST(LogTest, InitDefaultGuaranteesConsoleSink)
+{
+    initDefault();  // empty config -> a console sink is added
+    EXPECT_NO_THROW(V_LOGI("default console log"));
+    EXPECT_EQ(defaultLogger().name(), "vine");
 }
 
 TEST(LogTest, InitWithFunctionSinkCapturesMacro)
@@ -231,7 +241,7 @@ TEST(LogTest, InitWithFunctionSinkCapturesMacro)
     std::string line;
     auto sink = LogSink::function(
         [&line](LogLevel, const std::string& l) { line = l; });
-    Log::init(LogLevel::Info, { sink }, "%v");
+    initDefault(LogConfig{ .level = LogLevel::Info, .pattern = "%v", .sinks = { sink } });
     V_LOGI("hello {} from macro", 42);
     EXPECT_EQ(line, "hello 42 from macro");
 }
@@ -241,11 +251,31 @@ TEST(LogTest, SetLevelControlsDefaultLogger)
     std::string line;
     auto sink = LogSink::function(
         [&line](LogLevel, const std::string& l) { line = l; });
-    Log::init(LogLevel::Error, { sink }, "%v");
+    initDefault(LogConfig{ .level = LogLevel::Error, .pattern = "%v", .sinks = { sink } });
     V_LOGI("suppressed");
     EXPECT_TRUE(line.empty());
     V_LOGE("visible");
     EXPECT_EQ(line, "visible");
+}
+
+TEST(LogTest, InitWithFileSinkWritesToFile)
+{
+    const auto path = std::filesystem::temp_directory_path() / "vine_test_log_sink.txt";
+    std::filesystem::remove(path);
+
+    initDefault(LogConfig{ .pattern = "%v", .sinks = { LogSink::file(path) } });
+    V_LOGI("config file line");
+    flushDefault();
+    initDefault();  // reset default logger, releasing the file sink handle
+
+    std::ifstream in(path);
+    ASSERT_TRUE(in.good());
+    std::string line;
+    std::getline(in, line);
+    EXPECT_EQ(line, "config file line");
+    in.close();
+
+    std::filesystem::remove(path);
 }
 
 } // namespace

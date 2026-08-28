@@ -22,3 +22,5 @@ target_link_libraries(${APPFW_TARGET_NAME}
     tp::SARibbon
     tp::DockingPanes
     Qt6::Core Qt6::Gui Qt6::Widgets)
+
+# Application factories: AppBuilder.cpp, GuiAppBuilder.cpp.

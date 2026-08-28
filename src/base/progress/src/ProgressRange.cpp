@@ -44,14 +44,14 @@ bool ProgressRange::isActive() const
     return !used_ && parent_scope_ != nullptr && parent_scope_->indicator_ != nullptr;
 }
 
-bool ProgressRange::isCanceled() const
+bool ProgressRange::isCancelled() const
 {
-    return parent_scope_ != nullptr && parent_scope_->indicator_ != nullptr && parent_scope_->indicator_->isCanceled();
+    return parent_scope_ != nullptr && parent_scope_->indicator_ != nullptr && parent_scope_->indicator_->isCancelled();
 }
 
 bool ProgressRange::more() const
 {
-    return !isCanceled();
+    return !isCancelled();
 }
 
 void ProgressRange::close()

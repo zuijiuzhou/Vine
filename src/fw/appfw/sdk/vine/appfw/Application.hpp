@@ -11,6 +11,8 @@ class PluginManager;
 class ServiceManager;
 class ConfigManager;
 class ConfigRegistry;
+class EventBus;
+class MainThreadDispatcher;
 class UserIO;
 class ApplicationData;
 
@@ -52,6 +54,12 @@ class V_APPFW_API Application : public Object {
 
     /// Config item registry (single instance, lives with Application).
     ConfigRegistry* configRegistry() const;
+
+    /// In-process publish/subscribe bus (single instance, lives with Application).
+    EventBus* eventBus() const;
+
+    /// Main-thread marshaller used by EventBus for Main/Auto delivery.
+    MainThreadDispatcher* mainThreadDispatcher() const;
 
     UserIO* userIO() const;
 

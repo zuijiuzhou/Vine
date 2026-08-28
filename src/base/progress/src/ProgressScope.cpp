@@ -49,12 +49,12 @@ ProgressRange ProgressScope::next(double step)
 
 bool ProgressScope::more() const
 {
-    return !isCanceled();
+    return !isCancelled();
 }
 
-bool ProgressScope::isCanceled() const
+bool ProgressScope::isCancelled() const
 {
-    return indicator_ != nullptr && indicator_->isCanceled();
+    return indicator_ != nullptr && indicator_->isCancelled();
 }
 
 bool ProgressScope::isActive() const

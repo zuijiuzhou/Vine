@@ -2,9 +2,8 @@
 
 #include "progress_global.hpp"
 
+#include <atomic>
 #include <mutex>
-
-#include <vine/CancellationToken.hpp>
 
 V_PROGRESS_NS_BEGIN
 
@@ -14,9 +13,9 @@ class ProgressScope;
 /**
  * @brief Concrete progress indicator.
  *
- * Tracks the global progress position in [0, 1] and a cancellation token. It
+ * Tracks the global progress position in [0, 1] and a cancellation flag. It
  * performs no presentation of its own; callers poll position() and drive
- * cancellation through the token. Progress increments are thread-safe.
+ * cancellation through cancel(). Progress increments are thread-safe.
  */
 class V_PROGRESS_API ProgressIndicator
 {
@@ -37,14 +36,6 @@ class V_PROGRESS_API ProgressIndicator
     ProgressRange start();
 
     /**
-     * @brief Returns the root range of the indicator, or an empty range if it is null.
-     *
-     * @param indicator Indicator, may be nullptr.
-     * @return The root range, or an empty range.
-     */
-    static ProgressRange start(ProgressIndicator* indicator);
-
-    /**
      * @brief Returns the current global progress position.
      *
      * @return Overall progress in [0, 1].
@@ -56,23 +47,7 @@ class V_PROGRESS_API ProgressIndicator
      *
      * @return true if the operation should stop.
      */
-    bool isCanceled() const;
-
-    /**
-     * @brief Returns the cancellation token.
-     *
-     * Call cancel() on the token to request cancellation.
-     *
-     * @return The cancellation token.
-     */
-    vine::CancellationToken& cancellationToken();
-
-    /**
-     * @brief Returns the cancellation token.
-     *
-     * @return The cancellation token.
-     */
-    const vine::CancellationToken& cancellationToken() const;
+    bool isCancelled() const;
 
     /**
      * @brief Requests cancellation.
@@ -88,7 +63,7 @@ class V_PROGRESS_API ProgressIndicator
 
     ProgressScope*          root_scope_{nullptr};
 
-    vine::CancellationToken token_;
+    std::atomic<bool>       cancelled_{false};
 };
 
 V_PROGRESS_NS_END

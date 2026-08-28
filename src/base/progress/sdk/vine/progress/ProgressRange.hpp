@@ -44,7 +44,7 @@ class V_PROGRESS_API ProgressRange
      *
      * @return true if the operation should stop.
      */
-    bool isCanceled() const;
+    bool isCancelled() const;
 
     /**
      * @brief Returns false if the user requested a break.

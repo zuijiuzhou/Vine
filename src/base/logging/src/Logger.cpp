@@ -4,7 +4,6 @@
 #include <utility>
 
 #include <spdlog/spdlog.h>
-#include <spdlog/sinks/stdout_color_sinks.h>
 
 #include "SpdlogInternal.hpp"
 
@@ -21,7 +20,7 @@ Logger::Logger()
 {}
 
 Logger::Logger(std::string name, LogLevel level)
-  : Logger(std::move(name), level, {}, {})
+  : Logger(std::move(name), level, { LogSink::console() }, {})
 {}
 
 Logger::Logger(std::string name, LogLevel level, std::vector<LogSink> sinks, std::string pattern)
@@ -30,14 +29,9 @@ Logger::Logger(std::string name, LogLevel level, std::vector<LogSink> sinks, std
     d->name = std::move(name);
 
     std::vector<spdlog::sink_ptr> spd_sinks;
-    if (sinks.empty()) {
-        spd_sinks.push_back(std::make_shared<spdlog::sinks::stderr_color_sink_mt>());
-    }
-    else {
-        for (const auto& sink : sinks) {
-            if (sink.d && sink.d->sink) {
-                spd_sinks.push_back(sink.d->sink);
-            }
+    for (const auto& sink : sinks) {
+        if (sink.d && sink.d->sink) {
+            spd_sinks.push_back(sink.d->sink);
         }
     }
 
