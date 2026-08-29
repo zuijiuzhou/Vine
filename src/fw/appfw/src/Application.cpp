@@ -14,6 +14,7 @@
 #include <vine/appfw/MainThreadDispatcher.hpp>
 
 #include "ApplicationData.hpp"
+#include "ConsoleUserIO.hpp"
 
 V_APPFW_NS_BEGIN
 
@@ -57,6 +58,7 @@ Application::Application(ApplicationData* data, int argc, char** argv)
 
 Application::~Application()
 {
+    delete dptr()->user_io;
     delete dptr()->plugin_manager;
     delete dptr()->service_manager;
     delete dptr()->command_manager;
@@ -73,6 +75,20 @@ void Application::init()
     if (dptr()->app == nullptr) {
         dptr()->app = new QCoreApplication(dptr()->argc, dptr()->argv);
     }
+    setupUserIO();
+}
+
+void Application::setupUserIO()
+{
+    if (dptr()->user_io == nullptr) {
+        dptr()->user_io = createUserIO();
+        dptr()->user_io->setCommandManager(dptr()->command_manager);
+    }
+}
+
+UserIO* Application::createUserIO()
+{
+    return new ConsoleUserIO;
 }
 
 int Application::run()
@@ -118,6 +134,11 @@ EventBus* Application::eventBus() const
 MainThreadDispatcher* Application::mainThreadDispatcher() const
 {
     return dptr()->main_dispatcher;
+}
+
+UserIO* Application::userIO() const
+{
+    return dptr()->user_io;
 }
 
 Application* Application::current()

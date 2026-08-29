@@ -9,7 +9,11 @@
 #    include <QSettings>
 #endif
 
+#include <vine/appfw/gui/ConsolePanel.hpp>
+#include <vine/appfw/gui/MainWindow.hpp>
+
 #include "GuiApplicationData.hpp"
+#include "VisualUserIO.hpp"
 
 #if defined(Q_OS_WIN) && QT_VERSION < QT_VERSION_CHECK(6, 5, 0)
 namespace
@@ -119,7 +123,14 @@ GuiApplication::GuiApplication(int argc, char** argv)
 
 GuiApplication::~GuiApplication()
 {
+    auto* d = static_cast<GuiApplicationData*>(dptr());
+    delete d->main_window;
     // d is deleted by Application::~Application()
+}
+
+UserIO* GuiApplication::createUserIO()
+{
+    return new VisualUserIO;
 }
 
 void GuiApplication::init()
@@ -152,6 +163,13 @@ void GuiApplication::init()
         d->theme = resolveSystemTheme();
     }
     applyTheme(d->theme);
+
+    setupUserIO();
+
+    if (d->main_window == nullptr) {
+        d->main_window = new MainWindow();
+        d->main_window->show();
+    }
 }
 
 int GuiApplication::run()
@@ -193,6 +211,20 @@ bool GuiApplication::followSystemTheme() const
 {
     const auto* d = static_cast<const GuiApplicationData*>(dptr());
     return d->follow_system;
+}
+
+MainWindow* GuiApplication::mainWindow() const
+{
+    const auto* d = static_cast<const GuiApplicationData*>(dptr());
+    return d->main_window;
+}
+
+void GuiApplication::setConsolePanel(ConsolePanel* console)
+{
+    auto* io = static_cast<VisualUserIO*>(dptr()->user_io);
+    if (io != nullptr) {
+        io->setConsolePanel(console);
+    }
 }
 
 void GuiApplication::applyTheme(Theme theme)

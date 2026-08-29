@@ -1,4 +1,4 @@
-#include "PluginManagerDialog.hpp"
+#include <vine/appfw/gui/PluginManagerDialog.hpp>
 
 #include <QDialog>
 #include <QFileDialog>

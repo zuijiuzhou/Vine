@@ -90,3 +90,36 @@ V_APPFW_NS_END
         }                                                                        \
     };                                                                           \
     inline static AutoRegistrar s_auto_registrar_{};
+
+/**
+ * @brief Declares an alias for a command name inside a command class body.
+ *
+ * Queues an alias registration with this module's command registration queue;
+ * the alias resolves to the target command name when commands execute by name.
+ * Place inside the command class that owns the alias.
+ *
+ * @code
+ * class ListCommandsCommand : public vine::appfw::Command {
+ *     V_OBJECT_META_DECL;
+ *     V_DECLARE_COMMAND(ListCommandsCommand, u8"list_commands")
+ *     V_DECLARE_COMMAND_ALIAS(u8"gcm", u8"list_commands")
+ *   public:
+ *     ...
+ * };
+ * @endcode
+ *
+ * @param AliasName The alias as a u8"..." literal.
+ * @param TargetName The canonical command name the alias resolves to.
+ */
+#define V_DECLARE_COMMAND_ALIAS(AliasName, TargetName)                            \
+  private:                                                                       \
+    struct AutoAliasRegistrar {                                                  \
+        AutoAliasRegistrar()                                                     \
+        {                                                                        \
+            vine::appfw::detail::moduleCommandRegistrars().push_back(            \
+                [](vine::appfw::CommandManager* manager) {                       \
+                    return manager->registerAlias(AliasName, TargetName);        \
+                });                                                              \
+        }                                                                        \
+    };                                                                           \
+    inline static AutoAliasRegistrar s_auto_alias_registrar_{};

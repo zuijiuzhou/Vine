@@ -9,6 +9,9 @@
 #include <vine/appfw/Application.hpp>
 #include <vine/appfw/Command.hpp>
 
+#include <vine/co/DetachedTask.hpp>
+#include <vine/co/SyncWait.hpp>
+
 #include <vine/logging/Log.hpp>
 
 V_APPFW_NS_BEGIN
@@ -80,6 +83,9 @@ struct CommandManager::Data
 
     /// Snapshot handler invoked before an Undoable command runs (document layer).
     std::function<void()> snapshot_handler;
+
+    /// Command aliases (alias -> canonical command name).
+    std::map<String, String> aliases;
 };
 
 /**
@@ -117,8 +123,18 @@ Application* CommandManager::application() const
 
 CommandResult CommandManager::executeCommand(Command* command)
 {
+    return vine::co::syncWait(executeCommandAsync(command));
+}
+
+CommandResult CommandManager::executeCommand(const String& name)
+{
+    return vine::co::syncWait(executeCommandAsync(name));
+}
+
+vine::co::Task<CommandResult> CommandManager::executeCommandAsync(Command* command)
+{
     if (!command) {
-        return CommandResult(CommandStatus::Failed, String(u8"Command is null"));
+        co_return CommandResult(CommandStatus::Failed, String(u8"Command is null"));
     }
 
     // Exclusive commands cancel the running command chain before execution.
@@ -130,9 +146,9 @@ CommandResult CommandManager::executeCommand(Command* command)
 
     V_LOGI("Executing command '{}'", toUtf8(command->name()));
 
-    // Pops the stack when execute() returns or throws, keeping the manager
-    // usable. The pop is skipped when an Exclusive child already cleared the
-    // stack (this command was cancelled and is no longer on top).
+    // Pops the stack when the command completes, keeping the manager usable.
+    // The pop is skipped when an Exclusive child already cleared the stack
+    // (this command was cancelled and is no longer on top).
     struct StackGuard {
         std::vector<Command*>& stack;
         Command*              command;
@@ -157,7 +173,7 @@ CommandResult CommandManager::executeCommand(Command* command)
         executing.trigger(*this, args);
     }
 
-    CommandResult result = command->execute(&context);
+    CommandResult result = co_await command->execute(&context);
 
     if (result.succeeded()) {
         V_LOGI("Command '{}' succeeded", toUtf8(command->name()));
@@ -173,18 +189,25 @@ CommandResult CommandManager::executeCommand(Command* command)
     // Record the execution.
     d->history.push_back(command);
 
-    return result;
+    co_return result;
 }
 
-CommandResult CommandManager::executeCommand(const String& name)
+vine::co::Task<CommandResult> CommandManager::executeCommandAsync(const String& name)
 {
-    auto it = d->registry.find(name);
+    auto it = d->registry.find(resolveName(name));
     if (it == d->registry.end() || !it->second.factory) {
-        return CommandResult(CommandStatus::Failed, String(u8"Command not registered"));
+        co_return CommandResult(CommandStatus::Failed, String(u8"Command not registered"));
     }
 
     std::unique_ptr<Command> command(it->second.factory());
-    return executeCommand(command.get());
+    co_return co_await executeCommandAsync(command.get());
+}
+
+void CommandManager::executeDetached(const String& name)
+{
+    [](vine::co::Task<CommandResult> task) -> vine::co::DetachedTask {
+        co_await std::move(task);
+    }(executeCommandAsync(name));
 }
 
 Command* CommandManager::currentCommand() const
@@ -239,9 +262,92 @@ bool CommandManager::unregisterCommand(Type command_class)
     return removed;
 }
 
+bool CommandManager::registerAlias(const String& alias, const String& target)
+{
+    if (alias.empty() || target.empty()) {
+        return false;
+    }
+    const bool inserted = d->aliases.emplace(alias, target).second;
+    if (!inserted) {
+        V_LOGW("Alias '{}' already registered, ignoring target '{}'", toUtf8(alias), toUtf8(target));
+    }
+    return inserted;
+}
+
+bool CommandManager::unregisterAlias(const String& alias)
+{
+    return d->aliases.erase(alias) > 0;
+}
+
+String CommandManager::resolveName(const String& name) const
+{
+    // A registered command name wins over an alias with the same name.
+    if (d->registry.find(name) != d->registry.end()) {
+        return name;
+    }
+
+    auto it = d->aliases.find(name);
+    if (it != d->aliases.end()) {
+        return it->second;
+    }
+    return name;
+}
+
 bool CommandManager::isRegistered(const String& name) const
 {
-    return d->registry.find(name) != d->registry.end();
+    return d->registry.find(resolveName(name)) != d->registry.end();
+}
+
+std::vector<String> CommandManager::names() const
+{
+    std::vector<String> result;
+    result.reserve(d->registry.size());
+    for (const auto& entry : d->registry)
+    {
+        result.push_back(entry.first);
+    }
+    return result;
+}
+
+std::vector<std::pair<String, String>> CommandManager::aliases() const
+{
+    std::vector<std::pair<String, String>> result;
+    result.reserve(d->aliases.size());
+    for (const auto& entry : d->aliases)
+    {
+        result.emplace_back(entry.first, entry.second);
+    }
+    return result;
+}
+
+std::vector<CommandInfo> CommandManager::commandInfos() const
+{
+    // std::map keeps registry keys sorted, so the result is ordered by name.
+    std::vector<CommandInfo> result;
+    result.reserve(d->registry.size());
+
+    for (const auto& entry : d->registry) {
+        CommandInfo info;
+        info.name = entry.first;
+        if (entry.second.factory) {
+            std::unique_ptr<Command> command(entry.second.factory());
+            info.group       = command->group();
+            info.description = command->description();
+        }
+        result.push_back(std::move(info));
+    }
+
+    // Attach each alias to the entry of its target command.
+    for (const auto& alias : d->aliases) {
+        for (auto& info : result) {
+            if (info.name == alias.second) {
+                info.aliases.push_back(alias.first);
+                break;
+            }
+        }
+    }
+
+    return result;
 }
 
 void CommandManager::setSnapshotHandler(std::function<void()> handler)

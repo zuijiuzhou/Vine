@@ -18,7 +18,7 @@ V_APPFWGUI_NS_BEGIN
  * refresh() reloads values from storage and reset() restores defaults.
  * Inherits Window; show() non-modally or exec() modally.
  */
-class ConfigWindow : public Window {
+class V_APPFW_API ConfigWindow : public Window {
     V_OBJECT_META_DECL
 
   public:

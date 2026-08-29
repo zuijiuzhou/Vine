@@ -10,12 +10,13 @@ V_APPFW_NS_BEGIN
  */
 class ShowConfigWindowCommand : public Command {
     V_OBJECT_META_DECL;
-    V_DECLARE_COMMAND(ShowConfigWindowCommand, u8"showConfig")
+    V_DECLARE_COMMAND(ShowConfigWindowCommand, u8"show_config")
 
   public:
     String group() const override { return u8"插件"; }
+    String description() const override { return u8"打开配置窗口"; }
     CommandFlags flags() const override { return CommandFlags::None; }
-    CommandResult execute(CommandExecutionContext* context) override;
+    vine::co::Task<CommandResult> execute(CommandExecutionContext* context) override;
 };
 
 V_APPFW_NS_END

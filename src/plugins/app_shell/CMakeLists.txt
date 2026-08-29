@@ -1,4 +1,4 @@
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets)
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Svg)
 qt_standard_project_setup()
 
 set(CMAKE_AUTOMOC ON)
@@ -13,4 +13,4 @@ set_target_properties(${APP_SHELL_TARGET} PROPERTIES
     AUTORCC ON
 )
 
-target_link_libraries(${APP_SHELL_TARGET} PRIVATE vi::Appfw Qt6::Core Qt6::Gui Qt6::Widgets)
+target_link_libraries(${APP_SHELL_TARGET} PRIVATE vi::Appfw Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Svg)

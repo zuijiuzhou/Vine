@@ -5,6 +5,7 @@
 #include <functional>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
 #include <vine/Events.hpp>
 #include <vine/appfw/Command.hpp>
@@ -53,6 +54,23 @@ class V_APPFW_API CommandExecutedEventArgs : public EventArgs {
   private:
     Command* command_;
     CommandResult result_;
+};
+
+/**
+ * @brief Metadata of one registered command used for listing.
+ */
+struct CommandInfo {
+    /// Canonical command name.
+    String name;
+
+    /// Group the command belongs to (may be empty).
+    String group;
+
+    /// Short human-readable description (may be empty).
+    String description;
+
+    /// Aliases resolving to this command.
+    std::vector<String> aliases;
 };
 
 /**
@@ -108,6 +126,35 @@ class V_APPFW_API CommandManager
      * @return The execution outcome; Failed when the name is not registered.
      */
     CommandResult executeCommand(const String& name);
+
+    /**
+     * @brief Executes a command asynchronously.
+     *
+     * The returned task is lazy and may suspend; await it from a coroutine
+     * context. The command leaves the execution stack when the task completes.
+     *
+     * @param command Command to execute; must not be null.
+     * @return A task yielding the execution outcome.
+     */
+    vine::co::Task<CommandResult> executeCommandAsync(Command* command);
+
+    /**
+     * @brief Executes a registered command by name asynchronously.
+     *
+     * @param name Registered command name.
+     * @return A task yielding the execution outcome; Failed when not registered.
+     */
+    vine::co::Task<CommandResult> executeCommandAsync(const String& name);
+
+    /**
+     * @brief Executes a registered command by name in the background.
+     *
+     * Fire-and-forget: the command runs to completion and its outcome is
+     * delivered through the executed event. Use from UI event handlers.
+     *
+     * @param name Registered command name.
+     */
+    void executeDetached(const String& name);
 
     /**
      * @brief Returns the command at the top of the execution stack.
@@ -190,12 +237,56 @@ class V_APPFW_API CommandManager
     bool unregisterCommand(Type command_class);
 
     /**
+     * @brief Registers an alias that resolves to an existing command name.
+     *
+     * Executing the alias by name runs the target command. The target does
+     * not need to be registered when the alias is added.
+     *
+     * @param alias Alias name.
+     * @param target Canonical command name the alias resolves to.
+     * @return true if the alias was added, false if the alias is already taken.
+     */
+    bool registerAlias(const String& alias, const String& target);
+
+    /**
+     * @brief Unregisters an alias.
+     *
+     * @param alias Alias name.
+     * @return true if removed, false if not found.
+     */
+    bool unregisterAlias(const String& alias);
+
+    /**
      * @brief Returns whether a command with the given name is registered.
      *
      * @param name Command name.
      * @return true if registered.
      */
     bool isRegistered(const String& name) const;
+
+    /**
+     * @brief Returns the names of all registered commands.
+     *
+     * @return Registered command names.
+     */
+    std::vector<String> names() const;
+
+    /**
+     * @brief Returns the registered aliases as (alias, target) pairs.
+     *
+     * @return Alias entries; each pair maps an alias name to its target command.
+     */
+    std::vector<std::pair<String, String>> aliases() const;
+
+    /**
+     * @brief Returns metadata of all registered commands, sorted by name.
+     *
+     * Each entry carries the canonical name, its description and the aliases
+     * resolving to it.
+     *
+     * @return Command metadata ordered by command name.
+     */
+    std::vector<CommandInfo> commandInfos() const;
 
     /**
      * @brief Sets the handler invoked before an Undoable command executes.
@@ -209,6 +300,8 @@ class V_APPFW_API CommandManager
     void setSnapshotHandler(std::function<void()> handler);
 
   private:
+    String resolveName(const String& name) const;
+
     class Context;
 
     struct Data;

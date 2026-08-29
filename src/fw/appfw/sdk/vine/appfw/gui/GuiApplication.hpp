@@ -6,6 +6,9 @@
 
 V_APPFWGUI_NS_BEGIN
 
+class ConsolePanel;
+class MainWindow;
+
 /**
  * @brief Application theme.
  */
@@ -51,6 +54,23 @@ class V_APPFW_API GuiApplication : public Application {
      */
     bool followSystemTheme() const;
 
+    /**
+     * @brief Get the main window created during initialization.
+     *
+     * The main window is created and shown when the application initializes
+     * and remains valid for the whole application lifetime.
+     */
+    MainWindow* mainWindow() const;
+
+    /**
+     * @brief Attaches the console panel used by the visual user I/O.
+     *
+     * The GUI application's UserIO routes its output and input prompts to
+     * this panel. The caller (typically a plugin) creates and docks the
+     * panel and then hands it over here.
+     */
+    void setConsolePanel(ConsolePanel* console);
+
   public:
     /**
      * @brief Emitted whenever the effective theme changes.
@@ -59,6 +79,9 @@ class V_APPFW_API GuiApplication : public Application {
      * newly effective theme.
      */
     Signal<Theme> theme_changed;
+
+  protected:
+    UserIO* createUserIO() override;
 
   private:
     void applyTheme(Theme theme);

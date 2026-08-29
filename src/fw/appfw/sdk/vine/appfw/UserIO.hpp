@@ -2,16 +2,16 @@
 #include "appfw_global.hpp"
 
 #include <cstdint>
+#include <optional>
 
 #include <vine/RefObject.hpp>
 #include <vine/String.hpp>
-#include <vine/math/math_global.hpp>
-
-V_MATH_NS_BEGIN
-class Point3d;
-V_MATH_NS_END
+#include <vine/co/Task.hpp>
+#include <vine/math/Point3.hpp>
 
 V_APPFW_NS_BEGIN
+
+class CommandManager;
 
 class V_APPFW_API UserIO : public Object {
     V_OBJECT_META_DECL;
@@ -22,17 +22,62 @@ class V_APPFW_API UserIO : public Object {
   public:
     virtual void putString(const String& str) = 0;
 
-    virtual bool getString(String& val, const String& prompt = {}) const                    = 0;
-    virtual void getString(String& val, const String& def, const String& prompt = {}) const = 0;
+    /**
+     * @brief Clears all previously written output.
+     *
+     * The base implementation does nothing; visual implementations clear their
+     * console panel and headless implementations clear the terminal.
+     */
+    virtual void clear();
 
-    virtual bool getInt(int8_t& val, const String& prompt = {}) const             = 0;
-    virtual void getInt(int8_t& val, int8_t def, const String& prompt = {}) const = 0;
+    /**
+     * @brief Asynchronously requests a string from the user.
+     *
+     * @param prompt Prompt text shown to the user.
+     * @return A task yielding the entered string, or std::nullopt if cancelled.
+     */
+    virtual vine::co::Task<std::optional<String>> getStringAsync(const String& prompt = {}) = 0;
 
-    virtual bool getDouble(double& val, const String& prompt = {}) const             = 0;
-    virtual void getDouble(double& val, double def, const String& prompt = {}) const = 0;
+    /**
+     * @brief Asynchronously requests an integer from the user.
+     *
+     * @param prompt Prompt text shown to the user.
+     * @return A task yielding the entered value, or std::nullopt if cancelled.
+     */
+    virtual vine::co::Task<std::optional<int8_t>> getIntAsync(const String& prompt = {}) = 0;
 
-    virtual bool getPoint3d(math::Point3d& val, const String& prompt = {}) const                     = 0;
-    virtual void getPoint3d(math::Point3d& val, math::Point3d& def, const String& prompt = {}) const = 0;
+    /**
+     * @brief Asynchronously requests a double from the user.
+     *
+     * @param prompt Prompt text shown to the user.
+     * @return A task yielding the entered value, or std::nullopt if cancelled.
+     */
+    virtual vine::co::Task<std::optional<double>> getDoubleAsync(const String& prompt = {}) = 0;
+
+    /**
+     * @brief Asynchronously requests a 3D point from the user.
+     *
+     * @param prompt Prompt text shown to the user.
+     * @return A task yielding the picked point, or std::nullopt if cancelled.
+     */
+    virtual vine::co::Task<std::optional<math::Point3d>> getPoint3dAsync(const String& prompt = {}) = 0;
+
+    /**
+     * @brief Sets the command manager that idle input is dispatched to.
+     *
+     * @param manager Command manager, or nullptr to unbind.
+     */
+    virtual void setCommandManager(CommandManager* manager);
+
+    /**
+     * @brief Returns the bound command manager.
+     *
+     * @return The command manager, or nullptr if unbound.
+     */
+    CommandManager* commandManager() const;
+
+  private:
+    CommandManager* command_manager_{ nullptr };
 };
 
 using UserIOPtr = RefPtr<UserIO>;

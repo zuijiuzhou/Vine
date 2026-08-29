@@ -1,8 +1,15 @@
 ﻿#pragma once
 
+#include <vine/co/AsyncEvent.hpp>
 #include <vine/appfw/UserIO.hpp>
 
+V_APPFW_NS_BEGIN
+class CommandManager;
+V_APPFW_NS_END
+
 V_APPFWGUI_NS_BEGIN
+
+class ConsolePanel;
 
 class VisualUserIO : public UserIO {
     V_OBJECT_META_DECL;
@@ -13,24 +20,52 @@ class VisualUserIO : public UserIO {
     virtual ~VisualUserIO();
 
   public:
+    void setConsolePanel(ConsolePanel* console);
+    void setCommandManager(vine::appfw::CommandManager* manager) override;
+
+  public:
     virtual void putString(const String& str) override;
+    virtual void clear() override;
 
-    virtual bool getString(String& val, const String& prompt = {}) const override;
-    virtual void getString(String& val, const String& def, const String& prompt = {}) const override;
-
-    virtual bool getInt(int8_t& val, const String& prompt = {}) const override;
-    virtual void getInt(int8_t& val, int8_t def, const String& prompt = {}) const override;
-
-    virtual bool getDouble(double& val, const String& prompt = {}) const override;
-    virtual void getDouble(double& val, double def, const String& prompt = {}) const override;
-
-    virtual bool getPoint3d(math::Point3d& val, const String& prompt = {}) const override;
-    virtual void getPoint3d(math::Point3d& val, math::Point3d& def, const String& prompt = {}) const override;
+    virtual vine::co::Task<std::optional<String>>        getStringAsync(const String& prompt = {}) override;
+    virtual vine::co::Task<std::optional<int8_t>>        getIntAsync(const String& prompt = {}) override;
+    virtual vine::co::Task<std::optional<double>>        getDoubleAsync(const String& prompt = {}) override;
+    virtual vine::co::Task<std::optional<math::Point3d>> getPoint3dAsync(const String& prompt = {}) override;
 
   private:
-    struct Data;
-    Data* const d;
-    ;
+    enum class PendingRead
+    {
+        None,
+        String,
+        Int,
+        Double,
+        Point
+    };
+
+    void completeString(const String& value);
+    void completeInt(int8_t value);
+    void completeDouble(double value);
+    void completePoint(const math::Point3d& value);
+    void cancelInteraction();
+
+    void onLineEntered(const String& text);
+    void onEscape();
+    void parseAndComplete(const String& text);
+    void repromptError(const String& message);
+    void refreshCompletion();
+
+  private:
+    vine::co::AsyncEvent done_;
+    bool                 cancelled_{ false };
+
+    String        stringResult_;
+    int8_t        intResult_{ 0 };
+    double        doubleResult_{ 0.0 };
+    math::Point3d pointResult_;
+
+    ConsolePanel*                     console_{ nullptr };
+    PendingRead                       pending_{ PendingRead::None };
+    String                            currentPrompt_;
 };
 
 V_APPFWGUI_NS_END

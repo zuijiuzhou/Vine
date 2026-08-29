@@ -1,4 +1,4 @@
-#include "ConfigWindow.hpp"
+#include <vine/appfw/gui/ConfigWindow.hpp>
 
 #include <any>
 #include <vector>

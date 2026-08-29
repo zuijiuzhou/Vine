@@ -11,6 +11,7 @@ class ConfigManager;
 class ConfigRegistry;
 class EventBus;
 class MainThreadDispatcher;
+class UserIO;
 
 struct ApplicationData {
     PluginManager*        plugin_manager  = nullptr;
@@ -20,6 +21,7 @@ struct ApplicationData {
     ConfigRegistry*       config_registry = nullptr;
     EventBus*             event_bus       = nullptr;
     MainThreadDispatcher* main_dispatcher = nullptr;
+    UserIO*               user_io         = nullptr;
     QCoreApplication*     app             = nullptr;
 
     int    argc = 0;

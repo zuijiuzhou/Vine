@@ -7,6 +7,7 @@
 
 #include <vine/Object.hpp>
 #include <vine/String.hpp>
+#include <vine/co/Task.hpp>
 
 V_APPFW_NS_BEGIN
 
@@ -188,6 +189,13 @@ class V_APPFW_API Command : public Object
     virtual String group() const = 0;
 
     /**
+     * @brief Short human-readable description of what the command does.
+     *
+     * @return The description, empty when not provided.
+     */
+    virtual String description() const { return {}; }
+
+    /**
      * @brief Execution characteristics of this command.
      *
      * @return The command flags.
@@ -197,11 +205,14 @@ class V_APPFW_API Command : public Object
     /**
      * @brief Runs the command business logic.
      *
+     * The command may suspend on asynchronous operations (for example user
+     * input or an asynchronous delay) by co_awaiting them.
+     *
      * @param context Execution context providing application access and
      *                nested command execution.
-     * @return The execution outcome.
+     * @return A task yielding the execution outcome.
      */
-    virtual CommandResult execute(CommandExecutionContext* context) = 0;
+    virtual vine::co::Task<CommandResult> execute(CommandExecutionContext* context) = 0;
 };
 
 V_APPFW_NS_END

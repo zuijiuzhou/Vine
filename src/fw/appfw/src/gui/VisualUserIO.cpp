@@ -1,53 +1,305 @@
 ﻿#include "VisualUserIO.hpp"
 
-#include <QDockWidget>
+#include <vine/appfw/CommandManager.hpp>
+#include <vine/appfw/gui/ConsolePanel.hpp>
+
+#include <vine/co/DetachedTask.hpp>
 
 V_APPFWGUI_NS_BEGIN
 
 V_OBJECT_META_IMPL(VisualUserIO, UserIO)
 
-struct VisualUserIO::Data {};
+VisualUserIO::VisualUserIO() = default;
 
-VisualUserIO::VisualUserIO()
-  : d(new Data())
-{}
+VisualUserIO::~VisualUserIO() = default;
 
-VisualUserIO::~VisualUserIO()
-{}
+void VisualUserIO::setConsolePanel(ConsolePanel* console)
+{
+    console_ = console;
+    if (!console_)
+    {
+        return;
+    }
+    console_->lineEntered.addHandler([this](const String& text) { onLineEntered(text); });
+    console_->escapePressed.addHandler([this] { onEscape(); });
+    refreshCompletion();
+}
+
+void VisualUserIO::setCommandManager(vine::appfw::CommandManager* manager)
+{
+    UserIO::setCommandManager(manager);
+    refreshCompletion();
+}
+
+void VisualUserIO::refreshCompletion()
+{
+    if (console_ && commandManager())
+    {
+        console_->setCommandNames(commandManager()->names());
+    }
+}
 
 void VisualUserIO::putString(const String& str)
-{}
-
-bool VisualUserIO::getString(String& val, const String& prompt) const
 {
-    return false;
+    if (console_)
+    {
+        console_->append(ConsoleMessageType::Normal, str);
+    }
 }
 
-void VisualUserIO::getString(String& val, const String& def, const String& prompt) const
-{}
-
-bool VisualUserIO::getInt(int8_t& val, const String& prompt) const
+void VisualUserIO::clear()
 {
-    return false;
+    if (console_)
+    {
+        console_->clear();
+    }
 }
 
-void VisualUserIO::getInt(int8_t& val, int8_t def, const String& prompt) const
-{}
-
-bool VisualUserIO::getDouble(double& val, const String& prompt) const
+vine::co::Task<std::optional<String>> VisualUserIO::getStringAsync(const String& prompt)
 {
-    return false;
+    pending_       = PendingRead::String;
+    currentPrompt_ = prompt;
+    cancelled_     = false;
+    done_.reset();
+
+    if (console_)
+    {
+        console_->beginInput(prompt);
+    }
+
+    co_await done_;
+
+    if (cancelled_)
+    {
+        pending_ = PendingRead::None;
+        co_return std::nullopt;
+    }
+    pending_ = PendingRead::None;
+    co_return stringResult_;
 }
 
-void VisualUserIO::getDouble(double& val, double def, const String& prompt) const
-{}
-
-bool VisualUserIO::getPoint3d(math::Point3d& val, const String& prompt) const
+vine::co::Task<std::optional<int8_t>> VisualUserIO::getIntAsync(const String& prompt)
 {
-    return false;
+    pending_       = PendingRead::Int;
+    currentPrompt_ = prompt;
+    cancelled_     = false;
+    done_.reset();
+
+    if (console_)
+    {
+        console_->beginInput(prompt);
+    }
+
+    co_await done_;
+
+    if (cancelled_)
+    {
+        pending_ = PendingRead::None;
+        co_return std::nullopt;
+    }
+    pending_ = PendingRead::None;
+    co_return intResult_;
 }
 
-void VisualUserIO::getPoint3d(math::Point3d& val, math::Point3d& def, const String& prompt) const
-{}
+vine::co::Task<std::optional<double>> VisualUserIO::getDoubleAsync(const String& prompt)
+{
+    pending_       = PendingRead::Double;
+    currentPrompt_ = prompt;
+    cancelled_     = false;
+    done_.reset();
+
+    if (console_)
+    {
+        console_->beginInput(prompt);
+    }
+
+    co_await done_;
+
+    if (cancelled_)
+    {
+        pending_ = PendingRead::None;
+        co_return std::nullopt;
+    }
+    pending_ = PendingRead::None;
+    co_return doubleResult_;
+}
+
+vine::co::Task<std::optional<math::Point3d>> VisualUserIO::getPoint3dAsync(const String& prompt)
+{
+    pending_       = PendingRead::Point;
+    currentPrompt_ = prompt;
+    cancelled_     = false;
+    done_.reset();
+
+    if (console_)
+    {
+        console_->beginInput(prompt);
+    }
+
+    co_await done_;
+
+    if (cancelled_)
+    {
+        pending_ = PendingRead::None;
+        co_return std::nullopt;
+    }
+    pending_ = PendingRead::None;
+    co_return pointResult_;
+}
+
+void VisualUserIO::onLineEntered(const String& text)
+{
+    if (pending_ != PendingRead::None)
+    {
+        parseAndComplete(text);
+        return;
+    }
+
+    if (commandManager() && commandManager()->runningCount() > 0)
+    {
+        if (console_)
+        {
+            console_->append(ConsoleMessageType::Warning, String(u8"命令正在执行，请稍候"));
+        }
+        return;
+    }
+
+    if (console_)
+    {
+        console_->append(ConsoleMessageType::Command, text);
+    }
+
+    if (commandManager())
+    {
+        // 异步启动命令；失败信息在命令完成后回写。
+        [](VisualUserIO* self, vine::co::Task<CommandResult> task) -> vine::co::DetachedTask {
+            const auto result = co_await std::move(task);
+            if (!result.succeeded() && self->console_)
+            {
+                const auto& message = result.message();
+                self->console_->append(ConsoleMessageType::Error, message.empty() ? String(u8"命令执行失败") : message);
+            }
+        }(this, commandManager()->executeCommandAsync(text));
+    }
+}
+
+void VisualUserIO::onEscape()
+{
+    if (pending_ != PendingRead::None)
+    {
+        cancelInteraction();
+    }
+    else if (console_)
+    {
+        console_->clearInput();
+    }
+}
+
+void VisualUserIO::parseAndComplete(const String& text)
+{
+    switch (pending_)
+    {
+    case PendingRead::String:
+        completeString(text);
+        break;
+
+    case PendingRead::Int:
+    {
+        bool      ok = false;
+        const int v  = text.trimmed().toInt(&ok);
+        if (ok)
+        {
+            completeInt(static_cast<int8_t>(v));
+        }
+        else
+        {
+            repromptError(String(u8"请输入整数"));
+        }
+        break;
+    }
+
+    case PendingRead::Double:
+    {
+        bool   ok = false;
+        double v  = text.trimmed().toDouble(&ok);
+        if (ok)
+        {
+            completeDouble(v);
+        }
+        else
+        {
+            repromptError(String(u8"请输入数字"));
+        }
+        break;
+    }
+
+    case PendingRead::Point:
+    {
+        const auto parts = text.split(u8',');
+        if (parts.size() == 3)
+        {
+            bool   xOk = false;
+            bool   yOk = false;
+            bool   zOk = false;
+            double x   = parts[0].trimmed().toDouble(&xOk);
+            double y   = parts[1].trimmed().toDouble(&yOk);
+            double z   = parts[2].trimmed().toDouble(&zOk);
+            if (xOk && yOk && zOk)
+            {
+                math::Point3d p;
+                p.x = x;
+                p.y = y;
+                p.z = z;
+                completePoint(p);
+                break;
+            }
+        }
+        repromptError(String(u8"请输入 x,y,z 格式的点"));
+        break;
+    }
+
+    case PendingRead::None:
+        break;
+    }
+}
+
+void VisualUserIO::repromptError(const String& message)
+{
+    if (console_)
+    {
+        console_->append(ConsoleMessageType::Error, message);
+        console_->beginInput(currentPrompt_);
+    }
+}
+
+void VisualUserIO::completeString(const String& value)
+{
+    stringResult_ = value;
+    done_.set();
+}
+
+void VisualUserIO::completeInt(int8_t value)
+{
+    intResult_ = value;
+    done_.set();
+}
+
+void VisualUserIO::completeDouble(double value)
+{
+    doubleResult_ = value;
+    done_.set();
+}
+
+void VisualUserIO::completePoint(const math::Point3d& value)
+{
+    pointResult_ = value;
+    done_.set();
+}
+
+void VisualUserIO::cancelInteraction()
+{
+    cancelled_ = true;
+    done_.set();
+}
 
 V_APPFWGUI_NS_END

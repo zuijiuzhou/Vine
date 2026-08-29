@@ -11,7 +11,7 @@ V_APPFWGUI_NS_BEGIN
  * loading a plugin library from disk (QFileDialog). Loaded plugins appear in
  * the list immediately; a Refresh button re-queries the manager.
  */
-class PluginManagerDialog : public Window {
+class V_APPFW_API PluginManagerDialog : public Window {
     V_OBJECT_META_DECL;
 
   public:

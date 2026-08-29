@@ -32,6 +32,21 @@ class V_APPFW_API Application : public Object {
   protected:
     Application(ApplicationData* data, int argc, char** argv);
 
+    /**
+     * @brief Creates the application's UserIO.
+     *
+     * The base implementation returns a headless ConsoleUserIO; GUI
+     * applications override it to return a visual implementation.
+     *
+     * @return The newly created UserIO, owned by the application.
+     */
+    virtual UserIO* createUserIO();
+
+    /**
+     * @brief Creates and stores the application's UserIO.
+     */
+    void setupUserIO();
+
   public:
     ~Application() override;
 
