@@ -9,12 +9,15 @@
 V_APPFW_NS_BEGIN
 
 class PluginLoadContext;
+class ConfigItem;
+struct CommandInfo;
 
 /**
  * @brief Static metadata declared by a plugin.
  */
 struct V_APPFW_API PluginInfo {
     String              name;         // Unique plugin name (identifier).
+    String              display_name; // Human-friendly name shown in UI; falls back to name when empty.
     String              version;      // Plugin version, e.g. "1.2.0".
     String              description;  // Human-readable description.
     String              vendor;       // Author or vendor.
@@ -33,11 +36,15 @@ class V_APPFW_API Plugin : public Object {
 
   public:
     /**
-     * @brief Declares the plugin's static metadata.
+     * @brief Returns the plugin's static metadata.
+     *
+     * Populated by the PluginManager from the plugin's vinePluginQuery() entry
+     * when the plugin is created; V_DECLARE_PLUGIN is the single source of the
+     * metadata.
      *
      * @return The plugin metadata.
      */
-    virtual PluginInfo info() const;
+    const PluginInfo& info() const;
 
     /**
      * @brief Returns the plugin name (convenience for info().name).
@@ -45,6 +52,25 @@ class V_APPFW_API Plugin : public Object {
      * @return The plugin name.
      */
     String name() const;
+
+    /**
+     * @brief Reports the commands registered by this plugin.
+     *
+     * Queries the host CommandManager for commands attributed to this plugin
+     * (see CommandManager::setRegistrationOwner).
+     *
+     * @return The plugin's command metadata (may be empty).
+     */
+    std::vector<CommandInfo> commandInfos() const;
+
+    /**
+     * @brief Reports the config items registered by this plugin.
+     *
+     * Queries the host ConfigRegistry for items owned by this plugin.
+     *
+     * @return The plugin's config items (may be empty).
+     */
+    std::vector<const ConfigItem*> configItems() const;
 
   public:
     /**
@@ -74,6 +100,22 @@ class V_APPFW_API Plugin : public Object {
      * @param context Load context exposing host capabilities.
      */
     virtual void unload(PluginLoadContext* context);
+
+  private:
+    friend class PluginManager;
+
+    /**
+     * @brief Sets the plugin's static metadata.
+     *
+     * Called by the PluginManager when the plugin is created (from the plugin's
+     * vinePluginQuery() entry); plugin authors do not call this.
+     *
+     * @param info Plugin metadata.
+     */
+    void setInfo(PluginInfo info);
+
+    /// Static metadata set by the PluginManager at load time.
+    PluginInfo info_;
 };
 
 V_APPFW_NS_END

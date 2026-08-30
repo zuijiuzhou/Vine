@@ -7,6 +7,8 @@
 #include <SARibbon.h>
 #include <algorithm>
 
+#include <vine/appfw/Application.hpp>
+#include <vine/appfw/CommandManager.hpp>
 #include <vine/appfw/gui/RibbonAction.hpp>
 
 #include <vine/appfw/gui/UIElementData.hpp>
@@ -47,6 +49,7 @@ V_OBJECT_META_IMPL(RibbonButton, Control)
 struct RibbonButton::Impl : public UIElementData {
     void*          user       = nullptr;
     RibbonItemSize buttonSize = RibbonItemSize::Small;
+    String         command;
 
     /// Drop-down menu entry (ordered): item == nullptr means a separator.
     struct Entry {
@@ -68,6 +71,17 @@ RibbonButton::RibbonButton()
         // Bridge the Qt clicked signal to the framework's `clicked` event.
         QObject::connect(btn, &QToolButton::clicked, [this](bool) { clicked.trigger(*this, dptr()->clickedArgs); });
     }
+
+    // When a command is configured, execute it on click so simple command
+    // buttons do not need a manually bound callback.
+    clicked.addHandler([](RibbonButton& self, EventArgs&) {
+        const String cmd = self.command();
+        if (!cmd.empty()) {
+            if (auto* app = Application::current()) {
+                app->commandManager()->executeDetached(cmd);
+            }
+        }
+    });
 }
 
 RibbonButton::~RibbonButton()
@@ -365,6 +379,16 @@ void RibbonButton::setData(void* data)
 void* RibbonButton::data() const
 {
     return dptr()->user;
+}
+
+void RibbonButton::setCommand(const String& command)
+{
+    dptr()->command = command;
+}
+
+String RibbonButton::command() const
+{
+    return dptr()->command;
 }
 
 void RibbonButton::rebuildMenu()

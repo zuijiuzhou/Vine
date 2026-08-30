@@ -3,12 +3,14 @@
 #include <cstdint>
 #include <map>
 #include <memory>
+#include <stop_token>
 #include <utility>
 #include <vector>
 
 #include <vine/appfw/Application.hpp>
 #include <vine/appfw/Command.hpp>
 
+#include <vine/async/Cancellation.hpp>
 #include <vine/async/DetachedTask.hpp>
 #include <vine/async/SyncWait.hpp>
 
@@ -48,12 +50,14 @@ namespace
 {
 
 /**
- * @brief A registered command: its meta class and a no-arg factory.
+ * @brief A registered command: its meta class, a no-arg factory and the
+ * plugin that registered it (empty for host-app commands).
  */
 struct RegisteredCommand
 {
     Type                      class_type;
     std::function<Command*()> factory;
+    String                    owner;
 };
 
 /// Converts a String to a std::string for fmt-based logging.
@@ -89,11 +93,17 @@ struct CommandManager::Impl
     /// Registered commands by name (factory + meta class).
     std::map<String, RegisteredCommand> registry;
 
+    /// Owner tag applied to commands registered while it is non-empty.
+    String registration_owner;
+
     /// Snapshot handler invoked before an Undoable command runs (document layer).
     std::function<void()> snapshot_handler;
 
     /// Command aliases (alias -> canonical command name).
     std::map<String, String> aliases;
+
+    /// Cancellation source for the currently running command chain.
+    std::stop_source stop_source;
 };
 
 String CommandManager::Impl::resolveName(const String& name) const
@@ -116,8 +126,9 @@ String CommandManager::Impl::resolveName(const String& name) const
 class CommandManager::Context : public CommandExecutionContext
 {
   public:
-    explicit Context(Application* app)
+    Context(Application* app, std::stop_token token)
       : app_(app)
+      , token_(std::move(token))
     {}
 
     Application* application() const override
@@ -125,8 +136,19 @@ class CommandManager::Context : public CommandExecutionContext
         return app_;
     }
 
+    std::stop_token stopToken() const override
+    {
+        return token_;
+    }
+
+    bool isCancelled() const override
+    {
+        return token_.stop_requested();
+    }
+
   private:
-    Application* app_;
+    Application*   app_;
+    std::stop_token token_;
 };
 
 CommandManager::CommandManager(Application* app)
@@ -164,26 +186,36 @@ vine::async::Task<CommandResult> CommandManager::executeCommandAsync(Command* co
         d->stack.clear();
     }
 
+    // A fresh cancellation source starts each command chain; nested commands
+    // share the token so cancelCurrent() cancels the whole chain.
+    if (d->stack.empty()) {
+        d->stop_source = std::stop_source{};
+    }
     d->stack.push_back(command);
 
     V_LOGI("Executing command '{}'", toUtf8(command->name()));
 
     // Pops the stack when the command completes, keeping the manager usable.
     // The pop is skipped when an Exclusive child already cleared the stack
-    // (this command was cancelled and is no longer on top).
+    // (this command was cancelled and is no longer on top). When the chain
+    // drains, the cancellation source is reset for the next chain.
     struct StackGuard {
         std::vector<Command*>& stack;
-        Command*              command;
+        std::stop_source&      stop_source;
+        Command*               command;
 
         ~StackGuard()
         {
             if (!stack.empty() && stack.back() == command) {
                 stack.pop_back();
+                if (stack.empty()) {
+                    stop_source = std::stop_source{};
+                }
             }
         }
-    } guard{ d->stack, command };
+    } guard{ d->stack, d->stop_source, command };
 
-    Context context(d->app);
+    Context context(d->app, d->stop_source.get_token());
 
     // Undoable commands notify the document to snapshot its state first.
     if (d->snapshot_handler && (static_cast<std::uint32_t>(command->flags()) & static_cast<std::uint32_t>(CommandFlags::Undoable))) {
@@ -195,10 +227,25 @@ vine::async::Task<CommandResult> CommandManager::executeCommandAsync(Command* co
         executing.trigger(*this, args);
     }
 
-    CommandResult result = co_await command->execute(&context);
+    CommandResult result;
+    try {
+        result = co_await command->execute(&context);
+    }
+    catch (const vine::async::TaskCancelledException&) {
+        // Nested commands propagate the cancellation upward by default; only the
+        // outermost command reports it as a Cancelled result. A command that
+        // wants to handle a cancelled child catches the exception in its own
+        // execute().
+        if (d->stack.size() > 1) {
+            throw;
+        }
+        result = CommandResult(CommandStatus::Cancelled, String(u8"命令已取消"));
+    }
 
     if (result.succeeded()) {
         V_LOGI("Command '{}' succeeded", toUtf8(command->name()));
+    } else if (result.status() == CommandStatus::Cancelled) {
+        V_LOGW("Command '{}' cancelled", toUtf8(command->name()));
     } else {
         V_LOGE("Command '{}' failed: {}", toUtf8(command->name()), toUtf8(result.message()));
     }
@@ -242,6 +289,11 @@ int CommandManager::runningCount() const
     return static_cast<int>(d->stack.size());
 }
 
+void CommandManager::cancelCurrent()
+{
+    d->stop_source.request_stop();
+}
+
 int CommandManager::historyCount() const
 {
     return static_cast<int>(d->history.size());
@@ -262,7 +314,17 @@ void CommandManager::clearHistory()
 
 bool CommandManager::registerCommand(Type command_class, String name, std::function<Command*()> factory)
 {
-    return d->registry.emplace(std::move(name), RegisteredCommand{ command_class, std::move(factory) }).second;
+    return d->registry.emplace(std::move(name), RegisteredCommand{ command_class, std::move(factory), d->registration_owner }).second;
+}
+
+void CommandManager::setRegistrationOwner(String owner)
+{
+    d->registration_owner = std::move(owner);
+}
+
+const String& CommandManager::registrationOwner() const
+{
+    return d->registration_owner;
 }
 
 bool CommandManager::unregisterCommand(const String& name)
@@ -336,7 +398,8 @@ std::vector<CommandInfo> CommandManager::commandInfos() const
 
     for (const auto& entry : d->registry) {
         CommandInfo info;
-        info.name = entry.first;
+        info.name  = entry.first;
+        info.owner = entry.second.owner;
         if (entry.second.factory) {
             std::unique_ptr<Command> command(entry.second.factory());
             info.group       = command->group();
@@ -355,6 +418,17 @@ std::vector<CommandInfo> CommandManager::commandInfos() const
         }
     }
 
+    return result;
+}
+
+std::vector<CommandInfo> CommandManager::commandInfosForPlugin(const String& owner) const
+{
+    std::vector<CommandInfo> result;
+    for (const auto& info : commandInfos()) {
+        if (info.owner == owner) {
+            result.push_back(info);
+        }
+    }
     return result;
 }
 

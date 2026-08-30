@@ -4,6 +4,7 @@
 
 #include <any>
 #include <cstdint>
+#include <stop_token>
 
 #include <vine/Object.hpp>
 #include <vine/String.hpp>
@@ -144,6 +145,25 @@ class V_APPFW_API CommandExecutionContext
      * @return The hosting Application.
      */
     virtual Application* application() const = 0;
+
+    /**
+     * @brief Returns the cancellation token for this execution.
+     *
+     * Pass it to cancellable async operations (e.g. vine::async::sleep with a
+     * token); they throw TaskCancelledException once the execution is cancelled.
+     *
+     * @return The execution's cancellation token.
+     */
+    virtual std::stop_token stopToken() const = 0;
+
+    /**
+     * @brief Whether a cancellation has been requested for this execution.
+     *
+     * Commands doing non-cooperative work should poll this between steps.
+     *
+     * @return true when the execution should stop.
+     */
+    virtual bool isCancelled() const = 0;
 };
 
 /**

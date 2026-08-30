@@ -1,17 +1,42 @@
 ﻿#include <vine/appfw/Plugin.hpp>
 
+#include <utility>
+
+#include <vine/appfw/Application.hpp>
+#include <vine/appfw/CommandManager.hpp>
+#include <vine/appfw/ConfigRegistry.hpp>
+
 V_APPFW_NS_BEGIN
 
 V_OBJECT_META_IMPL(Plugin, Object)
 
-PluginInfo Plugin::info() const
+const PluginInfo& Plugin::info() const
 {
-    return {};
+    return info_;
+}
+
+void Plugin::setInfo(PluginInfo info)
+{
+    info_ = std::move(info);
 }
 
 String Plugin::name() const
 {
-    return info().name;
+    return info_.name;
+}
+
+std::vector<CommandInfo> Plugin::commandInfos() const
+{
+    auto* app = Application::current();
+    auto* cm  = app ? app->commandManager() : nullptr;
+    return cm ? cm->commandInfosForPlugin(name()) : std::vector<CommandInfo>{};
+}
+
+std::vector<const ConfigItem*> Plugin::configItems() const
+{
+    auto* app = Application::current();
+    auto* reg = app ? app->configRegistry() : nullptr;
+    return reg ? reg->itemsForPlugin(name()) : std::vector<const ConfigItem*>{};
 }
 
 void Plugin::preLoad(PluginLoadContext* context)

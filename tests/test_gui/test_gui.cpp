@@ -35,11 +35,13 @@
 
 #include <vine/vi_global.hpp>
 
-#include <vine/appfw/PluginLoadContext.hpp>
+#include <vine/appfw/Command.hpp>
+#include <vine/appfw/CommandManager.hpp>
 #include <vine/appfw/ConfigItem.hpp>
 #include <vine/appfw/ConfigManager.hpp>
 #include <vine/appfw/ConfigRegistry.hpp>
 #include <vine/appfw/ConfigStandard.hpp>
+#include <vine/appfw/PluginLoadContext.hpp>
 
 #include <vine/appfw/gui/Control.hpp>
 #include <vine/appfw/gui/DockPanel.hpp>
@@ -86,6 +88,23 @@ std::unique_ptr<guifw::GuiApplication> GuiEnv::app;
 
 // gtest_main 没有自定义 main 的钩子，用静态初始化注册全局环境即可。
 ::testing::Environment* const g_gui_env = ::testing::AddGlobalTestEnvironment(new GuiEnv());
+
+// 最小具体命令，用于验证 CommandManager 的 owner 跟踪与按插件报告。
+class DummyCommand : public vine::appfw::Command {
+    V_OBJECT_META_DECL;
+
+  public:
+    vine::String name() const override { return u8"dummy"; }
+    vine::String group() const override { return u8"Test"; }
+    vine::String description() const override { return u8"dummy command"; }
+    vine::appfw::CommandFlags flags() const override { return vine::appfw::CommandFlags::None; }
+    vine::async::Task<vine::appfw::CommandResult> execute(vine::appfw::CommandExecutionContext*) override
+    {
+        co_return vine::appfw::CommandResult(vine::appfw::CommandStatus::Success);
+    }
+};
+
+V_OBJECT_META_IMPL(DummyCommand, vine::appfw::Command)
 
 } // namespace
 
@@ -963,6 +982,53 @@ TEST_F(GuiTest, PluginLoadContext_Configs)
     EXPECT_NE(app->configRegistry()->item(u8"plugin.opt"), nullptr);
     EXPECT_TRUE(ctx.configs()->removeItem(u8"plugin.opt"));
     EXPECT_TRUE(ctx.configs()->removeCategory(u8"插件"));
+}
+
+TEST_F(GuiTest, CommandManager_RegistrationOwner)
+{
+    auto* app = GuiEnv::app.get();
+    ASSERT_NE(app, nullptr);
+    auto* cm = app->commandManager();
+    ASSERT_NE(cm, nullptr);
+
+    const auto pluginName = vine::String(u8"testPlugin");
+    const auto otherName  = vine::String(u8"myCommand");
+    const auto ownedName  = vine::String(u8"pluginCommand");
+
+    // 清理可能残留的注册，保证用例可重复运行。
+    cm->unregisterCommand(otherName);
+    cm->unregisterCommand(ownedName);
+
+    // 主机命令：无 owner。
+    cm->setRegistrationOwner({});
+    ASSERT_TRUE(cm->registerCommand<DummyCommand>(otherName));
+
+    // 插件命令：注册期间打上 owner。
+    cm->setRegistrationOwner(pluginName);
+    ASSERT_TRUE(cm->registerCommand<DummyCommand>(ownedName));
+    cm->setRegistrationOwner({});
+
+    // 报告接口：只返回该插件注册的命令，且 owner 正确。
+    const auto owned = cm->commandInfosForPlugin(pluginName);
+    ASSERT_EQ(owned.size(), 1u);
+    EXPECT_TRUE(owned[0].name == ownedName);
+    EXPECT_TRUE(owned[0].owner == pluginName);
+
+    const auto others = cm->commandInfosForPlugin(otherName);
+    EXPECT_TRUE(others.empty());
+
+    // 全量枚举中 owner 字段按注册来源标记。
+    for (const auto& info : cm->commandInfos()) {
+        if (info.name == ownedName) {
+            EXPECT_TRUE(info.owner == pluginName);
+        } else if (info.name == otherName) {
+            EXPECT_TRUE(info.owner.empty());
+        }
+    }
+
+    // 清理注册，避免影响其它用例。
+    cm->unregisterCommand(otherName);
+    cm->unregisterCommand(ownedName);
 }
 
 TEST_F(GuiTest, ConfigRegistry_StandardCategories)

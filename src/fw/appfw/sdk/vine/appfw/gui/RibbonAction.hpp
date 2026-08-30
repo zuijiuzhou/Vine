@@ -51,6 +51,15 @@ class V_APPFW_API RibbonAction : public UIElement {
     void  setData(void* dptr);
     void* data() const;
 
+    /// Sets the command name executed when the action is triggered (empty = none).
+    void setCommand(const String& command);
+    /// Gets the configured command name.
+    String command() const;
+
+  public:
+    /// Triggered when the action is triggered (e.g. from a menu).
+    Event<RibbonAction, EventArgs> triggered;
+
   private:
     struct Impl;
     Impl*       dptr();

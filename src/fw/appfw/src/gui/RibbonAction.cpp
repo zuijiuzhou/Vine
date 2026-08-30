@@ -1,20 +1,43 @@
 #include <vine/appfw/gui/RibbonAction.hpp>
 
-#include <vine/appfw/gui/UIElementData.hpp>
 #include <QAction>
 #include <QIcon>
+
+#include <vine/appfw/Application.hpp>
+#include <vine/appfw/CommandManager.hpp>
+
+#include <vine/appfw/gui/UIElementData.hpp>
 
 V_APPFWGUI_NS_BEGIN
 
 V_OBJECT_META_IMPL(RibbonAction, UIElement)
 
 struct RibbonAction::Impl : public UIElementData {
-    void* user = nullptr;
+    void*     user = nullptr;
+    EventArgs triggeredArgs;
+    String    command;
 };
 
 RibbonAction::RibbonAction()
   : UIElement(new Impl(), new QAction(nullptr))
-{}
+{
+    auto* act = impl<QAction>();
+
+    if (act) {
+        // Bridge the Qt triggered signal to the framework's `triggered` event.
+        QObject::connect(act, &QAction::triggered, [this](bool) { triggered.trigger(*this, dptr()->triggeredArgs); });
+    }
+
+    // When a command is configured, execute it when the action is triggered.
+    triggered.addHandler([](RibbonAction& self, EventArgs&) {
+        const String cmd = self.command();
+        if (!cmd.empty()) {
+            if (auto* app = Application::current()) {
+                app->commandManager()->executeDetached(cmd);
+            }
+        }
+    });
+}
 
 RibbonAction::~RibbonAction()
 {
@@ -123,6 +146,16 @@ void RibbonAction::setData(void* data)
 void* RibbonAction::data() const
 {
     return dptr()->user;
+}
+
+void RibbonAction::setCommand(const String& command)
+{
+    dptr()->command = command;
+}
+
+String RibbonAction::command() const
+{
+    return dptr()->command;
 }
 
 inline auto RibbonAction::dptr() -> Impl*

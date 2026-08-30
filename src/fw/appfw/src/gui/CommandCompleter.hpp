@@ -1,7 +1,6 @@
 #pragma once
 
-#include <vine/appfw/appfw_global.hpp>
-#include <vine/String.hpp>
+#include <vine/appfw/gui/ConsolePanel.hpp>
 
 #include <algorithm>
 #include <utility>
@@ -10,43 +9,60 @@
 V_APPFWGUI_NS_BEGIN
 
 /**
- * @brief Case-insensitive prefix completion over a list of command names.
+ * @brief Case-insensitive prefix completion over command entries.
+ *
+ * Matches a candidate when its name or any alias starts with the prefix.
  */
 class CommandCompleter
 {
   public:
     /**
-     * @brief Replaces the candidate set and sorts it for stable completion.
+     * @brief Replaces the candidate set and sorts it by name for stable order.
      *
-     * @param names Candidate command names.
+     * @param entries Candidate commands.
      */
-    void setCommands(std::vector<String> names)
+    void setEntries(std::vector<ConsoleCommandEntry> entries)
     {
-        names_ = std::move(names);
-        std::sort(names_.begin(), names_.end());
+        entries_ = std::move(entries);
+        std::sort(entries_.begin(), entries_.end(),
+            [](const ConsoleCommandEntry& a, const ConsoleCommandEntry& b) {
+                if (a.source != b.source) {
+                    return a.source < b.source;
+                }
+                return a.name < b.name;
+            });
     }
 
     /**
-     * @brief Returns all candidates starting with the prefix (case-insensitive).
+     * @brief Returns all entries whose name or alias starts with the prefix.
      *
-     * @param prefix Text to match against the start of each candidate.
-     * @return Matching candidates, in sorted order.
+     * @param prefix Text to match against the start of each name/alias.
+     * @return Matching entries, sorted by name.
      */
-    std::vector<String> complete(const String& prefix) const
+    std::vector<ConsoleCommandEntry> complete(const String& prefix) const
     {
-        std::vector<String> result;
-        for (const auto& name : names_)
+        std::vector<ConsoleCommandEntry> result;
+        for (const auto& entry : entries_)
         {
-            if (name.startsWith(prefix, true))
+            if (entry.name.startsWith(prefix, true))
             {
-                result.push_back(name);
+                result.push_back(entry);
+                continue;
+            }
+            for (const auto& alias : entry.aliases)
+            {
+                if (alias.startsWith(prefix, true))
+                {
+                    result.push_back(entry);
+                    break;
+                }
             }
         }
         return result;
     }
 
   private:
-    std::vector<String> names_;
+    std::vector<ConsoleCommandEntry> entries_;
 };
 
 V_APPFWGUI_NS_END

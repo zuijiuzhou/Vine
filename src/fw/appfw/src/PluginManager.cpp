@@ -18,6 +18,7 @@
 #endif // __linux__
 
 #include <vine/appfw/Application.hpp>
+#include <vine/appfw/CommandManager.hpp>
 #include <vine/appfw/Plugin.hpp>
 #include <vine/appfw/PluginLoadContext.hpp>
 #include <vine/logging/Log.hpp>
@@ -111,6 +112,37 @@ std::string toUtf8(const String& s)
 {
     return std::string(reinterpret_cast<const char*>(s.data()), s.size());
 }
+
+/**
+ * @brief Tags every command registered while alive with the given plugin name.
+ *
+ * RAII: restores the previous owner on destruction so the plugin's commands
+ * (vinePluginRegisterCommands and the load lifecycle) are attributed to it.
+ */
+class RegistrationOwnerScope
+{
+  public:
+    RegistrationOwnerScope(CommandManager* manager, const String& owner)
+      : manager_(manager)
+    {
+        if (manager_ != nullptr) {
+            manager_->setRegistrationOwner(owner);
+        }
+    }
+
+    ~RegistrationOwnerScope()
+    {
+        if (manager_ != nullptr) {
+            manager_->setRegistrationOwner({});
+        }
+    }
+
+    RegistrationOwnerScope(const RegistrationOwnerScope&)            = delete;
+    RegistrationOwnerScope& operator=(const RegistrationOwnerScope&) = delete;
+
+  private:
+    CommandManager* manager_;
+};
 
 } // namespace
 
@@ -241,22 +273,31 @@ Plugin* PluginManager::load(const String& str)
         return nullptr;
     }
 
+    // The query entry (from V_DECLARE_PLUGIN) is the single metadata source.
+    plugin->setInfo(*info);
+
     // Register the plugin's commands (V_DECLARE_COMMAND) inside its own module:
     // the DLL exports vinePluginRegisterCommands, which runs in the plugin's
-    // code and flushes its per-module queue into the CommandManager.
+    // code and flushes its per-module queue into the CommandManager. The owner
+    // scope attributes every command registered during the plugin's load
+    // (module commands + lifecycle) to this plugin.
     using RegisterFn = void(CommandManager*);
     const auto register_cmds = lib->resolveSymbol<RegisterFn>(u8"vinePluginRegisterCommands");
-    if (register_cmds) {
-        Application* app = Application::current();
-        register_cmds(app ? app->commandManager() : nullptr);
-    }
+    Application* app = Application::current();
+    CommandManager* cm = app ? app->commandManager() : nullptr;
+    {
+        RegistrationOwnerScope owner_scope(cm, info->name);
+        if (register_cmds) {
+            register_cmds(cm);
+        }
 
-    // Three-phase lifecycle, aligned with loadAll(): preLoad(), then load(),
-    // then postLoad() for cross-plugin wiring.
-    PluginLoadContext context(Application::current(), info->name);
-    plugin->preLoad(&context);
-    plugin->load(&context);
-    plugin->postLoad(&context);
+        // Three-phase lifecycle, aligned with loadAll(): preLoad(), then load(),
+        // then postLoad() for cross-plugin wiring.
+        PluginLoadContext context(app, info->name);
+        plugin->preLoad(&context);
+        plugin->load(&context);
+        plugin->postLoad(&context);
+    }
 
     d->plugins.push_back(LoadedPlugin{ info->name, plugin, plugin->info().dependencies, path });
     V_LOGI("Plugin '{}' loaded from '{}'", toUtf8(info->name), path.string());
@@ -405,12 +446,20 @@ bool PluginManager::loadAll()
             return false;
         }
 
+        // The query entry (from V_DECLARE_PLUGIN) is the single metadata source.
+        plugin->setInfo(*it->info);
+
         // Register the plugin's commands (V_DECLARE_COMMAND) inside its own module.
+        // The owner scope tags these module commands with the plugin name.
         using RegisterFn = void(CommandManager*);
         const auto register_cmds = it->lib->resolveSymbol<RegisterFn>(u8"vinePluginRegisterCommands");
-        if (register_cmds) {
-            Application* app = Application::current();
-            register_cmds(app ? app->commandManager() : nullptr);
+        Application* app = Application::current();
+        CommandManager* cm = app ? app->commandManager() : nullptr;
+        {
+            RegistrationOwnerScope owner_scope(cm, name);
+            if (register_cmds) {
+                register_cmds(cm);
+            }
         }
 
         V_LOGI("Plugin '{}' loaded", toUtf8(name));
@@ -420,16 +469,21 @@ bool PluginManager::loadAll()
     // Step 5: three-phase lifecycle - preLoad() for every plugin (each one
     // registers its own commands), then load() for every plugin, then
     // postLoad() for every plugin. Each plugin gets its own context so it can
-    // query pluginName() and its own registered configs.
+    // query pluginName() and its own registered configs. Every phase runs
+    // inside a per-plugin owner scope so lifecycle-registered commands are
+    // attributed to the plugin.
     for (const auto& lp : created) {
+        RegistrationOwnerScope owner_scope(Application::current() ? Application::current()->commandManager() : nullptr, lp.name);
         PluginLoadContext context(Application::current(), lp.name);
         lp.plugin->preLoad(&context);
     }
     for (const auto& lp : created) {
+        RegistrationOwnerScope owner_scope(Application::current() ? Application::current()->commandManager() : nullptr, lp.name);
         PluginLoadContext context(Application::current(), lp.name);
         lp.plugin->load(&context);
     }
     for (const auto& lp : created) {
+        RegistrationOwnerScope owner_scope(Application::current() ? Application::current()->commandManager() : nullptr, lp.name);
         PluginLoadContext context(Application::current(), lp.name);
         lp.plugin->postLoad(&context);
     }
@@ -489,6 +543,18 @@ std::vector<Plugin*> PluginManager::plugins() const
         result.push_back(lp.plugin);
     }
     return result;
+}
+
+std::vector<CommandInfo> PluginManager::commandInfosForPlugin(const String& name) const
+{
+    auto* plugin = this->plugin(name);
+    return plugin ? plugin->commandInfos() : std::vector<CommandInfo>{};
+}
+
+std::vector<const ConfigItem*> PluginManager::configItemsForPlugin(const String& name) const
+{
+    auto* plugin = this->plugin(name);
+    return plugin ? plugin->configItems() : std::vector<const ConfigItem*>{};
 }
 
 V_APPFW_NS_END

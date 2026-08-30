@@ -12,6 +12,20 @@ class QWidget;
 V_APPFWGUI_NS_BEGIN
 
 /**
+ * @brief A command candidate offered by the console completion popup.
+ */
+struct ConsoleCommandEntry {
+    /// Command name (target of the aliases).
+    String name;
+    /// Short human-readable description (may be empty).
+    String description;
+    /// Aliases resolving to this command (may be empty).
+    std::vector<String> aliases;
+    /// Owning plugin name shown as "source: name" (empty = host commands).
+    String source;
+};
+
+/**
  * @brief Console panel: read-only output view plus a command input line.
  *
  * Pure UI: it renders output with semantic coloring, collects a line of input,
@@ -48,9 +62,11 @@ class V_APPFW_API ConsolePanel : public Control
     void clearInput();
 
     /**
-     * @brief Sets the candidate names used by Tab completion.
+     * @brief Sets the candidate commands used by completion and the popup.
+     *
+     * @param entries Candidate commands.
      */
-    void setCommandNames(const std::vector<String>& names);
+    void setCommandEntries(const std::vector<ConsoleCommandEntry>& entries);
 
     /**
      * @brief Sets the color scheme.
@@ -69,6 +85,9 @@ class V_APPFW_API ConsolePanel : public Control
     vine::Signal<> escapePressed;
 
   private:
+    /// Applies the ConsoleTheme matching the current application theme.
+    void applyAppTheme();
+
     struct Impl;
     Impl*       dptr();
     const Impl* dptr() const;

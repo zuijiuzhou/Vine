@@ -113,6 +113,11 @@ class V_APPFW_API RibbonButton : public Control {
     void  setData(void* dptr);
     void* data() const;
 
+    /// Sets the command name executed when the button is clicked (empty = none).
+    void setCommand(const String& command);
+    /// Gets the configured command name.
+    String command() const;
+
   public:
     /// Triggered when the button is clicked.
     Event<RibbonButton, EventArgs> clicked;

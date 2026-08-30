@@ -9,6 +9,8 @@
 
 V_APPFW_NS_BEGIN
 
+struct CommandInfo;
+class ConfigItem;
 class Plugin;
 
 /**
@@ -155,6 +157,28 @@ class V_APPFW_API PluginManager {
      * @return The plugin instances.
      */
     std::vector<Plugin*> plugins() const;
+
+    /**
+     * @brief Reports the commands registered by the given plugin.
+     *
+     * Delegates to the host CommandManager; commands are attributed to a plugin
+     * while it is being loaded (see CommandManager::setRegistrationOwner).
+     *
+     * @param name Plugin name.
+     * @return The plugin's command metadata (may be empty).
+     */
+    std::vector<CommandInfo> commandInfosForPlugin(const String& name) const;
+
+    /**
+     * @brief Reports the config items registered by the given plugin.
+     *
+     * Delegates to the host ConfigRegistry; items are recorded with their owner
+     * when the plugin registers them through PluginLoadContext.
+     *
+     * @param name Plugin name.
+     * @return The plugin's config items (may be empty).
+     */
+    std::vector<const ConfigItem*> configItemsForPlugin(const String& name) const;
 
   private:
     struct Impl;

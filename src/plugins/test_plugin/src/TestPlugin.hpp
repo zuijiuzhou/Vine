@@ -12,9 +12,6 @@ class TestPlugin : public Plugin {
 
   public:
     TestPlugin();
-
-  public:
-    PluginInfo info() const override;
 };
 
 V_APPFW_NS_END

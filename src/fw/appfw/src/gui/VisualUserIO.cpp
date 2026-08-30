@@ -1,6 +1,9 @@
 ﻿#include "VisualUserIO.hpp"
 
+#include <vine/appfw/Application.hpp>
 #include <vine/appfw/CommandManager.hpp>
+#include <vine/appfw/Plugin.hpp>
+#include <vine/appfw/PluginManager.hpp>
 #include <vine/appfw/gui/ConsolePanel.hpp>
 
 #include <vine/async/DetachedTask.hpp>
@@ -33,10 +36,29 @@ void VisualUserIO::setCommandManager(vine::appfw::CommandManager* manager)
 
 void VisualUserIO::refreshCompletion()
 {
-    if (console_ && commandManager())
+    if (!console_ || !commandManager())
     {
-        console_->setCommandNames(commandManager()->names());
+        return;
     }
+
+    auto* pm = Application::current() ? Application::current()->pluginManager() : nullptr;
+
+    std::vector<ConsoleCommandEntry> entries;
+    for (const auto& info : commandManager()->commandInfos())
+    {
+        // The popup prefix is the plugin's human-friendly display name.
+        String source = info.owner;
+        if (pm != nullptr && !info.owner.empty())
+        {
+            if (auto* plugin = pm->plugin(info.owner))
+            {
+                const auto pinfo = plugin->info();
+                source = pinfo.display_name.empty() ? pinfo.name : pinfo.display_name;
+            }
+        }
+        entries.push_back(ConsoleCommandEntry{ info.name, info.description, info.aliases, source });
+    }
+    console_->setCommandEntries(entries);
 }
 
 void VisualUserIO::putString(const String& str)
@@ -188,6 +210,11 @@ void VisualUserIO::onEscape()
     if (pending_ != PendingRead::None)
     {
         cancelInteraction();
+    }
+    else if (commandManager() && commandManager()->runningCount() > 0)
+    {
+        // Cancel the async command currently running.
+        commandManager()->cancelCurrent();
     }
     else if (console_)
     {

@@ -19,7 +19,7 @@ vine::async::Task<CommandResult> ShowPluginsCommand::execute(CommandExecutionCon
 
     auto* dlg = new gui::PluginManagerDialog(pm);
     dlg->setWindowTitle(u8"插件管理器");
-    dlg->resize(520, 380);
+    dlg->resize(780, 500);
     dlg->exec();
     delete dlg;
     co_return CommandResult(CommandStatus::Success);

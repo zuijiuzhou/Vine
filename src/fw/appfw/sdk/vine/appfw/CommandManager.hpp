@@ -71,6 +71,9 @@ struct CommandInfo {
 
     /// Aliases resolving to this command.
     std::vector<String> aliases;
+
+    /// Name of the plugin that registered this command; empty for host commands.
+    String owner;
 };
 
 /**
@@ -169,6 +172,19 @@ class V_APPFW_API CommandManager
      * @return Stack depth.
      */
     int runningCount() const;
+
+    /**
+     * @brief Requests cancellation of the currently running command chain.
+     *
+     * Cooperative: the running command observes the request through
+     * CommandExecutionContext::stopToken()/isCancelled(). Cancellable async
+     * operations throw TaskCancelledException. A nested command rethrows the
+     * exception so cancellation propagates upward by default; the outermost
+     * command reports it as a CommandStatus::Cancelled result. A command that
+     * wants to react differently to a cancelled child catches the exception in
+     * its own execute(). No-op when no command is running.
+     */
+    void cancelCurrent();
 
     /**
      * @brief Returns the number of commands recorded in the execution history.
@@ -287,6 +303,34 @@ class V_APPFW_API CommandManager
      * @return Command metadata ordered by command name.
      */
     std::vector<CommandInfo> commandInfos() const;
+
+    /**
+     * @brief Returns metadata of the commands registered by one plugin.
+     *
+     * @param owner Plugin name; empty selects host-app commands.
+     * @return The matching command metadata, ordered by command name.
+     */
+    std::vector<CommandInfo> commandInfosForPlugin(const String& owner) const;
+
+    /**
+     * @brief Sets the owner tag applied to subsequently registered commands.
+     *
+     * The PluginManager sets this to the plugin name while the plugin registers
+     * its commands (vinePluginRegisterCommands and the load lifecycle), so the
+     * commands it registers are attributed to it. Reset to an empty string once
+     * the plugin has finished loading; commands registered outside a plugin load
+     * are attributed to the host application.
+     *
+     * @param owner Plugin name, or empty for host commands.
+     */
+    void setRegistrationOwner(String owner);
+
+    /**
+     * @brief Returns the current registration owner tag.
+     *
+     * @return The owner set by setRegistrationOwner().
+     */
+    const String& registrationOwner() const;
 
     /**
      * @brief Sets the handler invoked before an Undoable command executes.

@@ -2,7 +2,7 @@
 #
 # A plugin is a loadable module living in the plugin directory
 # (<exe>/plugins/vine) that exports vinePluginQuery()/vinePluginCreate() via
-# V_PLUGIN_DECLARE. Plugins are not linked against each other; dependencies are
+# V_DECLARE_PLUGIN. Plugins are not linked against each other; dependencies are
 # declared in PluginInfo.dependencies and resolved by PluginManager. This
 # helper only builds the module and deploys it next to the application; the
 # caller still adds find_package(Qt6) and target_link_libraries as needed.
