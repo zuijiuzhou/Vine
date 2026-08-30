@@ -141,10 +141,7 @@ ConfigManager::ConfigManager()
   : d(new Impl)
 {}
 
-ConfigManager::~ConfigManager()
-{
-    delete d;
-}
+ConfigManager::~ConfigManager() = default;
 
 bool ConfigManager::contains(const String& key) const
 {

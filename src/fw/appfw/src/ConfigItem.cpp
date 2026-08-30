@@ -44,25 +44,18 @@ ConfigItem& ConfigItem::operator=(const ConfigItem& other)
 }
 
 ConfigItem::ConfigItem(ConfigItem&& other) noexcept
-  : d(other.d)
-{
-    other.d = nullptr;
-}
+  : d(std::move(other.d))
+{}
 
 ConfigItem& ConfigItem::operator=(ConfigItem&& other) noexcept
 {
     if (this != &other) {
-        delete d;
-        d       = other.d;
-        other.d = nullptr;
+        d = std::move(other.d);
     }
     return *this;
 }
 
-ConfigItem::~ConfigItem()
-{
-    delete d;
-}
+ConfigItem::~ConfigItem() = default;
 
 const String& ConfigItem::key() const
 {

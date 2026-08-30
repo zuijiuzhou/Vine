@@ -2,7 +2,6 @@
 
 #include <SARibbon.h>
 #include <vine/Exception.hpp>
-#include <vine/Ptr.hpp>
 #include <vine/appfw/gui/MainWindow.hpp>
 #include <vine/appfw/gui/RibbonAction.hpp>
 #include <vine/appfw/gui/RibbonTab.hpp>

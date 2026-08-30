@@ -1,6 +1,8 @@
 #pragma once
 #include "runtime_global.hpp"
 
+#include <memory>
+
 #include <vine/String.hpp>
 
 V_RUNTIME_NS_BEGIN
@@ -72,7 +74,7 @@ class V_RUNTIME_API DynamicLibrary {
     void* resolveSymbolRaw(const String& symbol) const;
 
     struct Impl;
-    Impl* const d;
+    std::unique_ptr<Impl> d;
 
     friend class DynamicLibraryLoader;
 };

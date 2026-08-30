@@ -123,7 +123,7 @@ void EventChannel::deliver(std::size_t id, const Handler& handler, const std::sh
 
 struct EventBus::Impl {
     // One concrete EventChannel per subscribed event type.
-    std::map<vine::Type, detail::EventChannel> channels;
+    std::map<vine::TypeId, detail::EventChannel> channels;
     // Shared lock: publish reads the map concurrently; subscribe inserts.
     mutable std::shared_mutex mutex;
 };
@@ -132,12 +132,9 @@ EventBus::EventBus()
   : d(new Impl)
 {}
 
-EventBus::~EventBus()
-{
-    delete d;
-}
+EventBus::~EventBus() = default;
 
-Subscription EventBus::subscribeErased(vine::Type type,
+Subscription EventBus::subscribeErased(vine::TypeId type,
                                        std::function<void(const std::shared_ptr<const Object>&)> handler,
                                        SubscriptionThreadMode mode)
 {
@@ -163,7 +160,7 @@ void EventBus::publish(const std::shared_ptr<const Object>& event)
         // Shared read lock: concurrent publishes only read the map and may run
         // in parallel; subscribe's exclusive lock blocks this only briefly.
         std::shared_lock lock(d->mutex);
-        for (vine::Type cls = event->getClass(); cls != nullptr; cls = cls->parent()) {
+        for (vine::TypeId cls = event->getType(); cls != nullptr; cls = cls->parent()) {
             auto it = d->channels.find(cls);
             if (it != d->channels.end()) {
                 channels.push_back(&it->second);

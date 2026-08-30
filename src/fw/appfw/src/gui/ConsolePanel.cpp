@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <functional>
+#include <memory>
 
 #include <QColor>
 #include <QFont>
@@ -153,9 +154,9 @@ struct ConsolePanel::Impl : public UIElementData
     InputLine*      input  = nullptr;
 
     /// VS Code-style completion popup (frameless Qt::Tool window, owned here).
-    QListWidget* suggest = nullptr;
+    std::unique_ptr<QListWidget> suggest;
     /// Event filter closing the popup on outside clicks.
-    SuggestCloseFilter* suggest_filter = nullptr;
+    std::unique_ptr<SuggestCloseFilter> suggest_filter;
 
     ConsoleTheme theme = ConsoleTheme::dark();
 
@@ -184,7 +185,11 @@ struct ConsolePanel::Impl : public UIElementData
     void onHistoryUp();
     void onHistoryDown();
     void onTab();
+
+    ~Impl();
 };
+
+ConsolePanel::Impl::~Impl() = default;
 
 ConsolePanel::ConsolePanel(QWidget* parent)
   : Control(new Impl(), new QWidget(parent))
@@ -206,18 +211,18 @@ ConsolePanel::ConsolePanel(QWidget* parent)
     // VS Code-style completion popup: a frameless Qt::Tool window under the input
     // line. Unlike Qt::Popup it does not grab the mouse (the main window stays
     // draggable and focused); outside clicks are closed by an event filter.
-    data->suggest = new QListWidget();
+    data->suggest = std::make_unique<QListWidget>();
     data->suggest->setWindowFlags(Qt::Tool | Qt::FramelessWindowHint | Qt::WindowDoesNotAcceptFocus);
     data->suggest->setAttribute(Qt::WA_ShowWithoutActivating);
     data->suggest->setFocusPolicy(Qt::NoFocus);
     data->suggest->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     data->suggest->hide();
 
-    data->suggest_filter = new SuggestCloseFilter();
-    data->suggest_filter->popup = data->suggest;
+    data->suggest_filter = std::make_unique<SuggestCloseFilter>();
+    data->suggest_filter->popup = data->suggest.get();
     if (auto* app = QCoreApplication::instance())
     {
-        app->installEventFilter(data->suggest_filter);
+        app->installEventFilter(data->suggest_filter.get());
     }
 
     layout->addWidget(data->output);
@@ -225,7 +230,7 @@ ConsolePanel::ConsolePanel(QWidget* parent)
 
     QObject::connect(data->input, &QLineEdit::returnPressed, root, [data] { data->onReturnPressed(); });
     QObject::connect(data->input, &QLineEdit::textChanged, root, [data] { data->onTextChanged(); });
-    QObject::connect(data->suggest, &QListWidget::itemClicked, root, [data] { data->onReturnPressed(); });
+    QObject::connect(data->suggest.get(), &QListWidget::itemClicked, root, [data] { data->onReturnPressed(); });
     data->input->onEscape      = [data] { data->onEscape(); };
     data->input->onHistoryUp   = [data] { data->onHistoryUp(); };
     data->input->onHistoryDown = [data] { data->onHistoryDown(); };
@@ -245,14 +250,10 @@ ConsolePanel::~ConsolePanel()
         app->theme_changed.removeHandler(dptr()->theme_handler_id_);
     }
     if (auto* core_app = QCoreApplication::instance()) {
-        core_app->removeEventFilter(dptr()->suggest_filter);
+        core_app->removeEventFilter(dptr()->suggest_filter.get());
     }
-    // The popup and its filter are parentless, so release them here.
-    delete dptr()->suggest_filter;
-    delete dptr()->suggest;
-    dptr()->suggest       = nullptr;
-    dptr()->suggest_filter = nullptr;
-    // d is released by UIElement
+    // The popup and its filter are parentless (single owner), so they are
+    // released automatically when d (Impl) is deleted by UIElement.
 }
 
 void ConsolePanel::append(ConsoleMessageType type, const String& text)

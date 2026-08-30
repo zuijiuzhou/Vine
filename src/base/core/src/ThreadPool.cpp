@@ -33,7 +33,6 @@ ThreadPool::ThreadPool(std::size_t thread_count)
 ThreadPool::~ThreadPool()
 {
     stop();
-    delete d;
 }
 
 ThreadPool& ThreadPool::defaultPool()

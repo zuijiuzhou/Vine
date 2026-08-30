@@ -61,8 +61,8 @@
 // pimpl模式中，将v_ptr转换为派生类具体类型指针，类似于Qt中的Q_Q宏
 #define V_V(ClassName) auto* const v = getVPtr();
 
-// 定义类的共享指针和弱指针类型，并前向声明类
+// 定义类的侵入式指针类型，并前向声明类（需先包含 <vine/IntrusivePtr.hpp>）
 #define V_DEFINE_PTR(ClassName)                                                                                                                                \
     class ClassName;                                                                                                                                           \
-    using ClassName##SharedPtr = SPtr<ClassName>;                                                                                                            \
+    using ClassName##SharedPtr = IntrusivePtr<ClassName>;                                                                                                    \
     // using ClassName##WeakPtr   = std::weak_ptr<ClassName>;

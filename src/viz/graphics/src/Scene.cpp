@@ -2,7 +2,7 @@
 
 V_GRAPHICS_NS_BEGIN
 
-V_OBJECT_META_IMPL(Scene, RefObject);
+V_OBJECT_META_IMPL(Scene, vine::Object);
 
 struct Scene::Data {};
 

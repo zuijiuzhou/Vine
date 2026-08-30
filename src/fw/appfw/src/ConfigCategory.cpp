@@ -25,10 +25,7 @@ ConfigCategory::ConfigCategory(String name, ConfigRegistry* owner)
     d->owner = owner;
 }
 
-ConfigCategory::~ConfigCategory()
-{
-    delete d;
-}
+ConfigCategory::~ConfigCategory() = default;
 
 ConfigGroup* ConfigCategory::addGroup(String name)
 {

@@ -2,8 +2,10 @@
 
 #include <functional>
 
-#include <vine/Class.hpp>
-#include <vine/Ptr.hpp>
+#include <vine/IntrusivePtr.hpp>
+#include <vine/Type.hpp>
+
+#include <vine/di/ServiceBase.hpp>
 
 #include "Lifetime.hpp"
 #include "di_global.hpp"
@@ -18,9 +20,9 @@ class Container;
  * @param type Concrete type the factory is expected to create: the impl type
  *             when one is set, otherwise the service type.
  * @param container The container being resolved, so the factory can resolve dependencies.
- * @return A newly created RefObject instance.
+ * @return A newly created ServiceBase instance.
  */
-using InstanceFactory = std::function<RefObject*(Type, Container&)>;
+using InstanceFactory = std::function<ServiceBase*(TypeId, Container&)>;
 
 /**
  * @brief Describes how to provide a service: a pre-set instance, an instance
@@ -44,7 +46,7 @@ class V_DI_API Registration final {
      * @param type Service type; must be non-null.
      * @throws vine::Exception with ARGUMENT_NULL when type is null.
      */
-    Registration(Type type);
+    Registration(TypeId type);
 
   public:
     /**
@@ -57,14 +59,14 @@ class V_DI_API Registration final {
      * @return *this for chaining.
      * @throws vine::Exception with INVALID_ARGUMENTS when inst is not kind of the service type.
      */
-    Registration& instance(RefObject* inst);
+    Registration& instance(ServiceBase* inst);
 
     /**
      * @brief Returns the pre-set instance.
      *
      * @return The pre-set instance, or nullptr when none was set.
      */
-    RefObject* instance() const
+    ServiceBase* instance() const
     {
         return inst_.get();
     }
@@ -100,7 +102,7 @@ class V_DI_API Registration final {
      * @param type Implementation type.
      * @return *this for chaining.
      */
-    Registration& impl(Type type)
+    Registration& impl(TypeId type)
     {
         service_impl_type_ = type;
         return *this;
@@ -111,7 +113,7 @@ class V_DI_API Registration final {
      *
      * @return The implementation type, or nullptr when not set.
      */
-    Type impl() const
+    TypeId impl() const
     {
         return service_impl_type_;
     }
@@ -143,7 +145,7 @@ class V_DI_API Registration final {
      *
      * @return The service type.
      */
-    Type serviceType() const
+    TypeId serviceType() const
     {
         return service_type_;
     }
@@ -167,9 +169,9 @@ class V_DI_API Registration final {
     static Registration create();
 
   private:
-    Type              service_type_{};
-    Type              service_impl_type_{};
-    SPtr<RefObject> inst_;
+    TypeId            service_type_{};
+    TypeId            service_impl_type_{};
+    IntrusivePtr<ServiceBase> inst_;
     InstanceFactory   inst_fac_;
     Lifetime          lifetime_ = Lifetime::Transient;
 };

@@ -2,6 +2,7 @@
 #include "runtime_global.hpp"
 
 #include <cstddef>
+#include <memory>
 #include <vector>
 
 #include <vine/String.hpp>
@@ -152,7 +153,7 @@ class V_RUNTIME_API DynamicLibraryLoader {
 
   private:
     struct Impl;
-    Impl* const d;
+    std::unique_ptr<Impl> d;
 };
 
 V_RUNTIME_NS_END

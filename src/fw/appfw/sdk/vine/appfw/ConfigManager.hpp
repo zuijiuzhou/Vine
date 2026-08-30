@@ -4,6 +4,7 @@
 #include <vine/String.hpp>
 #include <vine/appfw/appfw_global.hpp>
 
+#include <memory>
 #include <vector>
 
 V_APPFW_NS_BEGIN
@@ -93,7 +94,7 @@ class V_APPFW_API ConfigManager {
 
   private:
     struct Impl;
-    Impl* const d;
+    std::unique_ptr<Impl> d;
 };
 
 V_APPFW_NS_END

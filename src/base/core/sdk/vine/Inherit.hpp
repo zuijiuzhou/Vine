@@ -2,8 +2,8 @@
 
 #include "core_global.hpp"
 
-#include "Class.hpp"
 #include "Object.hpp"
+#include "Type.hpp"
 
 V_CORE_NS_BEGIN
 
@@ -16,15 +16,15 @@ class Inherit : public Parent {
     {}
 
   public:
-    virtual const Class* getClass() const noexcept override
+    virtual const Type* getType() const noexcept override
     {
         return desc();
     }
 
-    static const Class* desc()
+    static const Type* desc()
     {
-        static const Class* cls = new Class(Parent::desc(), typeid(Sub));
-        return cls;
+        static const Type* t = new Type(typeid(Sub), Parent::desc());
+        return t;
     }
 
     // template <typename... TArgs>

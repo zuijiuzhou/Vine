@@ -33,22 +33,17 @@ class DockRootWidget final : public UIElement {
 } // namespace
 
 struct DockPanelManager::Impl {
-    DockingPaneManager* dockingMgr  = nullptr;
-    UIElement*          rootElement = nullptr;
+    std::unique_ptr<DockingPaneManager> dockingMgr;
+    std::unique_ptr<UIElement>          rootElement;
 };
 
 DockPanelManager::DockPanelManager()
   : d(new Impl)
 {
-    d->dockingMgr = new DockingPaneManager();
+    d->dockingMgr = std::make_unique<DockingPaneManager>();
 }
 
-DockPanelManager::~DockPanelManager()
-{
-    delete d->dockingMgr;
-    delete d->rootElement;
-    delete d;
-}
+DockPanelManager::~DockPanelManager() = default;
 
 void DockPanelManager::setWindow(UIElement* wnd)
 {
@@ -67,13 +62,16 @@ void DockPanelManager::setCentralWidget(UIElement* widget)
     d->dockingMgr->setClientWidget(static_cast<QWidget*>(widget->impl()));
 }
 
-UIElement* DockPanelManager::root() const
+RawPtr<UIElement> DockPanelManager::root() const
 {
     if (!d->dockingMgr)
         return nullptr;
-    if (!d->rootElement)
-        d->rootElement = new DockRootWidget(d->dockingMgr->widget());
-    return d->rootElement;
+    if (!d->rootElement) {
+        d->rootElement = std::make_unique<DockRootWidget>(d->dockingMgr->widget());
+        // DockingPanes/QMainWindow owns the central widget, not the wrapper.
+        d->rootElement->setOwnsImpl(false);
+    }
+    return d->rootElement.get();
 }
 
 DockPanel* DockPanelManager::createDockPanel(const String& title, DockAreas area)
@@ -104,7 +102,7 @@ void DockPanelManager::addDockPanel(DockPanel* panel, DockAreas area)
     if (!d->dockingMgr)
         return;
 
-    auto* mgr = d->dockingMgr;
+    auto* mgr = d->dockingMgr.get();
 
     auto* dp = panel->impl<DockingPaneContainer>();
     if (!dp) {

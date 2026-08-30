@@ -2,7 +2,7 @@
 
 V_GEOMETRY_NS_BEGIN
 
-V_OBJECT_META_IMPL(Material, vine::RefObject)
+V_OBJECT_META_IMPL(Material, vine::Object)
 
 Material::Material()
 {}

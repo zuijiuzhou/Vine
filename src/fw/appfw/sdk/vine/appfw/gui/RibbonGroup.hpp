@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vine/RawPtr.hpp>
+
 #include "Control.hpp"
 #include "Gui.hpp"
 
@@ -109,7 +111,7 @@ class V_APPFW_API RibbonGroup : public Control {
      * destroyed the button is cleared automatically.
      */
     void          setOptionAction(RibbonAction* item);
-    RibbonAction* optionAction() const;
+    RawPtr<RibbonAction> optionAction() const;
 
   private:
     struct Impl;

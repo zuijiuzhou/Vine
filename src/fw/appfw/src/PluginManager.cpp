@@ -176,12 +176,7 @@ PluginManager::PluginManager()
   : d(new Impl())
 {}
 
-PluginManager::~PluginManager()
-{
-    // Loaded plugin libraries are owned by the shared DynamicLibraryLoader
-    // and are unloaded when it is destroyed at process exit.
-    delete d;
-}
+PluginManager::~PluginManager() = default;
 
 void PluginManager::setPluginDirectory(const std::filesystem::path& dir)
 {

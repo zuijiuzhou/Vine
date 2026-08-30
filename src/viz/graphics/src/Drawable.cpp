@@ -2,7 +2,7 @@
 
 V_GRAPHICS_NS_BEGIN
 
-V_OBJECT_META_IMPL(Drawable, RefObject)
+V_OBJECT_META_IMPL(Drawable, vine::Object)
 
 struct Drawable::Data {};
 

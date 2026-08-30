@@ -2,6 +2,8 @@
 #include "Drawable.hpp"
 #include "graphics_global.hpp"
 
+#include <vine/IntrusivePtr.hpp>
+
 V_GRAPHICS_NS_BEGIN
 
 class V_GRAPHICS_API Geometry : public Drawable {
@@ -16,6 +18,6 @@ class V_GRAPHICS_API Geometry : public Drawable {
     ;
 };
 
-using GeometryPtr = SPtr<Geometry>;
+using GeometryPtr = IntrusivePtr<Geometry>;
 
 V_GRAPHICS_NS_END

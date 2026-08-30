@@ -1,7 +1,6 @@
 ﻿#include <QCoreApplication>
 
 #include <vine/Exception.hpp>
-#include <vine/Ptr.hpp>
 
 #include <vine/appfw/PluginManager.hpp>
 #include <vine/appfw/Application.hpp>
@@ -22,14 +21,16 @@ static Application* s_current_app = nullptr;
 
 V_OBJECT_META_IMPL(Application, Object)
 
+ApplicationData::~ApplicationData() = default;
+
 auto Application::dptr() -> ApplicationData*
 {
-    return d;
+    return d.get();
 }
 
 auto Application::dptr() const -> const ApplicationData*
 {
-    return d;
+    return d.get();
 }
 
 Application::Application(int argc, char** argv)
@@ -45,28 +46,19 @@ Application::Application(ApplicationData* data, int argc, char** argv)
 
     s_current_app = this;
 
-    dptr()->plugin_manager  = new PluginManager;
-    dptr()->service_manager = new ServiceManager;
-    dptr()->command_manager = new CommandManager(this);
-    dptr()->config_manager  = new ConfigManager;
-    dptr()->config_registry = new ConfigRegistry;
-    dptr()->main_dispatcher = new MainThreadDispatcher;
-    dptr()->event_bus       = new EventBus;
+    dptr()->plugin_manager  = std::make_unique<PluginManager>();
+    dptr()->service_manager = std::make_unique<ServiceManager>();
+    dptr()->command_manager = std::make_unique<CommandManager>(this);
+    dptr()->config_manager  = std::make_unique<ConfigManager>();
+    dptr()->config_registry = std::make_unique<ConfigRegistry>();
+    dptr()->main_dispatcher = std::make_unique<MainThreadDispatcher>();
+    dptr()->event_bus       = std::make_unique<EventBus>();
     dptr()->argc            = argc;
     dptr()->argv            = argv;
 }
 
 Application::~Application()
 {
-    delete dptr()->user_io;
-    delete dptr()->plugin_manager;
-    delete dptr()->service_manager;
-    delete dptr()->command_manager;
-    delete dptr()->config_manager;
-    delete dptr()->config_registry;
-    delete dptr()->event_bus;
-    delete dptr()->main_dispatcher;
-    delete d;
     s_current_app = nullptr;
 }
 
@@ -81,8 +73,8 @@ void Application::init()
 void Application::setupUserIO()
 {
     if (dptr()->user_io == nullptr) {
-        dptr()->user_io = createUserIO();
-        dptr()->user_io->setCommandManager(dptr()->command_manager);
+        dptr()->user_io.reset(createUserIO());
+        dptr()->user_io->setCommandManager(dptr()->command_manager.get());
     }
 }
 
@@ -101,47 +93,47 @@ void Application::exit(int code)
     QCoreApplication::exit(code);
 }
 
-CommandManager* Application::commandManager() const
+RawPtr<CommandManager> Application::commandManager() const
 {
-    return dptr()->command_manager;
+    return dptr()->command_manager.get();
 }
 
-PluginManager* Application::pluginManager() const
+RawPtr<PluginManager> Application::pluginManager() const
 {
-    return dptr()->plugin_manager;
+    return dptr()->plugin_manager.get();
 }
 
-ServiceManager* Application::serviceManager() const
+RawPtr<ServiceManager> Application::serviceManager() const
 {
-    return dptr()->service_manager;
+    return dptr()->service_manager.get();
 }
 
-ConfigManager* Application::configManager() const
+RawPtr<ConfigManager> Application::configManager() const
 {
-    return dptr()->config_manager;
+    return dptr()->config_manager.get();
 }
 
-ConfigRegistry* Application::configRegistry() const
+RawPtr<ConfigRegistry> Application::configRegistry() const
 {
-    return dptr()->config_registry;
+    return dptr()->config_registry.get();
 }
 
-EventBus* Application::eventBus() const
+RawPtr<EventBus> Application::eventBus() const
 {
-    return dptr()->event_bus;
+    return dptr()->event_bus.get();
 }
 
-MainThreadDispatcher* Application::mainThreadDispatcher() const
+RawPtr<MainThreadDispatcher> Application::mainThreadDispatcher() const
 {
-    return dptr()->main_dispatcher;
+    return dptr()->main_dispatcher.get();
 }
 
-UserIO* Application::userIO() const
+RawPtr<UserIO> Application::userIO() const
 {
-    return dptr()->user_io;
+    return dptr()->user_io.get();
 }
 
-Application* Application::current()
+RawPtr<Application> Application::current()
 {
     return s_current_app;
 }

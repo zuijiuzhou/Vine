@@ -70,11 +70,11 @@ class Subscription {
  * Complements member signals (Event<TSender, TEventArgs>): a publisher posts an
  * event and every subscriber registered for that type or any base type receives
  * it. Events must derive from Object; the bus dispatches along the runtime
- * class hierarchy (Class::parent()), so subscribing to a base type also
+ * class hierarchy (Type::parent()), so subscribing to a base type also
  * receives derived events (greenrobot-style polymorphism).
  *
  * Semantics:
- * - Events are keyed by their Class (TEvent::desc()); publish() walks the
+ * - Events are keyed by their Type (TEvent::desc()); publish() walks the
  *   runtime hierarchy of the posted event and delivers most-derived first.
  * - Delivery follows each subscription's ThreadMode: Current runs synchronously
  *   on the publishing thread in subscription order; Main posts to the main
@@ -124,12 +124,12 @@ class V_APPFW_API EventBus {
 
   private:
     /// Type-erased registration used by subscribe<TEvent>.
-    Subscription subscribeErased(vine::Type type,
+    Subscription subscribeErased(vine::TypeId type,
                                  std::function<void(const std::shared_ptr<const Object>&)> handler,
                                  SubscriptionThreadMode mode);
 
     struct Impl;
-    Impl* const d;
+    std::unique_ptr<Impl> d;
 };
 
 inline Subscription::~Subscription()

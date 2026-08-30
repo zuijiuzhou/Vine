@@ -2,7 +2,7 @@
 
 V_MODELIO_NS_BEGIN
 
-V_OBJECT_META_IMPL(MeshLoader, vine::RefObject)
+V_OBJECT_META_IMPL(MeshLoader, vine::Object)
 
 MeshLoader::MeshLoader() = default;
 

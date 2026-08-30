@@ -1,5 +1,7 @@
 ﻿#include <vine/appfw/gui/MainWindow.hpp>
 
+#include <memory>
+
 #include <QApplication>
 #include <QDockWidget>
 #include <QPalette>
@@ -7,7 +9,6 @@
 #include <QTimer>
 #include <SARibbon.h>
 
-#include <vine/Ptr.hpp>
 #include <vine/appfw/Application.hpp>
 #include <vine/appfw/gui/DockPanel.hpp>
 #include <vine/appfw/gui/DockPanelManager.hpp>
@@ -24,10 +25,14 @@ V_APPFWGUI_NS_BEGIN
 V_OBJECT_META_IMPL(MainWindow, Window)
 
 struct MainWindow::Impl : public UIElementData {
-    RibbonBar*        ribbon_bar     = nullptr;
-    StatusBar*        status_bar     = nullptr;
-    DockPanelManager* dock_panel_mgr = nullptr;
+    std::unique_ptr<RibbonBar>        ribbon_bar;
+    std::unique_ptr<StatusBar>        status_bar;
+    std::unique_ptr<DockPanelManager> dock_panel_mgr;
+
+    ~Impl();
 };
+
+MainWindow::Impl::~Impl() = default;
 
 namespace
 {
@@ -71,9 +76,9 @@ MainWindow::MainWindow()
 {
     s_current_main_window = this;
 
-    dptr()->ribbon_bar     = new RibbonBar(this);
-    dptr()->status_bar     = new StatusBar(this);
-    dptr()->dock_panel_mgr = new DockPanelManager();
+    dptr()->ribbon_bar     = std::make_unique<RibbonBar>(this);
+    dptr()->status_bar     = std::make_unique<StatusBar>(this);
+    dptr()->dock_panel_mgr = std::make_unique<DockPanelManager>();
     dptr()->dock_panel_mgr->setWindow(this);
 
     impl<itype>()->setWindowTitle("Vine");
@@ -81,7 +86,10 @@ MainWindow::MainWindow()
     impl<itype>()->setCentralWidget(static_cast<QWidget*>(dptr()->dock_panel_mgr->root()->impl()));
     impl<itype>()->setStatusBar(dptr()->status_bar->impl<QStatusBar>());
 
-    dptr()->status_bar->setOwnsImpl(true); // QMainWindow takes ownership of status bar
+    // QMainWindow::setStatusBar takes ownership of the status bar widget, so the
+    // wrapper must not delete it (owns_impl=false avoids a double-free with Qt's
+    // parent-child cleanup when the window is destroyed first).
+    dptr()->status_bar->setOwnsImpl(false);
 
     auto ribbon = impl<itype>()->ribbonBar();
     ribbon->setContentsMargins(5, 0, 5, 0);
@@ -93,10 +101,7 @@ MainWindow::~MainWindow()
     if (s_current_main_window == this) {
         s_current_main_window = nullptr;
     }
-    delete dptr()->dock_panel_mgr;
-    delete dptr()->ribbon_bar;
-    delete dptr()->status_bar;
-    // d is deleted by UIElement
+    // d (and its owned ribbon/status/dock members) is deleted by UIElement.
 }
 
 MainWindow* MainWindow::current()
@@ -104,19 +109,19 @@ MainWindow* MainWindow::current()
     return s_current_main_window;
 }
 
-RibbonBar* MainWindow::ribbonBar() const
+RawPtr<RibbonBar> MainWindow::ribbonBar() const
 {
-    return dptr()->ribbon_bar;
+    return dptr()->ribbon_bar.get();
 }
 
-StatusBar* MainWindow::statusBar() const
+RawPtr<StatusBar> MainWindow::statusBar() const
 {
-    return dptr()->status_bar;
+    return dptr()->status_bar.get();
 }
 
-DockPanelManager* MainWindow::dockPanelManager() const
+RawPtr<DockPanelManager> MainWindow::dockPanelManager() const
 {
-    return dptr()->dock_panel_mgr;
+    return dptr()->dock_panel_mgr.get();
 }
 
 inline auto MainWindow::dptr() -> Impl*

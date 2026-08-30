@@ -2,7 +2,7 @@
 
 V_MODELIO_NS_BEGIN
 
-V_OBJECT_META_IMPL(MeshExporter, vine::RefObject)
+V_OBJECT_META_IMPL(MeshExporter, vine::Object)
 
 MeshExporter::MeshExporter() = default;
 

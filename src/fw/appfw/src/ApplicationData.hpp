@@ -1,33 +1,38 @@
 #pragma once
 
+#include <memory>
+
+#include <vine/appfw/CommandManager.hpp>
+#include <vine/appfw/ConfigManager.hpp>
+#include <vine/appfw/ConfigRegistry.hpp>
+#include <vine/appfw/EventBus.hpp>
+#include <vine/appfw/MainThreadDispatcher.hpp>
+#include <vine/appfw/PluginManager.hpp>
+#include <vine/appfw/ServiceManager.hpp>
+#include <vine/appfw/UserIO.hpp>
+
 class QCoreApplication;
 
 V_APPFW_NS_BEGIN
 
-class PluginManager;
-class CommandManager;
-class ServiceManager;
-class ConfigManager;
-class ConfigRegistry;
-class EventBus;
-class MainThreadDispatcher;
-class UserIO;
-
 struct ApplicationData {
-    PluginManager*        plugin_manager  = nullptr;
-    ServiceManager*       service_manager = nullptr;
-    CommandManager*       command_manager = nullptr;
-    ConfigManager*        config_manager  = nullptr;
-    ConfigRegistry*       config_registry = nullptr;
-    EventBus*             event_bus       = nullptr;
-    MainThreadDispatcher* main_dispatcher = nullptr;
-    UserIO*               user_io         = nullptr;
-    QCoreApplication*     app             = nullptr;
+    // Members are destroyed in reverse declaration order; the order below is
+    // deliberately reversed so destruction matches the legacy explicit delete
+    // order (user_io first ... main_dispatcher last).
+    std::unique_ptr<MainThreadDispatcher> main_dispatcher;
+    std::unique_ptr<EventBus>             event_bus;
+    std::unique_ptr<ConfigRegistry>       config_registry;
+    std::unique_ptr<ConfigManager>        config_manager;
+    std::unique_ptr<CommandManager>       command_manager;
+    std::unique_ptr<ServiceManager>       service_manager;
+    std::unique_ptr<PluginManager>        plugin_manager;
+    std::unique_ptr<UserIO>               user_io;
+    QCoreApplication*                     app = nullptr;
 
     int    argc = 0;
     char** argv = nullptr;
 
-    virtual ~ApplicationData() = default;
+    virtual ~ApplicationData();
 };
 
 V_APPFW_NS_END

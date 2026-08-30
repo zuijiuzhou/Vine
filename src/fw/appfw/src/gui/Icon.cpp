@@ -40,10 +40,7 @@ Icon& Icon::operator=(const Icon& other)
     return *this;
 }
 
-Icon::~Icon()
-{
-    delete d;
-}
+Icon::~Icon() = default;
 
 const QIcon& Icon::value() const
 {

@@ -76,10 +76,7 @@ DynamicLibraryLoader::DynamicLibraryLoader()
   : d(new Impl)
 {}
 
-DynamicLibraryLoader::~DynamicLibraryLoader()
-{
-    delete d;
-}
+DynamicLibraryLoader::~DynamicLibraryLoader() = default;
 
 DynamicLibraryLoader& DynamicLibraryLoader::instance()
 {

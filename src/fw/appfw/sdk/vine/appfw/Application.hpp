@@ -2,7 +2,10 @@
 
 #include "appfw_global.hpp"
 
+#include <memory>
+
 #include <vine/Object.hpp>
+#include <vine/RawPtr.hpp>
 
 V_APPFW_NS_BEGIN
 
@@ -23,7 +26,7 @@ class V_APPFW_API Application : public Object {
     ApplicationData*       dptr();
     const ApplicationData* dptr() const;
 
-    ApplicationData* const d;
+    std::unique_ptr<ApplicationData> d;
 
   public:
     Application(int argc, char** argv);
@@ -57,32 +60,32 @@ class V_APPFW_API Application : public Object {
 
     void exit(int code);
 
-    CommandManager* commandManager() const;
+    RawPtr<CommandManager> commandManager() const;
 
-    PluginManager* pluginManager() const;
+    RawPtr<PluginManager> pluginManager() const;
 
-    ServiceManager* serviceManager() const;
+    RawPtr<ServiceManager> serviceManager() const;
 
     /// Application-level config manager (single instance, lives with Application).
-    ConfigManager* configManager() const;
+    RawPtr<ConfigManager> configManager() const;
 
     /// Config item registry (single instance, lives with Application).
-    ConfigRegistry* configRegistry() const;
+    RawPtr<ConfigRegistry> configRegistry() const;
 
     /// In-process publish/subscribe bus (single instance, lives with Application).
-    EventBus* eventBus() const;
+    RawPtr<EventBus> eventBus() const;
 
     /// Main-thread marshaller used by EventBus for Main/Auto delivery.
-    MainThreadDispatcher* mainThreadDispatcher() const;
+    RawPtr<MainThreadDispatcher> mainThreadDispatcher() const;
 
-    UserIO* userIO() const;
+    RawPtr<UserIO> userIO() const;
 
     int argc() const;
 
     char** argv() const;
 
   public:
-    static Application* current();
+    static RawPtr<Application> current();
 };
 
 V_APPFW_NS_END

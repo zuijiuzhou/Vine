@@ -2,6 +2,7 @@
 
 #include "appfw_global.hpp"
 
+#include <memory>
 #include <vector>
 
 #include <vine/String.hpp>
@@ -137,7 +138,7 @@ class V_APPFW_API ConfigRegistry {
 
   private:
     struct Impl;
-    Impl* const d;
+    std::unique_ptr<Impl> d;
 };
 
 V_APPFW_NS_END

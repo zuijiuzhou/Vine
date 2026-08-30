@@ -1,7 +1,7 @@
 ﻿#include <vine/di/Container.hpp>
 
 #include <vine/Exception.hpp>
-#include <vine/Ptr.hpp>
+#include <vine/IntrusivePtr.hpp>
 #include <vine/di/Registration.hpp>
 
 V_DI_NS_BEGIN
@@ -22,21 +22,18 @@ bool isValidRegistration(const Registration& reg)
 
 } // namespace
 
-V_OBJECT_META_IMPL(Container, RefObject)
+V_OBJECT_META_IMPL(Container, ServiceBase)
 
 struct Container::Impl {
-    std::unordered_map<Type, Registration>      regs;       // Keyed by service type.
-    std::unordered_map<Type, SPtr<RefObject>> singletons; // Lazily created singleton cache.
+    std::unordered_map<TypeId, Registration>      regs;       // Keyed by service type.
+    std::unordered_map<TypeId, IntrusivePtr<ServiceBase>> singletons; // Lazily created singleton cache.
 };
 
 Container::Container()
   : d(new Impl)
 {}
 
-Container::~Container()
-{
-    delete d;
-}
+Container::~Container() = default;
 
 void Container::add(const Registration& reg)
 {
@@ -50,7 +47,7 @@ void Container::add(const Registration& reg)
     d->regs.emplace(type, reg);
 }
 
-RefObject* Container::resolve(Type type) const
+RawPtr<ServiceBase> Container::resolve(TypeId type) const
 {
     auto it = d->regs.find(type);
     if (it == d->regs.end())
@@ -59,7 +56,7 @@ RefObject* Container::resolve(Type type) const
     const Registration& reg = it->second;
 
     // A pre-set instance is always a singleton owned by the registration.
-    if (RefObject* inst = reg.instance())
+    if (ServiceBase* inst = reg.instance())
         return inst;
 
     // Return the cached singleton when it was created before.
@@ -70,9 +67,9 @@ RefObject* Container::resolve(Type type) const
     }
 
     // The concrete creation target is the impl type when set, otherwise the service type.
-    Type target = reg.impl() ? reg.impl() : type;
+    TypeId target = reg.impl() ? reg.impl() : type;
 
-    RefObject* created = nullptr;
+    ServiceBase* created = nullptr;
     if (auto fac = reg.instanceFactory()) {
         // The factory receives the container so it can resolve dependencies.
         created = fac(target, const_cast<Container&>(*this));

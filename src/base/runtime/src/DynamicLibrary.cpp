@@ -41,7 +41,6 @@ DynamicLibrary::~DynamicLibrary()
         dlclose(d->handle);
     }
 #endif
-    delete d;
 }
 
 void* DynamicLibrary::resolveSymbolRaw(const String& symbol) const

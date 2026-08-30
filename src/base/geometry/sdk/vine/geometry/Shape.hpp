@@ -3,7 +3,8 @@
 #include "geometry_global.hpp"
 
 #include <vine/math/Math.hpp>
-#include <vine/RefObject.hpp>
+#include <vine/Object.hpp>
+#include <vine/RefCounted.hpp>
 
 V_GEOMETRY_NS_BEGIN
 
@@ -48,7 +49,7 @@ enum class ShapeType {
 /**
  * @brief Base class for all geometric shapes.
  */
-class V_GEOMETRY_API Shape : public vine::RefObject {
+class V_GEOMETRY_API Shape : public vine::Object, public vine::RefCounted<Shape> {
     V_OBJECT_META_DECL;
 
   protected:

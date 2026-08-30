@@ -16,10 +16,7 @@ ConfigRegistry::ConfigRegistry()
   : d(new Impl)
 {}
 
-ConfigRegistry::~ConfigRegistry()
-{
-    delete d;
-}
+ConfigRegistry::~ConfigRegistry() = default;
 
 ConfigCategory* ConfigRegistry::addCategory(String name)
 {

@@ -1,21 +1,21 @@
 #include <gtest/gtest.h>
 
 #include <vine/Exception.hpp>
-#include <vine/Ptr.hpp>
+#include <vine/IntrusivePtr.hpp>
 #include <vine/di/Container.hpp>
 #include <vine/di/Registration.hpp>
 
-using vine::RefObject;
-using vine::SPtr;
-using vine::Type;
+using vine::IntrusivePtr;
+using vine::TypeId;
 using vine::di::Container;
 using vine::di::Lifetime;
 using vine::di::Registration;
+using vine::di::ServiceBase;
 
 namespace
 {
 
-class DiServiceBase : public RefObject {
+class DiServiceBase : public ServiceBase {
     V_OBJECT_META_DECL
 };
 
@@ -31,7 +31,7 @@ class DiServiceB : public DiServiceBase {
     DiServiceB() = default;
 };
 
-V_OBJECT_META_IMPL(DiServiceBase, RefObject)
+V_OBJECT_META_IMPL(DiServiceBase, ServiceBase)
 V_OBJECT_META_IMPL(DiServiceA, DiServiceBase)
 V_OBJECT_META_IMPL(DiServiceB, DiServiceBase)
 
@@ -40,10 +40,10 @@ V_OBJECT_META_IMPL(DiServiceB, DiServiceBase)
 TEST(DiTest, SingletonFactoryReturnsSameInstance)
 {
     Container c;
-    c.add(Registration::create<DiServiceA>().lifetime(Lifetime::Singleton).instanceFactory([](Type, Container&) { return new DiServiceA(); }));
+    c.add(Registration::create<DiServiceA>().lifetime(Lifetime::Singleton).instanceFactory([](TypeId, Container&) { return new DiServiceA(); }));
 
-    RefObject* a1 = c.resolve(DiServiceA::desc());
-    RefObject* a2 = c.resolve(DiServiceA::desc());
+    ServiceBase* a1 = c.resolve(DiServiceA::desc());
+    ServiceBase* a2 = c.resolve(DiServiceA::desc());
     ASSERT_NE(a1, nullptr);
     EXPECT_EQ(a1, a2);
 }
@@ -51,10 +51,10 @@ TEST(DiTest, SingletonFactoryReturnsSameInstance)
 TEST(DiTest, TransientFactoryReturnsNewInstance)
 {
     Container c;
-    c.add(Registration::create<DiServiceA>().instanceFactory([](Type, Container&) { return new DiServiceA(); }));
+    c.add(Registration::create<DiServiceA>().instanceFactory([](TypeId, Container&) { return new DiServiceA(); }));
 
-    SPtr<DiServiceA> a1(static_cast<DiServiceA*>(c.resolve(DiServiceA::desc())));
-    SPtr<DiServiceA> a2(static_cast<DiServiceA*>(c.resolve(DiServiceA::desc())));
+    IntrusivePtr<DiServiceA> a1(static_cast<DiServiceA*>(c.resolve(DiServiceA::desc())));
+    IntrusivePtr<DiServiceA> a2(static_cast<DiServiceA*>(c.resolve(DiServiceA::desc())));
     ASSERT_NE(a1.get(), nullptr);
     ASSERT_NE(a2.get(), nullptr);
     EXPECT_NE(a1.get(), a2.get());
@@ -79,12 +79,12 @@ TEST(DiTest, UnregisteredTypeResolvesNull)
 TEST(DiTest, ImplTargetPassedToFactory)
 {
     Container c;
-    c.add(Registration::create<DiServiceA>().impl(DiServiceBase::desc()).instanceFactory([](Type target, Container&) {
+    c.add(Registration::create<DiServiceA>().impl(DiServiceBase::desc()).instanceFactory([](TypeId target, Container&) {
         EXPECT_EQ(target, DiServiceBase::desc());
         return new DiServiceA();
     }));
 
-    RefObject* s = c.resolve(DiServiceA::desc());
+    ServiceBase* s = c.resolve(DiServiceA::desc());
     ASSERT_NE(s, nullptr);
     EXPECT_TRUE(s->isKindOf(DiServiceBase::desc()));
 }
@@ -92,10 +92,10 @@ TEST(DiTest, ImplTargetPassedToFactory)
 TEST(DiTest, ImplChainedResolution)
 {
     Container c;
-    c.add(Registration::create<DiServiceBase>().instanceFactory([](Type, Container&) { return new DiServiceA(); }));
+    c.add(Registration::create<DiServiceBase>().instanceFactory([](TypeId, Container&) { return new DiServiceA(); }));
     c.add(Registration::create<DiServiceB>().impl(DiServiceBase::desc()));
 
-    RefObject* s = c.resolve(DiServiceB::desc());
+    ServiceBase* s = c.resolve(DiServiceB::desc());
     ASSERT_NE(s, nullptr);
     EXPECT_TRUE(s->isKindOf(DiServiceBase::desc()));
 }
@@ -111,7 +111,7 @@ TEST(DiTest, DuplicateRegistrationThrows)
 {
     Container c;
     c.add(Registration::create<DiServiceA>().instance(new DiServiceA()));
-    EXPECT_THROW(c.add(Registration::create<DiServiceA>().instanceFactory([](Type, Container&) { return new DiServiceA(); })), vine::Exception);
+    EXPECT_THROW(c.add(Registration::create<DiServiceA>().instanceFactory([](TypeId, Container&) { return new DiServiceA(); })), vine::Exception);
 }
 
 TEST(DiTest, EmptyRegistrationThrows)

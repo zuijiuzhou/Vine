@@ -4,6 +4,8 @@
 
 #include <filesystem>
 
+#include <vine/Object.hpp>
+#include <vine/RefCounted.hpp>
 #include <vine/geometry/BrepShape.hpp>
 
 V_MODELIO_NS_BEGIN
@@ -14,7 +16,7 @@ V_MODELIO_NS_BEGIN
  * Concrete B-rep exporters (STEP, IGES, ...) derive from this class and
  * write a BrepShape into the target format.
  */
-class V_MODELIO_API BrepExporter : public vine::RefObject {
+class V_MODELIO_API BrepExporter : public vine::Object, public vine::RefCounted<BrepExporter> {
     V_OBJECT_META_DECL;
 
   public:

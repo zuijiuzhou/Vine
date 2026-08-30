@@ -1,13 +1,16 @@
 ﻿#pragma once
 #include "di_global.hpp"
-#include <vine/RefObject.hpp>
+
+#include <memory>
+
+#include <vine/RawPtr.hpp>
+#include <vine/di/ServiceBase.hpp>
 
 V_DI_NS_BEGIN
 
 class Registration;
 
 V_DECLARE_PIMPL(Container)
-V_DEFINE_PTR(Container)
 
 /**
  * @brief Dependency injection container.
@@ -18,11 +21,12 @@ V_DEFINE_PTR(Container)
  * creation; a transient instance is re-created on every resolve call.
  *
  * The container is Qt-free and depends only on the core runtime type system
- * (Type / RefObject / SPtr). resolve() returns a non-owning raw pointer:
- * the container keeps ownership of pre-set and singleton instances, while a
- * transient instance must be adopted by the caller through SPtr.
+ * (Type / ServiceBase / IntrusivePtr). resolve() returns a non-owning raw
+ * pointer: the container keeps ownership of pre-set and singleton instances,
+ * while a transient instance must be adopted by the caller through
+ * IntrusivePtr.
  */
-class V_DI_API Container : public RefObject {
+class V_DI_API Container : public ServiceBase {
     V_OBJECT_META_DECL
 
   public:
@@ -53,24 +57,24 @@ class V_DI_API Container : public RefObject {
      * @return The resolved service instance, or nullptr when the type is not
      *         registered or cannot be created.
      */
-    RefObject* resolve(Type type) const;
+    RawPtr<ServiceBase> resolve(TypeId type) const;
 
     /**
      * @brief Resolves the service registered for T.
      *
-     * @tparam T Service type; must derive from RefObject.
+     * @tparam T Service type; must derive from Object.
      * @return The resolved service instance cast to T*, or nullptr.
      */
-    template <RefObjectBased T>
-    T* resolve() const;
+    template <ObjectBased T>
+    RawPtr<T> resolve() const;
 
   private:
     struct Impl;
-    Impl* const d;
+    std::unique_ptr<Impl> d;
 };
 
-template <RefObjectBased T>
-T* Container::resolve() const
+template <ObjectBased T>
+RawPtr<T> Container::resolve() const
 {
     return resolve(T::desc());
 }

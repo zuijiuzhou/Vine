@@ -24,10 +24,7 @@ ConfigGroup::ConfigGroup(String name, ConfigRegistry* owner)
     d->owner = owner;
 }
 
-ConfigGroup::~ConfigGroup()
-{
-    delete d;
-}
+ConfigGroup::~ConfigGroup() = default;
 
 bool ConfigGroup::addItem(const ConfigItem& item)
 {

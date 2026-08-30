@@ -1,5 +1,6 @@
 #pragma once
 
+#include <vine/RawPtr.hpp>
 #include <vine/appfw/ConfigManager.hpp>
 #include <vine/appfw/ConfigRegistry.hpp>
 
@@ -46,11 +47,11 @@ class V_APPFW_API ConfigWindow : public Window {
     /**
      * @brief The associated registry.
      */
-    ConfigRegistry* registry() const;
+    RawPtr<ConfigRegistry> registry() const;
     /**
      * @brief The associated config manager.
      */
-    ConfigManager* config() const;
+    RawPtr<ConfigManager> config() const;
 
   private:
     struct Impl;

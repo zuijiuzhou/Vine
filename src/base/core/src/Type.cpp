@@ -1,4 +1,4 @@
-﻿#include <vine/Class.hpp>
+﻿#include <vine/Type.hpp>
 
 #include <algorithm>
 #include <mutex>
@@ -17,8 +17,8 @@ V_CORE_NS_BEGIN
 namespace
 {
 
-std::set<Class*> s_classes;
-std::mutex       s_classes_mutex;
+std::set<Type*> s_types;
+std::mutex      s_types_mutex;
 
 #if defined(_MSC_VER)
 bool parse_type_info_msvc(const std::type_info& c_type, String& name, String& ns, String& full_name)
@@ -62,12 +62,14 @@ bool parse_type_info_gnuc(const std::type_info& c_type, String& name, String& ns
 
 } // namespace
 
-Class::Class(const std::type_info& c_type, const Class* parent)
+Type::Type(const std::type_info& c_type, const Type* parent, TypeKind kind, std::vector<const Type*> interfaces)
   : c_type_(c_type)
+  , parent_(parent)
+  , kind_(kind)
+  , interfaces_(std::move(interfaces))
 {
-    if (getClass(c_type))
+    if (get(c_type))
         throw Exception(Exception::ITEM_ALREADY_EXISTS);
-    this->parent_ = parent;
 
     auto is_ok = false;
 
@@ -84,20 +86,20 @@ Class::Class(const std::type_info& c_type, const Class* parent)
     }
 
     {
-        std::lock_guard<std::mutex> lock(s_classes_mutex);
-        s_classes.insert(this);
+        std::lock_guard<std::mutex> lock(s_types_mutex);
+        s_types.insert(this);
     }
 }
 
-Class::~Class()
+Type::~Type()
 {
     {
-        std::lock_guard<std::mutex> lock(s_classes_mutex);
-        s_classes.erase(this);
+        std::lock_guard<std::mutex> lock(s_types_mutex);
+        s_types.erase(this);
     }
 }
 
-bool Class::isSubclassOf(const Class* cls) const noexcept
+bool Type::isSubclassOf(const Type* cls) const noexcept
 {
     if (cls == nullptr)
         return false;
@@ -112,30 +114,59 @@ bool Class::isSubclassOf(const Class* cls) const noexcept
     return false;
 }
 
-bool Class::operator==(const Class& right) const noexcept
+bool Type::implements(const Type* itf) const noexcept
+{
+    if (itf == nullptr || !itf->isInterface())
+        return false;
+
+    std::vector<const Type*> pending(interfaces_.begin(), interfaces_.end());
+    std::vector<const Type*> visited;
+
+    while (!pending.empty()) {
+        const Type* t = pending.back();
+        pending.pop_back();
+
+        if (t == itf)
+            return true;
+
+        if (std::find(visited.begin(), visited.end(), t) != visited.end())
+            continue;
+        visited.push_back(t);
+
+        pending.insert(pending.end(), t->interfaces_.begin(), t->interfaces_.end());
+    }
+    return false;
+}
+
+bool Type::isKindOf(const Type* type) const noexcept
+{
+    return isSubclassOf(type) || implements(type);
+}
+
+bool Type::operator==(const Type& right) const noexcept
 {
     return c_type_ == right.c_type_;
 }
 
-bool Class::operator!=(const Class& right) const noexcept
+bool Type::operator!=(const Type& right) const noexcept
 {
     return !(*this == right);
 }
 
-Class* Class::getClass(const std::type_info& c_type)
+Type* Type::get(const std::type_info& c_type)
 {
-    std::lock_guard<std::mutex> lock(s_classes_mutex);
-    auto                        it = std::find_if(s_classes.begin(), s_classes.end(), [&c_type](Class* c) { return c->c_type_ == c_type; });
-    if (it == s_classes.end())
+    std::lock_guard<std::mutex> lock(s_types_mutex);
+    auto                        it = std::find_if(s_types.begin(), s_types.end(), [&c_type](Type* c) { return c->c_type_ == c_type; });
+    if (it == s_types.end())
         return nullptr;
     return *it;
 }
 
-Class* Class::getClass(const String& full_name)
+Type* Type::get(const String& full_name)
 {
-    std::lock_guard<std::mutex> lock(s_classes_mutex);
-    auto                        it = std::find_if(s_classes.begin(), s_classes.end(), [&full_name](Class* c) { return c->full_name_ == full_name; });
-    if (it == s_classes.end())
+    std::lock_guard<std::mutex> lock(s_types_mutex);
+    auto                        it = std::find_if(s_types.begin(), s_types.end(), [&full_name](Type* c) { return c->full_name_ == full_name; });
+    if (it == s_types.end())
         return nullptr;
     return *it;
 }

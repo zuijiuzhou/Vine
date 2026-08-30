@@ -4,7 +4,8 @@
 #include <cstdint>
 #include <optional>
 
-#include <vine/RefObject.hpp>
+#include <vine/Object.hpp>
+#include <vine/RawPtr.hpp>
 #include <vine/String.hpp>
 #include <vine/async/Task.hpp>
 #include <vine/math/Point3.hpp>
@@ -74,12 +75,12 @@ class V_APPFW_API UserIO : public Object {
      *
      * @return The command manager, or nullptr if unbound.
      */
-    CommandManager* commandManager() const;
+    RawPtr<CommandManager> commandManager() const;
 
   private:
     CommandManager* command_manager_{ nullptr };
 };
 
-using UserIOPtr = SPtr<UserIO>;
+using UserIOPtr = RawPtr<UserIO>;
 
 V_APPFW_NS_END

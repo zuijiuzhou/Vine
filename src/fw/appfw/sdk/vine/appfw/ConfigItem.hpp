@@ -6,6 +6,7 @@
 #include <initializer_list>
 #include <utility>
 #include <variant>
+#include <memory>
 #include <vector>
 
 #include <vine/String.hpp>
@@ -232,7 +233,7 @@ class V_APPFW_API ConfigItem {
 
   private:
     struct Impl;
-    Impl* d;
+    std::unique_ptr<Impl> d;
 };
 
 V_APPFW_NS_END

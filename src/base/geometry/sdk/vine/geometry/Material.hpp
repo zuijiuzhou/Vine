@@ -2,7 +2,8 @@
 
 #include "geometry_global.hpp"
 
-#include <vine/RefObject.hpp>
+#include <vine/Object.hpp>
+#include <vine/RefCounted.hpp>
 
 V_GEOMETRY_NS_BEGIN
 
@@ -23,7 +24,7 @@ enum class MaterialType {
 /**
  * @brief Base class for surface materials applied to shapes.
  */
-class V_GEOMETRY_API Material : public vine::RefObject {
+class V_GEOMETRY_API Material : public vine::Object, public vine::RefCounted<Material> {
     V_OBJECT_META_DECL;
 
   public:

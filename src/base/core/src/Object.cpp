@@ -1,19 +1,19 @@
 ﻿
 #include <vine/Object.hpp>
 
-#include <vine/Class.hpp>
 #include <vine/String.hpp>
+#include <vine/Type.hpp>
 
 V_CORE_NS_BEGIN
 
-const Class* Object::getClass() const noexcept
+const Type* Object::getType() const noexcept
 {
     return desc();
 }
 
-bool Object::isKindOf(const Class* type) const
+bool Object::isKindOf(const Type* type) const
 {
-    return getClass()->isSubclassOf(type);
+    return getType()->isKindOf(type);
 }
 
 bool Object::equals(const Object& other) const noexcept
@@ -23,13 +23,13 @@ bool Object::equals(const Object& other) const noexcept
 
 String Object::toString() const
 {
-    return getClass()->fullName();
+    return getType()->fullName();
 }
 
-const Class* Object::desc()
+const Type* Object::desc()
 {
-    static Class* cls = new Class(typeid(Object), nullptr);
-    return cls;
+    static Type* t = new Type(typeid(Object), nullptr);
+    return t;
 }
 
 V_CORE_NS_END

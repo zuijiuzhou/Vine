@@ -2,6 +2,7 @@
 
 #include <vine/appfw/Application.hpp>
 
+#include <vine/RawPtr.hpp>
 #include <vine/Signal.hpp>
 
 V_APPFWGUI_NS_BEGIN
@@ -60,7 +61,7 @@ class V_APPFW_API GuiApplication : public Application {
      * The main window is created and shown when the application initializes
      * and remains valid for the whole application lifetime.
      */
-    MainWindow* mainWindow() const;
+    RawPtr<MainWindow> mainWindow() const;
 
     /**
      * @brief Attaches the console panel used by the visual user I/O.

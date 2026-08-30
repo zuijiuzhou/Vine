@@ -2,8 +2,10 @@
 
 #include <vine/robotics/robot_core_global.hpp>
 
-#include <vine/RefObject.hpp>
+#include <vine/Object.hpp>
+#include <vine/RefCounted.hpp>
 #include <vine/SmallVector.hpp>
+#include <vine/String.hpp>
 #include <vine/math/Isometry3.hpp>
 #include <vine/robotics/kinematics/DofInfo.hpp>
 
@@ -21,8 +23,8 @@ enum class FrameType
     PlanarJoint
 };
 
-class V_ROBOTICS_CORE_API Frame : public vine::RefObject {
-    V_OBJECT_META(Frame, vine::RefObject);
+class V_ROBOTICS_CORE_API Frame : public vine::Object, public vine::RefCounted<Frame> {
+    V_OBJECT_META(Frame, vine::Object);
 
   public:
     Frame();

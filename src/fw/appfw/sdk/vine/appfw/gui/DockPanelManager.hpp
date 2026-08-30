@@ -1,8 +1,10 @@
 ﻿#pragma once
 
-#include <vine/Ptr.hpp>
+#include <vine/RawPtr.hpp>
+#include <vine/String.hpp>
 #include <vine/appfw/appfw_global.hpp>
 
+#include <memory>
 #include <vector>
 
 #include "Gui.hpp"
@@ -33,7 +35,7 @@ class V_APPFW_API DockPanelManager final {
     void setCentralWidget(UIElement* widget);
 
     /** Get the root widget to embed in a window's central area */
-    UIElement* root() const;
+    RawPtr<UIElement> root() const;
 
     /** Create and dock a DockPanel with title and content at the given area. */
     DockPanel* createDockPanel(const String& title, DockAreas area);
@@ -61,7 +63,7 @@ class V_APPFW_API DockPanelManager final {
 
   private:
     struct Impl;
-    Impl* const d;
+    std::unique_ptr<Impl> d;
 };
 
 V_APPFWGUI_NS_END

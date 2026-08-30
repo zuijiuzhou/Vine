@@ -5,9 +5,11 @@
 #include <functional>
 #include <type_traits>
 #include <utility>
+#include <memory>
 #include <vector>
 
 #include <vine/Events.hpp>
+#include <vine/RawPtr.hpp>
 #include <vine/appfw/Command.hpp>
 
 V_APPFW_NS_BEGIN
@@ -27,7 +29,7 @@ class V_APPFW_API CommandExecutingEventArgs : public EventArgs {
 
   public:
     /// The command that is about to execute.
-    Command* command() const;
+    RawPtr<Command> command() const;
 
   private:
     Command* command_;
@@ -46,7 +48,7 @@ class V_APPFW_API CommandExecutedEventArgs : public EventArgs {
 
   public:
     /// The command that finished executing.
-    Command* command() const;
+    RawPtr<Command> command() const;
 
     /// The execution result.
     const CommandResult& result() const;
@@ -106,7 +108,7 @@ class V_APPFW_API CommandManager
      *
      * @return The hosting Application.
      */
-    Application* application() const;
+    RawPtr<Application> application() const;
 
     /**
      * @brief Executes a command.
@@ -164,7 +166,7 @@ class V_APPFW_API CommandManager
      *
      * @return The running command, or nullptr when idle.
      */
-    Command* currentCommand() const;
+    RawPtr<Command> currentCommand() const;
 
     /**
      * @brief Returns the number of commands on the execution stack.
@@ -217,7 +219,7 @@ class V_APPFW_API CommandManager
      * @param factory Factory creating a new command instance.
      * @return true if registered, false if the name is already taken.
      */
-    bool registerCommand(Type command_class, String name, std::function<Command*()> factory);
+    bool registerCommand(TypeId command_class, String name, std::function<Command*()> factory);
 
     /**
      * @brief Registers a default-constructible command type by name.
@@ -250,7 +252,7 @@ class V_APPFW_API CommandManager
      * @param command_class Meta class of the commands to remove.
      * @return true if at least one command was removed.
      */
-    bool unregisterCommand(Type command_class);
+    bool unregisterCommand(TypeId command_class);
 
     /**
      * @brief Registers an alias that resolves to an existing command name.
@@ -347,7 +349,7 @@ class V_APPFW_API CommandManager
     class Context;
 
     struct Impl;
-    Impl* const d;
+    std::unique_ptr<Impl> d;
 };
 
 V_APPFW_NS_END

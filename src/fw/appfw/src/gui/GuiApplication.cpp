@@ -213,7 +213,7 @@ bool GuiApplication::followSystemTheme() const
     return d->follow_system;
 }
 
-MainWindow* GuiApplication::mainWindow() const
+RawPtr<MainWindow> GuiApplication::mainWindow() const
 {
     const auto* d = static_cast<const GuiApplicationData*>(dptr());
     return d->main_window;
@@ -221,7 +221,7 @@ MainWindow* GuiApplication::mainWindow() const
 
 void GuiApplication::setConsolePanel(ConsolePanel* console)
 {
-    auto* io = static_cast<VisualUserIO*>(dptr()->user_io);
+    auto* io = static_cast<VisualUserIO*>(dptr()->user_io.get());
     if (io != nullptr) {
         io->setConsolePanel(console);
     }

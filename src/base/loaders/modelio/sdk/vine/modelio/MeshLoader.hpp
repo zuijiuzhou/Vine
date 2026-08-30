@@ -4,7 +4,9 @@
 
 #include <filesystem>
 
-#include <vine/Ptr.hpp>
+#include <vine/IntrusivePtr.hpp>
+#include <vine/Object.hpp>
+#include <vine/RefCounted.hpp>
 #include <vine/geometry/Mesh.hpp>
 
 V_MODELIO_NS_BEGIN
@@ -16,7 +18,7 @@ V_MODELIO_NS_BEGIN
  * produce a Mesh (TriangleMesh or IndexedTriangleMesh). The returned mesh
  * is null when the file cannot be read or parsed.
  */
-class V_MODELIO_API MeshLoader : public vine::RefObject {
+class V_MODELIO_API MeshLoader : public vine::Object, public vine::RefCounted<MeshLoader> {
     V_OBJECT_META_DECL;
 
   public:
@@ -30,7 +32,7 @@ class V_MODELIO_API MeshLoader : public vine::RefObject {
      * @param path File to load.
      * @return Loaded mesh, or null on failure.
      */
-    virtual vine::SPtr<vine::geometry::Mesh> load(const std::filesystem::path& path) = 0;
+    virtual vine::IntrusivePtr<vine::geometry::Mesh> load(const std::filesystem::path& path) = 0;
 
     /**
      * @brief Returns whether this loader supports the given file.

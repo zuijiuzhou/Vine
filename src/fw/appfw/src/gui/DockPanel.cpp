@@ -121,7 +121,7 @@ void DockPanel::setContent(UIElement* c)
         oldClient->deleteLater();
 }
 
-UIElement* DockPanel::content() const
+RawPtr<UIElement> DockPanel::content() const
 {
     return dptr()->content;
 }

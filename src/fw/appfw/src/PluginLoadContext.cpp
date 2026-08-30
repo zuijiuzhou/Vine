@@ -19,27 +19,24 @@ PluginLoadContext::PluginLoadContext(Application* app, String plugin_name)
     d->plugin_name = std::move(plugin_name);
 }
 
-PluginLoadContext::~PluginLoadContext()
-{
-    delete d;
-}
+PluginLoadContext::~PluginLoadContext() = default;
 
-Application* PluginLoadContext::application() const
+RawPtr<Application> PluginLoadContext::application() const
 {
     return d->app;
 }
 
-ConfigRegistry* PluginLoadContext::configs() const
+RawPtr<ConfigRegistry> PluginLoadContext::configs() const
 {
     return d->app ? d->app->configRegistry() : nullptr;
 }
 
-CommandManager* PluginLoadContext::commandManager() const
+RawPtr<CommandManager> PluginLoadContext::commandManager() const
 {
     return d->app ? d->app->commandManager() : nullptr;
 }
 
-EventBus* PluginLoadContext::eventBus() const
+RawPtr<EventBus> PluginLoadContext::eventBus() const
 {
     return d->app ? d->app->eventBus() : nullptr;
 }

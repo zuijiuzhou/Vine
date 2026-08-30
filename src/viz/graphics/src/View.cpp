@@ -1,13 +1,13 @@
-﻿#include <vine/Ptr.hpp>
+﻿#include <vine/IntrusivePtr.hpp>
 #include <vine/graphics/Scene.hpp>
 #include <vine/graphics/View.hpp>
 
 V_GRAPHICS_NS_BEGIN
 
-V_OBJECT_META_IMPL(View, RefObject)
+V_OBJECT_META_IMPL(View, vine::Object)
 
 struct View::Data {
-    SPtr<Scene> scene;
+    IntrusivePtr<Scene> scene;
 };
 
 View::View()

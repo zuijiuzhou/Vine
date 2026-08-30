@@ -91,7 +91,7 @@ class V_CORE_API ThreadPool {
     void enqueueTask(std::function<void()> task);
 
     struct Impl;
-    Impl* const d;
+    std::unique_ptr<Impl> d;
 };
 
 template <typename F, typename... Args>

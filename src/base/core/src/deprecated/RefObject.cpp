@@ -1,4 +1,4 @@
-﻿#include <vine/RefObject.hpp>
+﻿#include <vine/deprecated/RefObject.hpp>
 
 V_CORE_NS_BEGIN
 

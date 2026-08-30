@@ -2,7 +2,7 @@
 
 V_GRAPHICS_NS_BEGIN
 
-V_OBJECT_META_IMPL(Geometry, RefObject)
+V_OBJECT_META_IMPL(Geometry, Drawable)
 
 struct Geometry::Data {};
 

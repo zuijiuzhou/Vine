@@ -3,7 +3,7 @@
 
 #include <vector>
 
-#include <vine/RefObject.hpp>
+#include <vine/Object.hpp>
 
 
 V_APPFW_NS_BEGIN

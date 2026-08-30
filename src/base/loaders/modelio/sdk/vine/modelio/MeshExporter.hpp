@@ -4,6 +4,8 @@
 
 #include <filesystem>
 
+#include <vine/Object.hpp>
+#include <vine/RefCounted.hpp>
 #include <vine/geometry/Mesh.hpp>
 
 V_MODELIO_NS_BEGIN
@@ -14,7 +16,7 @@ V_MODELIO_NS_BEGIN
  * Concrete mesh exporters (OBJ, STL, PLY, ...) derive from this class and
  * write a Mesh into the target format.
  */
-class V_MODELIO_API MeshExporter : public vine::RefObject {
+class V_MODELIO_API MeshExporter : public vine::Object, public vine::RefCounted<MeshExporter> {
     V_OBJECT_META_DECL;
 
   public:

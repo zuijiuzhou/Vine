@@ -24,7 +24,7 @@ CommandExecutingEventArgs::CommandExecutingEventArgs(Command* command)
   : command_(command)
 {}
 
-Command* CommandExecutingEventArgs::command() const
+RawPtr<Command> CommandExecutingEventArgs::command() const
 {
     return command_;
 }
@@ -36,7 +36,7 @@ CommandExecutedEventArgs::CommandExecutedEventArgs(Command* command, const Comma
   , result_(result)
 {}
 
-Command* CommandExecutedEventArgs::command() const
+RawPtr<Command> CommandExecutedEventArgs::command() const
 {
     return command_;
 }
@@ -55,7 +55,7 @@ namespace
  */
 struct RegisteredCommand
 {
-    Type                      class_type;
+    TypeId                    class_type;
     std::function<Command*()> factory;
     String                    owner;
 };
@@ -155,12 +155,9 @@ CommandManager::CommandManager(Application* app)
   : d(new Impl{ app, {}, {}, {}, {} })
 {}
 
-CommandManager::~CommandManager()
-{
-    delete d;
-}
+CommandManager::~CommandManager() = default;
 
-Application* CommandManager::application() const
+RawPtr<Application> CommandManager::application() const
 {
     return d->app;
 }
@@ -279,7 +276,7 @@ void CommandManager::executeDetached(const String& name)
     }(executeCommandAsync(name));
 }
 
-Command* CommandManager::currentCommand() const
+RawPtr<Command> CommandManager::currentCommand() const
 {
     return d->stack.empty() ? nullptr : d->stack.back();
 }
@@ -312,7 +309,7 @@ void CommandManager::clearHistory()
     d->history.clear();
 }
 
-bool CommandManager::registerCommand(Type command_class, String name, std::function<Command*()> factory)
+bool CommandManager::registerCommand(TypeId command_class, String name, std::function<Command*()> factory)
 {
     return d->registry.emplace(std::move(name), RegisteredCommand{ command_class, std::move(factory), d->registration_owner }).second;
 }
@@ -332,7 +329,7 @@ bool CommandManager::unregisterCommand(const String& name)
     return d->registry.erase(name) > 0;
 }
 
-bool CommandManager::unregisterCommand(Type command_class)
+bool CommandManager::unregisterCommand(TypeId command_class)
 {
     bool removed = false;
     for (auto it = d->registry.begin(); it != d->registry.end();) {

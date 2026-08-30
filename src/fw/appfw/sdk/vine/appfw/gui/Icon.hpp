@@ -1,5 +1,7 @@
 #pragma once
 
+#include <memory>
+
 #include <vine/String.hpp>
 #include <vine/appfw/appfw_global.hpp>
 
@@ -40,7 +42,7 @@ class V_APPFW_API Icon {
 
   private:
     struct Impl;
-    Impl* d;
+    std::unique_ptr<Impl> d;
 };
 
 V_APPFWGUI_NS_END
