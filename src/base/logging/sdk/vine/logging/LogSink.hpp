@@ -62,6 +62,21 @@ class V_LOGGING_API LogSink
     static LogSink rotatingFile(const std::filesystem::path& path, std::size_t max_size, std::size_t max_files);
 
     /**
+     * @brief Returns a sink writing to a daily-rotating log file.
+     *
+     * The file name is derived from base_path by inserting the date before the
+     * extension, e.g. "vine_2026-08-30.log" for base "vine.log". A new file is
+     * started every day at midnight; once max_files dated files exist the old
+     * ones are pruned (files from previous runs are left untouched).
+     *
+     * @param base_path Base log file path; its containing directory is created
+     *                  on first use when it does not exist.
+     * @param max_files Maximum number of dated files to keep; 0 keeps all.
+     * @return The daily file sink.
+     */
+    static LogSink dailyFile(const std::filesystem::path& base_path, std::size_t max_files = 0);
+
+    /**
      * @brief Returns a custom sink forwarding each formatted line to a callback.
      *
      * The callback receives the log level and the fully formatted single line

@@ -1,7 +1,9 @@
 #include <gtest/gtest.h>
 
+#include <ctime>
 #include <filesystem>
 #include <fstream>
+#include <iomanip>
 #include <sstream>
 #include <string>
 
@@ -219,6 +221,38 @@ TEST(LogSinkTest, FileSinkWritesToFile)
     std::string line;
     std::getline(in, line);
     EXPECT_EQ(line, "file line");
+    in.close();
+
+    std::filesystem::remove(path);
+}
+
+TEST(LogSinkTest, DailyFileSinkWritesToDatedFile)
+{
+    const auto base = std::filesystem::temp_directory_path() / "vine_test_daily.log";
+
+    // The sink inserts the local date before the extension:
+    // base "vine_test_daily.log" -> "vine_test_daily_YYYY-MM-DD.log".
+    const auto now = std::time(nullptr);
+    const auto tm  = *std::localtime(&now);
+    std::ostringstream name;
+    name << "vine_test_daily_" << std::put_time(&tm, "%Y-%m-%d") << ".log";
+    const auto path = std::filesystem::temp_directory_path() / name.str();
+    std::filesystem::remove(path);
+
+    // Scope the logger/sink so the file handle is released before removal;
+    // Windows cannot delete a file that is still open.
+    {
+        auto sink = LogSink::dailyFile(base);
+        Logger logger("unit", LogLevel::Info, { sink }, "%v");
+        logger.info("daily line");
+        logger.flush();
+    }
+
+    std::ifstream in(path);
+    ASSERT_TRUE(in.good());
+    std::string line;
+    std::getline(in, line);
+    EXPECT_EQ(line, "daily line");
     in.close();
 
     std::filesystem::remove(path);

@@ -1,11 +1,13 @@
 #include <vine/logging/LogSink.hpp>
 
+#include <cstdint>
 #include <memory>
 #include <mutex>
 #include <utility>
 
 #include <spdlog/sinks/base_sink.h>
 #include <spdlog/sinks/basic_file_sink.h>
+#include <spdlog/sinks/daily_file_sink.h>
 #include <spdlog/sinks/ostream_sink.h>
 #include <spdlog/sinks/rotating_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
@@ -81,6 +83,15 @@ LogSink LogSink::rotatingFile(const std::filesystem::path& path, std::size_t max
     LogSink result;
     result.d       = std::make_shared<Impl>();
     result.d->sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(path.string(), max_size, max_files);
+    return result;
+}
+
+LogSink LogSink::dailyFile(const std::filesystem::path& base_path, std::size_t max_files)
+{
+    LogSink result;
+    result.d       = std::make_shared<Impl>();
+    result.d->sink = std::make_shared<spdlog::sinks::daily_file_sink_mt>(
+        base_path.string(), 0, 0, false, static_cast<std::uint16_t>(max_files));
     return result;
 }
 

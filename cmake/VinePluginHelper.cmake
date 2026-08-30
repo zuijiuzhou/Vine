@@ -65,10 +65,15 @@ function(v_add_plugin target_name_var short_name)
 
     # Runtime resolves plugins at <exe>/plugins/vine on Windows and
     # <prefix>/plugins/vine on Linux (PluginManager::defaultPluginDirectory).
-    # Match that layout so installed plugins are found next to the installed app.
+    # Match that layout so installed plugins are found next to the installed app:
+    # Windows installs the plugin DLL under bin/ (RUNTIME), while Linux/macOS
+    # install the shared object directly under the prefix (LIBRARY). CMake still
+    # requires a LIBRARY DESTINATION on Windows because the target is a MODULE
+    # library (the DLL itself still goes to RUNTIME_DESTINATION).
     if(WIN32)
         install(TARGETS ${target_name}
-            RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}/plugins/vine)
+            RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}/plugins/vine
+            LIBRARY DESTINATION plugins/vine)
     else()
         install(TARGETS ${target_name}
             LIBRARY DESTINATION plugins/vine)
