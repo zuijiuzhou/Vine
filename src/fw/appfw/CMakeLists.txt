@@ -18,6 +18,7 @@ target_link_libraries(${APPFW_TARGET_NAME}
     PUBLIC vi::Async vi::Core vi::Di vi::Math vi::Global
     PRIVATE
     vi::Logging
+    vi::Progress
     vi::Runtime
     tp::SARibbon
     tp::DockingPanes

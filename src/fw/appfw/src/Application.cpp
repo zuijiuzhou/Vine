@@ -12,6 +12,8 @@
 
 #include <vine/appfw/MainThreadDispatcher.hpp>
 
+#include <vine/progress/ProgressHost.hpp>
+
 #include "ApplicationData.hpp"
 #include "ConsoleUserIO.hpp"
 
@@ -91,6 +93,13 @@ int Application::run()
 void Application::exit(int code)
 {
     QCoreApplication::exit(code);
+}
+
+bool Application::isBusy() const
+{
+    // Only the foreground operation blocks new commands; background hosts run
+    // in parallel and do not make the application busy.
+    return vine::progress::ProgressHost::current() != nullptr;
 }
 
 RawPtr<CommandManager> Application::commandManager() const

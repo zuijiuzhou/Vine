@@ -3,6 +3,7 @@
 #include <QApplication>
 #include <QGuiApplication>
 #include <QPalette>
+#include <QStatusBar>
 #include <QStyleHints>
 
 #if defined(Q_OS_WIN) && QT_VERSION < QT_VERSION_CHECK(6, 5, 0)
@@ -11,6 +12,8 @@
 
 #include <vine/appfw/gui/ConsolePanel.hpp>
 #include <vine/appfw/gui/MainWindow.hpp>
+#include <vine/appfw/gui/ProgressPresenter.hpp>
+#include <vine/appfw/gui/StatusBar.hpp>
 
 #include "GuiApplicationData.hpp"
 #include "VisualUserIO.hpp"
@@ -169,6 +172,14 @@ void GuiApplication::init()
     if (d->main_window == nullptr) {
         d->main_window = new MainWindow();
         d->main_window->show();
+
+        // Embed the automatic progress bar into the main window's status bar.
+        // Qt owns the native widget via the status bar; the presenter
+        // self-destructs with it (UIElement ownership model).
+        if (auto* status = d->main_window->statusBar()->impl<QStatusBar>()) {
+            auto* presenter = new ProgressPresenter();
+            status->addPermanentWidget(static_cast<QWidget*>(presenter->impl()));
+        }
     }
 }
 

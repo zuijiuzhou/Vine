@@ -14,13 +14,15 @@ V_APPFW_NS_BEGIN
 
 class Application;
 class CommandManager;
+class Command;
 
 /**
  * @brief Execution characteristics of a Command.
  *
  * Flags describe how the CommandManager treats a command at run time.
- * Version 1 defines two core flags: Undoable for commands that modify business
- * data, and Exclusive for commands that need exclusive execution rights.
+ * Version 1 defines three flags: Undoable for commands that modify business
+ * data, and Exclusive for commands that need exclusive execution rights, and
+ * LongRunning for commands that may take a long time.
  */
 enum class CommandFlags : std::uint32_t
 {
@@ -37,7 +39,18 @@ enum class CommandFlags : std::uint32_t
     /**
      * @brief Holds exclusive execution while running.
      */
-    Exclusive = 1 << 1
+    Exclusive = 1 << 1,
+
+    /**
+     * @brief May run for a long time; reports progress and serializes input.
+     *
+     * A LongRunning top-level command creates an ambient ProgressHost so the
+     * command can report progress through ProgressScope without wiring any
+     * UI. While it runs, the application is considered busy: other top-level
+     * commands are rejected with a "another operation is in progress" result
+     * and the UI may show a progress bar with a cancel button.
+     */
+    LongRunning = 1 << 2
 };
 
 /**
@@ -164,6 +177,24 @@ class V_APPFW_API CommandExecutionContext
      * @return true when the execution should stop.
      */
     virtual bool isCancelled() const = 0;
+
+    /**
+     * @brief Starts a registered child command by name as part of this
+     *        execution.
+     *
+     * The child is created through the command registry exactly like
+     * CommandManager::executeCommand(name), shares this execution's
+     * cancellation token and progress host, and bypasses the serialization
+     * gate so it may run inside a LongRunning parent. Use this — not
+     * application()->commandManager()->executeCommand() — to start a nested
+     * command: the manager cannot tell a nested call from a new top-level one
+     * (both enter the same entry point and commands may hop threads), so
+     * nesting must be marked explicitly through the execution context.
+     *
+     * @param name Registered child command name.
+     * @return The child's execution outcome; Failed when not registered.
+     */
+    virtual vine::async::Task<CommandResult> executeChild(const String& name) = 0;
 };
 
 /**
@@ -175,7 +206,8 @@ class V_APPFW_API CommandExecutionContext
  * document lifecycles.
  *
  * Commands run through the CommandManager. A command may start nested
- * commands, but only via application()->commandManager(), never directly.
+ * commands via context->executeChild(), which shares the execution's
+ * cancellation and progress host.
  */
 class V_APPFW_API Command : public Object
 {

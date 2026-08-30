@@ -16,6 +16,8 @@
 
 #include <vine/logging/Log.hpp>
 
+#include <vine/progress/ProgressHost.hpp>
+
 V_APPFW_NS_BEGIN
 
 V_OBJECT_META_IMPL(CommandExecutingEventArgs, EventArgs)
@@ -126,8 +128,9 @@ String CommandManager::Impl::resolveName(const String& name) const
 class CommandManager::Context : public CommandExecutionContext
 {
   public:
-    Context(Application* app, std::stop_token token)
-      : app_(app)
+    Context(CommandManager* mgr, Application* app, std::stop_token token)
+      : mgr_(mgr)
+      , app_(app)
       , token_(std::move(token))
     {}
 
@@ -146,8 +149,14 @@ class CommandManager::Context : public CommandExecutionContext
         return token_.stop_requested();
     }
 
+    vine::async::Task<CommandResult> executeChild(const String& name) override
+    {
+        return mgr_->executeChild(name);
+    }
+
   private:
-    Application*   app_;
+    CommandManager* mgr_;
+    Application*    app_;
     std::stop_token token_;
 };
 
@@ -174,6 +183,29 @@ CommandResult CommandManager::executeCommand(const String& name)
 
 vine::async::Task<CommandResult> CommandManager::executeCommandAsync(Command* command)
 {
+    return executeCommandAsyncImpl(command, /*nested=*/false);
+}
+
+vine::async::Task<CommandResult> CommandManager::executeChild(const String& name)
+{
+    std::unique_ptr<Command> command = createCommandByName(name);
+    if (!command) {
+        co_return CommandResult(CommandStatus::Failed, String(u8"Command not registered"));
+    }
+    co_return co_await executeCommandAsyncImpl(command.get(), /*nested=*/true);
+}
+
+std::unique_ptr<Command> CommandManager::createCommandByName(const String& name)
+{
+    auto it = d->registry.find(d->resolveName(name));
+    if (it == d->registry.end() || !it->second.factory) {
+        return nullptr;
+    }
+    return std::unique_ptr<Command>(it->second.factory());
+}
+
+vine::async::Task<CommandResult> CommandManager::executeCommandAsyncImpl(Command* command, bool nested)
+{
     if (!command) {
         co_return CommandResult(CommandStatus::Failed, String(u8"Command is null"));
     }
@@ -183,11 +215,33 @@ vine::async::Task<CommandResult> CommandManager::executeCommandAsync(Command* co
         d->stack.clear();
     }
 
+    // Serialization: while a foreground long-running operation is active, a
+    // new top-level command is refused unless it takes over via Exclusive.
+    // Nested children (via context->executeChild) bypass the gate and share
+    // the chain's host; background hosts never block commands.
+    if (!nested && !(static_cast<std::uint32_t>(command->flags()) & static_cast<std::uint32_t>(CommandFlags::Exclusive))
+        && vine::progress::ProgressHost::current() != nullptr) {
+        co_return CommandResult(CommandStatus::Failed, String(u8"Another operation is in progress"));
+    }
+
     // A fresh cancellation source starts each command chain; nested commands
     // share the token so cancelCurrent() cancels the whole chain.
     if (d->stack.empty()) {
         d->stop_source = std::stop_source{};
     }
+
+    // Every LongRunning command — top-level or nested — owns its own progress
+    // host, pushed onto the foreground stack so a nested child takes over the
+    // bar and the parent's host is restored when the child ends. The host is a
+    // coroutine-local: it lives for this command's execution and is destroyed
+    // (popping the stack) when the command completes. All hosts in the chain
+    // bind to the same chain-wide cancellation source.
+    std::unique_ptr<vine::progress::ProgressHost> progress_host;
+    if (static_cast<std::uint32_t>(command->flags()) & static_cast<std::uint32_t>(CommandFlags::LongRunning)) {
+        progress_host = std::make_unique<vine::progress::ProgressHost>(d->stop_source);
+        progress_host->setForeground(true);
+    }
+
     d->stack.push_back(command);
 
     V_LOGI("Executing command '{}'", toUtf8(command->name()));
@@ -212,7 +266,7 @@ vine::async::Task<CommandResult> CommandManager::executeCommandAsync(Command* co
         }
     } guard{ d->stack, d->stop_source, command };
 
-    Context context(d->app, d->stop_source.get_token());
+    Context context(this, d->app, d->stop_source.get_token());
 
     // Undoable commands notify the document to snapshot its state first.
     if (d->snapshot_handler && (static_cast<std::uint32_t>(command->flags()) & static_cast<std::uint32_t>(CommandFlags::Undoable))) {
@@ -260,13 +314,11 @@ vine::async::Task<CommandResult> CommandManager::executeCommandAsync(Command* co
 
 vine::async::Task<CommandResult> CommandManager::executeCommandAsync(const String& name)
 {
-    auto it = d->registry.find(d->resolveName(name));
-    if (it == d->registry.end() || !it->second.factory) {
+    std::unique_ptr<Command> command = createCommandByName(name);
+    if (!command) {
         co_return CommandResult(CommandStatus::Failed, String(u8"Command not registered"));
     }
-
-    std::unique_ptr<Command> command(it->second.factory());
-    co_return co_await executeCommandAsync(command.get());
+    co_return co_await executeCommandAsyncImpl(command.get(), /*nested=*/false);
 }
 
 void CommandManager::executeDetached(const String& name)

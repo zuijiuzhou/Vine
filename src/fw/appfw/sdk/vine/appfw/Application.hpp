@@ -84,6 +84,17 @@ class V_APPFW_API Application : public Object {
 
     char** argv() const;
 
+    /**
+     * @brief Returns whether a long-running operation is in progress.
+     *
+     * While busy, the framework refuses new top-level commands with a
+     * "another operation is in progress" result (see CommandFlags::LongRunning)
+     * and the UI may show a progress bar / disable actions.
+     *
+     * @return true while a progress-host-backed operation is running.
+     */
+    bool isBusy() const;
+
   public:
     static RawPtr<Application> current();
 };

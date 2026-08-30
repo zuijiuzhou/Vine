@@ -53,10 +53,22 @@
 #include <vine/appfw/gui/RibbonButton.hpp>
 #include <vine/appfw/gui/RibbonGroup.hpp>
 #include <vine/appfw/gui/RibbonTab.hpp>
+#include <vine/appfw/gui/ProgressPresenter.hpp>
+
+#include <vine/progress/ProgressHost.hpp>
+#include <vine/progress/ProgressRange.hpp>
+#include <vine/progress/ProgressScope.hpp>
+
+#include <vine/async/Sleep.hpp>
+#include <vine/async/SyncWait.hpp>
 
 #include <any>
+#include <chrono>
 #include <memory>
 #include <stdexcept>
+#include <thread>
+
+#include <QPushButton>
 
 namespace guifw = vine::appfw::gui;
 
@@ -105,6 +117,102 @@ class DummyCommand : public vine::appfw::Command {
 };
 
 V_OBJECT_META_IMPL(DummyCommand, vine::appfw::Command)
+
+// 耗时命令：LongRunning 标志让 CommandManager 自动挂载环境进度宿主。
+class LongCommand : public vine::appfw::Command {
+    V_OBJECT_META_DECL;
+
+  public:
+    vine::String name() const override { return u8"long"; }
+    vine::String group() const override { return u8"Test"; }
+    vine::String description() const override { return u8"long running command"; }
+    vine::appfw::CommandFlags flags() const override { return vine::appfw::CommandFlags::LongRunning; }
+    vine::async::Task<vine::appfw::CommandResult> execute(vine::appfw::CommandExecutionContext*) override
+    {
+        co_await vine::async::sleepFor(std::chrono::milliseconds(120));
+        co_return vine::appfw::CommandResult(vine::appfw::CommandStatus::Success);
+    }
+};
+
+V_OBJECT_META_IMPL(LongCommand, vine::appfw::Command)
+
+// 嵌套子命令：LongRunning，复用父命令的取消/进度宿主。
+class NestedChildCommand : public vine::appfw::Command {
+    V_OBJECT_META_DECL;
+
+  public:
+    vine::String name() const override { return u8"nested_child"; }
+    vine::String group() const override { return u8"Test"; }
+    vine::String description() const override { return u8"nested child command"; }
+    vine::appfw::CommandFlags flags() const override { return vine::appfw::CommandFlags::LongRunning; }
+    vine::async::Task<vine::appfw::CommandResult> execute(vine::appfw::CommandExecutionContext* context) override
+    {
+        // 子命令现在是独立宿主（前台栈顶），可上报自己的进度。
+        if (auto* host = vine::progress::ProgressHost::current()) {
+            host->setLabel("child");
+            vine::progress::ProgressScope scope = host->scope("child", 20);
+            for (int i = 0; i < 20; ++i) {
+                if (context && context->isCancelled()) {
+                    co_return vine::appfw::CommandResult(vine::appfw::CommandStatus::Cancelled);
+                }
+                scope.next(1);
+                co_await vine::async::sleepFor(std::chrono::milliseconds(10));
+            }
+        }
+        else {
+            for (int i = 0; i < 20; ++i) {
+                if (context && context->isCancelled()) {
+                    co_return vine::appfw::CommandResult(vine::appfw::CommandStatus::Cancelled);
+                }
+                co_await vine::async::sleepFor(std::chrono::milliseconds(10));
+            }
+        }
+        co_return vine::appfw::CommandResult(vine::appfw::CommandStatus::Success);
+    }
+};
+
+V_OBJECT_META_IMPL(NestedChildCommand, vine::appfw::Command)
+
+// 嵌套父命令：LongRunning，报告进度并通过 context->executeChild 调用子命令。
+class NestedProgressCommand : public vine::appfw::Command {
+    V_OBJECT_META_DECL;
+
+  public:
+    vine::String name() const override { return u8"nested_progress"; }
+    vine::String group() const override { return u8"Test"; }
+    vine::String description() const override { return u8"nested progress command"; }
+    vine::appfw::CommandFlags flags() const override { return vine::appfw::CommandFlags::LongRunning; }
+    vine::async::Task<vine::appfw::CommandResult> execute(vine::appfw::CommandExecutionContext* context) override
+    {
+        auto* host = vine::progress::ProgressHost::current();
+        if (!host || !context) {
+            co_return vine::appfw::CommandResult(vine::appfw::CommandStatus::Failed);
+        }
+        host->setLabel("parent");
+        vine::progress::ProgressScope root = host->scope("parent", 20);
+        for (int i = 0; i < 8; ++i) {
+            if (root.isCancelled()) {
+                co_return vine::appfw::CommandResult(vine::appfw::CommandStatus::Cancelled);
+            }
+            root.next(1);
+            co_await vine::async::sleepFor(std::chrono::milliseconds(5));
+        }
+        const auto child_result = co_await context->executeChild(u8"nested_child");
+        if (!child_result.succeeded()) {
+            co_return child_result;
+        }
+        for (int i = 0; i < 12; ++i) {
+            if (root.isCancelled()) {
+                co_return vine::appfw::CommandResult(vine::appfw::CommandStatus::Cancelled);
+            }
+            root.next(1);
+            co_await vine::async::sleepFor(std::chrono::milliseconds(5));
+        }
+        co_return vine::appfw::CommandResult(vine::appfw::CommandStatus::Success);
+    }
+};
+
+V_OBJECT_META_IMPL(NestedProgressCommand, vine::appfw::Command)
 
 } // namespace
 
@@ -1183,4 +1291,225 @@ TEST_F(GuiTest, DockPanel_PinUnpin)
     p->unpin();
     QCoreApplication::processEvents();
     EXPECT_FALSE(p->isPinned());
+}
+
+// ============================ 进度与串联 ============================
+
+namespace
+{
+
+/// 泵送 Qt 事件循环一段时长（用于驱动 QTimer 轮询）。
+void pumpEventsFor(int ms)
+{
+    const auto end = std::chrono::steady_clock::now() + std::chrono::milliseconds(ms);
+    while (std::chrono::steady_clock::now() < end) {
+        QCoreApplication::processEvents(QEventLoop::AllEvents, 20);
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+}
+
+} // namespace
+
+TEST_F(GuiTest, Application_IsBusyReflectsActiveHost)
+{
+    auto* app = GuiEnv::app.get();
+    ASSERT_NE(app, nullptr);
+    EXPECT_FALSE(app->isBusy());
+
+    {
+        vine::progress::ProgressHost host;
+        host.setForeground(true); // 只有前台宿主才让应用处于忙态
+        EXPECT_TRUE(vine::progress::ProgressHost::isActive());
+        EXPECT_TRUE(app->isBusy());
+        EXPECT_TRUE(vine::progress::ProgressHost::current() == &host);
+    }
+    EXPECT_FALSE(vine::progress::ProgressHost::isActive());
+    EXPECT_FALSE(app->isBusy());
+}
+
+TEST_F(GuiTest, CommandManager_LongRunningCreatesAmbientHost)
+{
+    auto* app = GuiEnv::app.get();
+    ASSERT_NE(app, nullptr);
+    auto* cm = app->commandManager();
+    ASSERT_NE(cm, nullptr);
+
+    const auto name = vine::String(u8"longCmd");
+    cm->unregisterCommand(name);
+    ASSERT_TRUE(cm->registerCommand<LongCommand>(name));
+
+    EXPECT_FALSE(vine::progress::ProgressHost::isActive());
+
+    // Task 是惰性的：放到工作线程上跑，主线程轮询观察宿主生命周期。
+    auto                 task = cm->executeCommandAsync(name);
+    std::atomic<bool>    done{ false };
+    vine::appfw::CommandResult result;
+    std::thread runner([&] {
+        result = vine::async::syncWait(std::move(task));
+        done.store(true);
+    });
+
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
+    while (!vine::progress::ProgressHost::isActive() && std::chrono::steady_clock::now() < deadline) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+    // 长命令运行期间，环境宿主已挂载、应用处于忙态。
+    EXPECT_TRUE(vine::progress::ProgressHost::isActive());
+    EXPECT_TRUE(app->isBusy());
+
+    while (!done.load() && std::chrono::steady_clock::now() < deadline) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+    runner.join();
+    EXPECT_EQ(result.status(), vine::appfw::CommandStatus::Success);
+    // 链结束后宿主释放、应用恢复空闲。
+    EXPECT_FALSE(vine::progress::ProgressHost::isActive());
+    EXPECT_FALSE(app->isBusy());
+
+    cm->unregisterCommand(name);
+}
+
+TEST_F(GuiTest, CommandManager_BusyGateRejectsNewCommand)
+{
+    auto* app = GuiEnv::app.get();
+    ASSERT_NE(app, nullptr);
+    auto* cm = app->commandManager();
+    ASSERT_NE(cm, nullptr);
+
+    const auto name = vine::String(u8"busyDummy");
+    cm->unregisterCommand(name);
+    ASSERT_TRUE(cm->registerCommand<DummyCommand>(name));
+
+    // 空闲时可执行。
+    auto ok = cm->executeCommand(name);
+    EXPECT_EQ(ok.status(), vine::appfw::CommandStatus::Success);
+
+    {
+        // 外部前台长任务持有宿主（模拟用户触发的耗时操作）。
+        vine::progress::ProgressHost host;
+        host.setForeground(true);
+        EXPECT_TRUE(app->isBusy());
+
+        // 忙时新命令被拒并提示。
+        auto busy = cm->executeCommand(name);
+        EXPECT_EQ(busy.status(), vine::appfw::CommandStatus::Failed);
+        EXPECT_EQ(busy.message(), vine::String(u8"Another operation is in progress"));
+    }
+
+    // 宿主释放后可再次执行。
+    auto after = cm->executeCommand(name);
+    EXPECT_EQ(after.status(), vine::appfw::CommandStatus::Success);
+
+    cm->unregisterCommand(name);
+}
+
+TEST(ProgressPresenterTest, ShowsBarForActiveHostAndHidesAfter)
+{
+    guifw::ProgressPresenter presenter;
+
+    // 无宿主：不忙、隐藏。
+    EXPECT_FALSE(presenter.isBusy());
+    EXPECT_FALSE(presenter.visible());
+
+    {
+        vine::progress::ProgressHost host;
+        host.setForeground(true); // 前台操作驱动主进度条
+        std::thread worker([&] {
+            vine::progress::ProgressScope scope(host.range(), "Exporting", 30);
+            for (int i = 0; i < 30; ++i) {
+                scope.next(1);
+                std::this_thread::sleep_for(std::chrono::milliseconds(25));
+            }
+        });
+
+        // 超过显示阈值后应出现进度条。
+        pumpEventsFor(700);
+        EXPECT_TRUE(presenter.isBusy());
+        EXPECT_TRUE(presenter.visible());
+
+        worker.join();
+    }
+
+    // 宿主结束后，延迟隐藏。
+    pumpEventsFor(500);
+    EXPECT_FALSE(presenter.isBusy());
+    EXPECT_FALSE(presenter.visible());
+}
+
+TEST(ProgressPresenterTest, CancelButtonRequestsStop)
+{
+    guifw::ProgressPresenter     presenter;
+    vine::progress::ProgressHost host;
+    host.setForeground(true); // 取消按钮只作用于前台操作
+
+    // 包装类不是 QObject：取消按钮在原生控件上查找。
+    auto* cancel = presenter.impl<QWidget>()->findChild<QPushButton*>();
+    ASSERT_NE(cancel, nullptr);
+
+    pumpEventsFor(150); // 让 presenter 观察到宿主
+    EXPECT_TRUE(presenter.isBusy());
+
+    cancel->click();
+    pumpEventsFor(50);
+
+    EXPECT_TRUE(host.cancelSource().stop_requested());
+    EXPECT_TRUE(host.indicator().isCancelled());
+}
+
+TEST_F(GuiTest, CommandManager_NestedProgressRunsChild)
+{
+    auto* app = GuiEnv::app.get();
+    ASSERT_NE(app, nullptr);
+    auto* cm = app->commandManager();
+    ASSERT_NE(cm, nullptr);
+
+    const auto name = vine::String(u8"nestedProgressCmd");
+    cm->unregisterCommand(name);
+    cm->unregisterCommand(u8"nested_child");
+    ASSERT_TRUE(cm->registerCommand<NestedChildCommand>(u8"nested_child"));
+    ASSERT_TRUE(cm->registerCommand<NestedProgressCommand>(name));
+
+    EXPECT_FALSE(vine::progress::ProgressHost::isActive());
+
+    // 父命令为 LongRunning → 前台宿主；内部经 executeChild 运行子命令（绕过串联门）。
+    auto                 task = cm->executeCommandAsync(name);
+    std::atomic<bool>    done{ false };
+    vine::appfw::CommandResult result;
+    std::thread runner([&] {
+        result = vine::async::syncWait(std::move(task));
+        done.store(true);
+    });
+
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
+    while (!vine::progress::ProgressHost::isActive() && std::chrono::steady_clock::now() < deadline) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+    // 父命令运行期间：前台宿主挂载、应用忙。
+    EXPECT_TRUE(vine::progress::ProgressHost::isActive());
+    EXPECT_TRUE(app->isBusy());
+
+    // 方案B：子命令压栈顶替父命令 → 前台栈出现深度 2。
+    bool saw_depth2 = false;
+    while (std::chrono::steady_clock::now() < deadline) {
+        if (vine::progress::ProgressHost::foregroundStack().size() >= 2) {
+            saw_depth2 = true;
+            break;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+    EXPECT_TRUE(saw_depth2);
+
+    while (!done.load() && std::chrono::steady_clock::now() < deadline) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+    runner.join();
+
+    // 父命令成功 ⇒ 嵌套子命令未被串联门拦截（executeChild 绕过）。
+    EXPECT_EQ(result.status(), vine::appfw::CommandStatus::Success);
+
+    // 链结束后宿主释放。
+    EXPECT_FALSE(vine::progress::ProgressHost::isActive());
+    EXPECT_FALSE(app->isBusy());
+
+    cm->unregisterCommand(name);
 }

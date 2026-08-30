@@ -13,6 +13,7 @@ target_include_directories(${TEST_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/third_party/
 
 target_link_libraries(${TEST_NAME}
     vi::Appfw
+    vi::Progress
     Qt6::Core Qt6::Gui Qt6::Widgets)
 
 add_test(NAME ${TEST_NAME} COMMAND ${TEST_NAME})

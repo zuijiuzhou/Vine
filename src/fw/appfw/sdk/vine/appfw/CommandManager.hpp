@@ -348,6 +348,16 @@ class V_APPFW_API CommandManager
   private:
     class Context;
 
+    /// Shared execution path; nested=true skips the serialization gate.
+    vine::async::Task<CommandResult> executeCommandAsyncImpl(Command* command, bool nested);
+
+    /// Creates a fresh registered command instance by name (or alias), or
+    /// nullptr when the name is not registered.
+    std::unique_ptr<Command> createCommandByName(const String& name);
+
+    /// Starts a registered child command by name as part of the current chain.
+    vine::async::Task<CommandResult> executeChild(const String& name);
+
     struct Impl;
     std::unique_ptr<Impl> d;
 };
