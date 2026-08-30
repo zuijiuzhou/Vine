@@ -39,6 +39,10 @@ Task<typename std::invoke_result_t<F>::value_type> retry(F factory,
 
     for (std::size_t attempt = 1;; ++attempt)
     {
+        if (attempt > 1)
+        {
+            co_await sleepFor(delay); // Delay before each retry (not inside a handler).
+        }
         try
         {
             if constexpr (std::is_void_v<T>)
@@ -57,7 +61,6 @@ Task<typename std::invoke_result_t<F>::value_type> retry(F factory,
             {
                 throw; // Exhausted: propagate.
             }
-            co_await sleepFor(delay);
         }
     }
 }

@@ -36,13 +36,22 @@ class TimeoutException : public vine::Exception
 namespace detail {
 
 /**
+ * @brief Throws the timeout exception; noreturn gives the coroutine no
+ *        fall-through path, so it cannot fall off the end without a value.
+ */
+[[noreturn]] inline void throwTimeout()
+{
+    throw TimeoutException{};
+}
+
+/**
  * @brief A task that "wins" the timeout race by throwing TimeoutException.
  */
 template<typename T>
 Task<T> timeoutTask(std::chrono::milliseconds timeout, CancellationToken token)
 {
     co_await sleepFor(timeout, std::move(token));
-    throw TimeoutException{};
+    throwTimeout();
 }
 
 } // namespace detail

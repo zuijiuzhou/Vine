@@ -6,6 +6,7 @@
 #include <cassert>
 #include <coroutine>
 #include <exception>
+#include <memory>
 #include <optional>
 #include <stdexcept>
 #include <stop_token>
@@ -71,7 +72,7 @@ class WhenChild
   public:
     struct promise_type
     {
-        WhenState* state_ = nullptr;
+        std::shared_ptr<WhenState> state_;
 
         [[nodiscard]]
         WhenChild get_return_object() noexcept
@@ -91,7 +92,10 @@ class WhenChild
 
             std::coroutine_handle<> await_suspend(std::coroutine_handle<promise_type> h) noexcept
             {
-                auto* state = h.promise().state_;
+                // A thread-stack copy keeps the state alive through done.set(),
+                // which resumes the composition to completion and destroys the
+                // frames (children included) that also hold references.
+                auto  state = h.promise().state_;
                 bool  finish = false;
 
                 if (state->mode == WhenMode::All)
@@ -167,10 +171,10 @@ class WhenChild
     WhenChild& operator=(const WhenChild&) = delete;
 
     /// Binds the shared state and starts driving the sub-task.
-    void start(WhenState& state) noexcept
+    void start(std::shared_ptr<WhenState> state) noexcept
     {
         assert(handle_);
-        handle_.promise().state_ = &state;
+        handle_.promise().state_ = std::move(state);
         handle_.resume();
     }
 
@@ -210,14 +214,20 @@ Task<void> whenAll(std::vector<AnyTask> tasks, CancellationToken token = {})
         co_return;
     }
 
-    detail::WhenState state;
-    state.mode      = detail::WhenMode::All;
-    state.remaining = count;
+    // Heap-allocated so the completion event outlives the composition frame:
+    // done.set() resumes this coroutine to completion, and destroying the frame
+    // (which owns the event) while set() runs would be a use-after-free. The
+    // shared state stays alive through set() via thread-stack copies held by
+    // the stop callback and by the completing child's FinalAwaiter.
+    auto state = std::make_shared<detail::WhenState>();
+    state->mode      = detail::WhenMode::All;
+    state->remaining = count;
 
     // Wakes the composition on cancellation; flag-only, no coroutine resume race.
-    std::stop_callback cancellation{ token, [&state]() noexcept {
-        state.cancelled = true;
-        state.done.set();
+    std::stop_callback cancellation{ token, [state]() noexcept {
+        auto s = state; // Thread-stack copy keeps the state alive through set().
+        s->cancelled = true;
+        s->done.set();
     } };
 
     std::vector<detail::WhenChild> children;
@@ -231,15 +241,15 @@ Task<void> whenAll(std::vector<AnyTask> tasks, CancellationToken token = {})
         child.start(state);
     }
 
-    co_await state.done;
+    co_await state->done;
 
-    if (state.cancelled)
+    if (state->cancelled)
     {
         throw TaskCancelledException{};
     }
-    if (state.first_exception)
+    if (state->first_exception)
     {
-        std::rethrow_exception(state.first_exception);
+        std::rethrow_exception(state->first_exception);
     }
 }
 
@@ -267,14 +277,15 @@ Task<void> whenAny(std::vector<AnyTask> tasks, CancellationToken token = {})
         co_return;
     }
 
-    detail::WhenState state;
-    state.mode      = detail::WhenMode::Any;
-    state.remaining = count;
+    auto state = std::make_shared<detail::WhenState>();
+    state->mode      = detail::WhenMode::Any;
+    state->remaining = count;
 
     // Wakes the composition on cancellation; flag-only, no coroutine resume race.
-    std::stop_callback cancellation{ token, [&state]() noexcept {
-        state.cancelled = true;
-        state.done.set();
+    std::stop_callback cancellation{ token, [state]() noexcept {
+        auto s = state; // Thread-stack copy keeps the state alive through set().
+        s->cancelled = true;
+        s->done.set();
     } };
 
     std::vector<detail::WhenChild> children;
@@ -288,15 +299,15 @@ Task<void> whenAny(std::vector<AnyTask> tasks, CancellationToken token = {})
         child.start(state);
     }
 
-    co_await state.done;
+    co_await state->done;
 
-    if (state.cancelled)
+    if (state->cancelled)
     {
         throw TaskCancelledException{};
     }
-    if (state.first_exception)
+    if (state->first_exception)
     {
-        std::rethrow_exception(state.first_exception);
+        std::rethrow_exception(state->first_exception);
     }
 }
 
@@ -330,7 +341,7 @@ WhenChild composeChildResult(Task<T> task, std::optional<T>* slot)
 }
 
 /**
- * @brief Implements the variadic whenAll over an index sequence.
+ * @brief Implements the variadic whenAll.
  *
  * @tparam Ts Result types of the tasks (non-void).
  * @param token Cancellation token.
@@ -338,40 +349,42 @@ WhenChild composeChildResult(Task<T> task, std::optional<T>* slot)
  * @return A task producing the tuple of all results.
  */
 template<typename... Ts>
-Task<std::tuple<Ts...>> whenAllImpl(std::index_sequence<Is...> /*unused*/,
-                                    CancellationToken token,
-                                    Task<Ts>... tasks)
+Task<std::tuple<Ts...>> whenAllImpl(CancellationToken token, Task<Ts>... tasks)
 {
     throwIfCancelled(token);
 
-    detail::WhenState state;
-    state.mode      = detail::WhenMode::All;
-    state.remaining = sizeof...(Ts);
+    auto state = std::make_shared<detail::WhenState>();
+    state->mode      = detail::WhenMode::All;
+    state->remaining = sizeof...(Ts);
 
-    std::stop_callback cancellation{ token, [&state]() noexcept {
-        state.cancelled = true;
-        state.done.set();
+    std::stop_callback cancellation{ token, [state]() noexcept {
+        auto s = state; // Thread-stack copy keeps the state alive through set().
+        s->cancelled = true;
+        s->done.set();
     } };
 
     std::tuple<std::optional<Ts>...> results;
-    auto children = std::make_tuple(
-        detail::composeChildResult(std::move(tasks), &std::get<Is>(results))...);
+    auto children = std::apply(
+        [&tasks...](auto&... slot) {
+            return std::make_tuple(detail::composeChildResult(std::move(tasks), &slot)...);
+        },
+        results);
 
     std::apply([&state](auto&... child) { (child.start(state), ...); }, children);
 
-    co_await state.done;
+    co_await state->done;
 
-    if (state.cancelled)
+    if (state->cancelled)
     {
         throw TaskCancelledException{};
     }
-    if (state.first_exception)
+    if (state->first_exception)
     {
-        std::rethrow_exception(state.first_exception);
+        std::rethrow_exception(state->first_exception);
     }
 
-    assert((... && std::get<Is>(results).has_value()));
-    co_return std::tuple<Ts...>{ std::move(*std::get<Is>(results))... };
+    assert(std::apply([](const auto&... slot) { return (... && slot.has_value()); }, results));
+    co_return std::apply([](auto&... slot) { return std::tuple<Ts...>{ std::move(*slot)... }; }, results);
 }
 
 /**
@@ -400,7 +413,7 @@ class WhenAnyChild
   public:
     struct promise_type
     {
-        WhenAnyState<T>* state_{ nullptr };
+        std::shared_ptr<WhenAnyState<T>> state_{};
         std::exception_ptr exception_{};
         std::optional<T> result_{};
 
@@ -423,7 +436,8 @@ class WhenAnyChild
             std::coroutine_handle<> await_suspend(std::coroutine_handle<promise_type> h) noexcept
             {
                 auto& p = h.promise();
-                auto* state = p.state_;
+                // Thread-stack copy keeps the state alive through done.set().
+                auto  state = p.state_;
 
                 // Only the first child to finish publishes its outcome.
                 if (!state->first_done.exchange(true))
@@ -448,8 +462,6 @@ class WhenAnyChild
         };
 
         FinalAwaiter final_suspend() noexcept { return {}; }
-
-        void return_void() noexcept {}
 
         void return_value(T value)
         {
@@ -492,9 +504,9 @@ class WhenAnyChild
     WhenAnyChild& operator=(const WhenAnyChild&) = delete;
 
     /// Binds the shared state and starts driving the sub-task.
-    void start(WhenAnyState<T>& state) noexcept
+    void start(std::shared_ptr<WhenAnyState<T>> state) noexcept
     {
-        handle_.promise().state_ = &state;
+        handle_.promise().state_ = std::move(state);
         handle_.resume();
     }
 
@@ -535,15 +547,22 @@ WhenAnyChild<T> composeAnyChild(Task<T> task)
  *
  * @tparam Ts Result types of the tasks.
  * @param tasks Tasks to await; each must be non-empty.
- * @param token Optional cancellation token.
+ * @param token Optional cancellation token; when supplied it is the first
+ *        argument.
  * @return A task producing the tuple of all results.
  */
 template<typename... Ts>
     requires (sizeof...(Ts) > 0) && (std::conjunction_v<std::negation<std::is_void<Ts>>...>)
-Task<std::tuple<Ts...>> whenAll(Task<Ts>... tasks, CancellationToken token = {})
+Task<std::tuple<Ts...>> whenAll(Task<Ts>... tasks)
 {
-    co_return co_await detail::whenAllImpl(std::index_sequence_for<Ts...>{}, std::move(token),
-                                           std::move(tasks)...);
+    co_return co_await detail::whenAllImpl(CancellationToken{}, std::move(tasks)...);
+}
+
+template<typename... Ts>
+    requires (sizeof...(Ts) > 0) && (std::conjunction_v<std::negation<std::is_void<Ts>>...>)
+Task<std::tuple<Ts...>> whenAll(CancellationToken token, Task<Ts>... tasks)
+{
+    co_return co_await detail::whenAllImpl(std::move(token), std::move(tasks)...);
 }
 
 /**
@@ -573,13 +592,14 @@ Task<std::vector<T>> whenAll(std::vector<Task<T>> tasks, CancellationToken token
         co_return {};
     }
 
-    detail::WhenState state;
-    state.mode      = detail::WhenMode::All;
-    state.remaining = count;
+    auto state = std::make_shared<detail::WhenState>();
+    state->mode      = detail::WhenMode::All;
+    state->remaining = count;
 
-    std::stop_callback cancellation{ token, [&state]() noexcept {
-        state.cancelled = true;
-        state.done.set();
+    std::stop_callback cancellation{ token, [state]() noexcept {
+        auto s = state; // Thread-stack copy keeps the state alive through set().
+        s->cancelled = true;
+        s->done.set();
     } };
 
     std::vector<std::optional<T>> results(count);
@@ -594,15 +614,15 @@ Task<std::vector<T>> whenAll(std::vector<Task<T>> tasks, CancellationToken token
         child.start(state);
     }
 
-    co_await state.done;
+    co_await state->done;
 
-    if (state.cancelled)
+    if (state->cancelled)
     {
         throw TaskCancelledException{};
     }
-    if (state.first_exception)
+    if (state->first_exception)
     {
-        std::rethrow_exception(state.first_exception);
+        std::rethrow_exception(state->first_exception);
     }
 
     std::vector<T> out;
@@ -641,11 +661,12 @@ Task<T> whenAny(std::vector<Task<T>> tasks, CancellationToken token = {})
         throw std::invalid_argument("async::whenAny: empty task list");
     }
 
-    detail::WhenAnyState<T> state;
+    auto state = std::make_shared<detail::WhenAnyState<T>>();
 
-    std::stop_callback cancellation{ token, [&state]() noexcept {
-        state.cancelled = true;
-        state.done.set();
+    std::stop_callback cancellation{ token, [state]() noexcept {
+        auto s = state; // Thread-stack copy keeps the state alive through set().
+        s->cancelled = true;
+        s->done.set();
     } };
 
     std::vector<detail::WhenAnyChild<T>> children;
@@ -659,18 +680,18 @@ Task<T> whenAny(std::vector<Task<T>> tasks, CancellationToken token = {})
         child.start(state);
     }
 
-    co_await state.done;
+    co_await state->done;
 
-    if (state.cancelled)
+    if (state->cancelled)
     {
         throw TaskCancelledException{};
     }
-    if (state.exception)
+    if (state->exception)
     {
-        std::rethrow_exception(state.exception);
+        std::rethrow_exception(state->exception);
     }
 
-    co_return std::move(state.result).value();
+    co_return std::move(state->result).value();
 }
 
 /**
@@ -687,12 +708,24 @@ Task<T> whenAny(std::vector<Task<T>> tasks, CancellationToken token = {})
  * @tparam Ts Remaining task types (same as T).
  * @param first First task.
  * @param rest Remaining tasks.
- * @param token Optional cancellation token.
+ * @param token Optional cancellation token; when supplied it is the first
+ *        argument.
  * @return A task producing the first task's result.
  */
 template<typename T, typename... Ts>
     requires (!std::is_void_v<T>) && (std::is_same_v<T, Ts> && ...)
-Task<T> whenAny(Task<T> first, Task<Ts>... rest, CancellationToken token = {})
+Task<T> whenAny(Task<T> first, Task<Ts>... rest)
+{
+    std::vector<Task<T>> tasks;
+    tasks.reserve(1 + sizeof...(Ts));
+    tasks.push_back(std::move(first));
+    (tasks.push_back(std::move(rest)), ...);
+    co_return co_await whenAny(std::move(tasks));
+}
+
+template<typename T, typename... Ts>
+    requires (!std::is_void_v<T>) && (std::is_same_v<T, Ts> && ...)
+Task<T> whenAny(CancellationToken token, Task<T> first, Task<Ts>... rest)
 {
     throwIfCancelled(token);
 

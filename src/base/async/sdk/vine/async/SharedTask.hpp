@@ -271,7 +271,7 @@ class SharedTask
      * @return The shared result (const reference).
      */
     [[nodiscard]]
-    const T& result() const requires (!std::is_void_v<T>)
+    decltype(auto) result() const requires (!std::is_void_v<T>)
     {
         if (!state_)
         {
@@ -282,7 +282,7 @@ class SharedTask
         {
             std::rethrow_exception(state_->exception_);
         }
-        return *state_->result_.value;
+        return std::as_const(*state_->result_.value);
     }
 
     /**
@@ -299,7 +299,8 @@ class SharedTask
     }
 
   private:
-    friend SharedTask<T> sharedTask(Task<T>);
+    template<typename U>
+    friend SharedTask<U> sharedTask(Task<U>);
 
     explicit SharedTask(std::shared_ptr<detail::SharedTaskState<T>> state) noexcept
       : state_(std::move(state))

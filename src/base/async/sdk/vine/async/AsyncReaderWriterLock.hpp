@@ -311,8 +311,8 @@ class AsyncReaderWriterLock
     /// Detaches one queued writer or all queued readers; mutex_ must be held.
     WakeBatch takeWaitersLocked() noexcept;
 
-    /// Resumes a WakeBatch outside mutex_.
-    static void resume(WakeBatch batch) noexcept;
+    /// Resumes a WakeBatch; locks mutex_ only to pop one granted reader at a time.
+    void resume(WakeBatch batch) noexcept;
 
     std::mutex     mutex_{};
     std::size_t    readers_{ 0 };
