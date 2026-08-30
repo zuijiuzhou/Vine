@@ -341,6 +341,14 @@ void ConsolePanel::Impl::appendFormatted(ConsoleMessageType type, const String& 
 void ConsolePanel::Impl::onTextChanged()
 {
     const String current = fromQString(input->text());
+    if (current.empty())
+    {
+        // An empty prompt hides the popup; otherwise clearing the input after
+        // running a command would match every command and re-show the popup.
+        matches.clear();
+        suggest->hide();
+        return;
+    }
     matches       = completer.complete(current);
     updateSuggest();
 }
