@@ -22,6 +22,8 @@ vine::async::Task<CommandResult> TestNestedProgressCommand::execute(CommandExecu
     }
 
     // 父命令驱动整体进度（0→40% → 子命令顶替 → 40→100%）。
+    // 每步 50ms：前段约 2s 走到 40%，子命令约 1.5s 顶替驱动整条进度条，
+    // 结束后恢复父命令，后段约 3s 从 40% 走完到 100%。
     host->setLabel("父:导出");
     vine::progress::ProgressScope root = host->scope("父:导出", 100);
     for (int i = 0; i < 40; ++i) {
@@ -29,7 +31,7 @@ vine::async::Task<CommandResult> TestNestedProgressCommand::execute(CommandExecu
             co_return CommandResult(CommandStatus::Cancelled);
         }
         root.next(1);
-        co_await vine::async::sleepFor(std::chrono::milliseconds(10));
+        co_await vine::async::sleepFor(std::chrono::milliseconds(50));
     }
 
     // 嵌套运行耗时子命令：按名字创建，子命令有独立前台宿主（顶替父命令），
@@ -44,7 +46,7 @@ vine::async::Task<CommandResult> TestNestedProgressCommand::execute(CommandExecu
             co_return CommandResult(CommandStatus::Cancelled);
         }
         root.next(1);
-        co_await vine::async::sleepFor(std::chrono::milliseconds(10));
+        co_await vine::async::sleepFor(std::chrono::milliseconds(50));
     }
 
     co_return CommandResult(CommandStatus::Success);
