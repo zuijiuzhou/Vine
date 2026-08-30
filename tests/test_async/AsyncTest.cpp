@@ -1359,6 +1359,42 @@ TEST(AsyncConditionVariableTest, RepeatedWaitNotifyCycles)
     }
 }
 
+TEST(AsyncConditionVariableTest, SingleNotifyNoLostWakeup)
+{
+    // Regression: arming the sticky flag in a separate critical section from
+    // the emptiness check lets a waiter slip into the gap — it registers
+    // (sees no sticky), then the sticky is set, and it is never resumed. The
+    // fixed notify_all arms the sticky atomically with the check, so exactly
+    // one notify per wait is never lost. Probabilistic by nature; the bounded
+    // spin turns a lost wakeup into a clean failure instead of a hang.
+    async::AsyncMutex mutex;
+    async::AsyncConditionVariable cv;
+
+    for (int iter = 0; iter < 1000; ++iter)
+    {
+        std::atomic<bool> woken{ false };
+
+        std::thread waiter([&] {
+            async::syncWait([&]() -> async::Task<void> {
+                co_await mutex.lock();
+                co_await cv.wait(mutex);
+                mutex.unlock();
+                woken.store(true);
+            }());
+        });
+
+        std::this_thread::yield();
+        cv.notify_all(); // Exactly one notification; must not be lost.
+
+        for (int i = 0; i < 100000 && !woken.load(); ++i)
+        {
+            std::this_thread::yield();
+        }
+        waiter.join();
+        EXPECT_TRUE(woken.load());
+    }
+}
+
 TEST(TaskCombinatorTest, TransformMapsResult)
 {
     auto task = async::transform(answer(), [](int x) { return x * 2; });
@@ -1684,4 +1720,224 @@ TEST(TaskTest, MoveOnlyResultComposition)
     ASSERT_EQ(result.size(), 2u);
     EXPECT_EQ(*result[0], 42);
     EXPECT_EQ(*result[1], 7);
+}
+
+TEST(AsyncEventTest, SetWinnerDestroysLoserIsSafe)
+{
+    // Regression: a batch set() that held raw waiter pointers across a resume
+    // would resume a dangling sibling when the resumed waiter is a whenAny
+    // winner whose completion destroys the still-suspended loser.
+    std::atomic<int> registered{ 0 };
+    std::atomic<int> woken{ 0 };
+
+    for (int iter = 0; iter < 200; ++iter)
+    {
+        async::AsyncEvent event;
+        registered.store(0);
+        woken.store(0);
+
+        auto makeAny = [&]() -> async::Task<void> {
+            std::vector<async::AnyTask> tasks;
+            for (int i = 0; i < 2; ++i)
+            {
+                tasks.push_back(async::discard([&]() -> async::Task<void> {
+                    ++registered;
+                    co_await event;
+                    ++woken;
+                }()));
+            }
+            co_await async::whenAny(std::move(tasks));
+        };
+
+        auto any = makeAny();
+        std::thread runner([&any, &registered] { async::syncWait(std::move(any)); });
+        while (registered.load() < 2)
+        {
+            std::this_thread::yield();
+        }
+        std::this_thread::sleep_for(std::chrono::microseconds(10));
+        event.set();
+        runner.join();
+        EXPECT_GE(woken.load(), 1);
+    }
+}
+
+TEST(AsyncSemaphoreTest, ReleaseWinnerDestroysLoserIsSafe)
+{
+    // Regression: a batch release() that copied every waiter handle before
+    // resuming could resume a dangling handle when the resumed waiter is a
+    // whenAny winner whose completion destroys the still-suspended loser.
+    async::AsyncSemaphore sem(0);
+    std::atomic<int> registered{ 0 };
+    std::atomic<int> acquired{ 0 };
+
+    for (int iter = 0; iter < 200; ++iter)
+    {
+        registered.store(0);
+        acquired.store(0);
+
+        auto makeAny = [&]() -> async::Task<void> {
+            std::vector<async::AnyTask> tasks;
+            for (int i = 0; i < 2; ++i)
+            {
+                tasks.push_back(async::discard([&]() -> async::Task<void> {
+                    ++registered;
+                    co_await sem.acquire();
+                    ++acquired;
+                }()));
+            }
+            co_await async::whenAny(std::move(tasks));
+        };
+
+        auto any = makeAny();
+        std::thread runner([&any, &registered] { async::syncWait(std::move(any)); });
+        while (registered.load() < 2)
+        {
+            std::this_thread::yield();
+        }
+        std::this_thread::sleep_for(std::chrono::microseconds(10));
+        sem.release(2); // Grant both queued acquirers.
+        runner.join();
+        EXPECT_GE(acquired.load(), 1);
+    }
+}
+
+TEST(AsyncQueueTest, CloseWinnerDestroysLoserIsSafe)
+{
+    // Regression: a batch close() that collected every waiter handle before
+    // resuming could resume a dangling handle when the resumed popper is a
+    // whenAny winner whose completion destroys the still-suspended sibling.
+    std::atomic<int> registered{ 0 };
+    std::atomic<int> popped{ 0 };
+
+    for (int iter = 0; iter < 200; ++iter)
+    {
+        async::AsyncQueue<int> queue(0);
+        registered.store(0);
+        popped.store(0);
+
+        auto makeAny = [&]() -> async::Task<void> {
+            std::vector<async::AnyTask> tasks;
+            for (int i = 0; i < 2; ++i)
+            {
+                tasks.push_back(async::discard([&]() -> async::Task<void> {
+                    ++registered;
+                    try
+                    {
+                        co_await queue.pop();
+                    }
+                    catch (const std::runtime_error&)
+                    {
+                        // Closed-and-empty: expected for the first popper.
+                    }
+                    ++popped;
+                }()));
+            }
+            co_await async::whenAny(std::move(tasks));
+        };
+
+        auto any = makeAny();
+        std::thread runner([&any, &registered] { async::syncWait(std::move(any)); });
+        while (registered.load() < 2)
+        {
+            std::this_thread::yield();
+        }
+        std::this_thread::sleep_for(std::chrono::microseconds(10));
+        queue.close();
+        runner.join();
+        EXPECT_GE(popped.load(), 1);
+    }
+}
+
+TEST(AsyncRwLockTest, UnlockWriteWinnerDestroysLoserReaderIsSafe)
+{
+    // Regression: a batch reader wake that held raw reader pointers across a
+    // resume would resume a dangling sibling when the resumed reader is a
+    // whenAny winner whose completion destroys the still-suspended loser.
+    async::AsyncReaderWriterLock lock;
+    async::AsyncEvent held;
+    async::AsyncEvent release;
+    std::atomic<int> registered{ 0 };
+    std::atomic<int> acquired{ 0 };
+
+    // Hold the write lock so readers queue.
+    auto writer = [&]() -> async::DetachedTask {
+        auto guard = co_await lock.writerLock();
+        (void)guard;
+        held.set();
+        co_await release;
+    }();
+    (void)writer;
+    async::syncWait([&]() -> async::Task<void> { co_await held; co_return; }());
+
+    for (int iter = 0; iter < 200; ++iter)
+    {
+        registered.store(0);
+        acquired.store(0);
+
+        auto makeAny = [&]() -> async::Task<void> {
+            std::vector<async::AnyTask> tasks;
+            for (int i = 0; i < 2; ++i)
+            {
+                tasks.push_back(async::discard([&]() -> async::Task<void> {
+                    ++registered;
+                    co_await lock.readerLock();
+                    ++acquired;
+                }()));
+            }
+            co_await async::whenAny(std::move(tasks));
+        };
+
+        auto any = makeAny();
+        std::thread runner([&any, &registered] { async::syncWait(std::move(any)); });
+        while (registered.load() < 2)
+        {
+            std::this_thread::yield();
+        }
+        std::this_thread::sleep_for(std::chrono::microseconds(10));
+        release.set(); // Writer releases; both queued readers are granted.
+        runner.join();
+        EXPECT_GE(acquired.load(), 1);
+    }
+}
+
+TEST(TaskCompletionSourceTest, SetResultWinnerDestroysLoserIsSafe)
+{
+    // Regression: a completion that swapped every waiter handle out and
+    // resumed them all could resume a dangling handle when the resumed waiter
+    // is a whenAny winner whose completion destroys the still-suspended loser.
+    std::atomic<int> registered{ 0 };
+    std::atomic<int> completed{ 0 };
+
+    for (int iter = 0; iter < 200; ++iter)
+    {
+        async::TaskCompletionSource<int> tcs;
+        registered.store(0);
+        completed.store(0);
+
+        auto makeAny = [&]() -> async::Task<void> {
+            std::vector<async::AnyTask> tasks;
+            for (int i = 0; i < 2; ++i)
+            {
+                tasks.push_back(async::discard([&]() -> async::Task<void> {
+                    ++registered;
+                    int v = co_await tcs.task();
+                    (void)v;
+                    ++completed;
+                }()));
+            }
+            co_await async::whenAny(std::move(tasks));
+        };
+
+        auto any = makeAny();
+        std::thread runner([&any, &registered] { async::syncWait(std::move(any)); });
+        while (registered.load() < 2)
+        {
+            std::this_thread::yield();
+        }
+        std::this_thread::sleep_for(std::chrono::microseconds(10));
+        tcs.setResult(42);
+        runner.join();
+        EXPECT_GE(completed.load(), 1);
+    }
 }

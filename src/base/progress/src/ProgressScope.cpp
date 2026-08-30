@@ -13,20 +13,15 @@ ProgressScope::ProgressScope(ProgressIndicator* indicator)
 {}
 
 ProgressScope::ProgressScope(const ProgressRange& range, const std::string& name, double max)
-  : indicator_(range.state_ != nullptr && range.state_->parent_scope_ != nullptr
-                   ? range.state_->parent_scope_->indicator()
-                   : nullptr)
-  , parent_(range.state_ != nullptr ? range.state_->parent_scope_ : nullptr)
+  : indicator_(range.parent_scope_ != nullptr ? range.parent_scope_->indicator_ : nullptr)
+  , parent_(range.parent_scope_)
   , name_(name)
-  , start_(range.state_ != nullptr ? range.state_->start_ : 0.0)
-  , global_length_(range.state_ != nullptr ? range.state_->delta_ : 0.0)
+  , start_(range.start_)
+  , global_length_(range.delta_)
   , local_length_(max > 1e-6 ? max : 1e-6)
-  , active_(indicator_ != nullptr && range.state_ != nullptr && !range.state_->completed_)
+  , active_(indicator_ != nullptr && !range.used_)
 {
-    // The scope reports this portion now; the range handles are disarmed.
-    if (range.state_ != nullptr) {
-        range.state_->completed_ = true;
-    }
+    range.used_ = true;
 }
 
 ProgressScope::~ProgressScope()

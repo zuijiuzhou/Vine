@@ -2,20 +2,17 @@
 
 #include "progress_global.hpp"
 
-#include <memory>
-
 V_PROGRESS_NS_BEGIN
 
 class ProgressScope;
 
 /**
- * @brief A shareable portion of the global progress scale.
+ * @brief A portion of the global progress scale allocated by a scope step.
  *
- * A range is allocated by a scope step or the indicator root and reports its
- * portion to the indicator exactly once: when complete() is called, or when
- * the last handle to it is destroyed. Copies share the same portion, so a
- * range can be passed around freely without double reporting; a ProgressScope
- * constructed from a range takes over the reporting responsibility.
+ * A range advances the progress by its allocated portion when it is completed
+ * or destroyed, unless a ProgressScope takes over that responsibility. A range
+ * can be copied; copying transfers the responsibility to the copy and disarms
+ * the source, so the portion is reported only once.
  */
 class V_PROGRESS_API ProgressRange
 {
@@ -25,13 +22,11 @@ class V_PROGRESS_API ProgressRange
   public:
     ProgressRange();
 
-    ProgressRange(const ProgressRange&)            = default;
-    ProgressRange& operator=(const ProgressRange&) = default;
+    ProgressRange(const ProgressRange& other);
 
-    ProgressRange(ProgressRange&&) noexcept            = default;
-    ProgressRange& operator=(ProgressRange&&) noexcept = default;
+    ProgressRange& operator=(const ProgressRange& other);
 
-    ~ProgressRange() = default;
+    ~ProgressRange();
 
   private:
     ProgressRange(const ProgressScope& parent, double start, double delta);
@@ -40,8 +35,7 @@ class V_PROGRESS_API ProgressRange
     /**
      * @brief Returns whether the range can still advance the progress.
      *
-     * @return true if the range is attached to an indicator and not yet
-     *         completed or handed over to a scope.
+     * @return true if the range is attached to an indicator and not yet used.
      */
     bool isActive() const;
 
@@ -54,16 +48,17 @@ class V_PROGRESS_API ProgressRange
 
     /**
      * @brief Completes the range and advances the indicator by its portion.
-     *
-     * Reporting happens at most once regardless of how many handles share the
-     * range; completing through any handle disarms all of them.
      */
     void complete();
 
   private:
-    struct State;
+    const ProgressScope* parent_scope_{nullptr};
 
-    std::shared_ptr<State> state_;
+    double start_{0.0};
+
+    double delta_{0.0};
+
+    mutable bool used_{false};
 };
 
 V_PROGRESS_NS_END
