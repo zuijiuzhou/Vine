@@ -52,9 +52,9 @@ class V_APPFW_API RibbonAction : public UIElement {
     void* data() const;
 
   private:
-    struct Data;
-    Data*       dptr();
-    const Data* dptr() const;
+    struct Impl;
+    Impl*       dptr();
+    const Impl* dptr() const;
 };
 
 V_APPFWGUI_NS_END

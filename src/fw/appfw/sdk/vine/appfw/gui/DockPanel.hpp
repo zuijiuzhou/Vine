@@ -49,9 +49,9 @@ class V_APPFW_API DockPanel : public Control {
   private:
     void attach(UIObject* container); // only DockPanelManager may call
 
-    struct Data;
-    Data*       dptr();
-    const Data* dptr() const;
+    struct Impl;
+    Impl*       dptr();
+    const Impl* dptr() const;
 };
 
 V_APPFWGUI_NS_END

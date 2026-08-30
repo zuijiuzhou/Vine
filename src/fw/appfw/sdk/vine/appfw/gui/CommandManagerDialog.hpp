@@ -28,9 +28,9 @@ class V_APPFW_API CommandManagerDialog : public Window {
     void applyFilter();
     void unregisterSelected();
 
-    struct Data;
-    Data*       dptr();
-    const Data* dptr() const;
+    struct Impl;
+    Impl*       dptr();
+    const Impl* dptr() const;
 };
 
 V_APPFWGUI_NS_END

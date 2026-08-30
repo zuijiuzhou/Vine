@@ -37,13 +37,13 @@ RibbonPanelLayoutMode fromSarPanelLayoutMode(SARibbonPanel::PanelLayoutMode m)
 
 } // namespace
 
-struct RibbonTab::Data : public UIElementData {
+struct RibbonTab::Impl : public UIElementData {
     String                    title;
     std::vector<RibbonGroup*> groups; // added groups (framework bookkeeping, for queries)
 };
 
 RibbonTab::RibbonTab()
-  : Control(new Data(), new SARibbonCategory(QString()))
+  : Control(new Impl(), new SARibbonCategory(QString()))
 {}
 
 RibbonTab::~RibbonTab()
@@ -141,14 +141,14 @@ int RibbonTab::panelSpacing() const
     return cat ? cat->panelSpacing() : 0;
 }
 
-inline auto RibbonTab::dptr() -> Data*
+inline auto RibbonTab::dptr() -> Impl*
 {
-    return static_cast<Data*>(UIElement::d);
+    return static_cast<Impl*>(UIElement::d);
 }
 
-inline auto RibbonTab::dptr() const -> const Data*
+inline auto RibbonTab::dptr() const -> const Impl*
 {
-    return static_cast<const Data*>(UIElement::d);
+    return static_cast<const Impl*>(UIElement::d);
 }
 
 V_APPFWGUI_NS_END

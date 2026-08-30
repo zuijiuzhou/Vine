@@ -14,8 +14,9 @@ class ProgressRange;
  *
  * A scope maps its local range [0, max] onto a portion of the global progress
  * scale taken from a ProgressRange. Steps are allocated with next(), and the
- * scope advances the indicator to its end when closed or destroyed. An empty
- * scope is not attached to any indicator and safely performs no reporting.
+ * scope advances the indicator to its end when completed or destroyed. An
+ * empty scope is not attached to any indicator and safely performs no
+ * reporting.
  */
 class V_PROGRESS_API ProgressScope
 {
@@ -44,13 +45,6 @@ class V_PROGRESS_API ProgressScope
     ProgressRange next(double step = 1.0);
 
     /**
-     * @brief Returns false if the user requested a break.
-     *
-     * @return true if the operation should continue.
-     */
-    bool more() const;
-
-    /**
      * @brief Returns whether the user requested a break.
      *
      * @return true if the operation should stop.
@@ -65,25 +59,28 @@ class V_PROGRESS_API ProgressScope
     bool isActive() const;
 
     /**
-     * @brief Returns the current local progress value.
+     * @brief Returns the current position in the local progress range.
      *
-     * @return Value in [0, max].
+     * @return Local position in [0, localLength()].
      */
-    double value() const;
+    double localPos() const;
 
     /**
-     * @brief Returns the maximal local progress value.
+     * @brief Returns the length of the local progress range.
      *
-     * @return The scope's max value.
+     * The local range always starts at zero, so its length equals its upper
+     * bound.
+     *
+     * @return The scope's local length.
      */
-    double maxValue() const;
+    double localLength() const;
 
     /**
-     * @brief Returns the portion of the global scale covered by this scope.
+     * @brief Returns the length of the global scale covered by this scope.
      *
-     * @return Portion in [0, 1].
+     * @return Global length in [0, 1].
      */
-    double portion() const;
+    double globalLength() const;
 
     /**
      * @brief Returns the scope name.
@@ -107,9 +104,9 @@ class V_PROGRESS_API ProgressScope
     ProgressIndicator* indicator() const;
 
     /**
-     * @brief Closes the scope and advances the indicator to its end.
+     * @brief Completes the scope and advances the indicator to its end.
      */
-    void close();
+    void complete();
 
   private:
     explicit ProgressScope(ProgressIndicator* indicator);
@@ -124,11 +121,11 @@ class V_PROGRESS_API ProgressScope
 
     double start_{0.0};
 
-    double portion_{1.0};
+    double global_length_{1.0};
 
-    double max_{1.0};
+    double local_length_{1.0};
 
-    double value_{0.0};
+    double local_pos_{0.0};
 
     bool active_{false};
 };

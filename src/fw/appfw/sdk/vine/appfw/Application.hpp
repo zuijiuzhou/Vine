@@ -23,7 +23,6 @@ class V_APPFW_API Application : public Object {
     ApplicationData*       dptr();
     const ApplicationData* dptr() const;
 
-    struct Data;
     ApplicationData* const d;
 
   public:

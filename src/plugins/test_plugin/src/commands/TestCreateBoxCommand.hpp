@@ -16,7 +16,7 @@ class TestCreateBoxCommand : public Command {
     String group() const override { return u8"测试"; }
     String description() const override { return u8"测试协程命令：输入长宽高并打印"; }
     CommandFlags flags() const override { return CommandFlags::None; }
-    vine::co::Task<CommandResult> execute(CommandExecutionContext* context) override;
+    vine::async::Task<CommandResult> execute(CommandExecutionContext* context) override;
 };
 
 V_APPFW_NS_END

@@ -128,8 +128,8 @@ class V_APPFW_API EventBus {
                                  std::function<void(const std::shared_ptr<const Object>&)> handler,
                                  SubscriptionThreadMode mode);
 
-    struct Data;
-    Data* const d;
+    struct Impl;
+    Impl* const d;
 };
 
 inline Subscription::~Subscription()

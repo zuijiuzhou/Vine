@@ -39,8 +39,8 @@ class V_APPFW_API Icon {
     operator QIcon() const;
 
   private:
-    struct Data;
-    Data* d;
+    struct Impl;
+    Impl* d;
 };
 
 V_APPFWGUI_NS_END

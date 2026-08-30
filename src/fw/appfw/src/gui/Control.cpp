@@ -8,10 +8,10 @@ V_APPFWGUI_NS_BEGIN
 
 V_OBJECT_META_IMPL(Control, UIElement)
 
-struct Control::Data : public UIElementData {};
+struct Control::Impl : public UIElementData {};
 
 Control::Control(QWidget* native, bool owns)
-  : UIElement(new Data(), native)
+  : UIElement(new Impl(), native)
 {
     setOwnsImpl(owns);
 }
@@ -94,14 +94,14 @@ Control::Control(UIElementData* data, QWidget* native, bool owns)
     setOwnsImpl(owns);
 }
 
-inline auto Control::dptr() -> Data*
+inline auto Control::dptr() -> Impl*
 {
-    return static_cast<Data*>(UIElement::d);
+    return static_cast<Impl*>(UIElement::d);
 }
 
-inline auto Control::dptr() const -> const Data*
+inline auto Control::dptr() const -> const Impl*
 {
-    return static_cast<const Data*>(UIElement::d);
+    return static_cast<const Impl*>(UIElement::d);
 }
 
 V_APPFWGUI_NS_END

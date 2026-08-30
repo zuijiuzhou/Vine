@@ -91,8 +91,10 @@ class InputLine : public QLineEdit
 
 V_OBJECT_META_IMPL(ConsolePanel, Control)
 
-struct ConsolePanel::Data : public UIElementData
+struct ConsolePanel::Impl : public UIElementData
 {
+    /// Owning panel, used by the input handlers to trigger signals.
+    ConsolePanel*   panel  = nullptr;
     QPlainTextEdit* output = nullptr;
     InputLine*      input  = nullptr;
 
@@ -104,13 +106,30 @@ struct ConsolePanel::Data : public UIElementData
     std::vector<String> matches;
     String              completionBase;
     int                 matchIndex = -1;
+
+    /**
+     * @brief Resolves the display color for a message type from the theme.
+     *
+     * @param type Message type to resolve.
+     * @return The color used to render that message type.
+     */
+    QColor colorFor(ConsoleMessageType type) const;
+
+    void appendFormatted(ConsoleMessageType type, const String& text);
+    void onEscape();
+    void onReturnPressed();
+    void onHistoryUp();
+    void onHistoryDown();
+    void onTab();
 };
 
 ConsolePanel::ConsolePanel(QWidget* parent)
-  : Control(new Data(), new QWidget(parent))
+  : Control(new Impl(), new QWidget(parent))
 {
     auto* data = dptr();
     auto* root = impl<QWidget>();
+
+    data->panel = this;
 
     auto* layout = new QVBoxLayout(root);
     layout->setContentsMargins(0, 0, 0, 0);
@@ -124,18 +143,18 @@ ConsolePanel::ConsolePanel(QWidget* parent)
     layout->addWidget(data->output);
     layout->addWidget(data->input);
 
-    QObject::connect(data->input, &QLineEdit::returnPressed, root, [this] { onReturnPressed(); });
-    data->input->onEscape      = [this] { escapePressed.trigger(); };
-    data->input->onHistoryUp   = [this] { onHistoryUp(); };
-    data->input->onHistoryDown = [this] { onHistoryDown(); };
-    data->input->onTab         = [this] { onTab(); };
+    QObject::connect(data->input, &QLineEdit::returnPressed, root, [data] { data->onReturnPressed(); });
+    data->input->onEscape      = [data] { data->onEscape(); };
+    data->input->onHistoryUp   = [data] { data->onHistoryUp(); };
+    data->input->onHistoryDown = [data] { data->onHistoryDown(); };
+    data->input->onTab         = [data] { data->onTab(); };
 }
 
 ConsolePanel::~ConsolePanel() = default;
 
 void ConsolePanel::append(ConsoleMessageType type, const String& text)
 {
-    appendFormatted(type, text);
+    dptr()->appendFormatted(type, text);
 }
 
 void ConsolePanel::clear()
@@ -146,7 +165,7 @@ void ConsolePanel::clear()
 void ConsolePanel::beginInput(const String& prompt)
 {
     auto* data = dptr();
-    appendFormatted(ConsoleMessageType::Prompt, prompt);
+    data->appendFormatted(ConsoleMessageType::Prompt, prompt);
     data->input->clear();
     data->input->setFocus();
 }
@@ -175,28 +194,25 @@ const ConsoleTheme& ConsolePanel::theme() const
     return dptr()->theme;
 }
 
-QColor ConsolePanel::colorFor(ConsoleMessageType type) const
+QColor ConsolePanel::Impl::colorFor(ConsoleMessageType type) const
 {
-    const auto* data = dptr();
     switch (type)
     {
     case ConsoleMessageType::Command:
-        return toQColor(data->theme.command);
+        return toQColor(theme.command);
     case ConsoleMessageType::Prompt:
-        return toQColor(data->theme.prompt);
+        return toQColor(theme.prompt);
     case ConsoleMessageType::Warning:
-        return toQColor(data->theme.warning);
+        return toQColor(theme.warning);
     case ConsoleMessageType::Error:
-        return toQColor(data->theme.error);
+        return toQColor(theme.error);
     default:
-        return toQColor(data->theme.normal);
+        return toQColor(theme.normal);
     }
 }
 
-void ConsolePanel::appendFormatted(ConsoleMessageType type, const String& text)
+void ConsolePanel::Impl::appendFormatted(ConsoleMessageType type, const String& text)
 {
-    auto* output = dptr()->output;
-
     QTextCharFormat fmt;
     fmt.setForeground(colorFor(type));
     if (type == ConsoleMessageType::Command || type == ConsoleMessageType::Prompt)
@@ -211,62 +227,63 @@ void ConsolePanel::appendFormatted(ConsoleMessageType type, const String& text)
     output->ensureCursorVisible();
 }
 
-void ConsolePanel::onReturnPressed()
+void ConsolePanel::Impl::onEscape()
 {
-    auto*       data = dptr();
-    const String text = fromQString(data->input->text());
-    data->input->clear();
-    data->history.add(text);
-    lineEntered.trigger(text);
+    panel->escapePressed.trigger();
 }
 
-void ConsolePanel::onHistoryUp()
+void ConsolePanel::Impl::onReturnPressed()
 {
-    auto*       data    = dptr();
-    const String current = fromQString(data->input->text());
-    const String cmd     = data->history.previous(current);
+    const String text = fromQString(input->text());
+    input->clear();
+    history.add(text);
+    panel->lineEntered.trigger(text);
+}
+
+void ConsolePanel::Impl::onHistoryUp()
+{
+    const String current = fromQString(input->text());
+    const String cmd     = history.previous(current);
     if (!cmd.empty())
     {
-        data->input->setText(toQString(cmd));
+        input->setText(toQString(cmd));
     }
 }
 
-void ConsolePanel::onHistoryDown()
+void ConsolePanel::Impl::onHistoryDown()
 {
-    auto*       data = dptr();
-    const String cmd  = data->history.next();
-    data->input->setText(toQString(cmd));
+    const String cmd = history.next();
+    input->setText(toQString(cmd));
 }
 
-void ConsolePanel::onTab()
+void ConsolePanel::Impl::onTab()
 {
-    auto*       data    = dptr();
-    const String current = fromQString(data->input->text());
+    const String current = fromQString(input->text());
 
-    if (data->matches.empty() || !current.startsWith(data->completionBase))
+    if (matches.empty() || !current.startsWith(completionBase))
     {
-        data->completionBase = current;
-        data->matches        = data->completer.complete(current);
-        data->matchIndex     = -1;
+        completionBase = current;
+        matches        = completer.complete(current);
+        matchIndex     = -1;
     }
 
-    if (data->matches.empty())
+    if (matches.empty())
     {
         return;
     }
 
-    data->matchIndex = (data->matchIndex + 1) % static_cast<int>(data->matches.size());
-    data->input->setText(toQString(data->matches[static_cast<size_t>(data->matchIndex)]));
+    matchIndex = (matchIndex + 1) % static_cast<int>(matches.size());
+    input->setText(toQString(matches[static_cast<size_t>(matchIndex)]));
 }
 
-inline auto ConsolePanel::dptr() -> Data*
+inline auto ConsolePanel::dptr() -> Impl*
 {
-    return static_cast<Data*>(UIElement::d);
+    return static_cast<Impl*>(UIElement::d);
 }
 
-inline auto ConsolePanel::dptr() const -> const Data*
+inline auto ConsolePanel::dptr() const -> const Impl*
 {
-    return static_cast<const Data*>(UIElement::d);
+    return static_cast<const Impl*>(UIElement::d);
 }
 
 V_APPFWGUI_NS_END

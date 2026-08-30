@@ -1,11 +1,14 @@
 #include <vine/progress/ProgressIndicator.hpp>
 
+#include <utility>
+
 #include <vine/progress/ProgressRange.hpp>
 #include <vine/progress/ProgressScope.hpp>
 
 V_PROGRESS_NS_BEGIN
 
-ProgressIndicator::ProgressIndicator()
+ProgressIndicator::ProgressIndicator(std::stop_token token)
+  : token_(std::move(token))
 {
     root_scope_ = new ProgressScope(this);
 }
@@ -21,34 +24,35 @@ ProgressIndicator::~ProgressIndicator()
 
 ProgressRange ProgressIndicator::start()
 {
-    position_           = 0.0;
-    root_scope_->value_ = 0.0;
-    cancelled_.store(false);
+    position_.store(0.0, std::memory_order_relaxed);
+    root_scope_->local_pos_ = 0.0;
+
     return root_scope_->next();
 }
 
 double ProgressIndicator::position() const
 {
-    return position_;
+    return position_.load(std::memory_order_relaxed);
 }
 
 bool ProgressIndicator::isCancelled() const
 {
-    return cancelled_.load();
+    return token_.stop_requested();
 }
 
-void ProgressIndicator::cancel()
+std::stop_token ProgressIndicator::token() const
 {
-    cancelled_.store(true);
+    return token_;
 }
 
 void ProgressIndicator::increment(double step)
 {
-    std::lock_guard<std::mutex> lock(mutex_);
-
-    position_ += step;
-    if (position_ > 1.0) {
-        position_ = 1.0;
+    double current = position_.load(std::memory_order_relaxed);
+    for (;;) {
+        const double next = (current > 1.0 - step) ? 1.0 : current + step;
+        if (position_.compare_exchange_weak(current, next, std::memory_order_relaxed)) {
+            return;
+        }
     }
 }
 

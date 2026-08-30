@@ -136,12 +136,12 @@ struct Candidate {
     const PluginInfo*              info;
 };
 
-struct PluginManager::Data {
+struct PluginManager::Impl {
     std::vector<LoadedPlugin> plugins;
 };
 
 PluginManager::PluginManager()
-  : d(new Data())
+  : d(new Impl())
 {}
 
 PluginManager::~PluginManager()

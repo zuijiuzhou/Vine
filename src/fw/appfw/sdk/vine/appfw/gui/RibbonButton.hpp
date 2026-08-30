@@ -120,9 +120,9 @@ class V_APPFW_API RibbonButton : public Control {
   private:
     void rebuildMenu();
 
-    struct Data;
-    Data*       dptr();
-    const Data* dptr() const;
+    struct Impl;
+    Impl*       dptr();
+    const Impl* dptr() const;
 };
 
 V_APPFWGUI_NS_END

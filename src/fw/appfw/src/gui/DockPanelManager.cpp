@@ -32,13 +32,13 @@ class DockRootWidget final : public UIElement {
 
 } // namespace
 
-struct DockPanelManager::Data {
+struct DockPanelManager::Impl {
     DockingPaneManager* dockingMgr  = nullptr;
     UIElement*          rootElement = nullptr;
 };
 
 DockPanelManager::DockPanelManager()
-  : d(new Data)
+  : d(new Impl)
 {
     d->dockingMgr = new DockingPaneManager();
 }

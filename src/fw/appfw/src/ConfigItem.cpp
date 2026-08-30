@@ -7,7 +7,7 @@
 
 V_APPFW_NS_BEGIN
 
-struct ConfigItem::Data {
+struct ConfigItem::Impl {
     String         key;
     String         label;
     String         description;
@@ -24,7 +24,7 @@ struct ConfigItem::Data {
 };
 
 ConfigItem::ConfigItem(String key, String label, ConfigItemType type)
-  : d(new Data)
+  : d(new Impl)
 {
     d->key   = std::move(key);
     d->label = std::move(label);
@@ -32,7 +32,7 @@ ConfigItem::ConfigItem(String key, String label, ConfigItemType type)
 }
 
 ConfigItem::ConfigItem(const ConfigItem& other)
-  : d(new Data(*other.d))
+  : d(new Impl(*other.d))
 {}
 
 ConfigItem& ConfigItem::operator=(const ConfigItem& other)

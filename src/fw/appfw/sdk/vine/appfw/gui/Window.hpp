@@ -52,13 +52,13 @@ class V_APPFW_API Window : public Control {
     bool isActive() const;
 
   protected:
-    // Derived classes pass custom Data to keep the inheritance chain extensible.
+    // Derived classes pass custom Impl to keep the inheritance chain extensible.
     Window(UIElementData* data, QWidget* native, bool owns = true);
 
   private:
-    struct Data;
-    Data*       dptr();
-    const Data* dptr() const;
+    struct Impl;
+    Impl*       dptr();
+    const Impl* dptr() const;
 };
 
 V_APPFWGUI_NS_END

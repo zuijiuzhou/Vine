@@ -3,7 +3,7 @@
 #include <vine/appfw/CommandManager.hpp>
 #include <vine/appfw/gui/ConsolePanel.hpp>
 
-#include <vine/co/DetachedTask.hpp>
+#include <vine/async/DetachedTask.hpp>
 
 V_APPFWGUI_NS_BEGIN
 
@@ -55,7 +55,7 @@ void VisualUserIO::clear()
     }
 }
 
-vine::co::Task<std::optional<String>> VisualUserIO::getStringAsync(const String& prompt)
+vine::async::Task<std::optional<String>> VisualUserIO::getStringAsync(const String& prompt)
 {
     pending_       = PendingRead::String;
     currentPrompt_ = prompt;
@@ -78,7 +78,7 @@ vine::co::Task<std::optional<String>> VisualUserIO::getStringAsync(const String&
     co_return stringResult_;
 }
 
-vine::co::Task<std::optional<int8_t>> VisualUserIO::getIntAsync(const String& prompt)
+vine::async::Task<std::optional<int8_t>> VisualUserIO::getIntAsync(const String& prompt)
 {
     pending_       = PendingRead::Int;
     currentPrompt_ = prompt;
@@ -101,7 +101,7 @@ vine::co::Task<std::optional<int8_t>> VisualUserIO::getIntAsync(const String& pr
     co_return intResult_;
 }
 
-vine::co::Task<std::optional<double>> VisualUserIO::getDoubleAsync(const String& prompt)
+vine::async::Task<std::optional<double>> VisualUserIO::getDoubleAsync(const String& prompt)
 {
     pending_       = PendingRead::Double;
     currentPrompt_ = prompt;
@@ -124,7 +124,7 @@ vine::co::Task<std::optional<double>> VisualUserIO::getDoubleAsync(const String&
     co_return doubleResult_;
 }
 
-vine::co::Task<std::optional<math::Point3d>> VisualUserIO::getPoint3dAsync(const String& prompt)
+vine::async::Task<std::optional<math::Point3d>> VisualUserIO::getPoint3dAsync(const String& prompt)
 {
     pending_       = PendingRead::Point;
     currentPrompt_ = prompt;
@@ -172,7 +172,7 @@ void VisualUserIO::onLineEntered(const String& text)
     if (commandManager())
     {
         // 异步启动命令；失败信息在命令完成后回写。
-        [](VisualUserIO* self, vine::co::Task<CommandResult> task) -> vine::co::DetachedTask {
+        [](VisualUserIO* self, vine::async::Task<CommandResult> task) -> vine::async::DetachedTask {
             const auto result = co_await std::move(task);
             if (!result.succeeded() && self->console_)
             {

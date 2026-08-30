@@ -7,7 +7,6 @@
 
 #include <vector>
 
-class QColor;
 class QWidget;
 
 V_APPFWGUI_NS_BEGIN
@@ -70,16 +69,9 @@ class V_APPFW_API ConsolePanel : public Control
     vine::Signal<> escapePressed;
 
   private:
-    struct Data;
-    Data*       dptr();
-    const Data* dptr() const;
-
-    QColor colorFor(ConsoleMessageType type) const;
-    void   appendFormatted(ConsoleMessageType type, const String& text);
-    void   onReturnPressed();
-    void   onHistoryUp();
-    void   onHistoryDown();
-    void   onTab();
+    struct Impl;
+    Impl*       dptr();
+    const Impl* dptr() const;
 };
 
 V_APPFWGUI_NS_END

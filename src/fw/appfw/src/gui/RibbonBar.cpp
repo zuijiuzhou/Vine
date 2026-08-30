@@ -13,12 +13,12 @@ V_APPFWGUI_NS_BEGIN
 
 V_OBJECT_META_IMPL(RibbonBar, Control)
 
-struct RibbonBar::Data : public UIElementData {
+struct RibbonBar::Impl : public UIElementData {
     std::vector<RibbonTab*> tabs;
     MainWindow*             wnd;
     QMenu*                  application_menu = nullptr;
 
-    ~Data()
+    ~Impl()
     {
         delete application_menu;
     }
@@ -57,7 +57,7 @@ RibbonStyle fromSarRibbonStyle(SARibbonBar::RibbonStyles s)
 } // namespace
 
 RibbonBar::RibbonBar(MainWindow* wnd)
-  : Control(new RibbonBar::Data(), static_cast<SARibbonMainWindow*>(wnd->impl())->ribbonBar(), /*owns=*/false)
+  : Control(new RibbonBar::Impl(), static_cast<SARibbonMainWindow*>(wnd->impl())->ribbonBar(), /*owns=*/false)
 {
     dptr()->wnd              = wnd;
     dptr()->application_menu = new QMenu();
@@ -274,14 +274,14 @@ bool RibbonBar::iconRightText() const
     return w && w->isEnableIconRightText();
 }
 
-inline auto RibbonBar::dptr() -> Data*
+inline auto RibbonBar::dptr() -> Impl*
 {
-    return static_cast<Data*>(UIElement::d);
+    return static_cast<Impl*>(UIElement::d);
 }
 
-inline auto RibbonBar::dptr() const -> const Data*
+inline auto RibbonBar::dptr() const -> const Impl*
 {
-    return static_cast<const Data*>(UIElement::d);
+    return static_cast<const Impl*>(UIElement::d);
 }
 
 V_APPFWGUI_NS_END

@@ -2,17 +2,20 @@
 
 #include "progress_global.hpp"
 
+#include <memory>
+
 V_PROGRESS_NS_BEGIN
 
 class ProgressScope;
 
 /**
- * @brief A portion of the global progress scale allocated by a scope step.
+ * @brief A shareable portion of the global progress scale.
  *
- * A range advances the progress by its allocated portion when it is closed or
- * destroyed, unless a ProgressScope takes over that responsibility. A range can
- * be copied; copying transfers the responsibility to the copy and disarms the
- * source, so the portion is reported only once.
+ * A range is allocated by a scope step or the indicator root and reports its
+ * portion to the indicator exactly once: when complete() is called, or when
+ * the last handle to it is destroyed. Copies share the same portion, so a
+ * range can be passed around freely without double reporting; a ProgressScope
+ * constructed from a range takes over the reporting responsibility.
  */
 class V_PROGRESS_API ProgressRange
 {
@@ -22,11 +25,13 @@ class V_PROGRESS_API ProgressRange
   public:
     ProgressRange();
 
-    ProgressRange(const ProgressRange& other);
+    ProgressRange(const ProgressRange&)            = default;
+    ProgressRange& operator=(const ProgressRange&) = default;
 
-    ProgressRange& operator=(const ProgressRange& other);
+    ProgressRange(ProgressRange&&) noexcept            = default;
+    ProgressRange& operator=(ProgressRange&&) noexcept = default;
 
-    ~ProgressRange();
+    ~ProgressRange() = default;
 
   private:
     ProgressRange(const ProgressScope& parent, double start, double delta);
@@ -35,7 +40,8 @@ class V_PROGRESS_API ProgressRange
     /**
      * @brief Returns whether the range can still advance the progress.
      *
-     * @return true if the range is attached to an indicator and not yet used.
+     * @return true if the range is attached to an indicator and not yet
+     *         completed or handed over to a scope.
      */
     bool isActive() const;
 
@@ -47,25 +53,17 @@ class V_PROGRESS_API ProgressRange
     bool isCancelled() const;
 
     /**
-     * @brief Returns false if the user requested a break.
+     * @brief Completes the range and advances the indicator by its portion.
      *
-     * @return true if the operation should continue.
+     * Reporting happens at most once regardless of how many handles share the
+     * range; completing through any handle disarms all of them.
      */
-    bool more() const;
-
-    /**
-     * @brief Closes the range and advances the indicator by its portion.
-     */
-    void close();
+    void complete();
 
   private:
-    const ProgressScope* parent_scope_{nullptr};
+    struct State;
 
-    double start_{0.0};
-
-    double delta_{0.0};
-
-    mutable bool used_{false};
+    std::shared_ptr<State> state_;
 };
 
 V_PROGRESS_NS_END

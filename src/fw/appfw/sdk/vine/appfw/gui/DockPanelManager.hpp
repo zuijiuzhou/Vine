@@ -60,8 +60,8 @@ class V_APPFW_API DockPanelManager final {
     std::vector<DockPanel*> panels() const;
 
   private:
-    struct Data;
-    Data* const d;
+    struct Impl;
+    Impl* const d;
 };
 
 V_APPFWGUI_NS_END

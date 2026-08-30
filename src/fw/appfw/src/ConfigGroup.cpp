@@ -7,7 +7,7 @@
 
 V_APPFW_NS_BEGIN
 
-struct ConfigGroup::Data {
+struct ConfigGroup::Impl {
     ConfigRegistry* owner = nullptr;
     String          name;
     String          label;
@@ -18,7 +18,7 @@ struct ConfigGroup::Data {
 };
 
 ConfigGroup::ConfigGroup(String name, ConfigRegistry* owner)
-  : d(new Data)
+  : d(new Impl)
 {
     d->name  = std::move(name);
     d->owner = owner;

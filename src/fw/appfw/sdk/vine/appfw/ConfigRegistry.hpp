@@ -77,8 +77,8 @@ class V_APPFW_API ConfigRegistry {
     bool removeItem(const String& key);
 
   private:
-    struct Data;
-    Data* const d;
+    struct Impl;
+    Impl* const d;
 };
 
 V_APPFW_NS_END

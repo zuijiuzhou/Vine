@@ -22,10 +22,10 @@ class ConsoleUserIO : public UserIO {
     void putString(const String& str) override;
     void clear() override;
 
-    vine::co::Task<std::optional<String>>        getStringAsync(const String& prompt = {}) override;
-    vine::co::Task<std::optional<int8_t>>        getIntAsync(const String& prompt = {}) override;
-    vine::co::Task<std::optional<double>>        getDoubleAsync(const String& prompt = {}) override;
-    vine::co::Task<std::optional<math::Point3d>> getPoint3dAsync(const String& prompt = {}) override;
+    vine::async::Task<std::optional<String>>        getStringAsync(const String& prompt = {}) override;
+    vine::async::Task<std::optional<int8_t>>        getIntAsync(const String& prompt = {}) override;
+    vine::async::Task<std::optional<double>>        getDoubleAsync(const String& prompt = {}) override;
+    vine::async::Task<std::optional<math::Point3d>> getPoint3dAsync(const String& prompt = {}) override;
 };
 
 V_APPFW_NS_END

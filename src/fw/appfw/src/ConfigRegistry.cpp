@@ -6,12 +6,12 @@
 
 V_APPFW_NS_BEGIN
 
-struct ConfigRegistry::Data {
+struct ConfigRegistry::Impl {
     std::vector<std::unique_ptr<ConfigCategory>> categories;
 };
 
 ConfigRegistry::ConfigRegistry()
-  : d(new Data)
+  : d(new Impl)
 {}
 
 ConfigRegistry::~ConfigRegistry()

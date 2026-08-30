@@ -231,8 +231,8 @@ class V_APPFW_API ConfigItem {
     ConfigItem& readOnly(bool on);
 
   private:
-    struct Data;
-    Data* d;
+    struct Impl;
+    Impl* d;
 };
 
 V_APPFW_NS_END

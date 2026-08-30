@@ -34,9 +34,9 @@ class V_APPFW_API AboutDialog : public Window {
   private:
     void applyContent();
 
-    struct Data;
-    Data*       dptr();
-    const Data* dptr() const;
+    struct Impl;
+    Impl*       dptr();
+    const Impl* dptr() const;
 };
 
 V_APPFWGUI_NS_END

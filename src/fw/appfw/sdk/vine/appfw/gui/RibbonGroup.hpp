@@ -96,7 +96,7 @@ class V_APPFW_API RibbonGroup : public Control {
      * the buttons that **already exist** in the panel and set them one by one;
      * **buttons added later will not inherit** the setting. A group-level call
      * overrides button-level wordWrap; reading returns the current setting
-     * (stored in Data).
+     * (stored in Impl).
      */
     void setWordWrap(bool on);
     bool wordWrap() const;
@@ -112,9 +112,9 @@ class V_APPFW_API RibbonGroup : public Control {
     RibbonAction* optionAction() const;
 
   private:
-    struct Data;
-    Data*       dptr();
-    const Data* dptr() const;
+    struct Impl;
+    Impl*       dptr();
+    const Impl* dptr() const;
 };
 
 V_APPFWGUI_NS_END

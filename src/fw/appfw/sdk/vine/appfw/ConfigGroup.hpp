@@ -85,8 +85,8 @@ class V_APPFW_API ConfigGroup {
     ConfigGroup(String name, ConfigRegistry* owner);
     friend class ConfigCategory;
 
-    struct Data;
-    Data* const d;
+    struct Impl;
+    Impl* const d;
 };
 
 V_APPFW_NS_END

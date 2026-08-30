@@ -136,7 +136,7 @@ class V_APPFW_API CommandManager
      * @param command Command to execute; must not be null.
      * @return A task yielding the execution outcome.
      */
-    vine::co::Task<CommandResult> executeCommandAsync(Command* command);
+    vine::async::Task<CommandResult> executeCommandAsync(Command* command);
 
     /**
      * @brief Executes a registered command by name asynchronously.
@@ -144,7 +144,7 @@ class V_APPFW_API CommandManager
      * @param name Registered command name.
      * @return A task yielding the execution outcome; Failed when not registered.
      */
-    vine::co::Task<CommandResult> executeCommandAsync(const String& name);
+    vine::async::Task<CommandResult> executeCommandAsync(const String& name);
 
     /**
      * @brief Executes a registered command by name in the background.
@@ -300,12 +300,10 @@ class V_APPFW_API CommandManager
     void setSnapshotHandler(std::function<void()> handler);
 
   private:
-    String resolveName(const String& name) const;
-
     class Context;
 
-    struct Data;
-    Data* const d;
+    struct Impl;
+    Impl* const d;
 };
 
 V_APPFW_NS_END

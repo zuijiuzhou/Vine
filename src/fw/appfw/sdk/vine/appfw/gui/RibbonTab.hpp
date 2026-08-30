@@ -44,9 +44,9 @@ class V_APPFW_API RibbonTab : public Control {
     int  panelSpacing() const;
 
   private:
-    struct Data;
-    Data*       dptr();
-    const Data* dptr() const;
+    struct Impl;
+    Impl*       dptr();
+    const Impl* dptr() const;
 };
 
 V_APPFWGUI_NS_END

@@ -49,7 +49,7 @@ RibbonPanelLayoutMode fromSarPanelLayoutMode(SARibbonPanel::PanelLayoutMode m)
 
 } // namespace
 
-struct RibbonGroup::Data : public UIElementData {
+struct RibbonGroup::Impl : public UIElementData {
     String                  title;
     bool                    word_wrap   = false;
     RibbonAction*           option_item = nullptr;
@@ -57,7 +57,7 @@ struct RibbonGroup::Data : public UIElementData {
 };
 
 RibbonGroup::RibbonGroup()
-  : Control(new Data(), new SARibbonPanel())
+  : Control(new Impl(), new SARibbonPanel())
 {}
 
 RibbonGroup::~RibbonGroup()
@@ -295,14 +295,14 @@ RibbonAction* RibbonGroup::optionAction() const
     return dptr()->option_item;
 }
 
-inline auto RibbonGroup::dptr() -> Data*
+inline auto RibbonGroup::dptr() -> Impl*
 {
-    return static_cast<Data*>(UIElement::d);
+    return static_cast<Impl*>(UIElement::d);
 }
 
-inline auto RibbonGroup::dptr() const -> const Data*
+inline auto RibbonGroup::dptr() const -> const Impl*
 {
-    return static_cast<const Data*>(UIElement::d);
+    return static_cast<const Impl*>(UIElement::d);
 }
 
 V_APPFWGUI_NS_END

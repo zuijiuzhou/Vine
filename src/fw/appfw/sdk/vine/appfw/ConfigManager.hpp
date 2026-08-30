@@ -89,8 +89,8 @@ class V_APPFW_API ConfigManager {
     bool load(const String& path);
 
   private:
-    struct Data;
-    Data* const d;
+    struct Impl;
+    Impl* const d;
 };
 
 V_APPFW_NS_END

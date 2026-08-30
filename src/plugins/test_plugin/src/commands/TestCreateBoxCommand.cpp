@@ -20,7 +20,7 @@ String numToString(double value)
 
 V_OBJECT_META_IMPL(TestCreateBoxCommand, Command)
 
-vine::co::Task<CommandResult> TestCreateBoxCommand::execute(CommandExecutionContext* context)
+vine::async::Task<CommandResult> TestCreateBoxCommand::execute(CommandExecutionContext* context)
 {
     auto* app = context ? context->application() : nullptr;
     auto* io  = app ? app->userIO() : nullptr;

@@ -7,7 +7,7 @@ V_APPFW_NS_BEGIN
 
 V_OBJECT_META_IMPL(ShowHelpCommand, Command)
 
-vine::co::Task<CommandResult> ShowHelpCommand::execute(CommandExecutionContext* context)
+vine::async::Task<CommandResult> ShowHelpCommand::execute(CommandExecutionContext* context)
 {
     auto* app = context ? context->application() : nullptr;
     auto* io  = app ? app->userIO() : nullptr;

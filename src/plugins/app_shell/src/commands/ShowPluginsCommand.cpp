@@ -9,7 +9,7 @@ V_APPFW_NS_BEGIN
 
 V_OBJECT_META_IMPL(ShowPluginsCommand, Command)
 
-vine::co::Task<CommandResult> ShowPluginsCommand::execute(CommandExecutionContext* context)
+vine::async::Task<CommandResult> ShowPluginsCommand::execute(CommandExecutionContext* context)
 {
     auto* app = context ? context->application() : nullptr;
     auto* pm  = app ? app->pluginManager() : nullptr;

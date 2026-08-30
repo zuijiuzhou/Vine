@@ -44,7 +44,7 @@ RibbonButtonStyle fromQtStyle(Qt::ToolButtonStyle s)
 
 V_OBJECT_META_IMPL(RibbonButton, Control)
 
-struct RibbonButton::Data : public UIElementData {
+struct RibbonButton::Impl : public UIElementData {
     void*          user       = nullptr;
     RibbonItemSize buttonSize = RibbonItemSize::Small;
 
@@ -60,7 +60,7 @@ struct RibbonButton::Data : public UIElementData {
 };
 
 RibbonButton::RibbonButton()
-  : Control(new Data(), new SARibbonToolButton(static_cast<QWidget*>(nullptr)))
+  : Control(new Impl(), new SARibbonToolButton(static_cast<QWidget*>(nullptr)))
 {
     auto* btn = impl<SARibbonToolButton>();
 
@@ -258,7 +258,7 @@ void RibbonButton::removeDropDownItem(RibbonAction* item)
         return;
 
     auto& entries = dptr()->entries;
-    auto  it      = std::find_if(entries.begin(), entries.end(), [item](const Data::Entry& e) { return e.item == item; });
+    auto  it      = std::find_if(entries.begin(), entries.end(), [item](const Impl::Entry& e) { return e.item == item; });
 
     if (it == entries.end()) {
         return;
@@ -421,14 +421,14 @@ void RibbonButton::rebuildMenu()
     btn->setPopupMode(QToolButton::InstantPopup);
 }
 
-inline auto RibbonButton::dptr() -> Data*
+inline auto RibbonButton::dptr() -> Impl*
 {
-    return static_cast<Data*>(UIElement::d);
+    return static_cast<Impl*>(UIElement::d);
 }
 
-inline auto RibbonButton::dptr() const -> const Data*
+inline auto RibbonButton::dptr() const -> const Impl*
 {
-    return static_cast<const Data*>(UIElement::d);
+    return static_cast<const Impl*>(UIElement::d);
 }
 
 V_APPFWGUI_NS_END

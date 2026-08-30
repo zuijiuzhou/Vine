@@ -8,12 +8,12 @@ V_APPFWGUI_NS_BEGIN
 
 V_OBJECT_META_IMPL(RibbonAction, UIElement)
 
-struct RibbonAction::Data : public UIElementData {
+struct RibbonAction::Impl : public UIElementData {
     void* user = nullptr;
 };
 
 RibbonAction::RibbonAction()
-  : UIElement(new Data(), new QAction(nullptr))
+  : UIElement(new Impl(), new QAction(nullptr))
 {}
 
 RibbonAction::~RibbonAction()
@@ -125,14 +125,14 @@ void* RibbonAction::data() const
     return dptr()->user;
 }
 
-inline auto RibbonAction::dptr() -> Data*
+inline auto RibbonAction::dptr() -> Impl*
 {
-    return static_cast<Data*>(UIElement::d);
+    return static_cast<Impl*>(UIElement::d);
 }
 
-inline auto RibbonAction::dptr() const -> const Data*
+inline auto RibbonAction::dptr() const -> const Impl*
 {
-    return static_cast<const Data*>(UIElement::d);
+    return static_cast<const Impl*>(UIElement::d);
 }
 
 V_APPFWGUI_NS_END

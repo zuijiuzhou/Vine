@@ -9,8 +9,8 @@
 #include <vine/appfw/Application.hpp>
 #include <vine/appfw/Command.hpp>
 
-#include <vine/co/DetachedTask.hpp>
-#include <vine/co/SyncWait.hpp>
+#include <vine/async/DetachedTask.hpp>
+#include <vine/async/SyncWait.hpp>
 
 #include <vine/logging/Log.hpp>
 
@@ -67,8 +67,16 @@ std::string toUtf8(const String& s)
 /**
  * @brief Private data of CommandManager.
  */
-struct CommandManager::Data
+struct CommandManager::Impl
 {
+    /**
+     * @brief Resolves a command name through the alias map.
+     *
+     * @param name Command or alias name.
+     * @return The canonical command name.
+     */
+    String resolveName(const String& name) const;
+
     /// Application that owns this manager (non-owning).
     Application* app;
 
@@ -87,6 +95,20 @@ struct CommandManager::Data
     /// Command aliases (alias -> canonical command name).
     std::map<String, String> aliases;
 };
+
+String CommandManager::Impl::resolveName(const String& name) const
+{
+    // A registered command name wins over an alias with the same name.
+    if (registry.find(name) != registry.end()) {
+        return name;
+    }
+
+    auto it = aliases.find(name);
+    if (it != aliases.end()) {
+        return it->second;
+    }
+    return name;
+}
 
 /**
  * @brief Private implementation of CommandExecutionContext.
@@ -108,7 +130,7 @@ class CommandManager::Context : public CommandExecutionContext
 };
 
 CommandManager::CommandManager(Application* app)
-  : d(new Data{ app, {}, {}, {}, {} })
+  : d(new Impl{ app, {}, {}, {}, {} })
 {}
 
 CommandManager::~CommandManager()
@@ -123,15 +145,15 @@ Application* CommandManager::application() const
 
 CommandResult CommandManager::executeCommand(Command* command)
 {
-    return vine::co::syncWait(executeCommandAsync(command));
+    return vine::async::syncWait(executeCommandAsync(command));
 }
 
 CommandResult CommandManager::executeCommand(const String& name)
 {
-    return vine::co::syncWait(executeCommandAsync(name));
+    return vine::async::syncWait(executeCommandAsync(name));
 }
 
-vine::co::Task<CommandResult> CommandManager::executeCommandAsync(Command* command)
+vine::async::Task<CommandResult> CommandManager::executeCommandAsync(Command* command)
 {
     if (!command) {
         co_return CommandResult(CommandStatus::Failed, String(u8"Command is null"));
@@ -192,9 +214,9 @@ vine::co::Task<CommandResult> CommandManager::executeCommandAsync(Command* comma
     co_return result;
 }
 
-vine::co::Task<CommandResult> CommandManager::executeCommandAsync(const String& name)
+vine::async::Task<CommandResult> CommandManager::executeCommandAsync(const String& name)
 {
-    auto it = d->registry.find(resolveName(name));
+    auto it = d->registry.find(d->resolveName(name));
     if (it == d->registry.end() || !it->second.factory) {
         co_return CommandResult(CommandStatus::Failed, String(u8"Command not registered"));
     }
@@ -205,7 +227,7 @@ vine::co::Task<CommandResult> CommandManager::executeCommandAsync(const String& 
 
 void CommandManager::executeDetached(const String& name)
 {
-    [](vine::co::Task<CommandResult> task) -> vine::co::DetachedTask {
+    [](vine::async::Task<CommandResult> task) -> vine::async::DetachedTask {
         co_await std::move(task);
     }(executeCommandAsync(name));
 }
@@ -279,23 +301,9 @@ bool CommandManager::unregisterAlias(const String& alias)
     return d->aliases.erase(alias) > 0;
 }
 
-String CommandManager::resolveName(const String& name) const
-{
-    // A registered command name wins over an alias with the same name.
-    if (d->registry.find(name) != d->registry.end()) {
-        return name;
-    }
-
-    auto it = d->aliases.find(name);
-    if (it != d->aliases.end()) {
-        return it->second;
-    }
-    return name;
-}
-
 bool CommandManager::isRegistered(const String& name) const
 {
-    return d->registry.find(resolveName(name)) != d->registry.end();
+    return d->registry.find(d->resolveName(name)) != d->registry.end();
 }
 
 std::vector<String> CommandManager::names() const

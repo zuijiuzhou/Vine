@@ -23,7 +23,7 @@ V_APPFWGUI_NS_BEGIN
 
 V_OBJECT_META_IMPL(MainWindow, Window)
 
-struct MainWindow::Data : public UIElementData {
+struct MainWindow::Impl : public UIElementData {
     RibbonBar*        ribbon_bar     = nullptr;
     StatusBar*        status_bar     = nullptr;
     DockPanelManager* dock_panel_mgr = nullptr;
@@ -67,7 +67,7 @@ void MainWindowImpl::applyAppTheme()
 }
 
 MainWindow::MainWindow()
-  : Window(new Data(), new MainWindowImpl(nullptr))
+  : Window(new Impl(), new MainWindowImpl(nullptr))
 {
     s_current_main_window = this;
 
@@ -119,14 +119,14 @@ DockPanelManager* MainWindow::dockPanelManager() const
     return dptr()->dock_panel_mgr;
 }
 
-inline auto MainWindow::dptr() -> Data*
+inline auto MainWindow::dptr() -> Impl*
 {
-    return static_cast<Data*>(UIElement::d);
+    return static_cast<Impl*>(UIElement::d);
 }
 
-inline auto MainWindow::dptr() const -> const Data*
+inline auto MainWindow::dptr() const -> const Impl*
 {
-    return static_cast<const Data*>(UIElement::d);
+    return static_cast<const Impl*>(UIElement::d);
 }
 
 V_APPFWGUI_NS_END

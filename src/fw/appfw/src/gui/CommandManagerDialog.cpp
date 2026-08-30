@@ -25,14 +25,14 @@ QString toQString(const String& s)
 
 V_OBJECT_META_IMPL(CommandManagerDialog, Window)
 
-struct CommandManagerDialog::Data : public UIElementData {
+struct CommandManagerDialog::Impl : public UIElementData {
     vine::appfw::CommandManager* manager = nullptr;
     QLineEdit*                   filter  = nullptr;
     QTableWidget*                table   = nullptr;
 };
 
 CommandManagerDialog::CommandManagerDialog(vine::appfw::CommandManager* manager)
-  : Window(new Data(), new QDialog())
+  : Window(new Impl(), new QDialog())
 {
     auto* data    = dptr();
     data->manager = manager;
@@ -155,14 +155,14 @@ void CommandManagerDialog::unregisterSelected()
     refresh();
 }
 
-inline auto CommandManagerDialog::dptr() -> Data*
+inline auto CommandManagerDialog::dptr() -> Impl*
 {
-    return static_cast<Data*>(UIElement::d);
+    return static_cast<Impl*>(UIElement::d);
 }
 
-inline auto CommandManagerDialog::dptr() const -> const Data*
+inline auto CommandManagerDialog::dptr() const -> const Impl*
 {
-    return static_cast<const Data*>(UIElement::d);
+    return static_cast<const Impl*>(UIElement::d);
 }
 
 V_APPFWGUI_NS_END

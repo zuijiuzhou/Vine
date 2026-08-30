@@ -7,7 +7,7 @@ V_APPFW_NS_BEGIN
 
 V_OBJECT_META_IMPL(ClearCommand, Command)
 
-vine::co::Task<CommandResult> ClearCommand::execute(CommandExecutionContext* context)
+vine::async::Task<CommandResult> ClearCommand::execute(CommandExecutionContext* context)
 {
     auto* app = context ? context->application() : nullptr;
     auto* io  = app ? app->userIO() : nullptr;

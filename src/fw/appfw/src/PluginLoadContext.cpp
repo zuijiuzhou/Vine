@@ -5,12 +5,12 @@
 
 V_APPFW_NS_BEGIN
 
-struct PluginLoadContext::Data {
+struct PluginLoadContext::Impl {
     Application* app = nullptr;
 };
 
 PluginLoadContext::PluginLoadContext(Application* app)
-    : d(new Data)
+    : d(new Impl)
 {
     d->app = app;
 }

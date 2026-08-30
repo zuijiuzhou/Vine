@@ -157,8 +157,8 @@ class V_APPFW_API PluginManager {
     std::vector<Plugin*> plugins() const;
 
   private:
-    struct Data;
-    Data* const d;
+    struct Impl;
+    Impl* const d;
 };
 
 V_APPFW_NS_END

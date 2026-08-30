@@ -8,7 +8,7 @@
 
 V_APPFW_NS_BEGIN
 
-struct ConfigCategory::Data {
+struct ConfigCategory::Impl {
     ConfigRegistry* owner = nullptr;
     String          name;
     String          label;
@@ -19,7 +19,7 @@ struct ConfigCategory::Data {
 };
 
 ConfigCategory::ConfigCategory(String name, ConfigRegistry* owner)
-  : d(new Data)
+  : d(new Impl)
 {
     d->name  = std::move(name);
     d->owner = owner;

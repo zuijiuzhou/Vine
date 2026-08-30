@@ -7,7 +7,7 @@
 
 #include <vine/Object.hpp>
 #include <vine/String.hpp>
-#include <vine/co/Task.hpp>
+#include <vine/async/Task.hpp>
 
 V_APPFW_NS_BEGIN
 
@@ -212,7 +212,7 @@ class V_APPFW_API Command : public Object
      *                nested command execution.
      * @return A task yielding the execution outcome.
      */
-    virtual vine::co::Task<CommandResult> execute(CommandExecutionContext* context) = 0;
+    virtual vine::async::Task<CommandResult> execute(CommandExecutionContext* context) = 0;
 };
 
 V_APPFW_NS_END

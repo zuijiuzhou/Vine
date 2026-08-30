@@ -21,7 +21,7 @@ QString toQString(const String& s)
 
 V_OBJECT_META_IMPL(AboutDialog, Window)
 
-struct AboutDialog::Data : public UIElementData {
+struct AboutDialog::Impl : public UIElementData {
     String app_name;
     String version;
     String description;
@@ -34,7 +34,7 @@ struct AboutDialog::Data : public UIElementData {
 };
 
 AboutDialog::AboutDialog()
-  : Window(new Data(), new QDialog())
+  : Window(new Impl(), new QDialog())
 {
     auto* root = impl<QDialog>();
     root->setWindowTitle(QStringLiteral("关于"));
@@ -130,14 +130,14 @@ void AboutDialog::applyContent()
     }
 }
 
-inline auto AboutDialog::dptr() -> Data*
+inline auto AboutDialog::dptr() -> Impl*
 {
-    return static_cast<Data*>(UIElement::d);
+    return static_cast<Impl*>(UIElement::d);
 }
 
-inline auto AboutDialog::dptr() const -> const Data*
+inline auto AboutDialog::dptr() const -> const Impl*
 {
-    return static_cast<const Data*>(UIElement::d);
+    return static_cast<const Impl*>(UIElement::d);
 }
 
 V_APPFWGUI_NS_END

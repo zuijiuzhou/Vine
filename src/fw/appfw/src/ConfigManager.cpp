@@ -130,12 +130,12 @@ const String& ConfigChangedEventArgs::key() const
     return key_;
 }
 
-struct ConfigManager::Data {
+struct ConfigManager::Impl {
     std::map<String, ConfigValue> values;
 };
 
 ConfigManager::ConfigManager()
-  : d(new Data)
+  : d(new Impl)
 {}
 
 ConfigManager::~ConfigManager()

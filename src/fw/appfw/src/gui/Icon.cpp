@@ -4,23 +4,23 @@
 
 V_APPFWGUI_NS_BEGIN
 
-struct Icon::Data {
+struct Icon::Impl {
     QIcon qicon;
 };
 
 Icon::Icon()
-    : d(new Data())
+    : d(new Impl())
 {
 }
 
 Icon::Icon(const QIcon& qicon)
-    : d(new Data())
+    : d(new Impl())
 {
     d->qicon = qicon;
 }
 
 Icon::Icon(const String& path)
-    : d(new Data())
+    : d(new Impl())
 {
     auto utf16 = path.toUtf16();
 
@@ -28,7 +28,7 @@ Icon::Icon(const String& path)
 }
 
 Icon::Icon(const Icon& other)
-    : d(new Data())
+    : d(new Impl())
 {
     d->qicon = other.d->qicon;
 }

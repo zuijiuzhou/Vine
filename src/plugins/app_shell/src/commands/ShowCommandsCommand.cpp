@@ -9,7 +9,7 @@ V_APPFW_NS_BEGIN
 
 V_OBJECT_META_IMPL(ShowCommandsCommand, Command)
 
-vine::co::Task<CommandResult> ShowCommandsCommand::execute(CommandExecutionContext* context)
+vine::async::Task<CommandResult> ShowCommandsCommand::execute(CommandExecutionContext* context)
 {
     auto* app = context ? context->application() : nullptr;
     auto* cm  = app ? app->commandManager() : nullptr;

@@ -20,7 +20,7 @@ class ListCommandsCommand : public Command {
     String group() const override { return u8"帮助"; }
     String description() const override { return u8"列出所有命令及其别名"; }
     CommandFlags flags() const override { return CommandFlags::None; }
-    vine::co::Task<CommandResult> execute(CommandExecutionContext* context) override;
+    vine::async::Task<CommandResult> execute(CommandExecutionContext* context) override;
 };
 
 V_APPFW_NS_END

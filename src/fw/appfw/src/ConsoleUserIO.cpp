@@ -30,7 +30,7 @@ void ConsoleUserIO::clear()
     std::cout << "\033[2J\033[1;1H" << std::flush;
 }
 
-vine::co::Task<std::optional<String>> ConsoleUserIO::getStringAsync(const String& prompt)
+vine::async::Task<std::optional<String>> ConsoleUserIO::getStringAsync(const String& prompt)
 {
     if (!prompt.empty())
     {
@@ -46,7 +46,7 @@ vine::co::Task<std::optional<String>> ConsoleUserIO::getStringAsync(const String
     co_return toVineString(line);
 }
 
-vine::co::Task<std::optional<int8_t>> ConsoleUserIO::getIntAsync(const String& prompt)
+vine::async::Task<std::optional<int8_t>> ConsoleUserIO::getIntAsync(const String& prompt)
 {
     if (!prompt.empty())
     {
@@ -69,7 +69,7 @@ vine::co::Task<std::optional<int8_t>> ConsoleUserIO::getIntAsync(const String& p
     co_return static_cast<int8_t>(v);
 }
 
-vine::co::Task<std::optional<double>> ConsoleUserIO::getDoubleAsync(const String& prompt)
+vine::async::Task<std::optional<double>> ConsoleUserIO::getDoubleAsync(const String& prompt)
 {
     if (!prompt.empty())
     {
@@ -92,7 +92,7 @@ vine::co::Task<std::optional<double>> ConsoleUserIO::getDoubleAsync(const String
     co_return v;
 }
 
-vine::co::Task<std::optional<math::Point3d>> ConsoleUserIO::getPoint3dAsync(const String& prompt)
+vine::async::Task<std::optional<math::Point3d>> ConsoleUserIO::getPoint3dAsync(const String& prompt)
 {
     if (!prompt.empty())
     {

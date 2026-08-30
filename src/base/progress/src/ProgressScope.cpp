@@ -13,20 +13,25 @@ ProgressScope::ProgressScope(ProgressIndicator* indicator)
 {}
 
 ProgressScope::ProgressScope(const ProgressRange& range, const std::string& name, double max)
-  : indicator_(range.parent_scope_ != nullptr ? range.parent_scope_->indicator_ : nullptr)
-  , parent_(range.parent_scope_)
+  : indicator_(range.state_ != nullptr && range.state_->parent_scope_ != nullptr
+                   ? range.state_->parent_scope_->indicator()
+                   : nullptr)
+  , parent_(range.state_ != nullptr ? range.state_->parent_scope_ : nullptr)
   , name_(name)
-  , start_(range.start_)
-  , portion_(range.delta_)
-  , max_(max > 1e-6 ? max : 1e-6)
-  , active_(indicator_ != nullptr && !range.used_)
+  , start_(range.state_ != nullptr ? range.state_->start_ : 0.0)
+  , global_length_(range.state_ != nullptr ? range.state_->delta_ : 0.0)
+  , local_length_(max > 1e-6 ? max : 1e-6)
+  , active_(indicator_ != nullptr && range.state_ != nullptr && !range.state_->completed_)
 {
-    range.used_ = true;
+    // The scope reports this portion now; the range handles are disarmed.
+    if (range.state_ != nullptr) {
+        range.state_->completed_ = true;
+    }
 }
 
 ProgressScope::~ProgressScope()
 {
-    close();
+    complete();
 }
 
 ProgressRange ProgressScope::next(double step)
@@ -35,9 +40,9 @@ ProgressRange ProgressScope::next(double step)
         return ProgressRange();
     }
 
-    const double current = localToGlobal(value_);
-    const double next    = localToGlobal(value_ + step);
-    value_ += step;
+    const double current = localToGlobal(local_pos_);
+    const double next    = localToGlobal(local_pos_ + step);
+    local_pos_ += step;
 
     const double delta = next - current;
     if (delta <= 0.0) {
@@ -45,11 +50,6 @@ ProgressRange ProgressScope::next(double step)
     }
 
     return ProgressRange(*this, start_ + current, delta);
-}
-
-bool ProgressScope::more() const
-{
-    return !isCancelled();
 }
 
 bool ProgressScope::isCancelled() const
@@ -62,10 +62,10 @@ bool ProgressScope::isActive() const
     return active_;
 }
 
-double ProgressScope::value() const
+double ProgressScope::localPos() const
 {
     if (!active_) {
-        return max_;
+        return local_length_;
     }
 
     const double global = indicator_->position() - start_;
@@ -73,22 +73,22 @@ double ProgressScope::value() const
         return 0.0;
     }
 
-    const double distance = portion_ - global;
+    const double distance = global_length_ - global;
     if (distance <= 1e-6) {
-        return max_;
+        return local_length_;
     }
 
-    return max_ * global / portion_;
+    return local_length_ * global / global_length_;
 }
 
-double ProgressScope::maxValue() const
+double ProgressScope::localLength() const
 {
-    return max_;
+    return local_length_;
 }
 
-double ProgressScope::portion() const
+double ProgressScope::globalLength() const
 {
-    return portion_;
+    return global_length_;
 }
 
 const std::string& ProgressScope::name() const
@@ -106,16 +106,16 @@ ProgressIndicator* ProgressScope::indicator() const
     return indicator_;
 }
 
-void ProgressScope::close()
+void ProgressScope::complete()
 {
     if (!active_) {
         return;
     }
 
-    const double current = localToGlobal(value_);
-    value_ = max_;
+    const double current = localToGlobal(local_pos_);
+    local_pos_ = local_length_;
 
-    const double delta = portion_ - current;
+    const double delta = global_length_ - current;
     if (delta > 0.0) {
         indicator_->increment(delta);
     }
@@ -129,11 +129,11 @@ double ProgressScope::localToGlobal(double value) const
         return 0.0;
     }
 
-    if (max_ - value <= 1e-6) {
-        return portion_;
+    if (local_length_ - value <= 1e-6) {
+        return global_length_;
     }
 
-    return portion_ * value / max_;
+    return global_length_ * value / local_length_;
 }
 
 V_PROGRESS_NS_END

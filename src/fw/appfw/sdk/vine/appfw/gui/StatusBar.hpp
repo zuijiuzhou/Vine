@@ -15,9 +15,9 @@ class V_APPFW_API StatusBar : public Control {
     void showMessage(const String& msg, int timeout_ms = 0);
 
   private:
-    struct Data;
-    Data*       dptr();
-    const Data* dptr() const;
+    struct Impl;
+    Impl*       dptr();
+    const Impl* dptr() const;
 };
 
 V_APPFWGUI_NS_END

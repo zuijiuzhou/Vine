@@ -20,6 +20,8 @@ class V_CORE_API Exception : public std::exception {
         INVALID_OPERATION,
         NOT_SUPPORT,
         NOT_IMPLEMENTED,
+        CANCELLED,
+        TIMEOUT,
 
         USER_EXCEPTION = 0x800001
     };

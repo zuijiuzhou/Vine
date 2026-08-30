@@ -30,7 +30,7 @@ inline QString toQString(const String& s)
 
 using itype = DockingPaneContainer;
 
-struct DockPanel::Data : public UIElementData {
+struct DockPanel::Impl : public UIElementData {
     DockFeatures features = DockFeatures::None;
     String       title;
     String       id;
@@ -38,22 +38,22 @@ struct DockPanel::Data : public UIElementData {
 };
 
 DockPanel::DockPanel()
-  : Control(new Data(), nullptr)
+  : Control(new Impl(), nullptr)
 {}
 
 DockPanel::~DockPanel()
 {
-    // UIElement::~UIElement() deletes d (Data)
+    // UIElement::~UIElement() deletes d (Impl)
 }
 
-inline auto DockPanel::dptr() -> Data*
+inline auto DockPanel::dptr() -> Impl*
 {
-    return static_cast<Data*>(UIElement::d);
+    return static_cast<Impl*>(UIElement::d);
 }
 
-inline auto DockPanel::dptr() const -> const Data*
+inline auto DockPanel::dptr() const -> const Impl*
 {
-    return static_cast<const Data*>(UIElement::d);
+    return static_cast<const Impl*>(UIElement::d);
 }
 
 bool DockPanel::onClosing()

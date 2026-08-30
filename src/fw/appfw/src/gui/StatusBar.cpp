@@ -7,14 +7,14 @@ V_APPFWGUI_NS_BEGIN
 
 V_OBJECT_META_IMPL(StatusBar, Control)
 
-struct StatusBar::Data : public UIElementData {};
+struct StatusBar::Impl : public UIElementData {};
 
 StatusBar::StatusBar()
-  : Control(new Data(), new QStatusBar())
+  : Control(new Impl(), new QStatusBar())
 {}
 
 StatusBar::StatusBar(UIElement* parent)
-  : Control(new Data(), new QStatusBar())
+  : Control(new Impl(), new QStatusBar())
 {
     // Attach to the parent widget if provided
     if (parent) {
@@ -39,14 +39,14 @@ void StatusBar::showMessage(const String& msg, int timeout_ms)
     sb->showMessage(QString::fromStdU16String(utf16));
 }
 
-inline auto StatusBar::dptr() -> Data*
+inline auto StatusBar::dptr() -> Impl*
 {
-    return static_cast<Data*>(UIElement::d);
+    return static_cast<Impl*>(UIElement::d);
 }
 
-inline auto StatusBar::dptr() const -> const Data*
+inline auto StatusBar::dptr() const -> const Impl*
 {
-    return static_cast<const Data*>(UIElement::d);
+    return static_cast<const Impl*>(UIElement::d);
 }
 
 V_APPFWGUI_NS_END

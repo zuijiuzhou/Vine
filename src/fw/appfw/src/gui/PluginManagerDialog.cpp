@@ -24,13 +24,13 @@ QString toQString(const String& s)
 
 V_OBJECT_META_IMPL(PluginManagerDialog, Window)
 
-struct PluginManagerDialog::Data : public UIElementData {
+struct PluginManagerDialog::Impl : public UIElementData {
     vine::appfw::PluginManager* manager = nullptr;
     QListWidget*                list    = nullptr;
 };
 
 PluginManagerDialog::PluginManagerDialog(vine::appfw::PluginManager* manager)
-  : Window(new Data(), new QDialog())
+  : Window(new Impl(), new QDialog())
 {
     auto* data    = dptr();
     data->manager = manager;
@@ -100,14 +100,14 @@ void PluginManagerDialog::refresh()
     }
 }
 
-inline auto PluginManagerDialog::dptr() -> Data*
+inline auto PluginManagerDialog::dptr() -> Impl*
 {
-    return static_cast<Data*>(UIElement::d);
+    return static_cast<Impl*>(UIElement::d);
 }
 
-inline auto PluginManagerDialog::dptr() const -> const Data*
+inline auto PluginManagerDialog::dptr() const -> const Impl*
 {
-    return static_cast<const Data*>(UIElement::d);
+    return static_cast<const Impl*>(UIElement::d);
 }
 
 V_APPFWGUI_NS_END

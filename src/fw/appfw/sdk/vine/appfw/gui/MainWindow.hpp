@@ -35,9 +35,9 @@ class V_APPFW_API MainWindow : public Window {
     DockPanelManager* dockPanelManager() const;
 
   private:
-    struct Data;
-    Data*       dptr();
-    const Data* dptr() const;
+    struct Impl;
+    Impl*       dptr();
+    const Impl* dptr() const;
 };
 
 V_APPFWGUI_NS_END

@@ -125,14 +125,14 @@ QWidget* makeEditorWidget(ConfigManager* config, const ConfigItem& item)
 
 V_OBJECT_META_IMPL(ConfigWindow, Window)
 
-struct ConfigWindow::Data : public UIElementData {
+struct ConfigWindow::Impl : public UIElementData {
     ConfigRegistry*       registry = nullptr;
     ConfigManager*        config   = nullptr;
     std::vector<QWidget*> editors; // Parallel to the tree traversal order
 };
 
 ConfigWindow::ConfigWindow(ConfigRegistry* registry, ConfigManager* config)
-  : Window(new Data(), new QDialog())
+  : Window(new Impl(), new QDialog())
 {
     auto* data     = dptr();
     data->registry = registry;
@@ -293,14 +293,14 @@ ConfigManager* ConfigWindow::config() const
     return dptr()->config;
 }
 
-inline auto ConfigWindow::dptr() -> Data*
+inline auto ConfigWindow::dptr() -> Impl*
 {
-    return static_cast<Data*>(Window::d);
+    return static_cast<Impl*>(Window::d);
 }
 
-inline auto ConfigWindow::dptr() const -> const Data*
+inline auto ConfigWindow::dptr() const -> const Impl*
 {
-    return static_cast<const Data*>(Window::d);
+    return static_cast<const Impl*>(Window::d);
 }
 
 V_APPFWGUI_NS_END

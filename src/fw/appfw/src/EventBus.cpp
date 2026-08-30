@@ -121,7 +121,7 @@ void EventChannel::deliver(std::size_t id, const Handler& handler, const std::sh
 
 } // namespace detail
 
-struct EventBus::Data {
+struct EventBus::Impl {
     // One concrete EventChannel per subscribed event type.
     std::map<vine::Type, detail::EventChannel> channels;
     // Shared lock: publish reads the map concurrently; subscribe inserts.
@@ -129,7 +129,7 @@ struct EventBus::Data {
 };
 
 EventBus::EventBus()
-  : d(new Data)
+  : d(new Impl)
 {}
 
 EventBus::~EventBus()
