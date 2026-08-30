@@ -151,6 +151,14 @@ inline void AsyncSemaphore::release(std::ptrdiff_t n) noexcept
                 {
                     tail_ = nullptr;
                 }
+                else
+                {
+                    // Detach the old head from its successor: otherwise the
+                    // successor's prev_ would still point at a's frame, and a
+                    // later dequeue of that successor would write through the
+                    // dangling prev_ (use-after-free) after a's frame is gone.
+                    head_->prev_ = nullptr;
+                }
                 a->prev_ = nullptr;
                 a->next_ = nullptr;
                 --count_;

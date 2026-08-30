@@ -82,7 +82,7 @@ class CvWaiter
 
   private:
     friend struct CvState;
-    friend class AsyncConditionVariable;
+    friend class vine::async::AsyncConditionVariable;
 
     std::shared_ptr<CvState> state_;
 

@@ -3,6 +3,7 @@
 #include "async_global.hpp"
 
 #include <algorithm>
+#include <atomic>
 #include <chrono>
 #include <condition_variable>
 #include <coroutine>
@@ -28,12 +29,16 @@ namespace detail {
  * destructor marks this state cancelled and wakes the timer thread, which then
  * refuses to resume the dangling coroutine. This mirrors AsyncEvent's
  * abandonment safety for detached-thread timers.
+ *
+ * cancelled_ is atomic so the timer thread can perform a final, cheap check
+ * immediately before resuming; the mutex + condition_variable still serialize
+ * the "cancel vs keep sleeping" decision while the thread is inside wait_for.
  */
 struct SleepState
 {
     std::mutex mutex_;
     std::condition_variable cv_;
-    bool cancelled_{ false };
+    std::atomic<bool> cancelled_{ false };
 };
 
 /**
@@ -54,11 +59,18 @@ class SleepAwaiter
 
     /**
      * @brief Cancels the timer when the awaiting frame is destroyed.
+     *
+     * The flag is stored under the mutex so the timer thread either observes
+     * it while still waiting (and never resumes) or has already passed the
+     * final check; the latter case falls under the framework contract in
+     * async_global.hpp (no concurrent destroy during the resume itself).
      */
     ~SleepAwaiter()
     {
-        std::lock_guard<std::mutex> lock(state_->mutex_);
-        state_->cancelled_ = true;
+        {
+            std::lock_guard<std::mutex> lock(state_->mutex_);
+            state_->cancelled_.store(true, std::memory_order_release);
+        }
         state_->cv_.notify_all();
     }
 
@@ -90,12 +102,21 @@ class SleepAwaiter
             {
                 const auto slice = std::min(remaining, std::chrono::milliseconds(10));
                 std::unique_lock<std::mutex> lock(state->mutex_);
-                state->cv_.wait_for(lock, slice, [&] { return state->cancelled_; });
-                if (state->cancelled_)
+                state->cv_.wait_for(lock, slice, [&] {
+                    return state->cancelled_.load(std::memory_order_acquire);
+                });
+                if (state->cancelled_.load(std::memory_order_acquire))
                 {
                     return; // The awaiting coroutine was destroyed; never resume it.
                 }
                 remaining -= slice;
+            }
+            // Final check narrows the destroy/resume race to this single point.
+            // Destroying the coroutine during the resume itself remains UB and
+            // is governed by the framework contract (see async_global.hpp).
+            if (state->cancelled_.load(std::memory_order_acquire))
+            {
+                return;
             }
             h.resume();
         }).detach();

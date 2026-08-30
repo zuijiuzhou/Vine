@@ -396,6 +396,12 @@ inline AsyncReaderWriterLock::WakeBatch AsyncReaderWriterLock::takeWaitersLocked
         {
             writers_tail_ = nullptr;
         }
+        else
+        {
+            // Detach the old head from its successor so a later dequeue of the
+            // successor cannot write through the old head's freed frame.
+            writers_head_->prev_ = nullptr;
+        }
         batch.writer->next_ = nullptr;
         batch.writer->prev_ = nullptr;
         writer_ = true; // The woken writer now holds the lock.

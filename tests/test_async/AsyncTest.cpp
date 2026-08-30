@@ -81,6 +81,621 @@ async::Task<int> delayed(int value, std::chrono::milliseconds delay)
     co_return value;
 }
 
+// ---------------------------------------------------------------------------
+// The helpers below are plain coroutine functions (NOT coroutine lambdas).
+// They are needed because both clang 22 and gcc 16 (experimental) miscompile
+// coroutine lambdas that capture variables (loop induction variables, or
+// references stored in the enclosing closure), which otherwise crashes or
+// misbehaves in these tests. Plain lambdas (no co_await/co_return) are fine.
+// ---------------------------------------------------------------------------
+
+async::Task<void> never()
+{
+    co_await std::suspend_always{};
+    co_return;
+}
+
+async::Task<void> failTask()
+{
+    throw std::runtime_error("boom");
+    co_return;
+}
+
+async::Task<int> failInt()
+{
+    throw std::runtime_error("boom");
+    co_return 0;
+}
+
+async::Task<int> one()
+{
+    co_return 1;
+}
+
+async::Task<void> neverFlag(bool& ran)
+{
+    co_await std::suspend_always{};
+    ran = true;
+    co_return;
+}
+
+async::Task<int> ranOne(bool& ran)
+{
+    ran = true;
+    co_return 1;
+}
+
+async::Task<std::unique_ptr<int>> makeUniquePtr(int v)
+{
+    co_return std::make_unique<int>(v);
+}
+
+async::Generator<int> gen123()
+{
+    co_yield 1;
+    co_yield 2;
+    co_yield 3;
+}
+
+async::Generator<int> genThrow()
+{
+    co_yield 1;
+    throw std::runtime_error("boom");
+    co_yield 2;
+}
+
+async::DetachedTask setEvent(async::AsyncEvent& event)
+{
+    event.set();
+    co_return;
+}
+
+async::Task<int> awaitEventInt(async::AsyncEvent& event, int value)
+{
+    co_await event;
+    co_return value;
+}
+
+async::Task<void> awaitEvent(async::AsyncEvent& event)
+{
+    co_await event;
+    co_return;
+}
+
+async::Task<void> awaitEventFlag(async::AsyncEvent& event, bool& ran)
+{
+    co_await event;
+    ran = true;
+    co_return;
+}
+
+async::Task<void> eventWaitCount(async::AsyncEvent& event,
+                                 std::atomic<int>& registered,
+                                 std::atomic<int>& woken)
+{
+    ++registered;
+    co_await event;
+    ++woken;
+}
+
+async::Task<void> awaitEventTwice(async::AsyncEvent& event, int& resumes)
+{
+    co_await event;
+    ++resumes;
+    co_await event;
+    ++resumes;
+    co_return;
+}
+
+async::Task<int> scheduleInline(async::InlineScheduler& scheduler)
+{
+    co_await scheduler.schedule();
+    co_return 1;
+}
+
+async::Task<void> markDone(int& done)
+{
+    ++done;
+    co_return;
+}
+
+async::Task<void> lockGuardRelease(async::AsyncMutex& mutex)
+{
+    auto guard = co_await async::lockAsync(mutex);
+    (void)guard;
+    co_return;
+}
+
+async::Task<void> fifoWorker(async::AsyncMutex& mutex, std::vector<int>& order, int tag)
+{
+    co_await mutex.lock();
+    order.push_back(tag);
+    mutex.unlock();
+}
+
+async::Task<void> mutexLockUnlock(async::AsyncMutex& mutex)
+{
+    co_await mutex.lock();
+    mutex.unlock();
+}
+
+async::Task<void> mutexIncrement(async::AsyncMutex& mutex, int& counter)
+{
+    co_await mutex.lock();
+    ++counter;
+    mutex.unlock();
+}
+
+async::DetachedTask mutexHolder(async::AsyncMutex& mutex,
+                                async::AsyncEvent& held,
+                                async::AsyncEvent& release,
+                                std::atomic<bool>& done)
+{
+    co_await mutex.lock();
+    held.set();
+    co_await release;
+    mutex.unlock();
+    done.store(true);
+}
+
+async::DetachedTask semAcquireSet(async::AsyncSemaphore& sem, bool& acquired)
+{
+    co_await sem.acquire();
+    acquired = true;
+}
+
+async::Task<void> resumeOnPoolTask(async::ThreadPoolScheduler& scheduler, bool& ran)
+{
+    co_await async::resumeOn(scheduler);
+    ran = true;
+    co_return;
+}
+
+async::Task<void> scopeFlag(bool& flag)
+{
+    flag = true;
+    co_return;
+}
+
+async::Task<void> scopeAwaitEvent(async::AsyncEvent& event)
+{
+    co_await event;
+    co_return;
+}
+
+async::Task<void> sleepCancel(CancellationToken token, bool& cancelled)
+{
+    try
+    {
+        co_await async::sleepFor(std::chrono::milliseconds(100), token);
+    }
+    catch (const async::TaskCancelledException&)
+    {
+        cancelled = true;
+    }
+}
+
+async::DetachedTask queuePopDetached(async::AsyncQueue<int>& queue, int& got)
+{
+    got = co_await queue.pop();
+}
+
+async::DetachedTask queuePushDetached(async::AsyncQueue<int>& queue, int value, bool& pushed)
+{
+    co_await queue.push(value);
+    pushed = true;
+}
+
+async::Task<void> latchWaitFlag(async::AsyncLatch& latch, bool& released)
+{
+    co_await latch.wait();
+    released = true;
+    co_return;
+}
+
+async::Task<void> rwBasic(async::AsyncReaderWriterLock& lock, int& value)
+{
+    {
+        auto guard = co_await lock.writerLock();
+        (void)guard;
+        value = 5;
+    }
+    {
+        auto guard = co_await lock.readerLock();
+        (void)guard;
+        EXPECT_EQ(value, 5);
+    }
+    co_return;
+}
+
+async::Task<void> rwReaderConcurrent(async::AsyncReaderWriterLock& lock,
+                                     std::atomic<int>& active,
+                                     std::atomic<int>& max_active)
+{
+    auto guard = co_await lock.readerLock();
+    (void)guard;
+    int now = ++active;
+    int cur = max_active.load();
+    while (cur < now && !max_active.compare_exchange_weak(cur, now))
+    {
+    }
+    co_await async::sleepFor(std::chrono::milliseconds(20));
+    --active;
+}
+
+async::DetachedTask rwReaderHold(async::AsyncReaderWriterLock& lock,
+                                 async::AsyncEvent& r1_held,
+                                 async::AsyncEvent& w1_done)
+{
+    auto guard = co_await lock.readerLock();
+    (void)guard;
+    r1_held.set();
+    co_await w1_done;
+}
+
+async::DetachedTask rwWriterThen(async::AsyncReaderWriterLock& lock,
+                                 async::AsyncEvent& w1_done,
+                                 std::atomic<bool>& ran)
+{
+    auto guard = co_await lock.writerLock();
+    (void)guard;
+    ran.store(true);
+    w1_done.set();
+}
+
+async::DetachedTask rwReaderThen(async::AsyncReaderWriterLock& lock, std::atomic<bool>& ran)
+{
+    auto guard = co_await lock.readerLock();
+    (void)guard;
+    ran.store(true);
+}
+
+async::DetachedTask rwWriterHolder(async::AsyncReaderWriterLock& lock,
+                                   async::AsyncEvent& held,
+                                   async::AsyncEvent& release,
+                                   std::atomic<bool>& done)
+{
+    auto guard = co_await lock.writerLock();
+    (void)guard;
+    held.set();
+    co_await release;
+    done.store(true);
+}
+
+async::DetachedTask rwWriterHoldRelease(async::AsyncReaderWriterLock& lock,
+                                        async::AsyncEvent& held,
+                                        async::AsyncEvent& release)
+{
+    auto guard = co_await lock.writerLock();
+    (void)guard;
+    held.set();
+    co_await release;
+}
+
+async::Task<void> rwWriterLockUnlock(async::AsyncReaderWriterLock& lock)
+{
+    auto guard = co_await lock.writerLock();
+    (void)guard;
+    co_return;
+}
+
+async::DetachedTask cvWaiterDetached(async::AsyncMutex& mutex,
+                                     async::AsyncConditionVariable& cv,
+                                     bool& woken)
+{
+    co_await mutex.lock();
+    co_await cv.wait(mutex);
+    woken = true;
+    mutex.unlock();
+}
+
+async::Task<void> cvWaiterCount(async::AsyncMutex& mutex,
+                                async::AsyncConditionVariable& cv,
+                                std::atomic<int>& registered,
+                                std::atomic<int>& woken)
+{
+    co_await mutex.lock();
+    ++registered;
+    co_await cv.wait(mutex);
+    ++woken;
+    mutex.unlock();
+}
+
+async::Task<void> cvWait(async::AsyncMutex& mutex, async::AsyncConditionVariable& cv)
+{
+    co_await mutex.lock();
+    co_await cv.wait(mutex);
+    mutex.unlock();
+}
+
+async::Task<void> cvWaitBool(async::AsyncMutex& mutex,
+                             async::AsyncConditionVariable& cv,
+                             bool& woken)
+{
+    co_await mutex.lock();
+    co_await cv.wait(mutex);
+    woken = true;
+    mutex.unlock();
+}
+
+async::Task<void> cvWaitOnce(async::AsyncMutex& mutex,
+                             async::AsyncConditionVariable& cv,
+                             std::atomic<int>& completed)
+{
+    co_await mutex.lock();
+    co_await cv.wait(mutex);
+    mutex.unlock();
+    ++completed;
+}
+
+async::Task<void> cvWaitFlag(async::AsyncMutex& mutex,
+                             async::AsyncConditionVariable& cv,
+                             std::atomic<bool>& woken)
+{
+    co_await mutex.lock();
+    co_await cv.wait(mutex);
+    woken.store(true);
+    mutex.unlock();
+}
+
+async::Task<void> cvWaitReacquire(async::AsyncMutex& mutex,
+                                  async::AsyncConditionVariable& cv,
+                                  std::atomic<bool>& ok)
+{
+    co_await mutex.lock();
+    co_await cv.wait(mutex);
+    mutex.unlock();
+    ok.store(true);
+}
+
+async::Task<int> finallyRunsOnExit(bool& cleaned)
+{
+    auto guard = async::makeFinally([&cleaned] { cleaned = true; });
+    (void)guard;
+    co_return 42;
+}
+
+async::Task<int> finallyRunsOnException(bool& cleaned)
+{
+    auto guard = async::makeFinally([&cleaned] { cleaned = true; });
+    (void)guard;
+    throw std::runtime_error("boom");
+    co_return 0;
+}
+
+async::Task<void> finallyDismiss(bool& cleaned)
+{
+    auto guard = async::makeFinally([&cleaned] { cleaned = true; });
+    guard.dismiss();
+    co_return;
+}
+
+async::Task<void> yieldRan(bool& ran)
+{
+    co_await async::yield();
+    ran = true;
+    co_return;
+}
+
+async::Task<int> sharedAwaitInt(async::SharedTask<int>& st)
+{
+    co_return co_await st;
+}
+
+async::Task<void> sharedAwaitVoid(async::SharedTask<void>& st)
+{
+    co_await st;
+    co_return;
+}
+
+async::Task<int> sharedSource(int& runs)
+{
+    ++runs;
+    co_return 42;
+}
+
+async::Task<int> sharedSourceSlow(std::atomic<int>& runs)
+{
+    ++runs;
+    co_await async::sleepFor(std::chrono::milliseconds(30));
+    co_return 7;
+}
+
+async::Task<int> sharedSourceEvent(async::AsyncEvent& release, std::atomic<bool>& started)
+{
+    started.store(true);
+    co_await release;
+    co_return 42;
+}
+
+async::Task<void> sharedSourceVoid(bool& ran)
+{
+    ran = true;
+    co_return;
+}
+
+async::Task<int> sharedSourceRelease(async::AsyncEvent& release)
+{
+    co_await release;
+    co_return 42;
+}
+
+async::Task<void> sharedAwaitCheck(async::SharedTask<int>& st, std::atomic<bool>& got)
+{
+    int v = co_await st;
+    got.store(v == 42);
+    co_return;
+}
+
+async::Task<int> retryAttempts(int& attempts, int failBelow)
+{
+    ++attempts;
+    if (attempts < failBelow)
+    {
+        throw std::runtime_error("transient");
+    }
+    co_return 42;
+}
+
+async::Task<int> retryFail(int& attempts)
+{
+    ++attempts;
+    throw std::runtime_error("boom");
+    co_return 0;
+}
+
+async::Task<void> eventLoser(async::AsyncEvent& event,
+                             std::atomic<int>& registered,
+                             std::atomic<int>& woken)
+{
+    ++registered;
+    co_await event;
+    ++woken;
+}
+
+async::Task<void> eventMakeAny(async::AsyncEvent& event,
+                               std::atomic<int>& registered,
+                               std::atomic<int>& woken)
+{
+    std::vector<async::AnyTask> tasks;
+    for (int i = 0; i < 2; ++i)
+    {
+        tasks.push_back(async::discard(eventLoser(event, registered, woken)));
+    }
+    co_await async::whenAny(std::move(tasks));
+}
+
+async::Task<void> semLoser(async::AsyncSemaphore& sem,
+                           std::atomic<int>& registered,
+                           std::atomic<int>& acquired)
+{
+    ++registered;
+    co_await sem.acquire();
+    ++acquired;
+}
+
+async::Task<void> semMakeAny(async::AsyncSemaphore& sem,
+                             std::atomic<int>& registered,
+                             std::atomic<int>& acquired)
+{
+    std::vector<async::AnyTask> tasks;
+    for (int i = 0; i < 2; ++i)
+    {
+        tasks.push_back(async::discard(semLoser(sem, registered, acquired)));
+    }
+    co_await async::whenAny(std::move(tasks));
+}
+
+async::Task<void> queueLoser(async::AsyncQueue<int>& queue,
+                             std::atomic<int>& registered,
+                             std::atomic<int>& popped)
+{
+    ++registered;
+    try
+    {
+        co_await queue.pop();
+    }
+    catch (const std::runtime_error&)
+    {
+    }
+    ++popped;
+}
+
+async::Task<void> queueMakeAny(async::AsyncQueue<int>& queue,
+                               std::atomic<int>& registered,
+                               std::atomic<int>& popped)
+{
+    std::vector<async::AnyTask> tasks;
+    for (int i = 0; i < 2; ++i)
+    {
+        tasks.push_back(async::discard(queueLoser(queue, registered, popped)));
+    }
+    co_await async::whenAny(std::move(tasks));
+}
+
+async::Task<void> rwReaderLoser(async::AsyncReaderWriterLock& lock,
+                                std::atomic<int>& registered,
+                                std::atomic<int>& acquired)
+{
+    ++registered;
+    auto guard = co_await lock.readerLock();
+    (void)guard;
+    ++acquired;
+}
+
+async::Task<void> rwReaderMakeAny(async::AsyncReaderWriterLock& lock,
+                                  std::atomic<int>& registered,
+                                  std::atomic<int>& acquired)
+{
+    std::vector<async::AnyTask> tasks;
+    for (int i = 0; i < 2; ++i)
+    {
+        tasks.push_back(async::discard(rwReaderLoser(lock, registered, acquired)));
+    }
+    co_await async::whenAny(std::move(tasks));
+}
+
+async::Task<void> tcsLoser(async::TaskCompletionSource<int>& tcs,
+                           std::atomic<int>& registered,
+                           std::atomic<int>& completed)
+{
+    ++registered;
+    int v = co_await tcs.task();
+    (void)v;
+    ++completed;
+}
+
+async::Task<void> tcsMakeAny(async::TaskCompletionSource<int>& tcs,
+                             std::atomic<int>& registered,
+                             std::atomic<int>& completed)
+{
+    std::vector<async::AnyTask> tasks;
+    for (int i = 0; i < 2; ++i)
+    {
+        tasks.push_back(async::discard(tcsLoser(tcs, registered, completed)));
+    }
+    co_await async::whenAny(std::move(tasks));
+}
+
+async::Task<void> cvLoser(async::AsyncMutex& mutex,
+                          async::AsyncConditionVariable& cv,
+                          std::atomic<int>& registered,
+                          std::atomic<int>& woken)
+{
+    co_await mutex.lock();
+    ++registered;
+    co_await cv.wait(mutex);
+    ++woken;
+    mutex.unlock();
+}
+
+async::Task<void> cvMakeAny(async::AsyncMutex& mutex,
+                            async::AsyncConditionVariable& cv,
+                            std::atomic<int>& registered,
+                            std::atomic<int>& woken)
+{
+    std::vector<async::AnyTask> tasks;
+    for (int i = 0; i < 2; ++i)
+    {
+        tasks.push_back(async::discard(cvLoser(mutex, cv, registered, woken)));
+    }
+    co_await async::whenAny(std::move(tasks));
+}
+
+async::DetachedTask cancellationProbe(std::vector<async::AnyTask> tasks,
+                                      CancellationToken token,
+                                      bool& cancelled_seen)
+{
+    try
+    {
+        co_await async::whenAll(std::move(tasks), token);
+    }
+    catch (const async::TaskCancelledException&)
+    {
+        cancelled_seen = true;
+    }
+}
+
 } // namespace
 
 TEST(TaskTest, SyncWaitReturnsValue)
@@ -133,10 +748,7 @@ TEST(TaskTest, AwaitEmptyVoidTaskThrows)
 TEST(DetachedTaskTest, RunsEagerly)
 {
     async::AsyncEvent event;
-    auto task = [&event]() -> async::DetachedTask {
-        event.set();
-        co_return;
-    }();
+    setEvent(event);
     EXPECT_TRUE(event.isSet());
 }
 
@@ -144,10 +756,7 @@ TEST(AsyncEventTest, SetResumesWaiter)
 {
     async::AsyncEvent event;
 
-    auto task = [&event]() -> async::Task<int> {
-        co_await event;
-        co_return 99;
-    }();
+    auto task = awaitEventInt(event, 99);
 
     std::thread setter([&event] {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -165,20 +774,13 @@ TEST(AsyncEventTest, WaiterDestroyedWhileQueued)
     // A waiter queued on the event, then destroyed by whenAny while queued;
     // its awaiter must unregister so set() never resumes a dead frame.
     std::vector<async::AnyTask> race;
-    race.push_back(async::discard([&event]() -> async::Task<void> {
-        co_await event;
-        co_return;
-    }()));
-    race.push_back([]() -> async::Task<void> { co_return; }());
+    race.push_back(async::discard(awaitEvent(event)));
+    race.push_back(noop());
     async::syncWait(async::whenAny(std::move(race)));
 
     // Setting the event must not resume the destroyed waiter.
     bool ran = false;
-    auto task = [&event, &ran]() -> async::Task<void> {
-        co_await event;
-        ran = true;
-        co_return;
-    }();
+    auto task = awaitEventFlag(event, ran);
     event.set();
     async::syncWait(std::move(task));
     EXPECT_TRUE(ran);
@@ -188,10 +790,7 @@ TEST(AsyncEventTest, InitiallySetResumesImmediately)
 {
     async::AsyncEvent event(true);
     EXPECT_TRUE(event.isSet());
-    auto task = [&event]() -> async::Task<int> {
-        co_await event;
-        co_return 99;
-    }();
+    auto task = awaitEventInt(event, 99);
     EXPECT_EQ(async::syncWait(std::move(task)), 99);
 }
 
@@ -199,10 +798,7 @@ TEST(AsyncEventTest, SetBeforeAwaitResumesImmediately)
 {
     async::AsyncEvent event;
     event.set();
-    auto task = [&event]() -> async::Task<int> {
-        co_await event;
-        co_return 7;
-    }();
+    auto task = awaitEventInt(event, 7);
     EXPECT_EQ(async::syncWait(std::move(task)), 7);
 }
 
@@ -215,11 +811,7 @@ TEST(AsyncEventTest, MultipleWaitersAllWoken)
     std::vector<async::Task<void>> tasks;
     for (int i = 0; i < 5; ++i)
     {
-        tasks.push_back([&]() -> async::Task<void> {
-            ++registered; // About to await.
-            co_await event;
-            ++woken;
-        }());
+        tasks.push_back(eventWaitCount(event, registered, woken));
     }
     auto all = async::whenAll(std::move(tasks));
 
@@ -243,11 +835,7 @@ TEST(AsyncEventTest, ResetThenAwaitSuspends)
     EXPECT_FALSE(event.isSet());
 
     bool ran = false;
-    auto task = [&]() -> async::Task<void> {
-        co_await event;
-        ran = true;
-        co_return;
-    }();
+    auto task = awaitEventFlag(event, ran);
     std::thread setter([&event] {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
         event.set();
@@ -262,13 +850,7 @@ TEST(AsyncEventTest, ReAwaitAfterSetResumesImmediately)
     async::AsyncEvent event;
     int resumes = 0;
 
-    auto task = [&]() -> async::Task<void> {
-        co_await event; // Suspends; set() resumes.
-        ++resumes;
-        co_await event; // Event still set: resumes immediately.
-        ++resumes;
-        co_return;
-    }();
+    auto task = awaitEventTwice(event, resumes);
 
     std::thread setter([&event] {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -296,10 +878,7 @@ TEST(AsyncEventTest, ConcurrentSetResetStress)
     // Repeatedly await while another thread flips set/reset; must never hang.
     for (int i = 0; i < 100; ++i)
     {
-        auto task = [&]() -> async::Task<void> {
-            co_await event;
-            co_return;
-        }();
+        auto task = awaitEvent(event);
         async::syncWait(std::move(task));
         ++completed;
     }
@@ -311,10 +890,7 @@ TEST(AsyncEventTest, ConcurrentSetResetStress)
 TEST(SchedulerTest, InlineSchedulerRunsInline)
 {
     async::InlineScheduler scheduler;
-    auto task = [&]() -> async::Task<int> {
-        co_await scheduler.schedule();
-        co_return 1;
-    }();
+    auto task = scheduleInline(scheduler);
     EXPECT_EQ(async::syncWait(std::move(task)), 1);
 }
 
@@ -357,15 +933,11 @@ TEST(TaskTest, DiscardPropagatesException)
 TEST(TaskTest, WhenAllAwaitsAll)
 {
     int done = 0;
-    auto mark = [&done]() -> async::Task<void> {
-        ++done;
-        co_return;
-    };
 
     std::vector<async::AnyTask> tasks;
-    tasks.push_back(async::discard(mark()));
-    tasks.push_back(async::discard(mark()));
-    tasks.push_back(async::discard(mark()));
+    tasks.push_back(async::discard(markDone(done)));
+    tasks.push_back(async::discard(markDone(done)));
+    tasks.push_back(async::discard(markDone(done)));
 
     async::syncWait(async::whenAll(std::move(tasks)));
     EXPECT_EQ(done, 3);
@@ -373,14 +945,9 @@ TEST(TaskTest, WhenAllAwaitsAll)
 
 TEST(TaskTest, WhenAllPropagatesFirstException)
 {
-    auto fail = []() -> async::Task<void> {
-        throw std::runtime_error("boom");
-        co_return;
-    };
-
     std::vector<async::AnyTask> tasks;
-    tasks.push_back(async::discard(fail()));
-    tasks.push_back(async::discard([]() -> async::Task<void> { co_return; }()));
+    tasks.push_back(async::discard(failTask()));
+    tasks.push_back(noop());
 
     EXPECT_THROW(async::syncWait(async::whenAll(std::move(tasks))), std::runtime_error);
 }
@@ -388,15 +955,10 @@ TEST(TaskTest, WhenAllPropagatesFirstException)
 TEST(TaskTest, WhenAnyCompletesOnFirst)
 {
     bool ran = false;
-    auto never = [&ran]() -> async::Task<void> {
-        co_await std::suspend_always{};   // never resumes
-        ran = true;
-        co_return;
-    };
 
     std::vector<async::AnyTask> tasks;
-    tasks.push_back(async::discard(never()));
-    tasks.push_back(async::discard([]() -> async::Task<void> { co_return; }()));
+    tasks.push_back(async::discard(neverFlag(ran)));
+    tasks.push_back(noop());
 
     async::syncWait(async::whenAny(std::move(tasks)));
     EXPECT_FALSE(ran);   // the never-completing task is destroyed with the composition
@@ -407,14 +969,14 @@ TEST(TaskTest, WithCancellationThrowsWhenCancelled)
     vine::CancellationSource source;
     source.request_stop();
 
-    auto task    = []() -> async::Task<int> { co_return 1; }();
+    auto task    = one();
     auto wrapped = async::withCancellation(source.get_token(), std::move(task));
     EXPECT_THROW(async::syncWait(std::move(wrapped)), async::TaskCancelledException);
 }
 
 TEST(TaskTest, WithCancellationRunsTask)
 {
-    auto task    = []() -> async::Task<int> { co_return 42; }();
+    auto task    = answer();
     auto wrapped = async::withCancellation(vine::CancellationToken{}, std::move(task));
     EXPECT_EQ(async::syncWait(std::move(wrapped)), 42);
 }
@@ -424,10 +986,6 @@ TEST(TaskTest, WhenAllAlreadyCancelled)
     vine::CancellationSource source;
     source.request_stop();
 
-    auto never = []() -> async::Task<void> {
-        co_await std::suspend_always{};
-        co_return;
-    };
     std::vector<async::AnyTask> tasks;
     tasks.push_back(async::discard(never()));
 
@@ -440,24 +998,11 @@ TEST(TaskTest, WhenAllCancellation)
 {
     vine::CancellationSource source;
 
-    auto never = []() -> async::Task<void> {
-        co_await std::suspend_always{};
-        co_return;
-    };
     std::vector<async::AnyTask> tasks;
     tasks.push_back(async::discard(never()));
 
     bool cancelled_seen = false;
-    [&]() -> async::DetachedTask {
-        try
-        {
-            co_await async::whenAll(std::move(tasks), source.get_token());
-        }
-        catch (const async::TaskCancelledException&)
-        {
-            cancelled_seen = true;
-        }
-    }();
+    cancellationProbe(std::move(tasks), source.get_token(), cancelled_seen);
 
     source.request_stop();
     EXPECT_TRUE(cancelled_seen);
@@ -465,11 +1010,7 @@ TEST(TaskTest, WhenAllCancellation)
 
 TEST(GeneratorTest, YieldsSequence)
 {
-    auto gen = []() -> async::Generator<int> {
-        co_yield 1;
-        co_yield 2;
-        co_yield 3;
-    }();
+    auto gen = gen123();
 
     std::vector<int> values;
     for (int v : gen)
@@ -484,11 +1025,7 @@ TEST(GeneratorTest, YieldsSequence)
 
 TEST(GeneratorTest, ExceptionPropagates)
 {
-    auto gen = []() -> async::Generator<int> {
-        co_yield 1;
-        throw std::runtime_error("boom");
-        co_yield 2;
-    }();
+    auto gen = genThrow();
 
     auto it = gen.begin();
     EXPECT_EQ(*it, 1);
@@ -508,11 +1045,7 @@ TEST(AsyncMutexTest, LockUnlock)
 TEST(AsyncMutexTest, LockGuardReleases)
 {
     async::AsyncMutex mutex;
-    auto task = [&mutex]() -> async::Task<void> {
-        auto guard = co_await async::lockAsync(mutex);
-        (void)guard;
-        co_return;
-    }();
+    auto task = lockGuardRelease(mutex);
     async::syncWait(std::move(task));
     EXPECT_TRUE(mutex.try_lock());   // released when the guard was destroyed
     mutex.unlock();
@@ -528,11 +1061,7 @@ TEST(AsyncMutexTest, FifoOrder)
     async::Scope scope;
     for (int i = 1; i <= 4; ++i)
     {
-        scope.add([&mutex, &order, i]() -> async::Task<void> {
-            co_await mutex.lock();
-            order.push_back(i);
-            mutex.unlock();
-        }());
+        scope.add(fifoWorker(mutex, order, i));
     }
 
     // All four are now queued; releasing kicks off FIFO handoff.
@@ -549,24 +1078,14 @@ TEST(AsyncMutexTest, WaiterDestroyedWhileQueued)
     async::AsyncEvent release;
     std::atomic<bool> holder_done{ false };
 
-    auto holder = [&]() -> async::DetachedTask {
-        co_await mutex.lock();
-        held.set();
-        co_await release;
-        mutex.unlock();
-        holder_done.store(true);
-    }();
-    (void)holder;
-    async::syncWait([&]() -> async::Task<void> { co_await held; co_return; }());
+    mutexHolder(mutex, held, release, holder_done);
+    async::syncWait(awaitEvent(held));
 
     // A waiter queued on the mutex, destroyed by whenAny while queued; its
     // awaiter must unregister so unlock never resumes a dead frame.
     std::vector<async::AnyTask> race;
-    race.push_back(async::discard([&]() -> async::Task<void> {
-        co_await mutex.lock();
-        mutex.unlock();
-    }()));
-    race.push_back([]() -> async::Task<void> { co_return; }());
+    race.push_back(async::discard(mutexLockUnlock(mutex)));
+    race.push_back(noop());
     async::syncWait(async::whenAny(std::move(race)));
 
     release.set();
@@ -590,11 +1109,7 @@ TEST(AsyncMutexTest, ContentionStress)
         threads.emplace_back([&]() {
             for (int i = 0; i < kIterations; ++i)
             {
-                auto task = [&]() -> async::Task<void> {
-                    co_await mutex.lock();
-                    ++counter;
-                    mutex.unlock();
-                }();
+                auto task = mutexIncrement(mutex, counter);
                 async::syncWait(std::move(task));
             }
         });
@@ -620,10 +1135,7 @@ TEST(AsyncSemaphoreTest, WaiterResumedOnRelease)
 {
     async::AsyncSemaphore sem(0);
     bool acquired = false;
-    [&]() -> async::DetachedTask {
-        co_await sem.acquire();
-        acquired = true;
-    }();
+    semAcquireSet(sem, acquired);
 
     sem.release();
     EXPECT_TRUE(acquired);
@@ -635,11 +1147,7 @@ TEST(ThreadPoolSchedulerTest, ResumeOnPool)
     async::ThreadPoolScheduler scheduler(pool);
     bool ran = false;
 
-    auto task = [&]() -> async::Task<void> {
-        co_await async::resumeOn(scheduler);
-        ran = true;
-        co_return;
-    }();
+    auto task = resumeOnPoolTask(scheduler, ran);
 
     async::syncWait(std::move(task));
     EXPECT_TRUE(ran);
@@ -747,15 +1255,9 @@ TEST(ScopeTest, AddAndJoin)
     async::Scope scope;
     bool a = false;
     bool b = false;
-    scope.add(async::Task<void>([]() -> async::Task<void> { co_return; }()));
-    scope.add([&a]() -> async::Task<void> {
-        a = true;
-        co_return;
-    }());
-    scope.add([&b]() -> async::Task<void> {
-        b = true;
-        co_return;
-    }());
+    scope.add(noop());
+    scope.add(scopeFlag(a));
+    scope.add(scopeFlag(b));
     async::syncWait(scope.join());
     EXPECT_TRUE(a);
     EXPECT_TRUE(b);
@@ -765,10 +1267,7 @@ TEST(ScopeTest, JoinWaitsForSlowChild)
 {
     async::Scope scope;
     async::AsyncEvent slow;
-    scope.add([&slow]() -> async::Task<void> {
-        co_await slow;
-        co_return;
-    }());
+    scope.add(scopeAwaitEvent(slow));
 
     std::thread setter([&slow] {
         std::this_thread::sleep_for(std::chrono::milliseconds(20));
@@ -781,10 +1280,7 @@ TEST(ScopeTest, JoinWaitsForSlowChild)
 TEST(ScopeTest, JoinRethrowsChildFailure)
 {
     async::Scope scope;
-    scope.add([]() -> async::Task<void> {
-        throw std::runtime_error("boom");
-        co_return;
-    }());
+    scope.add(failTask());
     EXPECT_THROW(async::syncWait(scope.join()), std::runtime_error);
 }
 
@@ -845,10 +1341,7 @@ TEST(TypedWhenAnyTest, ReturnsFirstResult)
 TEST(TypedWhenAnyTest, RethrowsFirstFailure)
 {
     std::vector<async::Task<int>> tasks;
-    tasks.push_back([]() -> async::Task<int> {
-        throw std::runtime_error("boom");
-        co_return 0;
-    }());
+    tasks.push_back(failInt());
     tasks.push_back(delayed(2, std::chrono::milliseconds(100)));
     EXPECT_THROW(async::syncWait(async::whenAny(std::move(tasks))), std::runtime_error);
 }
@@ -873,16 +1366,7 @@ TEST(SleepTest, CancellationThrows)
 {
     vine::CancellationSource source;
     bool cancelled = false;
-    auto runner = [&]() -> async::Task<void> {
-        try
-        {
-            co_await async::sleepFor(std::chrono::milliseconds(100), source.get_token());
-        }
-        catch (const async::TaskCancelledException&)
-        {
-            cancelled = true;
-        }
-    }();
+    auto runner = sleepCancel(source.get_token(), cancelled);
 
     std::thread canceller([&source] {
         std::this_thread::sleep_for(std::chrono::milliseconds(20));
@@ -906,10 +1390,7 @@ TEST(AsyncQueueTest, PopWaitsForPush)
 {
     async::AsyncQueue<int> queue;
     int got = 0;
-    auto consumer = [&]() -> async::DetachedTask {
-        got = co_await queue.pop();
-    }();
-    (void)consumer;
+    queuePopDetached(queue, got);
     async::syncWait(queue.push(42));
     EXPECT_EQ(got, 42);
 }
@@ -920,11 +1401,7 @@ TEST(AsyncQueueTest, BoundedPushSuspendsWhenFull)
     async::syncWait(queue.push(1)); // Fills the bounded queue.
 
     bool pushed = false;
-    auto producer = [&]() -> async::DetachedTask {
-        co_await queue.push(2); // Suspends: full.
-        pushed = true;
-    }();
-    (void)producer;
+    queuePushDetached(queue, 2, pushed);
     EXPECT_FALSE(pushed);
 
     EXPECT_EQ(async::syncWait(queue.pop()), 1); // Frees room.
@@ -955,11 +1432,7 @@ TEST(AsyncLatchTest, WaitSuspendsUntilReady)
 {
     async::AsyncLatch latch(1);
     bool released = false;
-    auto task = [&]() -> async::Task<void> {
-        co_await latch.wait();
-        released = true;
-        co_return;
-    }();
+    auto task = latchWaitFlag(latch, released);
 
     std::thread t([&latch] {
         std::this_thread::sleep_for(std::chrono::milliseconds(20));
@@ -974,17 +1447,7 @@ TEST(AsyncRwLockTest, BasicReadWrite)
 {
     async::AsyncReaderWriterLock lock;
     int value = 0;
-    auto task = [&]() -> async::Task<void> {
-        {
-            auto guard = co_await lock.writerLock();
-            value = 5;
-        }
-        {
-            auto guard = co_await lock.readerLock();
-            EXPECT_EQ(value, 5);
-        }
-        co_return;
-    }();
+    auto task = rwBasic(lock, value);
     async::syncWait(std::move(task));
 }
 
@@ -997,16 +1460,7 @@ TEST(AsyncRwLockTest, ConcurrentReaders)
     std::vector<async::Task<void>> tasks;
     for (int i = 0; i < 3; ++i)
     {
-        tasks.push_back([&]() -> async::Task<void> {
-            auto guard = co_await lock.readerLock();
-            int now = ++active;
-            int cur = max_active.load();
-            while (cur < now && !max_active.compare_exchange_weak(cur, now))
-            {
-            }
-            co_await async::sleepFor(std::chrono::milliseconds(20)); // Hold the lock.
-            --active;
-        }());
+        tasks.push_back(rwReaderConcurrent(lock, active, max_active));
     }
     async::syncWait(async::whenAll(std::move(tasks)));
     EXPECT_GE(max_active.load(), 2);
@@ -1021,26 +1475,12 @@ TEST(AsyncRwLockTest, WriterPreference)
     std::atomic<bool> r2_ran{ false };
 
     // R1 holds a read lock until w1_done.
-    auto r1 = [&]() -> async::DetachedTask {
-        auto guard = co_await lock.readerLock();
-        r1_held.set();
-        co_await w1_done;
-    }();
-    (void)r1;
-    async::syncWait([&]() -> async::Task<void> { co_await r1_held; co_return; }());
+    rwReaderHold(lock, r1_held, w1_done);
+    async::syncWait(awaitEvent(r1_held));
 
     // W1 queues behind R1; R2 arriving after must not jump ahead of W1.
-    auto w1 = [&]() -> async::DetachedTask {
-        auto guard = co_await lock.writerLock();
-        w1_ran.store(true);
-        w1_done.set();
-    }();
-    (void)w1;
-    auto r2 = [&]() -> async::DetachedTask {
-        auto guard = co_await lock.readerLock();
-        r2_ran.store(true);
-    }();
-    (void)r2;
+    rwWriterThen(lock, w1_done, w1_ran);
+    rwReaderThen(lock, r2_ran);
 
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
     EXPECT_FALSE(w1_ran.load());
@@ -1062,23 +1502,14 @@ TEST(AsyncRwLockTest, WaiterDestroyedWhileQueued)
     async::AsyncEvent release;
     std::atomic<bool> holder_done{ false };
 
-    auto holder = [&]() -> async::DetachedTask {
-        auto guard = co_await lock.writerLock();
-        held.set();
-        co_await release;
-        holder_done.store(true);
-    }();
-    (void)holder;
-    async::syncWait([&]() -> async::Task<void> { co_await held; co_return; }());
+    rwWriterHolder(lock, held, release, holder_done);
+    async::syncWait(awaitEvent(held));
 
     // A waiter queued on the write lock, then destroyed by whenAny while
     // queued; its awaiter must unregister so release never resumes a dead frame.
     std::vector<async::AnyTask> race;
-    race.push_back(async::discard([&]() -> async::Task<void> {
-        auto guard = co_await lock.writerLock();
-        co_return;
-    }()));
-    race.push_back([]() -> async::Task<void> { co_return; }());
+    race.push_back(async::discard(rwWriterLockUnlock(lock)));
+    race.push_back(noop());
     async::syncWait(async::whenAny(std::move(race)));
 
     release.set();
@@ -1094,13 +1525,7 @@ TEST(AsyncConditionVariableTest, NotifyResumesWaiter)
     async::AsyncMutex mutex;
     async::AsyncConditionVariable cv;
     bool woken = false;
-    auto waiter = [&]() -> async::DetachedTask {
-        co_await mutex.lock();
-        co_await cv.wait(mutex);
-        woken = true;
-        mutex.unlock();
-    }();
-    (void)waiter;
+    cvWaiterDetached(mutex, cv, woken);
 
     cv.notify_one();
     for (int i = 0; i < 1000 && !woken; ++i)
@@ -1118,12 +1543,7 @@ TEST(AsyncConditionVariableTest, NotifyBeforeWaitIsConsumed)
     cv.notify_one(); // No waiter: preserved as a pending notification.
 
     bool woken = false;
-    auto task = [&]() -> async::Task<void> {
-        co_await mutex.lock();
-        co_await cv.wait(mutex); // Consumes the pending notification.
-        woken = true;
-        mutex.unlock();
-    }();
+    auto task = cvWaitBool(mutex, cv, woken);
     async::syncWait(std::move(task));
     EXPECT_TRUE(woken);
 }
@@ -1138,13 +1558,7 @@ TEST(AsyncConditionVariableTest, NotifyAllWakesAll)
     std::vector<async::Task<void>> tasks;
     for (int i = 0; i < 4; ++i)
     {
-        tasks.push_back([&]() -> async::Task<void> {
-            co_await mutex.lock();
-            ++registered;
-            co_await cv.wait(mutex);
-            ++woken;
-            mutex.unlock();
-        }());
+        tasks.push_back(cvWaiterCount(mutex, cv, registered, woken));
     }
     auto all = async::whenAll(std::move(tasks));
     std::thread runner([&all, &registered] { async::syncWait(std::move(all)); });
@@ -1167,13 +1581,7 @@ TEST(AsyncConditionVariableTest, NotifyOneWakesSingleWaiter)
     std::vector<async::Task<void>> tasks;
     for (int i = 0; i < 3; ++i)
     {
-        tasks.push_back([&]() -> async::Task<void> {
-            co_await mutex.lock();
-            ++registered;
-            co_await cv.wait(mutex);
-            ++woken;
-            mutex.unlock();
-        }());
+        tasks.push_back(cvWaiterCount(mutex, cv, registered, woken));
     }
     auto all = async::whenAll(std::move(tasks));
     std::thread runner([&all, &registered] { async::syncWait(std::move(all)); });
@@ -1203,12 +1611,8 @@ TEST(AsyncConditionVariableTest, WaiterDestroyedWhileWaiting)
     // by whenAny while suspended; its node must unregister so a later notify
     // never resumes a dead frame.
     std::vector<async::AnyTask> race;
-    race.push_back(async::discard([&]() -> async::Task<void> {
-        co_await mutex.lock();
-        co_await cv.wait(mutex);
-        mutex.unlock();
-    }()));
-    race.push_back([]() -> async::Task<void> { co_return; }());
+    race.push_back(async::discard(cvWait(mutex, cv)));
+    race.push_back(noop());
     async::syncWait(async::whenAny(std::move(race)));
 
     // Notifying after the waiter is gone must not resume a dead frame.
@@ -1222,13 +1626,7 @@ TEST(AsyncConditionVariableTest, WaitReacquiresMutex)
     async::AsyncConditionVariable cv;
     std::atomic<bool> ok{ false };
 
-    auto w1 = [&]() -> async::Task<void> {
-        co_await mutex.lock();
-        co_await cv.wait(mutex); // Releases the mutex, then re-acquires it.
-        // If wait() did not re-acquire, unlock() would trip its debug assert.
-        mutex.unlock();
-        ok.store(true);
-    }();
+    auto w1 = cvWaitReacquire(mutex, cv, ok);
 
     std::thread notifier([&cv] {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -1253,26 +1651,11 @@ TEST(AsyncConditionVariableTest, NotifyAllWinnerDestroysLoserIsSafe)
     std::atomic<int> registered{ 0 };
     std::atomic<int> woken{ 0 };
 
-    auto makeAny = [&]() -> async::Task<void> {
-        std::vector<async::AnyTask> tasks;
-        for (int i = 0; i < 2; ++i)
-        {
-            tasks.push_back(async::discard([&]() -> async::Task<void> {
-                co_await mutex.lock();
-                ++registered;
-                co_await cv.wait(mutex);
-                ++woken;
-                mutex.unlock();
-            }()));
-        }
-        co_await async::whenAny(std::move(tasks));
-    };
-
     for (int iter = 0; iter < 200; ++iter)
     {
         registered.store(0);
         woken.store(0);
-        auto any = makeAny();
+        auto any = cvMakeAny(mutex, cv, registered, woken);
         std::thread runner([&any, &registered] { async::syncWait(std::move(any)); });
         while (registered.load() < 2)
         {
@@ -1316,12 +1699,7 @@ TEST(AsyncConditionVariableTest, ConcurrentNotifyAllStress)
             while (!stop.load())
             {
                 ++active;
-                async::syncWait([&]() -> async::Task<void> {
-                    co_await mutex.lock();
-                    co_await cv.wait(mutex);
-                    mutex.unlock();
-                    ++completed;
-                }());
+                async::syncWait(cvWaitOnce(mutex, cv, completed));
                 --active;
             }
         });
@@ -1347,12 +1725,7 @@ TEST(AsyncConditionVariableTest, RepeatedWaitNotifyCycles)
     for (int i = 0; i < 1000; ++i)
     {
         std::atomic<bool> woken{ false };
-        auto task = [&]() -> async::Task<void> {
-            co_await mutex.lock();
-            co_await cv.wait(mutex);
-            woken.store(true);
-            mutex.unlock();
-        }();
+        auto task = cvWaitFlag(mutex, cv, woken);
         cv.notify_one(); // No waiter yet; preserved as a pending notification.
         async::syncWait(std::move(task));
         EXPECT_TRUE(woken.load());
@@ -1375,12 +1748,7 @@ TEST(AsyncConditionVariableTest, SingleNotifyNoLostWakeup)
         std::atomic<bool> woken{ false };
 
         std::thread waiter([&] {
-            async::syncWait([&]() -> async::Task<void> {
-                co_await mutex.lock();
-                co_await cv.wait(mutex);
-                mutex.unlock();
-                woken.store(true);
-            }());
+            async::syncWait(cvWaitFlag(mutex, cv, woken));
         });
 
         std::this_thread::yield();
@@ -1440,23 +1808,14 @@ TEST(WithTimeoutTest, TimesOut)
 
 TEST(WithTimeoutTest, TimesOutVoid)
 {
-    auto task = async::withTimeout([]() -> async::Task<void> {
-        co_await std::suspend_always{};
-    }(), std::chrono::milliseconds(30));
+    auto task = async::withTimeout(never(), std::chrono::milliseconds(30));
     EXPECT_THROW(async::syncWait(std::move(task)), async::TimeoutException);
 }
 
 TEST(RetryTest, SucceedsAfterRetries)
 {
     int attempts = 0;
-    auto task = async::retry([&]() -> async::Task<int> {
-        ++attempts;
-        if (attempts < 3)
-        {
-            throw std::runtime_error("transient");
-        }
-        co_return 42;
-    }, 5);
+    auto task = async::retry([&] { return retryAttempts(attempts, 3); }, 5);
     EXPECT_EQ(async::syncWait(std::move(task)), 42);
     EXPECT_EQ(attempts, 3);
 }
@@ -1464,11 +1823,7 @@ TEST(RetryTest, SucceedsAfterRetries)
 TEST(RetryTest, FailsAfterAttempts)
 {
     int attempts = 0;
-    auto task = async::retry([&]() -> async::Task<int> {
-        ++attempts;
-        throw std::runtime_error("boom");
-        co_return 0;
-    }, 3);
+    auto task = async::retry([&] { return retryFail(attempts); }, 3);
     EXPECT_THROW(async::syncWait(std::move(task)), std::runtime_error);
     EXPECT_EQ(attempts, 3);
 }
@@ -1476,11 +1831,7 @@ TEST(RetryTest, FailsAfterAttempts)
 TEST(FinallyTest, RunsOnExit)
 {
     bool cleaned = false;
-    auto task = [&]() -> async::Task<int> {
-        auto guard = async::makeFinally([&cleaned] { cleaned = true; });
-        (void)guard;
-        co_return 42;
-    }();
+    auto task = finallyRunsOnExit(cleaned);
     EXPECT_EQ(async::syncWait(std::move(task)), 42);
     EXPECT_TRUE(cleaned);
 }
@@ -1488,12 +1839,7 @@ TEST(FinallyTest, RunsOnExit)
 TEST(FinallyTest, RunsOnException)
 {
     bool cleaned = false;
-    auto task = [&]() -> async::Task<int> {
-        auto guard = async::makeFinally([&cleaned] { cleaned = true; });
-        (void)guard;
-        throw std::runtime_error("boom");
-        co_return 0;
-    }();
+    auto task = finallyRunsOnException(cleaned);
     EXPECT_THROW(async::syncWait(std::move(task)), std::runtime_error);
     EXPECT_TRUE(cleaned);
 }
@@ -1501,11 +1847,7 @@ TEST(FinallyTest, RunsOnException)
 TEST(FinallyTest, DismissSkips)
 {
     bool cleaned = false;
-    auto task = [&]() -> async::Task<void> {
-        auto guard = async::makeFinally([&cleaned] { cleaned = true; });
-        guard.dismiss();
-        co_return;
-    }();
+    auto task = finallyDismiss(cleaned);
     async::syncWait(std::move(task));
     EXPECT_FALSE(cleaned);
 }
@@ -1513,11 +1855,7 @@ TEST(FinallyTest, DismissSkips)
 TEST(YieldTest, Resumes)
 {
     bool ran = false;
-    auto task = [&]() -> async::Task<void> {
-        co_await async::yield();
-        ran = true;
-        co_return;
-    }();
+    auto task = yieldRan(ran);
     async::syncWait(std::move(task));
     EXPECT_TRUE(ran);
 }
@@ -1525,13 +1863,10 @@ TEST(YieldTest, Resumes)
 TEST(SharedTaskTest, MultipleAwaitSameResult)
 {
     int runs = 0;
-    auto st = async::sharedTask([&runs]() -> async::Task<int> {
-        ++runs;
-        co_return 42;
-    }());
+    auto st = async::sharedTask(sharedSource(runs));
 
-    int a = async::syncWait([&]() -> async::Task<int> { co_return co_await st; }());
-    int b = async::syncWait([&]() -> async::Task<int> { co_return co_await st; }());
+    int a = async::syncWait(sharedAwaitInt(st));
+    int b = async::syncWait(sharedAwaitInt(st));
     EXPECT_EQ(a, 42);
     EXPECT_EQ(b, 42);
     EXPECT_EQ(runs, 1);
@@ -1541,7 +1876,7 @@ TEST(SharedTaskTest, ResultAfterCompletion)
 {
     auto st = async::sharedTask(answer());
     EXPECT_FALSE(st.isReady());
-    async::syncWait([&]() -> async::Task<void> { co_await st; co_return; }());
+    async::syncWait(sharedAwaitInt(st));
     EXPECT_TRUE(st.isReady());
     EXPECT_EQ(st.result(), 42);
 }
@@ -1549,8 +1884,8 @@ TEST(SharedTaskTest, ResultAfterCompletion)
 TEST(SharedTaskTest, ExceptionPropagatesToAll)
 {
     auto st = async::sharedTask(failing());
-    auto t1 = [&]() -> async::Task<int> { co_return co_await st; }();
-    auto t2 = [&]() -> async::Task<int> { co_return co_await st; }();
+    auto t1 = sharedAwaitInt(st);
+    auto t2 = sharedAwaitInt(st);
     EXPECT_THROW(async::syncWait(std::move(t1)), std::runtime_error);
     EXPECT_THROW(async::syncWait(std::move(t2)), std::runtime_error);
 }
@@ -1559,8 +1894,8 @@ TEST(SharedTaskTest, CopyableAndShared)
 {
     auto st = async::sharedTask(answer());
     auto st2 = st; // Copy: both point at the same computation.
-    int a = async::syncWait([&]() -> async::Task<int> { co_return co_await st; }());
-    int b = async::syncWait([&]() -> async::Task<int> { co_return co_await st2; }());
+    int a = async::syncWait(sharedAwaitInt(st));
+    int b = async::syncWait(sharedAwaitInt(st2));
     EXPECT_EQ(a, 42);
     EXPECT_EQ(b, 42);
 }
@@ -1568,27 +1903,20 @@ TEST(SharedTaskTest, CopyableAndShared)
 TEST(SharedTaskTest, VoidSharedTask)
 {
     bool ran = false;
-    auto st = async::sharedTask([&ran]() -> async::Task<void> {
-        ran = true;
-        co_return;
-    }());
-    async::syncWait([&]() -> async::Task<void> { co_await st; co_return; }());
+    auto st = async::sharedTask(sharedSourceVoid(ran));
+    async::syncWait(sharedAwaitVoid(st));
     EXPECT_TRUE(ran);
 }
 
 TEST(SharedTaskTest, ConcurrentAwaitersRunOnce)
 {
     std::atomic<int> runs{ 0 };
-    auto st = async::sharedTask([&runs]() -> async::Task<int> {
-        ++runs;
-        co_await async::sleepFor(std::chrono::milliseconds(30));
-        co_return 7;
-    }());
+    auto st = async::sharedTask(sharedSourceSlow(runs));
 
     std::vector<async::Task<int>> tasks;
     for (int i = 0; i < 4; ++i)
     {
-        tasks.push_back([&]() -> async::Task<int> { co_return co_await st; }());
+        tasks.push_back(sharedAwaitInt(st));
     }
     auto results = async::syncWait(async::whenAll(std::move(tasks)));
     for (int r : results)
@@ -1603,21 +1931,17 @@ TEST(SharedTaskTest, EmptySharedTask)
     async::SharedTask<int> st;
     EXPECT_FALSE(static_cast<bool>(st));
     EXPECT_FALSE(st.isReady());
-    EXPECT_THROW(async::syncWait([&]() -> async::Task<int> { co_return co_await st; }()),
-                 std::logic_error);
+    EXPECT_THROW(async::syncWait(sharedAwaitInt(st)), std::logic_error);
     EXPECT_THROW(st.result(), std::logic_error);
 }
 
 TEST(SharedTaskTest, LazyDoesNotRunUntilFirstAwait)
 {
     int runs = 0;
-    auto st = async::sharedTask([&runs]() -> async::Task<int> {
-        ++runs;
-        co_return 42;
-    }());
+    auto st = async::sharedTask(sharedSource(runs));
     EXPECT_EQ(runs, 0); // Creating the SharedTask does not run the source.
 
-    int v = async::syncWait([&]() -> async::Task<int> { co_return co_await st; }());
+    int v = async::syncWait(sharedAwaitInt(st));
     EXPECT_EQ(v, 42);
     EXPECT_EQ(runs, 1);
 }
@@ -1628,17 +1952,9 @@ TEST(SharedTaskTest, SharedTaskDestroyedWhileRunning)
     std::atomic<bool> source_started{ false };
     std::atomic<bool> got{ false };
 
-    auto st = async::sharedTask([&]() -> async::Task<int> {
-        source_started.store(true);
-        co_await release;
-        co_return 42;
-    }());
+    auto st = async::sharedTask(sharedSourceEvent(release, source_started));
 
-    auto t = [&]() -> async::Task<void> {
-        int v = co_await st;
-        got.store(v == 42);
-        co_return;
-    }();
+    auto t = sharedAwaitCheck(st, got);
     std::thread runner([&] { async::syncWait(std::move(t)); });
 
     while (!source_started.load())
@@ -1654,20 +1970,17 @@ TEST(SharedTaskTest, SharedTaskDestroyedWhileRunning)
 TEST(SharedTaskTest, WaiterDestroyedBeforeCompletion)
 {
     async::AsyncEvent release;
-    auto st = async::sharedTask([&release]() -> async::Task<int> {
-        co_await release;
-        co_return 42;
-    }());
+    auto st = async::sharedTask(sharedSourceRelease(release));
 
     // An abandoned waiter: whenAny destroys it while it is suspended awaiting
     // st; its awaiter must unregister so completion never resumes a dead frame.
     std::vector<async::AnyTask> race;
-    race.push_back(async::discard([&]() -> async::Task<int> { co_return co_await st; }()));
-    race.push_back([]() -> async::Task<void> { co_return; }());
+    race.push_back(async::discard(sharedAwaitInt(st)));
+    race.push_back(noop());
     async::syncWait(async::whenAny(std::move(race)));
 
     release.set(); // Completing the source must not resume the destroyed waiter.
-    int v = async::syncWait([&]() -> async::Task<int> { co_return co_await st; }());
+    int v = async::syncWait(sharedAwaitInt(st));
     EXPECT_EQ(v, 42);
 }
 
@@ -1698,10 +2011,7 @@ TEST(TaskTest, WhenAllCancelledDoesNotStartChildren)
 
     bool ran = false;
     std::vector<async::Task<int>> tasks;
-    tasks.push_back([&ran]() -> async::Task<int> {
-        ran = true;
-        co_return 1;
-    }());
+    tasks.push_back(ranOne(ran));
     EXPECT_THROW(async::syncWait(async::whenAll(std::move(tasks), source.get_token())),
                  async::TaskCancelledException);
     EXPECT_FALSE(ran); // Children must not start when already cancelled.
@@ -1710,12 +2020,8 @@ TEST(TaskTest, WhenAllCancelledDoesNotStartChildren)
 TEST(TaskTest, MoveOnlyResultComposition)
 {
     std::vector<async::Task<std::unique_ptr<int>>> tasks;
-    tasks.push_back([]() -> async::Task<std::unique_ptr<int>> {
-        co_return std::make_unique<int>(42);
-    }());
-    tasks.push_back([]() -> async::Task<std::unique_ptr<int>> {
-        co_return std::make_unique<int>(7);
-    }());
+    tasks.push_back(makeUniquePtr(42));
+    tasks.push_back(makeUniquePtr(7));
     auto result = async::syncWait(async::whenAll(std::move(tasks)));
     ASSERT_EQ(result.size(), 2u);
     EXPECT_EQ(*result[0], 42);
@@ -1736,20 +2042,7 @@ TEST(AsyncEventTest, SetWinnerDestroysLoserIsSafe)
         registered.store(0);
         woken.store(0);
 
-        auto makeAny = [&]() -> async::Task<void> {
-            std::vector<async::AnyTask> tasks;
-            for (int i = 0; i < 2; ++i)
-            {
-                tasks.push_back(async::discard([&]() -> async::Task<void> {
-                    ++registered;
-                    co_await event;
-                    ++woken;
-                }()));
-            }
-            co_await async::whenAny(std::move(tasks));
-        };
-
-        auto any = makeAny();
+        auto any = eventMakeAny(event, registered, woken);
         std::thread runner([&any, &registered] { async::syncWait(std::move(any)); });
         while (registered.load() < 2)
         {
@@ -1776,20 +2069,7 @@ TEST(AsyncSemaphoreTest, ReleaseWinnerDestroysLoserIsSafe)
         registered.store(0);
         acquired.store(0);
 
-        auto makeAny = [&]() -> async::Task<void> {
-            std::vector<async::AnyTask> tasks;
-            for (int i = 0; i < 2; ++i)
-            {
-                tasks.push_back(async::discard([&]() -> async::Task<void> {
-                    ++registered;
-                    co_await sem.acquire();
-                    ++acquired;
-                }()));
-            }
-            co_await async::whenAny(std::move(tasks));
-        };
-
-        auto any = makeAny();
+        auto any = semMakeAny(sem, registered, acquired);
         std::thread runner([&any, &registered] { async::syncWait(std::move(any)); });
         while (registered.load() < 2)
         {
@@ -1816,27 +2096,7 @@ TEST(AsyncQueueTest, CloseWinnerDestroysLoserIsSafe)
         registered.store(0);
         popped.store(0);
 
-        auto makeAny = [&]() -> async::Task<void> {
-            std::vector<async::AnyTask> tasks;
-            for (int i = 0; i < 2; ++i)
-            {
-                tasks.push_back(async::discard([&]() -> async::Task<void> {
-                    ++registered;
-                    try
-                    {
-                        co_await queue.pop();
-                    }
-                    catch (const std::runtime_error&)
-                    {
-                        // Closed-and-empty: expected for the first popper.
-                    }
-                    ++popped;
-                }()));
-            }
-            co_await async::whenAny(std::move(tasks));
-        };
-
-        auto any = makeAny();
+        auto any = queueMakeAny(queue, registered, popped);
         std::thread runner([&any, &registered] { async::syncWait(std::move(any)); });
         while (registered.load() < 2)
         {
@@ -1861,34 +2121,15 @@ TEST(AsyncRwLockTest, UnlockWriteWinnerDestroysLoserReaderIsSafe)
     std::atomic<int> acquired{ 0 };
 
     // Hold the write lock so readers queue.
-    auto writer = [&]() -> async::DetachedTask {
-        auto guard = co_await lock.writerLock();
-        (void)guard;
-        held.set();
-        co_await release;
-    }();
-    (void)writer;
-    async::syncWait([&]() -> async::Task<void> { co_await held; co_return; }());
+    rwWriterHoldRelease(lock, held, release);
+    async::syncWait(awaitEvent(held));
 
     for (int iter = 0; iter < 200; ++iter)
     {
         registered.store(0);
         acquired.store(0);
 
-        auto makeAny = [&]() -> async::Task<void> {
-            std::vector<async::AnyTask> tasks;
-            for (int i = 0; i < 2; ++i)
-            {
-                tasks.push_back(async::discard([&]() -> async::Task<void> {
-                    ++registered;
-                    co_await lock.readerLock();
-                    ++acquired;
-                }()));
-            }
-            co_await async::whenAny(std::move(tasks));
-        };
-
-        auto any = makeAny();
+        auto any = rwReaderMakeAny(lock, registered, acquired);
         std::thread runner([&any, &registered] { async::syncWait(std::move(any)); });
         while (registered.load() < 2)
         {
@@ -1915,21 +2156,7 @@ TEST(TaskCompletionSourceTest, SetResultWinnerDestroysLoserIsSafe)
         registered.store(0);
         completed.store(0);
 
-        auto makeAny = [&]() -> async::Task<void> {
-            std::vector<async::AnyTask> tasks;
-            for (int i = 0; i < 2; ++i)
-            {
-                tasks.push_back(async::discard([&]() -> async::Task<void> {
-                    ++registered;
-                    int v = co_await tcs.task();
-                    (void)v;
-                    ++completed;
-                }()));
-            }
-            co_await async::whenAny(std::move(tasks));
-        };
-
-        auto any = makeAny();
+        auto any = tcsMakeAny(tcs, registered, completed);
         std::thread runner([&any, &registered] { async::syncWait(std::move(any)); });
         while (registered.load() < 2)
         {

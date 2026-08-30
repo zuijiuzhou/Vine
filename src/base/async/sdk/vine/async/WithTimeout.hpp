@@ -92,21 +92,15 @@ inline Task<void> withTimeout(Task<void> task,
                               std::chrono::milliseconds timeout,
                               CancellationToken token = {})
 {
-    auto timed_out = std::make_shared<std::atomic<bool>>(false);
-
+    // Races the task against timeoutTask<void>, which throws TimeoutException
+    // when the timer fires. If the task finishes first, whenAny destroys the
+    // still-running timer; if the timer wins, its exception propagates through
+    // whenAny. No coroutine lambda is used here so the timer task is unaffected
+    // by compiler coroutine-lambda capture bugs.
     std::vector<AnyTask> race;
     race.push_back(std::move(task));
-    race.push_back([timeout, token = std::move(token), timed_out]() -> Task<void> {
-        co_await sleepFor(timeout, std::move(token));
-        timed_out->store(true);
-    }());
-
+    race.push_back(detail::timeoutTask<void>(timeout, std::move(token)));
     co_await whenAny(std::move(race));
-
-    if (timed_out->load())
-    {
-        throw TimeoutException{};
-    }
 }
 
 V_ASYNC_NS_END

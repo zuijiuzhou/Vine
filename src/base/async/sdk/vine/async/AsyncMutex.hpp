@@ -274,6 +274,12 @@ inline void AsyncMutex::unlock() noexcept
             {
                 tail_ = nullptr;
             }
+            else
+            {
+                // Detach the old head from its successor so a later dequeue of
+                // the successor cannot write through the old head's freed frame.
+                head_->prev_ = nullptr;
+            }
             popped->next_ = nullptr;
             popped->prev_ = nullptr;
         }

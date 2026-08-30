@@ -13,6 +13,18 @@
  * coroutine before completion — is supported: every awaiter unregisters
  * itself on destruction. But concurrent destruction during completion is
  * undefined behavior, exactly as in cppcoro/folly.
+ *
+ * Coroutine-lambda caveat: a coroutine *lambda* keeps its captures in the
+ * closure object, which is a temporary destroyed at the end of the full
+ * expression. The coroutine frame only stores the implicit object parameter
+ * (a pointer to the closure), so the closure must outlive the coroutine.
+ * Immediately invoking a capturing coroutine lambda and resuming the returned
+ * task later reads destroyed closure state — undefined behavior (cppreference:
+ * "uses (anonymous lambda type)::i after free"). This is user-side UB, not a
+ * compiler defect. Prefer a named coroutine function (parameters are copied
+ * into the coroutine state), or pass values as coroutine parameters, or keep
+ * the lambda object alive for the coroutine's lifetime. Plain lambdas without
+ * co_await/co_return/co_yield are unaffected.
  */
 
 #define V_ASYNC_NS_BEGIN \

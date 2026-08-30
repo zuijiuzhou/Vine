@@ -87,6 +87,10 @@ DetachedTask runScopeChild(std::shared_ptr<ScopeState> state, Task<T> task)
  * join() before the Scope goes out of scope to guarantee all children have
  * finished. A child may be added after a previous join(); this starts a fresh
  * batch whose failures are collected by the next join().
+ *
+ * add() and join() must not be called concurrently from different threads:
+ * the pending counter and the first-failure slot are batch-level state whose
+ * add/join interleaving is intentionally left to the caller to serialize.
  */
 class Scope
 {
@@ -128,7 +132,8 @@ class Scope
      *
      * Rethrows the first exception recorded by any child. If the token is
      * cancelled while waiting, TaskCancelledException is thrown and the
-     * children keep running to completion independently.
+     * children keep running to completion independently; a later join() waits
+     * for them normally (cancellation never leaves the internal event armed).
      *
      * @param token Optional cancellation token.
      * @return A task that completes when all children have completed.
@@ -136,19 +141,49 @@ class Scope
     [[nodiscard]]
     Task<void> join(CancellationToken token = {})
     {
+        throwIfCancelled(token);
+
+        // Cancellation only wakes the wait; join() re-checks the token and the
+        // pending counter after every wakeup, so a cancelled join never leaves
+        // done_ armed for a later join().
         std::stop_callback cancellation{ token, [state = state_]() noexcept {
             state->done_.set();
         } };
 
-        co_await state_->done_;
+        for (;;)
+        {
+            {
+                std::lock_guard<std::mutex> lock(state_->mutex_);
+                if (state_->pending_ == 0)
+                {
+                    break;
+                }
+                // Re-arm before waiting: done_ is manual-reset and may have
+                // been set by a previous cancellation.
+                state_->done_.reset();
+            }
 
-        if (token.stop_requested())
-        {
-            throw TaskCancelledException{};
+            if (token.stop_requested())
+            {
+                throw TaskCancelledException{};
+            }
+
+            co_await state_->done_;
+
+            if (token.stop_requested())
+            {
+                throw TaskCancelledException{};
+            }
         }
-        if (state_->first_exception_)
+
+        std::exception_ptr ex;
         {
-            std::rethrow_exception(state_->first_exception_);
+            std::lock_guard<std::mutex> lock(state_->mutex_);
+            ex = state_->first_exception_;
+        }
+        if (ex)
+        {
+            std::rethrow_exception(ex);
         }
     }
 

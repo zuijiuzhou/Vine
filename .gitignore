@@ -2,6 +2,7 @@
 /vs_build
 /vsc_build
 /build_*
+/build-*
 /dist
 .vscode
 .vs

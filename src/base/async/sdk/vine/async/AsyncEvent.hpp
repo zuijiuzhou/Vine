@@ -153,13 +153,19 @@ class AsyncEvent
 
 inline void AsyncEvent::set() noexcept
 {
+    {
+        std::lock_guard lock(mutex_);
+        // Manual-reset: arm the flag exactly once, before any waiter is
+        // resumed. Arming it inside the resume loop below would overwrite a
+        // reset() issued by a resumed waiter (e.g. an edge-triggered event
+        // clearing itself for the next batch), so it must happen here.
+        set_ = true;
+    }
     for (;;)
     {
         Awaiter* a = nullptr;
         {
             std::lock_guard lock(mutex_);
-            set_ = true; // Manual-reset: stays set for awaiters that arrive
-                         // during or after this call.
             if (head_)
             {
                 a = head_;
