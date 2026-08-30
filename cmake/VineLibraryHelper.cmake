@@ -84,9 +84,9 @@ function(v_add_library target_name_var short_name)
     # string(TOLOWER ${short_name} ShortName_lowercase)
     # string(TOLOWER ${CMAKE_PROJECT_NAME} proj_name_lowercase)
 
-    # 安装头文件
+    # 安装头文件（相对路径，尊重 CMAKE_INSTALL_PREFIX / --prefix）
     # install(FILES ${sdk_file_list} DESTINATION ${CMAKE_INSTALL_PREFIX}/include/${src_rel_dir})
-    install(DIRECTORY ${sdk_dir}/ DESTINATION ${CMAKE_INSTALL_PREFIX}/include)
+    install(DIRECTORY ${sdk_dir}/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
     # message(----------${sdk_dir})
     # message(----------${CMAKE_INSTALL_PREFIX}/include/${src_rel_dir})
     # foreach(sdk_file ${sdk_file_list})

@@ -32,14 +32,22 @@ function(v_add_plugin target_name_var short_name)
     # MODULE: a loadable DLL that is not linked against (no import library).
     add_library(${target_name} MODULE ${sdk_file_list} ${header_file_list} ${src_file_list} ${rc_file_list})
 
-    # No lib prefix, grouped under vine/plugins in the solution. Output goes
-    # directly to <exe>/plugins/vine so the default plugin directory works.
+    # No lib prefix, grouped under vine/plugins in the solution.
+    # Mirror PluginManager::defaultPluginDirectory() so plugins are found when
+    # the app runs from the build tree: Windows/macOS use <exe>/plugins/vine,
+    # Linux uses <exe>/../plugins/vine (sibling of bin/, matching install).
+    if(WIN32 OR APPLE)
+        set(_plugin_output_dir "$<TARGET_FILE_DIR:${VI_APP_TARGET}>/plugins/vine")
+    else()
+        set(_plugin_output_dir "$<TARGET_FILE_DIR:${VI_APP_TARGET}>/../plugins/vine")
+    endif()
+
     set_target_properties(${target_name} PROPERTIES
         PREFIX ""
         FOLDER vine/plugins
-        RUNTIME_OUTPUT_DIRECTORY "$<TARGET_FILE_DIR:${VI_APP_TARGET}>/plugins/vine"
-        LIBRARY_OUTPUT_DIRECTORY "$<TARGET_FILE_DIR:${VI_APP_TARGET}>/plugins/vine"
-        ARCHIVE_OUTPUT_DIRECTORY "$<TARGET_FILE_DIR:${VI_APP_TARGET}>/plugins/vine")
+        RUNTIME_OUTPUT_DIRECTORY "${_plugin_output_dir}"
+        LIBRARY_OUTPUT_DIRECTORY "${_plugin_output_dir}"
+        ARCHIVE_OUTPUT_DIRECTORY "${_plugin_output_dir}")
 
     target_include_directories(${target_name}
         PUBLIC
@@ -55,10 +63,16 @@ function(v_add_plugin target_name_var short_name)
         set(${target_name_var} ${target_name} PARENT_SCOPE)
     endif()
 
-    install(TARGETS ${target_name}
-        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}/plugins/vine
-        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}/plugins/vine
-        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}/plugins/vine)
+    # Runtime resolves plugins at <exe>/plugins/vine on Windows and
+    # <prefix>/plugins/vine on Linux (PluginManager::defaultPluginDirectory).
+    # Match that layout so installed plugins are found next to the installed app.
+    if(WIN32)
+        install(TARGETS ${target_name}
+            RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}/plugins/vine)
+    else()
+        install(TARGETS ${target_name}
+            LIBRARY DESTINATION plugins/vine)
+    endif()
 
     message(--------AddPlugin:${target_name})
 endfunction()

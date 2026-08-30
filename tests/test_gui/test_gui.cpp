@@ -39,6 +39,7 @@
 #include <vine/appfw/ConfigItem.hpp>
 #include <vine/appfw/ConfigManager.hpp>
 #include <vine/appfw/ConfigRegistry.hpp>
+#include <vine/appfw/ConfigStandard.hpp>
 
 #include <vine/appfw/gui/Control.hpp>
 #include <vine/appfw/gui/DockPanel.hpp>
@@ -962,6 +963,97 @@ TEST_F(GuiTest, PluginLoadContext_Configs)
     EXPECT_NE(app->configRegistry()->item(u8"plugin.opt"), nullptr);
     EXPECT_TRUE(ctx.configs()->removeItem(u8"plugin.opt"));
     EXPECT_TRUE(ctx.configs()->removeCategory(u8"插件"));
+}
+
+TEST_F(GuiTest, ConfigRegistry_StandardCategories)
+{
+    using vine::appfw::ConfigItem;
+    using vine::appfw::ConfigItemType;
+    using vine::appfw::ConfigRegistry;
+    using vine::appfw::StandardCategory;
+    using vine::appfw::StandardGroup;
+
+    ConfigRegistry reg;
+
+    // standardCategory 是 create-or-get：重复调用返回同一节点，规范名 + label + order。
+    auto* log1 = reg.standardCategory(StandardCategory::Logging);
+    auto* log2 = reg.standardCategory(StandardCategory::Logging);
+    ASSERT_NE(log1, nullptr);
+    EXPECT_EQ(log1, log2);
+    EXPECT_TRUE(log1->name() == u8"logging");
+    EXPECT_TRUE(log1->label() == u8"日志");
+
+    // standardGroup 是 create-or-get：规范名 + label。
+    auto* console = reg.standardGroup(StandardCategory::Logging, StandardGroup::Console);
+    ASSERT_NE(console, nullptr);
+    EXPECT_TRUE(console->name() == u8"console");
+    EXPECT_TRUE(console->label() == u8"控制台");
+    EXPECT_EQ(reg.standardGroup(StandardCategory::Logging, StandardGroup::Console), console);
+
+    // addItem 便捷接口
+    EXPECT_TRUE(reg.addItem(StandardCategory::Logging, StandardGroup::Console,
+                            ConfigItem(u8"logging.console_enabled", u8"日志输出到控制台", ConfigItemType::Bool), u8"app_shell"));
+    EXPECT_NE(reg.item(u8"logging.console_enabled"), nullptr);
+
+    // 重复 key 拒绝
+    EXPECT_FALSE(reg.addItem(StandardCategory::Logging, StandardGroup::Console,
+                             ConfigItem(u8"logging.console_enabled", u8"x", ConfigItemType::Bool), u8"other"));
+}
+
+TEST_F(GuiTest, ConfigRegistry_Ownership)
+{
+    using vine::appfw::ConfigItem;
+    using vine::appfw::ConfigItemType;
+    using vine::appfw::ConfigRegistry;
+    using vine::appfw::StandardCategory;
+    using vine::appfw::StandardGroup;
+
+    ConfigRegistry reg;
+    reg.addItem(StandardCategory::Logging, StandardGroup::Console,
+                ConfigItem(u8"logging.console_enabled", u8"日志输出到控制台", ConfigItemType::Bool), u8"app_shell");
+    reg.addItem(StandardCategory::Appearance, StandardGroup::Theme,
+                ConfigItem(u8"appearance.theme", u8"主题", ConfigItemType::String), u8"app_shell");
+    reg.addItem(StandardCategory::General, StandardGroup::Startup,
+                ConfigItem(u8"general.maximize", u8"最大化启动", ConfigItemType::Bool), u8"other_plugin");
+
+    auto app_items = reg.itemsForPlugin(u8"app_shell");
+    ASSERT_EQ(app_items.size(), 2u);
+    auto other_items = reg.itemsForPlugin(u8"other_plugin");
+    ASSERT_EQ(other_items.size(), 1u);
+    EXPECT_TRUE(other_items[0]->key() == u8"general.maximize");
+
+    // removeItemsForPlugin 只删该插件的项
+    EXPECT_TRUE(reg.removeItemsForPlugin(u8"app_shell"));
+    EXPECT_TRUE(reg.itemsForPlugin(u8"app_shell").empty());
+    EXPECT_EQ(reg.item(u8"logging.console_enabled"), nullptr);
+    EXPECT_EQ(reg.item(u8"appearance.theme"), nullptr);
+    EXPECT_NE(reg.item(u8"general.maximize"), nullptr); // 其它插件不受影响
+
+    EXPECT_FALSE(reg.removeItemsForPlugin(u8"app_shell")); // 已无项可删
+}
+
+TEST_F(GuiTest, PluginLoadContext_RegisterConfigItem)
+{
+    auto* app = GuiEnv::app.get();
+    ASSERT_NE(app, nullptr);
+
+    vine::appfw::PluginLoadContext ctx(app, u8"my_plugin");
+    EXPECT_TRUE(ctx.pluginName() == u8"my_plugin");
+
+    using vine::appfw::ConfigItem;
+    using vine::appfw::ConfigItemType;
+    using vine::appfw::StandardCategory;
+    using vine::appfw::StandardGroup;
+
+    EXPECT_TRUE(ctx.registerConfigItem(StandardCategory::Logging, StandardGroup::Console,
+                                       ConfigItem(u8"logging.file_path", u8"日志文件", ConfigItemType::String)));
+
+    auto items = ctx.registeredConfigs();
+    ASSERT_EQ(items.size(), 1u);
+    EXPECT_TRUE(items[0]->key() == u8"logging.file_path");
+
+    // 清理共享 registry，避免污染其它测试。
+    app->configRegistry()->removeItemsForPlugin(u8"my_plugin");
 }
 
 // ============================ 停靠面板 ============================

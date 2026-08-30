@@ -12,6 +12,7 @@ set_target_properties(SARibbon PROPERTIES
     AUTOMOC ON
     AUTOUIC ON
     AUTORCC ON
+    POSITION_INDEPENDENT_CODE ON
     FOLDER third_party
 )
 
