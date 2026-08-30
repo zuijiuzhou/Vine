@@ -3,6 +3,7 @@
 #include <memory>
 #include <utility>
 
+#include <spdlog/pattern_formatter.h>
 #include <spdlog/spdlog.h>
 
 #include "SpdlogInternal.hpp"
@@ -12,6 +13,7 @@ V_LOGGING_NS_BEGIN
 struct Logger::Impl
 {
     std::string                     name;
+    std::string                     pattern;
     std::shared_ptr<spdlog::logger> logger;
 };
 
@@ -40,6 +42,7 @@ Logger::Logger(std::string name, LogLevel level, std::vector<LogSink> sinks, std
     if (!pattern.empty()) {
         d->logger->set_pattern(pattern);
     }
+    d->pattern = std::move(pattern);
 }
 
 const std::string& Logger::name() const
@@ -64,6 +67,23 @@ void Logger::setPattern(const std::string& pattern)
     if (d->logger) {
         d->logger->set_pattern(pattern);
     }
+    d->pattern = pattern;
+}
+
+void Logger::addSink(LogSink sink)
+{
+    if (!d->logger || !sink.d || !sink.d->sink) {
+        return;
+    }
+
+    auto spd_sink = sink.d->sink;
+
+    // Give the new sink the same formatter as the logger's existing sinks.
+    // An empty pattern means the spdlog default ("%+"), mirroring the logger
+    // constructor which leaves the default formatter in place.
+    spd_sink->set_formatter(std::make_unique<spdlog::pattern_formatter>(d->pattern.empty() ? std::string("%+") : d->pattern));
+
+    d->logger->sinks().push_back(std::move(spd_sink));
 }
 
 void Logger::flush()

@@ -85,6 +85,17 @@ class V_LOGGING_API Logger
     void setPattern(const std::string& pattern);
 
     /**
+     * @brief Attaches an additional sink to this logger.
+     *
+     * The sink inherits the logger's current format pattern. Adding a sink is
+     * not synchronized with concurrent logging; attach sinks before the logger
+     * is shared across threads.
+     *
+     * @param sink Destination to append.
+     */
+    void addSink(LogSink sink);
+
+    /**
      * @brief Flushes all sinks of this logger.
      */
     void flush();

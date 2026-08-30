@@ -38,6 +38,14 @@ ConfigGroup* ConfigCategory::addGroup(String name)
     return d->groups.back().get();
 }
 
+ConfigGroup* ConfigCategory::getOrAddGroup(String name)
+{
+    if (ConfigGroup* existing = group(name))
+        return existing;
+    d->groups.push_back(std::unique_ptr<ConfigGroup>(new ConfigGroup(std::move(name), d->owner)));
+    return d->groups.back().get();
+}
+
 bool ConfigCategory::removeGroup(const String& name)
 {
     for (auto it = d->groups.begin(); it != d->groups.end(); ++it) {

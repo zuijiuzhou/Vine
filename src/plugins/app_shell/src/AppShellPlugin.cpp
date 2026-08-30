@@ -1,9 +1,16 @@
 #include "AppShellPlugin.hpp"
 
+#include "ConsoleLogRouter.hpp"
+
 #include <QWidget>
 
 #include <vine/appfw/Application.hpp>
+#include <vine/appfw/ConfigItem.hpp>
+#include <vine/appfw/ConfigManager.hpp>
+#include <vine/appfw/ConfigStandard.hpp>
 #include <vine/appfw/CommandManager.hpp>
+#include <vine/appfw/MainThreadDispatcher.hpp>
+#include <vine/appfw/PluginLoadContext.hpp>
 #include <vine/appfw/gui/ConsolePanel.hpp>
 #include <vine/appfw/gui/Control.hpp>
 #include <vine/appfw/gui/DockPanel.hpp>
@@ -18,7 +25,27 @@
 
 #include <vine/appfw/plugin_export.hpp>
 
+#include <vine/logging/Log.hpp>
+
 V_APPFW_NS_BEGIN
+
+namespace
+{
+
+/**
+ * @brief Maps a log level to the console's semantic message type.
+ */
+gui::ConsoleMessageType toConsoleType(logging::LogLevel level)
+{
+    switch (level) {
+    case logging::LogLevel::Warn:     return gui::ConsoleMessageType::Warning;
+    case logging::LogLevel::Error:
+    case logging::LogLevel::Critical: return gui::ConsoleMessageType::Error;
+    default:                          return gui::ConsoleMessageType::Normal;
+    }
+}
+
+} // namespace
 
 V_OBJECT_META_IMPL(AppShellPlugin, Plugin)
 
@@ -128,6 +155,58 @@ void AppShellPlugin::load(PluginLoadContext* context)
     if (auto* app = ::vine::obj_cast<gui::GuiApplication>(Application::current())) {
         app->setConsolePanel(consolePanel);
     }
+
+    // 将默认日志路由到控制台面板：日志可来自任意线程，需投递回主线程刷新 UI。
+    // 开关的“真源”是 ConfigManager（配置窗口可改），原子只是 sink 的无锁缓存。
+    auto* app = Application::current();
+    if (app && app->configManager()) {
+        auto* cfg       = app->configManager();
+        const String key = consoleLogConfigKey();
+        if (!cfg->contains(key)) {
+            cfg->setBool(key, true);
+        }
+        consoleLogEnabledState()->store(cfg->getBool(key, true), std::memory_order_relaxed);
+
+        // 配置窗口修改 / 命令切换都会触发 changed，这里同步 sink 的原子开关。
+        config_change_handler_id_ = cfg->changed.addHandler(
+            [alive = consoleLogEnabledState(), key](ConfigManager& mgr, ConfigChangedEventArgs& args) {
+                if (args.key() == key) {
+                    alive->store(mgr.getBool(key, true), std::memory_order_relaxed);
+                }
+            });
+    }
+
+    log_sink_ = logging::LogSink::function(
+        [panel = consolePanel, alive = consoleLogEnabledState()](logging::LogLevel level, const std::string& message) {
+            if (!alive->load(std::memory_order_relaxed)) {
+                return;
+            }
+            String text(message.begin(), message.end());
+            const auto type = toConsoleType(level);
+            if (auto* app = Application::current(); app && app->mainThreadDispatcher()) {
+                app->mainThreadDispatcher()->postToMain(
+                    [panel, type, text = std::move(text)]() mutable { panel->append(type, text); });
+            }
+        });
+    logging::defaultLogger().addSink(log_sink_);
+
+    // 注册配置项，让开关出现在配置窗口（标准“日志”分类 → “控制台”分组）。
+    if (context) {
+        ConfigItem item(consoleLogConfigKey(), u8"日志输出到控制台", ConfigItemType::Bool);
+        item.description(u8"开启后，默认日志输出到控制台面板").defaultValue(true);
+        context->registerConfigItem(StandardCategory::Logging, StandardGroup::Console, item);
+    }
+}
+
+void AppShellPlugin::unload(PluginLoadContext* context)
+{
+    (void)context;
+
+    if (auto* app = Application::current(); app && app->configManager() && config_change_handler_id_ != 0) {
+        app->configManager()->changed.removeHandler(config_change_handler_id_);
+        config_change_handler_id_ = 0;
+    }
+    consoleLogEnabledState()->store(false, std::memory_order_relaxed);
 }
 
 V_PLUGIN_DECLARE(AppShellPlugin, u8"app_shell", u8"1.0.0", u8"应用外壳：基础界面（插件信息与配置管理）", u8"Vine", { })

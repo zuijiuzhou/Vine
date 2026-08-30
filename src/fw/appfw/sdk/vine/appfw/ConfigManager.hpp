@@ -34,6 +34,9 @@ class V_APPFW_API ConfigChangedEventArgs : public EventArgs {
  * and the getter/setter pair shares the key parameter.
  * @note Keys support dotted hierarchies, e.g. u8"window.x" denotes x under
  * window; toJson()/loadJson() generate/read nested JSON objects by hierarchy.
+ * @note All accessors are thread-safe: an internal shared mutex allows
+ * concurrent readers while writers hold it exclusively; the changed event is
+ * fired after releasing it, so handlers may safely call back into the manager.
  */
 class V_APPFW_API ConfigManager {
   public:

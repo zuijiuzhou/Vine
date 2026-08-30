@@ -1,6 +1,7 @@
 #include <vine/appfw/ConfigRegistry.hpp>
 
 #include <algorithm>
+#include <map>
 #include <memory>
 #include <utility>
 
@@ -8,6 +9,7 @@ V_APPFW_NS_BEGIN
 
 struct ConfigRegistry::Impl {
     std::vector<std::unique_ptr<ConfigCategory>> categories;
+    std::map<String, String>                     owners_; // item key -> owning plugin name
 };
 
 ConfigRegistry::ConfigRegistry()
@@ -25,6 +27,74 @@ ConfigCategory* ConfigRegistry::addCategory(String name)
         return nullptr; // Duplicate name, reject
     d->categories.push_back(std::unique_ptr<ConfigCategory>(new ConfigCategory(std::move(name), this)));
     return d->categories.back().get();
+}
+
+ConfigCategory* ConfigRegistry::getOrAddCategory(String name)
+{
+    if (ConfigCategory* existing = category(name))
+        return existing;
+    d->categories.push_back(std::unique_ptr<ConfigCategory>(new ConfigCategory(std::move(name), this)));
+    return d->categories.back().get();
+}
+
+ConfigCategory* ConfigRegistry::standardCategory(StandardCategory id)
+{
+    ConfigCategory* cat = getOrAddCategory(standardCategoryName(id));
+    if (cat) {
+        cat->label(standardCategoryLabel(id));
+        cat->order(standardCategoryOrder(id));
+    }
+    return cat;
+}
+
+ConfigGroup* ConfigRegistry::standardGroup(StandardCategory cat_id, StandardGroup grp_id)
+{
+    ConfigCategory* cat = standardCategory(cat_id);
+    if (!cat)
+        return nullptr;
+    ConfigGroup* grp = cat->getOrAddGroup(standardGroupName(grp_id));
+    if (grp)
+        grp->label(standardGroupLabel(grp_id));
+    return grp;
+}
+
+bool ConfigRegistry::addItem(StandardCategory cat, StandardGroup grp, const ConfigItem& item, String owner)
+{
+    ConfigGroup* g = standardGroup(cat, grp);
+    if (!g || !g->addItem(item))
+        return false;
+    if (!owner.empty())
+        d->owners_[item.key()] = std::move(owner);
+    return true;
+}
+
+std::vector<const ConfigItem*> ConfigRegistry::itemsForPlugin(const String& plugin_name) const
+{
+    std::vector<const ConfigItem*> out;
+    for (const auto& [key, owner] : d->owners_) {
+        if (owner == plugin_name) {
+            if (const ConfigItem* it = item(key))
+                out.push_back(it);
+        }
+    }
+    return out;
+}
+
+bool ConfigRegistry::removeItemsForPlugin(const String& plugin_name)
+{
+    std::vector<String> keys;
+    for (const auto& [key, owner] : d->owners_) {
+        if (owner == plugin_name)
+            keys.push_back(key);
+    }
+
+    bool removed = false;
+    for (const auto& key : keys) {
+        if (removeItem(key))
+            removed = true;
+        d->owners_.erase(key);
+    }
+    return removed;
 }
 
 bool ConfigRegistry::removeCategory(const String& name)

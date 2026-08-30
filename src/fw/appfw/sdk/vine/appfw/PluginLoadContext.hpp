@@ -2,10 +2,17 @@
 
 #include "appfw_global.hpp"
 
+#include <vector>
+
+#include <vine/String.hpp>
+
+#include "ConfigStandard.hpp"
+
 V_APPFW_NS_BEGIN
 
 class Application;
 class CommandManager;
+class ConfigItem;
 class ConfigRegistry;
 class EventBus;
 
@@ -18,8 +25,13 @@ class EventBus;
  */
 class V_APPFW_API PluginLoadContext {
   public:
-    /// Constructs the load context with Application as the host.
-    explicit PluginLoadContext(Application* app);
+    /**
+     * @brief Constructs the load context with Application as the host.
+     *
+     * @param app Host application.
+     * @param plugin_name Name of the plugin this context belongs to.
+     */
+    explicit PluginLoadContext(Application* app, String plugin_name = {});
     ~PluginLoadContext();
 
     /**
@@ -47,6 +59,31 @@ class V_APPFW_API PluginLoadContext {
      * @return The EventBus owned by the host Application, or nullptr if none.
      */
     EventBus* eventBus() const;
+
+    /**
+     * @brief Name of the plugin this context belongs to.
+     *
+     * @return The plugin name.
+     */
+    const String& pluginName() const;
+
+    /**
+     * @brief Registers a config item under a standard category/group, owned by
+     * this plugin.
+     *
+     * @param cat Standard category.
+     * @param grp Standard group.
+     * @param item Item descriptor.
+     * @return true if registered, false if the key already exists.
+     */
+    bool registerConfigItem(StandardCategory cat, StandardGroup grp, const ConfigItem& item);
+
+    /**
+     * @brief Config items registered by this plugin.
+     *
+     * @return The plugin's registered items.
+     */
+    std::vector<const ConfigItem*> registeredConfigs() const;
 
   private:
     struct Impl;

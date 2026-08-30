@@ -13,4 +13,4 @@ set_target_properties(${APP_SHELL_TARGET} PROPERTIES
     AUTORCC ON
 )
 
-target_link_libraries(${APP_SHELL_TARGET} PRIVATE vi::Appfw Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Svg)
+target_link_libraries(${APP_SHELL_TARGET} PRIVATE vi::Appfw vi::Logging Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Svg)

@@ -32,6 +32,17 @@ class V_APPFW_API ConfigCategory {
      * @return The new group, or nullptr if a group with the same name exists.
      */
     ConfigGroup* addGroup(String name);
+
+    /**
+     * @brief Returns the group with the given name, creating it if absent.
+     *
+     * Unlike addGroup() (which rejects duplicates), this never fails: repeated
+     * calls with the same name share one group node.
+     *
+     * @param name Group name.
+     * @return The existing or newly created group.
+     */
+    ConfigGroup* getOrAddGroup(String name);
     /**
      * @brief Removes the group with the given name.
      *

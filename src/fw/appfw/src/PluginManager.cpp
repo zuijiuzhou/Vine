@@ -253,7 +253,7 @@ Plugin* PluginManager::load(const String& str)
 
     // Three-phase lifecycle, aligned with loadAll(): preLoad(), then load(),
     // then postLoad() for cross-plugin wiring.
-    PluginLoadContext context(Application::current());
+    PluginLoadContext context(Application::current(), info->name);
     plugin->preLoad(&context);
     plugin->load(&context);
     plugin->postLoad(&context);
@@ -419,15 +419,18 @@ bool PluginManager::loadAll()
 
     // Step 5: three-phase lifecycle - preLoad() for every plugin (each one
     // registers its own commands), then load() for every plugin, then
-    // postLoad() for every plugin.
-    PluginLoadContext context(Application::current());
+    // postLoad() for every plugin. Each plugin gets its own context so it can
+    // query pluginName() and its own registered configs.
     for (const auto& lp : created) {
+        PluginLoadContext context(Application::current(), lp.name);
         lp.plugin->preLoad(&context);
     }
     for (const auto& lp : created) {
+        PluginLoadContext context(Application::current(), lp.name);
         lp.plugin->load(&context);
     }
     for (const auto& lp : created) {
+        PluginLoadContext context(Application::current(), lp.name);
         lp.plugin->postLoad(&context);
     }
 

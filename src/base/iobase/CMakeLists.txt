@@ -13,6 +13,7 @@ FetchContent_Declare(zlib
                     -P ${CMAKE_SOURCE_DIR}/cmake/patches/ZlibStaticOnly.cmake
 )
 set(ZLIB_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE) # No example executables.
+set(SKIP_INSTALL_ALL ON CACHE BOOL "" FORCE)     # zlib is baked into IOBase; do not install it.
 FetchContent_MakeAvailable(zlib)
 
 # libzip's find_package(ZLIB) must resolve to the zlib built above. FindZLIB

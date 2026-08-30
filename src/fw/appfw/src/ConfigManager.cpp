@@ -10,6 +10,8 @@
 #include <QStringList>
 
 #include <map>
+#include <mutex>
+#include <shared_mutex>
 #include <type_traits>
 #include <variant>
 #include <vector>
@@ -132,6 +134,7 @@ const String& ConfigChangedEventArgs::key() const
 
 struct ConfigManager::Impl {
     std::map<String, ConfigValue> values;
+    std::shared_mutex             mutex;
 };
 
 ConfigManager::ConfigManager()
@@ -145,37 +148,56 @@ ConfigManager::~ConfigManager()
 
 bool ConfigManager::contains(const String& key) const
 {
+    std::shared_lock lock(d->mutex);
     return d->values.find(key) != d->values.end();
 }
 
 void ConfigManager::remove(const String& key)
 {
-    auto it = d->values.find(key);
-    if (it == d->values.end())
-        return;
-    d->values.erase(it);
-    ConfigChangedEventArgs args(key);
-    changed.trigger(*this, args);
+    bool erased = false;
+    {
+        std::lock_guard lock(d->mutex);
+        auto it = d->values.find(key);
+        if (it != d->values.end()) {
+            d->values.erase(it);
+            erased = true;
+        }
+    }
+    if (erased) {
+        ConfigChangedEventArgs args(key);
+        changed.trigger(*this, args);
+    }
 }
 
 void ConfigManager::clear()
 {
-    if (d->values.empty())
-        return;
-    d->values.clear();
-    auto args = ConfigChangedEventArgs(String());
-    changed.trigger(*this, args);
+    bool had_values = false;
+    {
+        std::lock_guard lock(d->mutex);
+        had_values = !d->values.empty();
+        if (had_values) {
+            d->values.clear();
+        }
+    }
+    if (had_values) {
+        auto args = ConfigChangedEventArgs(String());
+        changed.trigger(*this, args);
+    }
 }
 
 void ConfigManager::setString(const String& key, const String& value)
 {
-    d->values[key] = value;
+    {
+        std::lock_guard lock(d->mutex);
+        d->values[key] = value;
+    }
     ConfigChangedEventArgs args(key);
     changed.trigger(*this, args);
 }
 
 String ConfigManager::getString(const String& key, const String& def) const
 {
+    std::shared_lock lock(d->mutex);
     auto it = d->values.find(key);
     if (it == d->values.end())
         return def;
@@ -185,13 +207,17 @@ String ConfigManager::getString(const String& key, const String& def) const
 
 void ConfigManager::setBool(const String& key, bool value)
 {
-    d->values[key] = value;
+    {
+        std::lock_guard lock(d->mutex);
+        d->values[key] = value;
+    }
     ConfigChangedEventArgs args(key);
     changed.trigger(*this, args);
 }
 
 bool ConfigManager::getBool(const String& key, bool def) const
 {
+    std::shared_lock lock(d->mutex);
     auto it = d->values.find(key);
     if (it == d->values.end())
         return def;
@@ -201,13 +227,17 @@ bool ConfigManager::getBool(const String& key, bool def) const
 
 void ConfigManager::setInt(const String& key, int value)
 {
-    d->values[key] = static_cast<int64_t>(value);
+    {
+        std::lock_guard lock(d->mutex);
+        d->values[key] = static_cast<int64_t>(value);
+    }
     ConfigChangedEventArgs args(key);
     changed.trigger(*this, args);
 }
 
 int ConfigManager::getInt(const String& key, int def) const
 {
+    std::shared_lock lock(d->mutex);
     auto it = d->values.find(key);
     if (it == d->values.end())
         return def;
@@ -217,13 +247,17 @@ int ConfigManager::getInt(const String& key, int def) const
 
 void ConfigManager::setDouble(const String& key, double value)
 {
-    d->values[key] = value;
+    {
+        std::lock_guard lock(d->mutex);
+        d->values[key] = value;
+    }
     ConfigChangedEventArgs args(key);
     changed.trigger(*this, args);
 }
 
 double ConfigManager::getDouble(const String& key, double def) const
 {
+    std::shared_lock lock(d->mutex);
     auto it = d->values.find(key);
     if (it == d->values.end())
         return def;
@@ -233,13 +267,17 @@ double ConfigManager::getDouble(const String& key, double def) const
 
 void ConfigManager::setStringArray(const String& key, const std::vector<String>& values)
 {
-    d->values[key] = values;
+    {
+        std::lock_guard lock(d->mutex);
+        d->values[key] = values;
+    }
     ConfigChangedEventArgs args(key);
     changed.trigger(*this, args);
 }
 
 std::vector<String> ConfigManager::getStringArray(const String& key) const
 {
+    std::shared_lock lock(d->mutex);
     std::vector<String> out;
     auto                it = d->values.find(key);
     if (it == d->values.end())
@@ -250,13 +288,17 @@ std::vector<String> ConfigManager::getStringArray(const String& key) const
 
 void ConfigManager::setBoolArray(const String& key, const std::vector<bool>& values)
 {
-    d->values[key] = values;
+    {
+        std::lock_guard lock(d->mutex);
+        d->values[key] = values;
+    }
     ConfigChangedEventArgs args(key);
     changed.trigger(*this, args);
 }
 
 std::vector<bool> ConfigManager::getBoolArray(const String& key) const
 {
+    std::shared_lock lock(d->mutex);
     std::vector<bool> out;
     auto              it = d->values.find(key);
     if (it == d->values.end())
@@ -270,13 +312,17 @@ void ConfigManager::setIntArray(const String& key, const std::vector<int>& value
     std::vector<int64_t> v;
     v.reserve(values.size());
     for (int x : values) v.push_back(x);
-    d->values[key] = std::move(v);
+    {
+        std::lock_guard lock(d->mutex);
+        d->values[key] = std::move(v);
+    }
     ConfigChangedEventArgs args(key);
     changed.trigger(*this, args);
 }
 
 std::vector<int> ConfigManager::getIntArray(const String& key) const
 {
+    std::shared_lock lock(d->mutex);
     std::vector<int> out;
     auto             it = d->values.find(key);
     if (it == d->values.end())
@@ -291,13 +337,17 @@ std::vector<int> ConfigManager::getIntArray(const String& key) const
 
 void ConfigManager::setDoubleArray(const String& key, const std::vector<double>& values)
 {
-    d->values[key] = values;
+    {
+        std::lock_guard lock(d->mutex);
+        d->values[key] = values;
+    }
     ConfigChangedEventArgs args(key);
     changed.trigger(*this, args);
 }
 
 std::vector<double> ConfigManager::getDoubleArray(const String& key) const
 {
+    std::shared_lock lock(d->mutex);
     std::vector<double> out;
     auto                it = d->values.find(key);
     if (it == d->values.end())
@@ -308,6 +358,7 @@ std::vector<double> ConfigManager::getDoubleArray(const String& key) const
 
 String ConfigManager::toJson() const
 {
+    std::shared_lock lock(d->mutex);
     QJsonObject obj;
     for (const auto& [key, value] : d->values) {
         QJsonObject entry;
@@ -373,9 +424,14 @@ bool ConfigManager::loadJson(const String& json)
     if (err.error != QJsonParseError::NoError || !doc.isObject())
         return false;
 
-    // replace the existing config (recursively expanding nested objects into dotted keys)
-    d->values.clear();
-    flattenJson(doc.object(), QString(), d->values);
+    // Expand nested objects into dotted keys on a local map, then swap it in
+    // under the lock so parsing never holds the mutex.
+    std::map<String, ConfigValue> parsed;
+    flattenJson(doc.object(), QString(), parsed);
+    {
+        std::lock_guard lock(d->mutex);
+        d->values = std::move(parsed);
+    }
     return true;
 }
 
