@@ -55,10 +55,11 @@ if(WIN32)
 endif()
 
 if(MSVC)
-    # equivalent to /source-charset:utf-8 /execution-charset:utf-8
-    add_compile_options(/utf-8)
-    # Enable C++ exceptions (std::get on std::variant throws std::bad_variant_access)
-    add_compile_options(/EHsc)
+    # MSVC compile options are applied per-target to the project's own code
+    # (see v_add_library / v_add_plugin / src/app / tests / third_party), NOT
+    # globally: a global add_compile_options() would leak into FetchContent
+    # dependencies (e.g. assimp sets its own /source-charset:utf-8, which
+    # conflicts with /utf-8 -> D8016).
     # Generate the linker program database (PDB) so DLLs/exes are debuggable in
     # Debug/RelWithDebInfo builds (applies to appfw, plugins, tests, ...).
     add_link_options($<$<CONFIG:Debug,RelWithDebInfo>:/DEBUG>)

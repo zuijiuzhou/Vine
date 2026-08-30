@@ -17,6 +17,13 @@ if(VINE_USE_FETCHCONTENT)
     set(ASSIMP_BUILD_SAMPLES OFF CACHE BOOL "" FORCE)
     set(ASSIMP_BUILD_ASSIMP_TOOLS OFF CACHE BOOL "" FORCE)
     set(ASSIMP_BUILD_ASSIMP_VIEW OFF CACHE BOOL "" FORCE)
+    # Do not build assimp's bundled zlib (contrib/zlib defines zlibstatic, which
+    # clashes with the zlib fetched by vi::IOBase). Use that zlibstatic instead.
+    set(ASSIMP_BUILD_ZLIB OFF CACHE BOOL "" FORCE)
+    # assimp is baked into the ModelIo DLL and never installed; skip its
+    # install(EXPORT) rules, which would fail because the zlibstatic it links
+    # is not part of assimp's export set.
+    set(ASSIMP_INSTALL OFF CACHE BOOL "" FORCE)
     FetchContent_MakeAvailable(assimp)
 
     # assimp builds itself with -Wall -Werror (code/CMakeLists.txt); clang flags
@@ -24,6 +31,12 @@ if(VINE_USE_FETCHCONTENT)
     # downgrade all warnings back to non-errors for the vendored library.
     if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
         target_compile_options(assimp PRIVATE -Wno-error)
+    endif()
+    # MSVC builds assimp with /WX (warnings-as-errors); its vendored headers
+    # trigger warnings with the current toolchain (e.g. Exceptional.h), so
+    # downgrade them to plain warnings here too.
+    if(MSVC)
+        target_compile_options(assimp PRIVATE /WX-)
     endif()
 
     v_group_targets_folder(${assimp_SOURCE_DIR} third_party)

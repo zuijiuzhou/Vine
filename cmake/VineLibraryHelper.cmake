@@ -31,6 +31,16 @@ function(v_add_library target_name_var short_name)
     else()
         add_library(${target_name} INTERFACE ${sdk_file_list} ${header_file_list} ${src_file_list} ${rc_file_list})
     endif()
+
+    # MSVC options for the project's own code only. This helper is not used by
+    # FetchContent dependencies, so a global add_compile_options() would leak
+    # into them (e.g. assimp sets its own /source-charset:utf-8, conflicting
+    # with /utf-8). UTF-8 sources, C++ exceptions, conforming preprocessor for
+    # __VA_OPT__ macros, and the real __cplusplus value.
+    if(src_file_list AND MSVC)
+        target_compile_options(${target_name}
+            PRIVATE /utf-8 /EHsc /Zc:preprocessor /Zc:__cplusplus)
+    endif()
     # 设置目标别名，仅影响build阶段，不影响install
     add_library(${target_alias} ALIAS ${target_name})
     # 设置输出文件名

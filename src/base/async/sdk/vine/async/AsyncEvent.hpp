@@ -53,10 +53,15 @@ class AsyncEvent
     }
 
     /**
-     * @brief Sets the event and resumes every waiting coroutine.
+     * @brief Sets the event and resumes the coroutines waiting when set() was
+     * called.
      *
      * The event stays set until reset(). Each awaiting coroutine is resumed
      * outside the internal mutex, on the calling thread.
+     *
+     * Only the waiters queued at the moment set() is called are released.
+     * Waiters registered afterwards (e.g. a resumed coroutine synchronously
+     * starting a new wait on the same event) wait for the next set().
      */
     void set() noexcept;
 
@@ -153,6 +158,7 @@ class AsyncEvent
 
 inline void AsyncEvent::set() noexcept
 {
+    Awaiter* boundary = nullptr;
     {
         std::lock_guard lock(mutex_);
         // Manual-reset: arm the flag exactly once, before any waiter is
@@ -160,6 +166,10 @@ inline void AsyncEvent::set() noexcept
         // reset() issued by a resumed waiter (e.g. an edge-triggered event
         // clearing itself for the next batch), so it must happen here.
         set_ = true;
+        // 代际边界：本次 set() 只释放到调用时队尾（boundary）为止。恢复期间
+        // （仍在本 set() 栈上）新入队的 waiter 属于下一代，留给下一次 set()，
+        // 否则顺序复用一个事件时会把新等待者提前唤醒。
+        boundary = tail_;
     }
     for (;;)
     {
@@ -187,8 +197,15 @@ inline void AsyncEvent::set() noexcept
         {
             break;
         }
+        // 在 resume 前记录是否到达代际边界：resume 可能销毁本协程帧（a 悬垂），
+        // 之后再比较指针是 UB；这里只比较指针值、不解引用。
+        const bool at_boundary = (a == boundary);
         assert(a->handle_);
         a->handle_.resume(); // Resume outside the lock.
+        if (at_boundary)
+        {
+            break;
+        }
     }
 }
 

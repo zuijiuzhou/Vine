@@ -9,6 +9,10 @@ file(GLOB_RECURSE RC_FILE_LIST LIST_DIRECTORIES false *.rc)
 
 qt_add_executable(${APP_TARGET_NAME} WIN32 ${SRC_FILE_LIST} ${HEADER_FILE_LIST} ${RC_FILE_LIST})
 
+if(MSVC)
+    target_compile_options(${APP_TARGET_NAME} PRIVATE /utf-8 /EHsc /Zc:preprocessor /Zc:__cplusplus)
+endif()
+
 set_target_properties(${APP_TARGET_NAME} PROPERTIES WIN32_EXECUTABLE TRUE MACOSX_BUNDLE TRUE FOLDER vine/app)
 
 target_link_libraries(${APP_TARGET_NAME} PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets vi::Appfw vi::Di vi::Global vi::Logging)

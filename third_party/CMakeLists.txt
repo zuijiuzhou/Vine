@@ -1,2 +1,5 @@
+if(MSVC)
+    add_compile_options(/utf-8 /EHsc /Zc:preprocessor /Zc:__cplusplus)
+endif()
 add_subdirectory(DockingPanes)
 add_subdirectory(SARibbon)

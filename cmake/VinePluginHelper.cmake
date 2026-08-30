@@ -32,6 +32,12 @@ function(v_add_plugin target_name_var short_name)
     # MODULE: a loadable DLL that is not linked against (no import library).
     add_library(${target_name} MODULE ${sdk_file_list} ${header_file_list} ${src_file_list} ${rc_file_list})
 
+    # MSVC options for the project's own plugin code only (see v_add_library).
+    if(MSVC)
+        target_compile_options(${target_name}
+            PRIVATE /utf-8 /EHsc /Zc:preprocessor /Zc:__cplusplus)
+    endif()
+
     # No lib prefix, grouped under vine/plugins in the solution.
     # Mirror PluginManager::defaultPluginDirectory() so plugins are found when
     # the app runs from the build tree: Windows/macOS use <exe>/plugins/vine,

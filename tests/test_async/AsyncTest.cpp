@@ -187,6 +187,20 @@ async::Task<void> awaitEventTwice(async::AsyncEvent& event, int& resumes)
     co_return;
 }
 
+async::Task<void> eventReArmOnce(async::AsyncEvent& event,
+                                 std::atomic<bool>& registered,
+                                 std::atomic<int>& woken,
+                                 std::atomic<bool>& rearmed)
+{
+    registered.store(true); // About to register the gen-1 waiter.
+    co_await event;         // Generation 1.
+    woken.fetch_add(1);
+    event.reset();          // Re-arm for the next read (VisualUserIO pattern).
+    rearmed.store(true);
+    co_await event;         // Generation 2.
+    woken.fetch_add(1);
+}
+
 async::Task<int> scheduleInline(async::InlineScheduler& scheduler)
 {
     co_await scheduler.schedule();
@@ -859,6 +873,40 @@ TEST(AsyncEventTest, ReAwaitAfterSetResumesImmediately)
     async::syncWait(std::move(task));
     setter.join();
     EXPECT_EQ(resumes, 2);
+}
+
+TEST(AsyncEventTest, SetDoesNotReleaseNextGeneration)
+{
+    // Regression: the pop-one resume loop must release only the waiters queued
+    // at set()-time. A coroutine resumed by set() that synchronously re-arms
+    // the event (reset + await, the VisualUserIO sequential-read pattern)
+    // registers a next-generation waiter; the in-flight set() must NOT wake
+    // it — it waits for the following set().
+    async::AsyncEvent event;
+    std::atomic<bool> registered{ false };
+    std::atomic<int>  woken{ 0 };
+    std::atomic<bool> rearmed{ false };
+
+    auto task = eventReArmOnce(event, registered, woken, rearmed);
+    std::thread runner([&] { async::syncWait(std::move(task)); });
+    while (!registered.load())
+    {
+        std::this_thread::yield();
+    }
+    // Let the runner finish enqueueing the gen-1 waiter and suspend.
+    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+
+    event.set(); // 1st set(): resumes gen-1 only.
+    EXPECT_EQ(woken.load(), 1);
+    EXPECT_TRUE(rearmed.load());
+
+    // The gen-2 waiter (registered on the same set() stack) must stay parked.
+    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    EXPECT_EQ(woken.load(), 1);
+
+    event.set(); // 2nd set(): resumes gen-2.
+    runner.join();
+    EXPECT_EQ(woken.load(), 2);
 }
 
 TEST(AsyncEventTest, ConcurrentSetResetStress)
