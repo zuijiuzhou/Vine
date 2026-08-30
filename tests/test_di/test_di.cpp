@@ -6,7 +6,7 @@
 #include <vine/di/Registration.hpp>
 
 using vine::RefObject;
-using vine::RefPtr;
+using vine::SPtr;
 using vine::Type;
 using vine::di::Container;
 using vine::di::Lifetime;
@@ -53,8 +53,8 @@ TEST(DiTest, TransientFactoryReturnsNewInstance)
     Container c;
     c.add(Registration::create<DiServiceA>().instanceFactory([](Type, Container&) { return new DiServiceA(); }));
 
-    RefPtr<DiServiceA> a1(static_cast<DiServiceA*>(c.resolve(DiServiceA::desc())));
-    RefPtr<DiServiceA> a2(static_cast<DiServiceA*>(c.resolve(DiServiceA::desc())));
+    SPtr<DiServiceA> a1(static_cast<DiServiceA*>(c.resolve(DiServiceA::desc())));
+    SPtr<DiServiceA> a2(static_cast<DiServiceA*>(c.resolve(DiServiceA::desc())));
     ASSERT_NE(a1.get(), nullptr);
     ASSERT_NE(a2.get(), nullptr);
     EXPECT_NE(a1.get(), a2.get());

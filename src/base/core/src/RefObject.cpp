@@ -24,6 +24,6 @@ RefObject::~RefObject() noexcept
     }
 }
 
-// Note: strong/weak ref management moved to RefPtr/WRefPtr in Ptr.hpp.
+// Note: strong/weak ref management moved to SPtr/WPtr in Ptr.hpp.
 
 V_CORE_NS_END

@@ -16,6 +16,6 @@ class V_GRAPHICS_API Geometry : public Drawable {
     ;
 };
 
-using GeometryPtr = RefPtr<Geometry>;
+using GeometryPtr = SPtr<Geometry>;
 
 V_GRAPHICS_NS_END

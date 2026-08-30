@@ -17,7 +17,7 @@ Registration& Registration::instance(RefObject* inst)
     if (inst && !inst->isKindOf(service_type_)) {
         throw vine::Exception(vine::Exception::INVALID_ARGUMENTS, u8"The 'inst' is not kind of the service type.");
     }
-    inst_     = inst;                // The container takes ownership through RefPtr.
+    inst_     = inst;                // The container takes ownership through SPtr.
     lifetime_ = Lifetime::Singleton; // A pre-set instance is inherently shared.
     return *this;
 }

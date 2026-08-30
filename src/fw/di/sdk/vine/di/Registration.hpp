@@ -50,7 +50,7 @@ class V_DI_API Registration final {
     /**
      * @brief Provides a pre-built singleton instance.
      *
-     * The container takes ownership of inst through RefPtr and the lifetime
+     * The container takes ownership of inst through SPtr and the lifetime
      * is forced to Singleton.
      *
      * @param inst Instance to serve; must be kind of the service type.
@@ -169,7 +169,7 @@ class V_DI_API Registration final {
   private:
     Type              service_type_{};
     Type              service_impl_type_{};
-    RefPtr<RefObject> inst_;
+    SPtr<RefObject> inst_;
     InstanceFactory   inst_fac_;
     Lifetime          lifetime_ = Lifetime::Transient;
 };

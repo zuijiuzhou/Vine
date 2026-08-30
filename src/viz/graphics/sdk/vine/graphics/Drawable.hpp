@@ -16,6 +16,6 @@ class V_GRAPHICS_API Drawable : public RefObject {
     ;
 };
 
-using DrawablePtr = RefPtr<Drawable>;
+using DrawablePtr = SPtr<Drawable>;
 
 V_GRAPHICS_NS_END

@@ -64,5 +64,5 @@
 // 定义类的共享指针和弱指针类型，并前向声明类
 #define V_DEFINE_PTR(ClassName)                                                                                                                                \
     class ClassName;                                                                                                                                           \
-    using ClassName##SharedPtr = RefPtr<ClassName>;                                                                                                            \
+    using ClassName##SharedPtr = SPtr<ClassName>;                                                                                                            \
     // using ClassName##WeakPtr   = std::weak_ptr<ClassName>;

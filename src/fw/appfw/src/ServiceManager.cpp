@@ -6,13 +6,13 @@
 V_APPFW_NS_BEGIN
 
 struct ServiceManager::Impl {
-    RefPtr<di::Container> container;
+    SPtr<di::Container> container;
 };
 
 ServiceManager::ServiceManager()
   : d(new Impl())
 {
-    d->container = RefPtr<di::Container>(new di::Container());
+    d->container = SPtr<di::Container>(new di::Container());
 }
 
 ServiceManager::~ServiceManager()

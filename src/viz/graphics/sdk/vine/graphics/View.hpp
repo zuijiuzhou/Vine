@@ -22,6 +22,6 @@ class V_GRAPHICS_API View : public RefObject {
     ;
 };
 
-using ViewPtr = RefPtr<View>;
+using ViewPtr = SPtr<View>;
 
 V_GRAPHICS_NS_END

@@ -26,7 +26,7 @@ V_OBJECT_META_IMPL(Container, RefObject)
 
 struct Container::Impl {
     std::unordered_map<Type, Registration>      regs;       // Keyed by service type.
-    std::unordered_map<Type, RefPtr<RefObject>> singletons; // Lazily created singleton cache.
+    std::unordered_map<Type, SPtr<RefObject>> singletons; // Lazily created singleton cache.
 };
 
 Container::Container()

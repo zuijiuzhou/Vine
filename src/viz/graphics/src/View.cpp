@@ -7,7 +7,7 @@ V_GRAPHICS_NS_BEGIN
 V_OBJECT_META_IMPL(View, RefObject)
 
 struct View::Data {
-    RefPtr<Scene> scene;
+    SPtr<Scene> scene;
 };
 
 View::View()

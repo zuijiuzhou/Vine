@@ -7,9 +7,9 @@
 V_CORE_NS_BEGIN
 
 template <typename>
-class RefPtr;
+class SPtr;
 template <typename>
-class WRefPtr;
+class WPtr;
 
 class RefObject;
 
@@ -32,17 +32,17 @@ class V_CORE_API RefObject : public Object {
     RefObject() noexcept;
     virtual ~RefObject() noexcept;
 
-    // Control block is private; RefPtr/WRefPtr are friends and may
+    // Control block is private; SPtr/WPtr are friends and may
     // access `cb_` directly. Do not expose it publicly.
 
   public:
-    // Reference management functions moved to Ptr.hpp (RefPtr/WRefPtr).
-    // Use RefPtr<T> and WRefPtr<T> to manage strong/weak references.
+    // Reference management functions moved to Ptr.hpp (SPtr/WPtr).
+    // Use SPtr<T> and WPtr<T> to manage strong/weak references.
 
   private:
   private:
     // Control block holds atomic strong/weak counters. Kept private
-    // inside RefObject; RefPtr/WRefPtr are declared friends so they
+    // inside RefObject; SPtr/WPtr are declared friends so they
     // can manage the counters without exposing them publicly.
     struct PtrControlBlock {
         std::atomic<unsigned int> strong_refs{ 0 };
@@ -52,9 +52,9 @@ class V_CORE_API RefObject : public Object {
     PtrControlBlock* cb_;
 
     template <typename U>
-    friend class RefPtr;
+    friend class SPtr;
     template <typename U>
-    friend class WRefPtr;
+    friend class WPtr;
 };
 
 // class V_CORE_API RefObjectPrivate {

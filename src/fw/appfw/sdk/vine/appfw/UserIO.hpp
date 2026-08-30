@@ -80,6 +80,6 @@ class V_APPFW_API UserIO : public Object {
     CommandManager* command_manager_{ nullptr };
 };
 
-using UserIOPtr = RefPtr<UserIO>;
+using UserIOPtr = SPtr<UserIO>;
 
 V_APPFW_NS_END

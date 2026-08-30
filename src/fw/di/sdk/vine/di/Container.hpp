@@ -18,9 +18,9 @@ V_DEFINE_PTR(Container)
  * creation; a transient instance is re-created on every resolve call.
  *
  * The container is Qt-free and depends only on the core runtime type system
- * (Type / RefObject / RefPtr). resolve() returns a non-owning raw pointer:
+ * (Type / RefObject / SPtr). resolve() returns a non-owning raw pointer:
  * the container keeps ownership of pre-set and singleton instances, while a
- * transient instance must be adopted by the caller through RefPtr.
+ * transient instance must be adopted by the caller through SPtr.
  */
 class V_DI_API Container : public RefObject {
     V_OBJECT_META_DECL

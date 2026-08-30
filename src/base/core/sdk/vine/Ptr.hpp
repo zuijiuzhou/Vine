@@ -4,52 +4,53 @@
 
 #include "RefObject.hpp"
 #include <atomic>
+#include <memory>
 
 V_CORE_NS_BEGIN
 
 template <typename T>
-class RefPtr {
+class SPtr {
   private:
     template <typename TOther>
-    friend class RefPtr;
+    friend class SPtr;
 
   public:
     /**
      * Construct from raw pointer without modifying the strong refcount.
-     * This is intended for internal use by `WRefPtr::lock()` after it
+     * This is intended for internal use by `WPtr::lock()` after it
      * atomically incremented the strong count.
      */
-    RefPtr(T* ptr, bool addRef)
+    SPtr(T* ptr, bool addRef)
       : ptr_(ptr)
     {
         if (ptr_ && addRef) {
-            static_assert(std::is_base_of_v<RefObject, T>, "RefPtr requires RefObject-based T");
+            static_assert(std::is_base_of_v<RefObject, T>, "SPtr requires RefObject-based T");
             auto* cb = static_cast<RefObject*>(ptr_)->cb_;
             if (cb)
                 cb->strong_refs.fetch_add(1, std::memory_order_relaxed);
         }
     }
 
-    RefPtr()
+    SPtr()
       : ptr_(nullptr)
     {}
 
-    RefPtr(T* ptr)
+    SPtr(T* ptr)
       : ptr_(ptr)
     {
         if (ptr_) {
-            static_assert(std::is_base_of_v<RefObject, T>, "RefPtr requires RefObject-based T");
+            static_assert(std::is_base_of_v<RefObject, T>, "SPtr requires RefObject-based T");
             auto* cb = static_cast<RefObject*>(ptr_)->cb_;
             if (cb)
                 cb->strong_refs.fetch_add(1, std::memory_order_relaxed);
         }
     }
 
-    RefPtr(const RefPtr& other)
+    SPtr(const SPtr& other)
       : ptr_(other.ptr_)
     {
         if (ptr_) {
-            static_assert(std::is_base_of_v<RefObject, T>, "RefPtr requires RefObject-based T");
+            static_assert(std::is_base_of_v<RefObject, T>, "SPtr requires RefObject-based T");
             auto* cb = static_cast<RefObject*>(ptr_)->cb_;
             if (cb)
                 cb->strong_refs.fetch_add(1, std::memory_order_relaxed);
@@ -57,21 +58,21 @@ class RefPtr {
     }
 
     template <typename TOther>
-    RefPtr(const RefPtr<TOther>& other)
+    SPtr(const SPtr<TOther>& other)
       : ptr_(other.ptr_)
     {
         if (ptr_) {
-            static_assert(std::is_base_of_v<RefObject, T>, "RefPtr requires RefObject-based T");
+            static_assert(std::is_base_of_v<RefObject, T>, "SPtr requires RefObject-based T");
             auto* cb = static_cast<RefObject*>(ptr_)->cb_;
             if (cb)
                 cb->strong_refs.fetch_add(1, std::memory_order_relaxed);
         }
     }
 
-    ~RefPtr()
+    ~SPtr()
     {
         if (ptr_) {
-            static_assert(std::is_base_of_v<RefObject, T>, "RefPtr requires RefObject-based T");
+            static_assert(std::is_base_of_v<RefObject, T>, "SPtr requires RefObject-based T");
             auto* cb = static_cast<RefObject*>(ptr_)->cb_;
             if (cb) {
                 if (cb->strong_refs.fetch_sub(1, std::memory_order_acq_rel) == 1)
@@ -92,7 +93,7 @@ class RefPtr {
         if (ptr == ptr_)
             return;
         if (ptr_) {
-            static_assert(std::is_base_of_v<RefObject, T>, "RefPtr requires RefObject-based T");
+            static_assert(std::is_base_of_v<RefObject, T>, "SPtr requires RefObject-based T");
             auto* cb = static_cast<RefObject*>(ptr_)->cb_;
             if (cb) {
                 if (cb->strong_refs.fetch_sub(1, std::memory_order_acq_rel) == 1)
@@ -104,7 +105,7 @@ class RefPtr {
         }
         ptr_ = ptr;
         if (ptr_) {
-            static_assert(std::is_base_of_v<RefObject, T>, "RefPtr requires RefObject-based T");
+            static_assert(std::is_base_of_v<RefObject, T>, "SPtr requires RefObject-based T");
             auto* cb = static_cast<RefObject*>(ptr_)->cb_;
             if (cb)
                 cb->strong_refs.fetch_add(1, std::memory_order_relaxed);
@@ -115,7 +116,7 @@ class RefPtr {
     {
         auto temp = ptr_;
         if (ptr_) {
-            static_assert(std::is_base_of_v<RefObject, T>, "RefPtr requires RefObject-based T");
+            static_assert(std::is_base_of_v<RefObject, T>, "SPtr requires RefObject-based T");
             auto* cb = static_cast<RefObject*>(ptr_)->cb_;
             if (cb) {
                 cb->strong_refs.fetch_sub(1, std::memory_order_acq_rel);
@@ -125,7 +126,7 @@ class RefPtr {
         return temp;
     }
 
-    void swap(RefPtr& other)
+    void swap(SPtr& other)
     { std::swap(ptr_, other.ptr_); }
 
   public:
@@ -138,51 +139,51 @@ class RefPtr {
     T& operator*() const
     { return *ptr_; }
 
-    RefPtr& operator=(const RefPtr& right)
+    SPtr& operator=(const SPtr& right)
     {
         set(right.ptr_);
         return *this;
     }
 
     template <typename TOther>
-    RefPtr& operator=(const RefPtr<TOther>& right)
+    SPtr& operator=(const SPtr<TOther>& right)
     {
         set(right.ptr_);
         return *this;
     }
 
     template <typename TOther>
-    RefPtr& operator=(TOther* ptr)
+    SPtr& operator=(TOther* ptr)
     {
         set(ptr);
         return *this;
     }
 
-    bool operator==(const RefPtr& right) const
+    bool operator==(const SPtr& right) const
     { return ptr_ == right.ptr_; }
 
     bool operator==(const T* right) const
     { return ptr_ == right; }
 
-    friend bool operator==(const T* left, const RefPtr& right)
+    friend bool operator==(const T* left, const SPtr& right)
     { return left == right.ptr_; }
 
-    bool operator!=(const RefPtr& right) const
+    bool operator!=(const SPtr& right) const
     { return ptr_ != right.ptr_; }
 
     bool operator!=(const T* right) const
     { return ptr_ != right; }
 
-    friend bool operator!=(const T* left, const RefPtr& right)
+    friend bool operator!=(const T* left, const SPtr& right)
     { return left != right.ptr_; }
 
-    bool operator<(const RefPtr<T>& right) const
+    bool operator<(const SPtr<T>& right) const
     { return ptr_ < right.ptr_; }
 
     bool operator<(const T* right) const
     { return ptr_ < right; }
 
-    bool operator>(const RefPtr<T>& right) const
+    bool operator>(const SPtr<T>& right) const
     { return ptr_ > right.ptr_; }
 
     bool operator>(const T* right) const
@@ -196,18 +197,18 @@ class RefPtr {
 };
 
 template <typename T>
-class WRefPtr {
+class WPtr {
   private:
     template <typename TOther>
-    friend class WRefPtr;
+    friend class WPtr;
 
   public:
-    WRefPtr()
+    WPtr()
       : ptr_(nullptr)
       , cb_(nullptr)
     {}
 
-    explicit WRefPtr(T* ptr)
+    explicit WPtr(T* ptr)
       : ptr_(ptr)
       , cb_(ptr ? static_cast<RefObject*>(ptr)->cb_ : nullptr)
     {
@@ -215,7 +216,7 @@ class WRefPtr {
             cb_->weak_refs.fetch_add(1, std::memory_order_relaxed);
     }
 
-    WRefPtr(const RefPtr<T>& rp)
+    WPtr(const SPtr<T>& rp)
       : ptr_(rp.get())
       , cb_(ptr_ ? static_cast<RefObject*>(ptr_)->cb_ : nullptr)
     {
@@ -223,7 +224,7 @@ class WRefPtr {
             cb_->weak_refs.fetch_add(1, std::memory_order_relaxed);
     }
 
-    WRefPtr(const WRefPtr& other)
+    WPtr(const WPtr& other)
       : ptr_(other.ptr_)
       , cb_(other.cb_)
     {
@@ -231,13 +232,13 @@ class WRefPtr {
             cb_->weak_refs.fetch_add(1, std::memory_order_relaxed);
     }
 
-    ~WRefPtr()
+    ~WPtr()
     {
         if (cb_ && cb_->weak_refs.fetch_sub(1, std::memory_order_acq_rel) == 1)
             delete cb_;
     }
 
-    WRefPtr& operator=(const WRefPtr& right)
+    WPtr& operator=(const WPtr& right)
     {
         if (*this == right)
             return *this;
@@ -250,16 +251,16 @@ class WRefPtr {
         return *this;
     }
 
-    RefPtr<T> lock() const
+    SPtr<T> lock() const
     {
         if (!cb_ || !ptr_)
-            return RefPtr<T>();
+            return SPtr<T>();
 
         unsigned int s = cb_->strong_refs.load(std::memory_order_acquire);
         while (s != 0) {
-            if (cb_->strong_refs.compare_exchange_weak(s, s + 1, std::memory_order_acq_rel, std::memory_order_acquire)) { return RefPtr<T>(ptr_, false); }
+            if (cb_->strong_refs.compare_exchange_weak(s, s + 1, std::memory_order_acq_rel, std::memory_order_acquire)) { return SPtr<T>(ptr_, false); }
         }
-        return RefPtr<T>();
+        return SPtr<T>();
     }
 
   private:
@@ -267,10 +268,10 @@ class WRefPtr {
     RefObject::PtrControlBlock* cb_;
 
   public:
-    bool operator==(const WRefPtr& right) const
+    bool operator==(const WPtr& right) const
     { return ptr_ == right.ptr_ && cb_ == right.cb_; }
 
-    bool operator!=(const WRefPtr& right) const
+    bool operator!=(const WPtr& right) const
     { return ptr_ != right.ptr_ || cb_ != right.cb_; }
 
     bool operator==(const T* right) const
@@ -279,10 +280,10 @@ class WRefPtr {
     bool operator!=(const T* right) const
     { return ptr_ != right; }
 
-    friend bool operator==(const T* left, const WRefPtr& right)
+    friend bool operator==(const T* left, const WPtr& right)
     { return left == right.ptr_; }
 
-    friend bool operator!=(const T* left, const WRefPtr& right)
+    friend bool operator!=(const T* left, const WPtr& right)
     { return left != right.ptr_; }
 
     bool hasValue() const
@@ -293,17 +294,36 @@ class WRefPtr {
 };
 
 template <typename T, typename Y>
-inline RefPtr<T> static_pointer_cast(const RefPtr<Y>& rp)
+inline SPtr<T> static_pointer_cast(const SPtr<Y>& rp)
 { return static_cast<T*>(rp.get()); }
 
 template <typename T, typename Y>
-inline RefPtr<T> dynamic_pointer_cast(const RefPtr<Y>& rp)
+inline SPtr<T> dynamic_pointer_cast(const SPtr<Y>& rp)
 { return dynamic_cast<T*>(rp.get()); }
 
 template <typename T, typename Y>
-inline RefPtr<T> const_pointer_cast(const RefPtr<Y>& rp)
+inline SPtr<T> const_pointer_cast(const SPtr<Y>& rp)
 { return const_cast<T*>(rp.get()); }
+
+/**
+ * @brief Raw, non-owning pointer alias.
+ *
+ * RPtr<T> is a plain T*; it completes the S/W/R/U pointer family alongside
+ * SPtr (strong, owning), WPtr (weak, non-owning) and UPtr (unique, owning).
+ */
+template <typename T>
+using RPtr = T*;
+
+/**
+ * @brief Unique-ownership pointer alias.
+ *
+ * UPtr<T> is a std::unique_ptr<T>; it completes the S/W/R/U pointer family
+ * alongside SPtr (strong, owning), WPtr (weak, non-owning) and RPtr (raw,
+ * non-owning).
+ */
+template <typename T>
+using UPtr = std::unique_ptr<T>;
 
 V_CORE_NS_END
 
-#define V_PTR(ClassName) RefPtr<ClassName>
+#define V_PTR(ClassName) SPtr<ClassName>
