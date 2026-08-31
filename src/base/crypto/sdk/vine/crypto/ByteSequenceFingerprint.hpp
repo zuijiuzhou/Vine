@@ -4,6 +4,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <filesystem>
 #include <functional>
 #include <iosfwd>
@@ -98,6 +99,29 @@ class V_CRYPTO_API ByteSequenceFingerprint
      * @return true if the fingerprints differ.
      */
     bool operator!=(const ByteSequenceFingerprint& rhs) const noexcept;
+
+    /**
+     * @brief Compares two fingerprints for ordering.
+     *
+     * Lexicographic over (mode, size, bytes); consistent with operator==, so
+     * fingerprints equal under == never order one below the other. Enables
+     * use as a std::map key (e.g. vine::runtime::InMemoryCache).
+     *
+     * @param rhs The fingerprint to compare with.
+     * @return true when this fingerprint precedes rhs.
+     */
+    bool operator<(const ByteSequenceFingerprint& rhs) const noexcept
+    {
+        if (mode_ != rhs.mode_)
+        {
+            return mode_ < rhs.mode_;
+        }
+        if (size_ != rhs.size_)
+        {
+            return size_ < rhs.size_;
+        }
+        return std::memcmp(fingerprint_.data(), rhs.fingerprint_.data(), kFingerprintSize) < 0;
+    }
 
     /**
      * @brief Returns the fingerprint generation mode.

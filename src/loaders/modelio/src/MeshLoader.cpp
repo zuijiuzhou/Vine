@@ -210,11 +210,12 @@ vine::IntrusivePtr<Mesh> MeshLoader::load(const std::filesystem::path& file_path
     }
 
     const vine::crypto::ByteSequenceFingerprint fingerprint(file_path);
-    const auto                                  cache_it = cache_.find(fingerprint);
-    if (cache_it != cache_.end()) {
-        const auto& cached = cache_it->second.option_shape_map;
-        const auto  it     = cached.find(options_);
-        if (it != cached.end()) {
+    if (auto cached = cache_.get(fingerprint))
+    {
+        const auto& option_map = cached->option_shape_map;
+        const auto  it         = option_map.find(options_);
+        if (it != option_map.end())
+        {
             return it->second;
         }
     }
@@ -237,8 +238,11 @@ vine::IntrusivePtr<Mesh> MeshLoader::load(const std::filesystem::path& file_path
     mergeAssimpScene(*mesh, scene);
     applyScale(options_, *mesh);
 
-    if (fingerprint) {
-        cache_[fingerprint].option_shape_map.insert_or_assign(options_, mesh);
+    if (fingerprint)
+    {
+        auto cached = cache_.get(fingerprint).value_or(CacheData{});
+        cached.option_shape_map.insert_or_assign(options_, mesh);
+        cache_.set(fingerprint, std::move(cached), -1);
     }
 
     return mesh;

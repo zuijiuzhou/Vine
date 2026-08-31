@@ -10,6 +10,7 @@
 #include <vine/IntrusivePtr.hpp>
 #include <vine/crypto/ByteSequenceFingerprint.hpp>
 #include <vine/geometry/BrepShape.hpp>
+#include <vine/runtime/InMemoryCache.hpp>
 
 V_MODELIO_NS_BEGIN
 
@@ -124,8 +125,7 @@ class V_MODELIO_API BrepLoader
     // 字段区块
   private:
     Options options_;
-    std::unordered_map<vine::crypto::ByteSequenceFingerprint, CacheData, std::hash<vine::crypto::ByteSequenceFingerprint>>
-        cache_;
+    vine::runtime::InMemoryCache<vine::crypto::ByteSequenceFingerprint, CacheData> cache_;
 };
 
 V_MODELIO_NS_END
