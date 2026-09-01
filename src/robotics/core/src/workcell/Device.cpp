@@ -33,6 +33,11 @@ void Device::initDevice(std::unique_ptr<DeviceData> data)
 
     owned_data_ = std::move(data);
 
+    // 定义数据可指定设备类型(如加载出的 Manipulator/ExternalAxis), 未指定时保留子类默认
+    if (owned_data_ && owned_data_->kind != DeviceKind::Other) {
+        device_kind_ = owned_data_->kind;
+    }
+
     links_.clear();
     joints_.clear();
     ends_.clear();
@@ -192,7 +197,9 @@ void Device::setQ(const kinematics::Q& q, kinematics::State& state)
 
 void DeviceData::copyBaseFrom(const DeviceData& other)
 {
-    metadata = other.metadata;
+    metadata  = other.metadata;
+    kind      = other.kind;
+    materials = other.materials;
 
     // 深拷贝连杆并建立 旧->新 映射
     std::unordered_map<const Link*, Link*> link_map;

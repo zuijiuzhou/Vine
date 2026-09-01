@@ -3,12 +3,16 @@
 #include <vine/robotics/robot_core_global.hpp>
 
 #include <cstddef>
+#include <filesystem>
 #include <memory>
 #include <vector>
 
 #include <vine/String.hpp>
+#include <vine/geometry/Material.hpp>
+#include <vine/intrusive_ptr.hpp>
 #include <vine/raw_ptr.hpp>
 #include <vine/robotics/kinematics/Frame.hpp>
+#include <vine/robotics/kinematics/KinematicsBase.hpp>
 #include <vine/robotics/kinematics/Q.hpp>
 #include <vine/robotics/kinematics/State.hpp>
 
@@ -38,11 +42,25 @@ enum class DeviceKind
 };
 
 /**
+ * @brief Length unit of a device file's coordinates.
+ *
+ * The value is used as a scale-factor ratio: converting a length from unit A
+ * to unit B multiplies by value(B) / value(A).
+ */
+enum class LengthUnit
+{
+    /// Meter.
+    Meter = 1,
+    /// Millimeter (in-memory default).
+    Millimeter = 1000,
+};
+
+/**
  * @brief Device metadata (identity / product / version information).
  *
  * name is the original device name (not the instance name). Serialization
- * related fields (timestamps, length unit, default IK solver) are intentionally
- * not modeled yet.
+ * fields (timestamps, length unit, default IK solver) are carried here so
+ * the IO layer can round-trip them.
  */
 struct V_ROBOTICS_CORE_API DeviceMetadata
 {
@@ -58,6 +76,25 @@ struct V_ROBOTICS_CORE_API DeviceMetadata
     String author;
     // 版本信息
     String version;
+    // 序列化信息
+    String                   create_time;
+    String                   modified_time;
+    LengthUnit               length_unit{ LengthUnit::Millimeter };
+    kinematics::IKSolverType ik_solver_type{ kinematics::IKSolverType::Iterative };
+};
+
+/**
+ * @brief A named material in a device's material library.
+ *
+ * Visuals reference device materials by name; the material object is shared
+ * between the library and the referencing visuals.
+ */
+struct V_ROBOTICS_CORE_API DeviceMaterial
+{
+    /// Material name (unique within a device).
+    String name;
+    /// The material object.
+    vine::intrusive_ptr<vine::geometry::Material> material;
 };
 
 /**
@@ -74,6 +111,9 @@ struct V_ROBOTICS_CORE_API DeviceMetadata
 struct V_ROBOTICS_CORE_API DeviceData
 {
     DeviceMetadata                                  metadata;
+    DeviceKind                                      kind{ DeviceKind::Other };
+    /// Named material library; visuals reference these by name.
+    std::vector<DeviceMaterial>                     materials;
     std::vector<std::unique_ptr<Link>>              links;
     std::vector<std::unique_ptr<Joint>>             joints;
 
@@ -177,6 +217,28 @@ class V_ROBOTICS_CORE_API Device : public SceneObject
     const String& modelName() const;
 
     /**
+     * @brief Returns the source file path this device was loaded from.
+     *
+     * @return The source file path, empty when not loaded from a file.
+     */
+    const std::filesystem::path& filePath() const
+    {
+        return file_path_;
+    }
+
+    /**
+     * @brief Sets the source file path this device was loaded from.
+     *
+     * Used by the IO layer to enable device-file dedup on export.
+     *
+     * @param path The source file path.
+     */
+    void setFilePath(const std::filesystem::path& path)
+    {
+        file_path_ = path;
+    }
+
+    /**
      * @brief Returns the device metadata.
      *
      * @return The metadata, empty when the device is not initialized.
@@ -216,6 +278,19 @@ class V_ROBOTICS_CORE_API Device : public SceneObject
     const DeviceData* data() const
     {
         return owned_data_.get();
+    }
+
+    /**
+     * @brief Returns the device's named material library.
+     *
+     * Visuals reference these materials by name.
+     *
+     * @return The materials, empty when the device is not initialized.
+     */
+    const std::vector<DeviceMaterial>& materials() const
+    {
+        static const std::vector<DeviceMaterial> s_empty;
+        return owned_data_ ? owned_data_->materials : s_empty;
     }
 
     /**
@@ -322,6 +397,7 @@ class V_ROBOTICS_CORE_API Device : public SceneObject
 
   private:
     DeviceKind                              device_kind_{ DeviceKind::Other };
+    std::filesystem::path                   file_path_;
     std::unique_ptr<DeviceData>             owned_data_;
     std::vector<raw_ptr<Link>>              links_;
     std::vector<raw_ptr<Joint>>             joints_;

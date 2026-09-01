@@ -73,6 +73,15 @@ bool ZipArchive::addFile(const String& name, const std::vector<unsigned char>& d
     return addFile(name, data.data(), data.size());
 }
 
+bool ZipArchive::addFile(const String& name, const std::filesystem::path& src_path)
+{
+    if (name.empty() || src_path.empty()) {
+        return false;
+    }
+    entries_.push_back({ name, {}, src_path, true });
+    return true;
+}
+
 bool ZipArchive::addDirectory(const std::filesystem::path& dir_path)
 {
     std::error_code ec;
@@ -121,26 +130,31 @@ bool ZipArchive::addDirectory(const std::filesystem::path& dir_path)
 
 bool ZipArchive::save(const std::filesystem::path& path)
 {
-    const std::string path_utf8 = toUtf8(path);
-    int               error     = 0;
-    zip_t* const      archive   = zip_open(path_utf8.c_str(), ZIP_CREATE | ZIP_TRUNCATE, &error);
-    if (archive == nullptr) {
+    std::vector<unsigned char> bytes;
+    if (!buildZip(bytes)) {
         return false;
     }
-    bool ok = true;
-    for (const Entry& entry : entries_) {
-        const auto*     name   = reinterpret_cast<const char*>(entry.name.data());
-        zip_source_t* const source = zip_source_buffer(archive, entry.data.data(), entry.data.size(), 0);
-        if (source == nullptr || zip_file_add(archive, name, source, ZIP_FL_ENC_UTF_8) < 0) {
-            zip_source_free(source);
-            ok = false;
-            break;
-        }
+    std::ofstream out(path, std::ios::binary);
+    if (!out) {
+        return false;
     }
-    if (zip_close(archive) < 0) {
-        ok = false;
+    out.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+    return out.good();
+}
+
+bool ZipArchive::save(std::vector<unsigned char>& out)
+{
+    return buildZip(out);
+}
+
+bool ZipArchive::save(std::ostream& out)
+{
+    std::vector<unsigned char> bytes;
+    if (!buildZip(bytes)) {
+        return false;
     }
-    return ok;
+    out.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+    return out.good();
 }
 
 std::vector<String> ZipArchive::entryNames(const std::filesystem::path& path)
@@ -161,6 +175,38 @@ std::vector<String> ZipArchive::entryNames(const std::filesystem::path& path)
         }
     }
     zip_close(archive);
+    return names;
+}
+
+std::vector<String> ZipArchive::entryNames(const void* data, std::size_t size)
+{
+    std::vector<String> names;
+    if (data == nullptr) {
+        return names;
+    }
+    zip_error_t error;
+    zip_error_init(&error);
+    zip_source_t* const source = zip_source_buffer_create(data, size, 0, &error);
+    if (source == nullptr) {
+        zip_error_fini(&error);
+        return names;
+    }
+    zip_t* const archive = zip_open_from_source(source, ZIP_RDONLY, &error);
+    if (archive == nullptr) {
+        zip_source_free(source);
+        zip_error_fini(&error);
+        return names;
+    }
+    const zip_int64_t count = zip_get_num_entries(archive, 0);
+    for (zip_int64_t i = 0; i < count; ++i) {
+        struct zip_stat st;
+        zip_stat_init(&st);
+        if (zip_stat_index(archive, i, 0, &st) == 0 && st.name != nullptr) {
+            names.push_back(fromEntryName(st.name, std::strlen(st.name)));
+        }
+    }
+    zip_close(archive);
+    zip_error_fini(&error);
     return names;
 }
 
@@ -269,6 +315,139 @@ bool ZipArchive::readEntry(const std::filesystem::path& path, const String& name
     zip_fclose(file);
     zip_close(archive);
     if (total != st.size) {
+        out.clear();
+        return false;
+    }
+    return true;
+}
+
+bool ZipArchive::readEntry(const void* data, std::size_t size, const String& name, std::vector<unsigned char>& out)
+{
+    if (data == nullptr || name.empty()) {
+        return false;
+    }
+    zip_error_t error;
+    zip_error_init(&error);
+    zip_source_t* const source = zip_source_buffer_create(data, size, 0, &error);
+    if (source == nullptr) {
+        zip_error_fini(&error);
+        return false;
+    }
+    zip_t* const archive = zip_open_from_source(source, ZIP_RDONLY, &error);
+    if (archive == nullptr) {
+        zip_source_free(source);
+        zip_error_fini(&error);
+        return false;
+    }
+    const auto*       name_utf8 = reinterpret_cast<const char*>(name.data());
+    const zip_int64_t index     = zip_name_locate(archive, name_utf8, ZIP_FL_ENC_UTF_8);
+    if (index < 0) {
+        zip_close(archive);
+        zip_error_fini(&error);
+        return false;
+    }
+    struct zip_stat st;
+    zip_stat_init(&st);
+    if (zip_stat_index(archive, index, 0, &st) != 0) {
+        zip_close(archive);
+        zip_error_fini(&error);
+        return false;
+    }
+    zip_file_t* const file = zip_fopen_index(archive, index, 0);
+    if (file == nullptr) {
+        zip_close(archive);
+        zip_error_fini(&error);
+        return false;
+    }
+    out.clear();
+    out.resize(static_cast<std::size_t>(st.size));
+    zip_uint64_t total = 0;
+    while (total < st.size) {
+        const zip_int64_t n = zip_fread(file, out.data() + total, st.size - total);
+        if (n <= 0) {
+            break;
+        }
+        total += static_cast<zip_uint64_t>(n);
+    }
+    zip_fclose(file);
+    zip_close(archive);
+    zip_error_fini(&error);
+    if (total != st.size) {
+        out.clear();
+        return false;
+    }
+    return true;
+}
+
+bool ZipArchive::buildZip(std::vector<unsigned char>& out)
+{
+    out.clear();
+    zip_error_t error;
+    zip_error_init(&error);
+    // Growable in-memory source; kept alive past zip_close() to read it back.
+    zip_source_t* const source = zip_source_buffer_create(nullptr, 0, 1, &error);
+    if (source == nullptr) {
+        zip_error_fini(&error);
+        return false;
+    }
+    zip_t* const archive = zip_open_from_source(source, ZIP_CREATE | ZIP_TRUNCATE, &error);
+    if (archive == nullptr) {
+        zip_source_free(source);
+        zip_error_fini(&error);
+        return false;
+    }
+    zip_source_keep(source);
+
+    bool ok = true;
+    // File-backed entries are buffered here so their bytes stay alive until
+    // zip_close() compresses them (freep=0 sources do not copy the data).
+    std::vector<std::vector<unsigned char>> file_backed;
+    file_backed.reserve(entries_.size());
+    for (const Entry& entry : entries_) {
+        const char*  name  = reinterpret_cast<const char*>(entry.name.data());
+        const void*  bytes = entry.data.data();
+        zip_uint64_t len   = static_cast<zip_uint64_t>(entry.data.size());
+        if (entry.from_file) {
+            std::ifstream in(entry.src, std::ios::binary);
+            if (!in) {
+                ok = false;
+                break;
+            }
+            file_backed.push_back(readStream(in));
+            bytes = file_backed.back().data();
+            len   = static_cast<zip_uint64_t>(file_backed.back().size());
+        }
+        zip_source_t* const entry_source = zip_source_buffer(archive, bytes, len, 0);
+        if (entry_source == nullptr || zip_file_add(archive, name, entry_source, ZIP_FL_ENC_UTF_8) < 0) {
+            zip_source_free(entry_source);
+            ok = false;
+            break;
+        }
+    }
+
+    if (ok && zip_close(archive) < 0) {
+        ok = false;
+    }
+    if (!ok) {
+        zip_source_free(source);
+        zip_error_fini(&error);
+        return false;
+    }
+
+    // Read the final archive bytes back from the (kept) buffer source.
+    struct zip_stat st;
+    zip_stat_init(&st);
+    if (zip_source_stat(source, &st) < 0 || zip_source_open(source) < 0) {
+        zip_source_free(source);
+        zip_error_fini(&error);
+        return false;
+    }
+    out.resize(static_cast<std::size_t>(st.size));
+    const zip_uint64_t got = static_cast<zip_uint64_t>(zip_source_read(source, out.data(), st.size));
+    zip_source_close(source);
+    zip_source_free(source);
+    zip_error_fini(&error);
+    if (got != st.size) {
         out.clear();
         return false;
     }

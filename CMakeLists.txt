@@ -76,6 +76,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 add_subdirectory(third_party)
 add_subdirectory(src)
+add_subdirectory(tools/urdf2vine)
 
 if(WIN32)
     include(VineDeployQt)

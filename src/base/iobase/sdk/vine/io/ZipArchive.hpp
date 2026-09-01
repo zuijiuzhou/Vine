@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <filesystem>
+#include <ostream>
 #include <vector>
 
 #include <vine/String.hpp>
@@ -45,6 +46,18 @@ class V_IOBASE_API ZipArchive
     bool addFile(const String& name, const std::vector<unsigned char>& data);
 
     /**
+     * @brief Adds a file-backed archive entry.
+     *
+     * The source file is only read when save() runs, so large resources do
+     * not have to be buffered in memory up front.
+     *
+     * @param name Entry name, using '/' separators.
+     * @param src_path Physical file to store.
+     * @return true on success.
+     */
+    bool addFile(const String& name, const std::filesystem::path& src_path);
+
+    /**
      * @brief Recursively adds all files under a directory.
      *
      * Entry names are relative to dir_path and use '/' separators. Empty
@@ -64,12 +77,37 @@ class V_IOBASE_API ZipArchive
     bool save(const std::filesystem::path& path);
 
     /**
+     * @brief Writes the added entries into an in-memory ZIP buffer.
+     *
+     * @param out Receives the ZIP bytes.
+     * @return true on success.
+     */
+    bool save(std::vector<unsigned char>& out);
+
+    /**
+     * @brief Writes the added entries as ZIP bytes into an output stream.
+     *
+     * @param out Target output stream.
+     * @return true on success.
+     */
+    bool save(std::ostream& out);
+
+    /**
      * @brief Lists the entry names stored in a ZIP file.
      *
      * @param path Input .zip file path.
      * @return Entry names, or empty on failure.
      */
     static std::vector<String> entryNames(const std::filesystem::path& path);
+
+    /**
+     * @brief Lists the entry names stored in an in-memory ZIP.
+     *
+     * @param data ZIP bytes.
+     * @param size Number of bytes.
+     * @return Entry names, or empty on failure.
+     */
+    static std::vector<String> entryNames(const void* data, std::size_t size);
 
     /**
      * @brief Decompresses all entries of a ZIP file into a directory.
@@ -92,11 +130,35 @@ class V_IOBASE_API ZipArchive
      */
     static bool readEntry(const std::filesystem::path& path, const String& name, std::vector<unsigned char>& out);
 
+    /**
+     * @brief Reads one entry of an in-memory ZIP into a buffer.
+     *
+     * @param data ZIP bytes.
+     * @param size Number of bytes.
+     * @param name Entry name to read.
+     * @param out Receives the entry bytes.
+     * @return true on success.
+     */
+    static bool readEntry(const void* data, std::size_t size, const String& name,
+                          std::vector<unsigned char>& out);
+
   private:
+    /**
+     * @brief Builds the ZIP bytes for the currently added entries.
+     *
+     * File-backed entries (addFile with a path) are read from disk here.
+     *
+     * @param out Receives the ZIP bytes.
+     * @return true on success.
+     */
+    bool buildZip(std::vector<unsigned char>& out);
+
     struct Entry
     {
         String                     name;
         std::vector<unsigned char> data;
+        std::filesystem::path      src;       ///< Source file when from_file is true.
+        bool                       from_file{ false };
     };
 
     std::vector<Entry> entries_;

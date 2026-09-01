@@ -6,6 +6,7 @@
 #include <vector>
 
 #include <vine/INameable.hpp>
+#include <vine/Object.hpp>
 #include <vine/String.hpp>
 #include <vine/math/Isometry3.hpp>
 #include <vine/raw_ptr.hpp>
@@ -30,7 +31,8 @@ enum class SceneObjectKind
  * A SceneObject is something the user adds/removes/finds in the workcell
  * (a robot, a scanner, a part, a table, ...). The Workcell owns every
  * SceneObject (unique ownership); this base exposes identity (via INameable)
- * plus each object's own coordinate frames.
+ * plus each object's own coordinate frames. Deriving from vine::Object makes
+ * every scene object part of the Object type system (isKindOf / obj_cast).
  *
  * Parent/child relationships are NOT stored explicitly. They are derived from
  * the coordinate-frame tree: every object owns a base frame, and an object is
@@ -39,8 +41,10 @@ enum class SceneObjectKind
  * relationships through the frame tree (see parentObject(), childObjects(),
  * Workcell::parentOf(), ...).
  */
-class V_ROBOTICS_CORE_API SceneObject : public vine::INameable
+class V_ROBOTICS_CORE_API SceneObject : public vine::Object, public vine::INameable
 {
+    V_OBJECT_META(SceneObject, vine::Object, vine::INameable);
+
   public:
     /**
      * @brief Destroys the scene object.

@@ -4,6 +4,7 @@
 
 #include <vine/intrusive_ptr.hpp>
 #include <vine/math/Isometry3.hpp>
+#include <vine/String.hpp>
 
 #include <vine/geometry/Material.hpp>
 #include <vine/geometry/Shape.hpp>
@@ -80,10 +81,31 @@ class Visual
         material_ = material;
     }
 
+    /**
+     * @brief Returns the device material name this visual references.
+     *
+     * @return The material name, or empty when the material is inline.
+     */
+    const String& materialName() const
+    {
+        return material_name_;
+    }
+
+    /**
+     * @brief Sets the device material name this visual references.
+     *
+     * @param name The device material name.
+     */
+    void setMaterialName(const String& name)
+    {
+        material_name_ = name;
+    }
+
   private:
     vine::intrusive_ptr<vine::geometry::Shape>    shape_;
     math::Isometry3d                             tf_;
     vine::intrusive_ptr<vine::geometry::Material> material_;
+    String                                       material_name_;
 };
 
 V_ROBOTICS_WORKCELL_NS_END

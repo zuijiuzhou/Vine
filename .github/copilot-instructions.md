@@ -1,5 +1,16 @@
 # C++ Coding Guidelines
 
+## Project Layout & Documentation
+
+* `docs/` is reserved for the GitHub Pages site (contains `index.html`, `CNAME`).
+  Do NOT place design docs or notes there.
+* `.ai/` holds AI-visible, repo-versioned knowledge:
+  * `.ai/design/` — full module design docs (e.g. `robotics-io-design.md`,
+    `robotics-proximity-design.md`).
+  * `.ai/memory/` — concise module notes (e.g. `robotics-proximity.md`).
+* Before touching a module's design or conventions, consult `.ai/design/` and
+  `.ai/memory/` for the relevant module.
+
 ## Language Standard
 
 * Use C++20.
@@ -130,7 +141,12 @@ Headers with special requirements (e.g. `GL.h` which must be included first) may
 * Public interfaces must use Doxygen-style comments.
 * Do not create section comments.
 * Use `/** @brief ... */` format with `@`-prefixed tags.
-* Any function with a return value must document it with `@return`.
+* Every public function must document:
+  * `@brief` — one-line summary of the function's purpose.
+  * `@param` — one tag per parameter, describing its meaning and any constraints.
+  * `@return` — the return value / success semantics (required for every non-void return).
+* Constructors and destructors use `@brief` only; use `@param` only for parameters with non-obvious meaning.
+* Comments must use `@param` for EVERY parameter of a function, never omit one.
 * Prefer multi-line comments; do not condense them into a single line.
 * Keep each sentence on one line: wrap to a new line after a sentence completes, so a full sentence occupies one line. A line should generally not exceed 160 characters (you may break earlier to keep a sentence on its own line).
 
@@ -140,10 +156,11 @@ Example:
 /**
  * @brief Loads mesh data from a file.
  *
- * @param file_path Path to the mesh file.
- * @return true if loading succeeds.
+ * @param file_path  Path to the mesh file.
+ * @param scale_mode Vertex scaling strategy.
+ * @return true if loading succeeds, false otherwise.
  */
-bool loadMesh(const std::filesystem::path& file_path);
+bool loadMesh(const std::filesystem::path& file_path, ScaleMode scale_mode);
 ```
 
 * Comments should explain design intent, constraints, and non-obvious logic.

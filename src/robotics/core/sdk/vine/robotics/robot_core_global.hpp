@@ -35,3 +35,12 @@
 #define V_ROBOTICS_WORKCELL_NS_END                                                                                                                                       \
     }                                                                                                                                                              \
     V_ROBOTICS_NS_END
+
+#define V_ROBOTICS_PROXIMITY_NS_BEGIN                                                                                                                                     \
+    V_ROBOTICS_NS_BEGIN                                                                                                                                             \
+    namespace proximity                                                                                                                                                  \
+    {
+
+#define V_ROBOTICS_PROXIMITY_NS_END                                                                                                                                       \
+    }                                                                                                                                                              \
+    V_ROBOTICS_NS_END
