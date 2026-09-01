@@ -2,14 +2,10 @@
 
 #include <vine/robotics/robot_core_global.hpp>
 
-#include <vine/String.hpp> 
+#include <vine/String.hpp>
 
-#include "Collision.hpp"
 #include "RigidBody.hpp"
 #include "SceneObject.hpp"
-#include "Visual.hpp"
-
-
 
 V_ROBOTICS_WORKCELL_NS_BEGIN
 
@@ -21,7 +17,7 @@ V_ROBOTICS_WORKCELL_NS_BEGIN
  * joints, no degrees of freedom, no kinematics. Its geometry (visuals +
  * collisions + frames) is carried by an embedded RigidBody.
  */
-class RigidObject : public SceneObject
+class V_ROBOTICS_CORE_API RigidObject : public SceneObject
 {
   public:
     /**
@@ -29,29 +25,20 @@ class RigidObject : public SceneObject
      *
      * @param name The object name.
      */
-    explicit RigidObject(const String& name)
-      : name_(name)
-    {}
+    explicit RigidObject(const String& name);
 
+    /**
+     * @brief Destroys the rigid object.
+     */
+    ~RigidObject() override;
+
+  public:
     /**
      * @brief Returns the object kind.
      *
      * @return SceneObjectKind::RigidObject.
      */
-    SceneObjectKind kind() const override
-    {
-        return SceneObjectKind::RigidObject;
-    }
-
-    /**
-     * @brief Returns the object name.
-     *
-     * @return The name.
-     */
-    const String& name() const override
-    {
-        return name_;
-    }
+    SceneObjectKind kind() const override;
 
     /**
      * @brief Returns the rigid body (root frame + geometry).
@@ -74,7 +61,6 @@ class RigidObject : public SceneObject
     }
 
   private:
-    String    name_;
     RigidBody body_;
 };
 

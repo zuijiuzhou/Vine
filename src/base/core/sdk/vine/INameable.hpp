@@ -10,21 +10,31 @@
 V_CORE_NS_BEGIN
 
 /**
- * @brief Interface for objects that can render themselves as a String.
+ * @brief Interface for objects that have a readable name.
  */
-class INameable {
-    V_DECLARE_INTERFACE(INameable)
+class INamed {
+    V_DECLARE_INTERFACE(INamed)
 
   public:
-    virtual ~INameable() = default;
-    
+    virtual ~INamed() = default;
+
     /**
      * @brief Returns the object name.
      *
      * @return The name.
      */
-    virtual const String& name() const = 0;
+    virtual const String& name() const noexcept = 0;
+};
 
+/**
+ * @brief Interface for objects whose name can be changed.
+ *
+ * Extends INamed with a name setter.
+ */
+class INameable : public INamed {
+    V_DECLARE_INTERFACE(INameable, INamed)
+
+  public:
     /**
      * @brief Sets the object name.
      *

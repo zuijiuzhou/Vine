@@ -25,7 +25,6 @@ V_ROBOTICS_KINEMATICS_NS_BEGIN
  */
 class V_ROBOTICS_CORE_API QState
 {
-    // 构造函数区块
   public:
     QState() = default;
     QState(const QState&) = default;
@@ -33,7 +32,6 @@ class V_ROBOTICS_CORE_API QState
     QState& operator=(const QState&) = default;
     QState& operator=(QState&&) noexcept = default;
 
-    // 方法区块
   public:
     /**
      * @brief Rebuilds the state from a root frame.
@@ -93,7 +91,6 @@ class V_ROBOTICS_CORE_API QState
         return offsets_.size();
     }
 
-    // 字段区块
   private:
     Q                                       q_;
     std::unordered_map<const Frame*, std::size_t> offsets_;

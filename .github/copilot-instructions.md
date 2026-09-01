@@ -42,31 +42,34 @@ Fields use `snake_case`:
 
 ### Class Layout
 
-For simple classes, group members with access control specifiers (`public:` / `protected:` / `private:`) and lay them out in blocks in the following order:
+For simple classes, group members with access control specifiers (`public:` /
+`protected:` / `private:`) and lay them out in blocks in the following order:
 
 1. Type declarations (`enum`, `using`, `friend`).
 2. Constructors / destructor.
 3. Methods.
 4. Fields.
 
+The block names below (类型声明区块 / 构造函数区块 / 方法区块 / 字段区块) are
+labels used ONLY to describe what each block holds. They are NOT comments and
+MUST NOT be inserted into the code: write the layout with plain access-specifier
+blocks and no block-label comments.
+
 Example:
 
 ```cpp
 class Cls
 {
-    ## 第一块是类型声明区块
   public:
     enum Type {};
     using Id = std::uint64_t;
     friend class Xxx;
 
-    ## 第二块是构造函数区块
   public:
     Cls();
   protected:
     Cls(Val v);
 
-    ## 第三块是方法区块
   public:
     void method1(int param);
   protected:
@@ -74,7 +77,6 @@ class Cls
   private:
     void method3();
 
-    ## 第四块是字段区块
   public:
     int val1{ 1 };
     inline static int s_val2{ 1 };

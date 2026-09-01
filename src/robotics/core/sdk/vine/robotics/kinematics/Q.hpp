@@ -21,11 +21,9 @@ V_ROBOTICS_KINEMATICS_NS_BEGIN
  * operations, concatenation, sub-vectors, norms and scalar scaling.
  */
 class V_ROBOTICS_CORE_API Q : public vine::SmallVector<double, 8> {
-    // 类型声明区块
   public:
     using MyBase = vine::SmallVector<double, 8>;
 
-    // 构造函数区块
   public:
     /** @brief Constructs an empty joint vector. */
     Q() = default;
@@ -75,7 +73,6 @@ class V_ROBOTICS_CORE_API Q : public vine::SmallVector<double, 8> {
         }
     }
 
-    // 方法区块
   public:
     /**
      * @brief Computes the dot product with another joint vector.
@@ -377,7 +374,6 @@ class V_ROBOTICS_CORE_API Q : public vine::SmallVector<double, 8> {
         return *this;
     }
 
-    // 方法区块（私有）
   private:
     /**
      * @brief Throws when two joint vectors have different sizes.

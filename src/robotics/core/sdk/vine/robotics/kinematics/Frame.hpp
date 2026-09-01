@@ -6,9 +6,11 @@
 #include <vector>
 
 #include <vine/IHierarchyNode.hpp>
+#include <vine/INameable.hpp>
 #include <vine/Object.hpp>
 #include <vine/SmallVector.hpp>
 #include <vine/String.hpp>
+#include <vine/raw_ptr.hpp>
 #include <vine/math/Isometry3.hpp>
 #include <vine/robotics/kinematics/DofInfo.hpp>
 
@@ -26,6 +28,8 @@ enum class FrameType
     PlanarJoint
 };
 
+class State;
+
 /**
  * @brief Kinematic frame (joint coordinate system) of a kinematic chain.
  *
@@ -34,24 +38,24 @@ enum class FrameType
  * tree links are non-owning: frames are owned externally (e.g. by the robot
  * model) and must outlive the tree that references them.
  */
-class V_ROBOTICS_CORE_API Frame : public vine::Object, public vine::IHierarchyNode<Frame> {
-    V_OBJECT_META(Frame, vine::Object);
+class V_ROBOTICS_CORE_API Frame : public vine::Object,
+                                  public vine::INameable,
+                                  public vine::IHierarchyNode<Frame> {
+    V_OBJECT_META(Frame, vine::Object, vine::INameable);
 
-    // 构造函数区块
   public:
     Frame();
 
   protected:
     Frame(FrameType type);
 
-    // 方法区块
   public:
-    const String& name() const
+    const String& name() const noexcept override
     {
         return name_;
     }
 
-    void setName(const String& name)
+    void setName(const String& name) override
     {
         name_ = name;
     }
@@ -60,6 +64,28 @@ class V_ROBOTICS_CORE_API Frame : public vine::Object, public vine::IHierarchyNo
     {
         return type_;
     }
+
+    /**
+     * @brief Returns the number of degrees of freedom of this frame.
+     *
+     * Derived from the frame type: Fixed = 0, Revolute/Prismatic = 1,
+     * Planar = 3.
+     *
+     * @return The DoF count.
+     */
+    std::size_t dof() const noexcept
+    {
+        return dof_;
+    }
+
+    /**
+     * @brief Returns the number of degrees of freedom for the given frame
+     *        type.
+     *
+     * @param type The frame type.
+     * @return The DoF count.
+     */
+    static std::size_t dofOfType(FrameType type) noexcept;
 
     math::Isometry3d fixedTransform() const
     {
@@ -71,10 +97,20 @@ class V_ROBOTICS_CORE_API Frame : public vine::Object, public vine::IHierarchyNo
         fixed_tf_ = tf;
     }
 
-    virtual math::Isometry3d transform()
+    /**
+     * @brief Returns the pose of this frame relative to its parent frame.
+     *
+     * For a fixed frame the scene state is ignored and the fixed transform is
+     * returned; movable frames (e.g. a joint) compose their degrees of freedom
+     * read from the state.
+     *
+     * @param state The scene state, used to query joint values.
+     * @return The transform relative to the parent frame.
+     */
+    virtual math::Isometry3d transform(const State& state) const
     {
         return fixed_tf_;
-    };
+    }
 
     virtual const std::vector<DofInfo>& dofInfos() const
     {
@@ -87,7 +123,7 @@ class V_ROBOTICS_CORE_API Frame : public vine::Object, public vine::IHierarchyNo
      *
      * @return The parent frame, or null for a root frame.
      */
-    Frame* parent() const noexcept override
+    raw_ptr<Frame> parent() const noexcept override
     {
         return parent_;
     }
@@ -108,7 +144,7 @@ class V_ROBOTICS_CORE_API Frame : public vine::Object, public vine::IHierarchyNo
      * @param index The child index.
      * @return The child frame, or null when the index is out of range.
      */
-    Frame* childAt(std::size_t index) const override
+    raw_ptr<Frame> childAt(std::size_t index) const override
     {
         return index < children_.size() ? children_[index] : nullptr;
     }
@@ -122,7 +158,7 @@ class V_ROBOTICS_CORE_API Frame : public vine::Object, public vine::IHierarchyNo
      * @param child The child frame to append.
      * @throws std::invalid_argument on invalid input.
      */
-    void addChild(Frame* child);
+    void addChild(raw_ptr<Frame> child);
 
     /**
      * @brief Removes a direct child frame.
@@ -130,14 +166,14 @@ class V_ROBOTICS_CORE_API Frame : public vine::Object, public vine::IHierarchyNo
      * @param child The direct child frame to remove.
      * @throws std::invalid_argument when child is not a direct child.
      */
-    void removeChild(Frame* child);
+    void removeChild(raw_ptr<Frame> child);
 
     /**
      * @brief Returns the direct child frames.
      *
      * @return Read-only reference to the children.
      */
-    const std::vector<Frame*>& children() const noexcept
+    const std::vector<raw_ptr<Frame>>& children() const noexcept
     {
         return children_;
     }
@@ -152,13 +188,44 @@ class V_ROBOTICS_CORE_API Frame : public vine::Object, public vine::IHierarchyNo
         return parent_ == nullptr;
     }
 
-    // 字段区块
+    /**
+     * @brief Computes the transform that maps points from the given frame to
+     *        the world (root) frame of the tree.
+     *
+     * The result is the pose of frame expressed in the root coordinate
+     * system: the transforms of frame and all its ancestors are composed from
+     * the root down to frame.
+     *
+     * @param frame The source frame.
+     * @param state The scene state, used to query joint values.
+     * @return The world transform.
+     * @throws std::invalid_argument when frame is null.
+     */
+    static math::Isometry3d frameInWorld(raw_ptr<const Frame> frame, const State& state);
+
+    /**
+     * @brief Computes the transform that maps points from the from frame to
+     *        the to frame.
+     *
+     * The result satisfies: p_to = frameInFrame(from, to, state) * p_from.
+     * Both frames must belong to the same frame tree.
+     *
+     * @param from The source frame.
+     * @param to The target frame.
+     * @param state The scene state, used to query joint values.
+     * @return The relative transform.
+     * @throws std::invalid_argument when either frame is null or the frames
+     *         do not share the same root.
+     */
+    static math::Isometry3d frameInFrame(raw_ptr<const Frame> from, raw_ptr<const Frame> to, const State& state);
+
   private:
     String              name_;
     FrameType           type_{ FrameType::Fixed };
     math::Isometry3d    fixed_tf_;
-    Frame*              parent_{ nullptr };
-    std::vector<Frame*> children_;
+    std::size_t         dof_{ 0 };
+    raw_ptr<Frame>      parent_{ nullptr };
+    std::vector<raw_ptr<Frame>> children_;
 };
 
 V_ROBOTICS_KINEMATICS_NS_END

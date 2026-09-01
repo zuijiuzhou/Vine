@@ -26,7 +26,7 @@ class State {
     State() = default;
 
   public:
-    void setup(const VFrame* root_frame)
+    void setup(const Frame* root_frame)
     {
         qstate_.setup(root_frame);
     }
@@ -48,7 +48,7 @@ class State {
         return qstate_;
     }
 
-    void copyFrom(const VState& other)
+    void copyFrom(const State& other)
     {
         qstate_.copyFrom(other.qstate_);
     }

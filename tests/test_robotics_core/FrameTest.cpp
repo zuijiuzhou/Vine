@@ -6,11 +6,46 @@
 
 using namespace vine::robotics::kinematics;
 
+namespace
+{
+
+/**
+ * @brief Exposes the protected Frame(FrameType) constructor for tests.
+ */
+class TestFrame : public Frame
+{
+  public:
+    explicit TestFrame(FrameType type)
+      : Frame(type)
+    {}
+};
+
+} // namespace
+
 TEST(FrameTest, DefaultFrameIsFixed)
 {
     Frame frame;
     EXPECT_EQ(frame.frameType(), FrameType::Fixed);
     EXPECT_TRUE(frame.isRoot());
+}
+
+TEST(FrameTest, DofFromType)
+{
+    Frame fixed;
+    TestFrame revolute(FrameType::RevoluteJoint);
+    TestFrame prismatic(FrameType::PrismaticJoint);
+    TestFrame planar(FrameType::PlanarJoint);
+
+    // The DoF count is derived from the frame type at construction.
+    EXPECT_EQ(fixed.dof(), 0u);
+    EXPECT_EQ(revolute.dof(), 1u);
+    EXPECT_EQ(prismatic.dof(), 1u);
+    EXPECT_EQ(planar.dof(), 3u);
+
+    EXPECT_EQ(Frame::dofOfType(FrameType::Fixed), 0u);
+    EXPECT_EQ(Frame::dofOfType(FrameType::RevoluteJoint), 1u);
+    EXPECT_EQ(Frame::dofOfType(FrameType::PrismaticJoint), 1u);
+    EXPECT_EQ(Frame::dofOfType(FrameType::PlanarJoint), 3u);
 }
 
 TEST(FrameTest, BuildsTree)
