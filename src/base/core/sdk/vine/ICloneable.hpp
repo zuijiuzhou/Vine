@@ -2,7 +2,7 @@
 
 #include "core_global.hpp"
 
-#include <type_traits>
+#include <concepts>
 
 #include "Object.hpp"
 
@@ -28,9 +28,11 @@ class ICloneable {
 };
 
 /**
- * @brief Concept for types that derive from ICloneable.
+ * @brief Concept for types that provide a clone() method.
  */
 template <typename T>
-concept Cloneable = std::is_base_of_v<ICloneable, T>;
+concept Cloneable = requires(const T& t) {
+    { t.clone() } -> std::convertible_to<Object*>;
+};
 
 V_CORE_NS_END

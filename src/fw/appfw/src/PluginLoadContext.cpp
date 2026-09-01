@@ -21,22 +21,22 @@ PluginLoadContext::PluginLoadContext(Application* app, String plugin_name)
 
 PluginLoadContext::~PluginLoadContext() = default;
 
-RawPtr<Application> PluginLoadContext::application() const
+raw_ptr<Application> PluginLoadContext::application() const
 {
     return d->app;
 }
 
-RawPtr<ConfigRegistry> PluginLoadContext::configs() const
+raw_ptr<ConfigRegistry> PluginLoadContext::configs() const
 {
     return d->app ? d->app->configRegistry() : nullptr;
 }
 
-RawPtr<CommandManager> PluginLoadContext::commandManager() const
+raw_ptr<CommandManager> PluginLoadContext::commandManager() const
 {
     return d->app ? d->app->commandManager() : nullptr;
 }
 
-RawPtr<EventBus> PluginLoadContext::eventBus() const
+raw_ptr<EventBus> PluginLoadContext::eventBus() const
 {
     return d->app ? d->app->eventBus() : nullptr;
 }

@@ -54,19 +54,19 @@ Example:
 ```cpp
 class Cls
 {
-    // 类型声明区块（这不是注释）
+    ## 第一块是类型声明区块
   public:
     enum Type {};
     using Id = std::uint64_t;
     friend class Xxx;
 
-    // 构造函数区块（这不是注释）
+    ## 第二块是构造函数区块
   public:
     Cls();
   protected:
     Cls(Val v);
 
-    // 方法区块（这不是注释）
+    ## 第三块是方法区块
   public:
     void method1(int param);
   protected:
@@ -74,7 +74,7 @@ class Cls
   private:
     void method3();
 
-    // 字段区块（这不是注释）
+    ## 第四块是字段区块
   public:
     int val1{ 1 };
     inline static int s_val2{ 1 };

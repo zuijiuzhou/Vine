@@ -62,7 +62,7 @@ void DockPanelManager::setCentralWidget(UIElement* widget)
     d->dockingMgr->setClientWidget(static_cast<QWidget*>(widget->impl()));
 }
 
-RawPtr<UIElement> DockPanelManager::root() const
+raw_ptr<UIElement> DockPanelManager::root() const
 {
     if (!d->dockingMgr)
         return nullptr;

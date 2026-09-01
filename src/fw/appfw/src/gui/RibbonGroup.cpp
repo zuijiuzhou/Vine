@@ -290,7 +290,7 @@ void RibbonGroup::setOptionAction(RibbonAction* item)
     }
 }
 
-RawPtr<RibbonAction> RibbonGroup::optionAction() const
+raw_ptr<RibbonAction> RibbonGroup::optionAction() const
 {
     return dptr()->option_item;
 }

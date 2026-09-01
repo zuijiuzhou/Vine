@@ -9,7 +9,7 @@
 #include <vector>
 
 #include <vine/Events.hpp>
-#include <vine/RawPtr.hpp>
+#include <vine/raw_ptr.hpp>
 #include <vine/appfw/Command.hpp>
 
 V_APPFW_NS_BEGIN
@@ -29,7 +29,7 @@ class V_APPFW_API CommandExecutingEventArgs : public EventArgs {
 
   public:
     /// The command that is about to execute.
-    RawPtr<Command> command() const;
+    raw_ptr<Command> command() const;
 
   private:
     Command* command_;
@@ -48,7 +48,7 @@ class V_APPFW_API CommandExecutedEventArgs : public EventArgs {
 
   public:
     /// The command that finished executing.
-    RawPtr<Command> command() const;
+    raw_ptr<Command> command() const;
 
     /// The execution result.
     const CommandResult& result() const;
@@ -108,7 +108,7 @@ class V_APPFW_API CommandManager
      *
      * @return The hosting Application.
      */
-    RawPtr<Application> application() const;
+    raw_ptr<Application> application() const;
 
     /**
      * @brief Executes a command.
@@ -166,7 +166,7 @@ class V_APPFW_API CommandManager
      *
      * @return The running command, or nullptr when idle.
      */
-    RawPtr<Command> currentCommand() const;
+    raw_ptr<Command> currentCommand() const;
 
     /**
      * @brief Returns the number of commands on the execution stack.

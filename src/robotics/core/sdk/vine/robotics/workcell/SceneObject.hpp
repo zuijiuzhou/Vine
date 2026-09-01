@@ -31,7 +31,7 @@ enum class SceneObjectKind
  * the object's own coordinate system, and a frames_ registry (raw pointers)
  * of every frame the object carries — its base frame plus the joint and end
  * frames added by derived classes. Parent/child relationships between
- * objects are maintained by linking these frames — Frame is an ITreeNode
+ * objects are maintained by linking these frames — Frame is an IHierarchyNode
  * with parent/children — so the scene graph is the frame tree.
  *
  * Link is deliberately NOT a SceneObject: it is a Device-internal kinematic

@@ -26,7 +26,7 @@ CommandExecutingEventArgs::CommandExecutingEventArgs(Command* command)
   : command_(command)
 {}
 
-RawPtr<Command> CommandExecutingEventArgs::command() const
+raw_ptr<Command> CommandExecutingEventArgs::command() const
 {
     return command_;
 }
@@ -38,7 +38,7 @@ CommandExecutedEventArgs::CommandExecutedEventArgs(Command* command, const Comma
   , result_(result)
 {}
 
-RawPtr<Command> CommandExecutedEventArgs::command() const
+raw_ptr<Command> CommandExecutedEventArgs::command() const
 {
     return command_;
 }
@@ -166,7 +166,7 @@ CommandManager::CommandManager(Application* app)
 
 CommandManager::~CommandManager() = default;
 
-RawPtr<Application> CommandManager::application() const
+raw_ptr<Application> CommandManager::application() const
 {
     return d->app;
 }
@@ -328,7 +328,7 @@ void CommandManager::executeDetached(const String& name)
     }(executeCommandAsync(name));
 }
 
-RawPtr<Command> CommandManager::currentCommand() const
+raw_ptr<Command> CommandManager::currentCommand() const
 {
     return d->stack.empty() ? nullptr : d->stack.back();
 }

@@ -109,17 +109,17 @@ MainWindow* MainWindow::current()
     return s_current_main_window;
 }
 
-RawPtr<RibbonBar> MainWindow::ribbonBar() const
+raw_ptr<RibbonBar> MainWindow::ribbonBar() const
 {
     return dptr()->ribbon_bar.get();
 }
 
-RawPtr<StatusBar> MainWindow::statusBar() const
+raw_ptr<StatusBar> MainWindow::statusBar() const
 {
     return dptr()->status_bar.get();
 }
 
-RawPtr<DockPanelManager> MainWindow::dockPanelManager() const
+raw_ptr<DockPanelManager> MainWindow::dockPanelManager() const
 {
     return dptr()->dock_panel_mgr.get();
 }

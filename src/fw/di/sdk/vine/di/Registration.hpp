@@ -2,7 +2,7 @@
 
 #include <functional>
 
-#include <vine/IntrusivePtr.hpp>
+#include <vine/intrusive_ptr.hpp>
 #include <vine/Type.hpp>
 
 #include <vine/di/ServiceBase.hpp>
@@ -171,7 +171,7 @@ class V_DI_API Registration final {
   private:
     TypeId            service_type_{};
     TypeId            service_impl_type_{};
-    IntrusivePtr<ServiceBase> inst_;
+    intrusive_ptr<ServiceBase> inst_;
     InstanceFactory   inst_fac_;
     Lifetime          lifetime_ = Lifetime::Transient;
 };

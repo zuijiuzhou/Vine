@@ -1,11 +1,11 @@
 #include <gtest/gtest.h>
 
 #include <vine/Exception.hpp>
-#include <vine/IntrusivePtr.hpp>
+#include <vine/intrusive_ptr.hpp>
 #include <vine/di/Container.hpp>
 #include <vine/di/Registration.hpp>
 
-using vine::IntrusivePtr;
+using vine::intrusive_ptr;
 using vine::TypeId;
 using vine::di::Container;
 using vine::di::Lifetime;
@@ -53,8 +53,8 @@ TEST(DiTest, TransientFactoryReturnsNewInstance)
     Container c;
     c.add(Registration::create<DiServiceA>().instanceFactory([](TypeId, Container&) { return new DiServiceA(); }));
 
-    IntrusivePtr<DiServiceA> a1(static_cast<DiServiceA*>(c.resolve(DiServiceA::desc())));
-    IntrusivePtr<DiServiceA> a2(static_cast<DiServiceA*>(c.resolve(DiServiceA::desc())));
+    intrusive_ptr<DiServiceA> a1(static_cast<DiServiceA*>(c.resolve(DiServiceA::desc())));
+    intrusive_ptr<DiServiceA> a2(static_cast<DiServiceA*>(c.resolve(DiServiceA::desc())));
     ASSERT_NE(a1.get(), nullptr);
     ASSERT_NE(a2.get(), nullptr);
     EXPECT_NE(a1.get(), a2.get());

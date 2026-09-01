@@ -1,6 +1,6 @@
 ﻿#include "graphics_global.hpp"
 
-#include <vine/IntrusivePtr.hpp>
+#include <vine/intrusive_ptr.hpp>
 #include <vine/Object.hpp>
 #include <vine/RefCounted.hpp>
 
@@ -24,6 +24,6 @@ class V_GRAPHICS_API View : public Object, public RefCounted<View> {
     ;
 };
 
-using ViewPtr = IntrusivePtr<View>;
+using ViewPtr = intrusive_ptr<View>;
 
 V_GRAPHICS_NS_END

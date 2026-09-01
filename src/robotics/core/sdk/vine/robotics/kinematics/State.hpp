@@ -4,7 +4,9 @@
 
 #include <cstddef>
 #include <unordered_map>
- 
+
+#include <vine/raw_ptr.hpp>
+
 #include "QState.hpp"
 
 V_ROBOTICS_KINEMATICS_NS_BEGIN
@@ -16,13 +18,18 @@ V_ROBOTICS_KINEMATICS_NS_BEGIN
  * carries one QState per device, keyed by the device's base frame. A device
  * reads and writes its joint values through the QState of its own base frame.
  */
-class State
-{
+class State {
   public:
     /**
      * @brief Constructs an empty scene state.
      */
     State() = default;
+
+  public:
+    void setup(const VFrame* root_frame)
+    {
+        qstate_.setup(root_frame);
+    }
 
     /**
      * @brief Returns the QState of the device rooted at root, creating it
@@ -36,11 +43,18 @@ class State
         return qstate_;
     }
 
-    
+    const QState& qstate(const Frame* root) const
+    {
+        return qstate_;
+    }
+
+    void copyFrom(const VState& other)
+    {
+        qstate_.copyFrom(other.qstate_);
+    }
 
   private:
-
-  QState qstate_;
+    QState qstate_;
 };
 
 V_ROBOTICS_KINEMATICS_NS_END

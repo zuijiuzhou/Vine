@@ -3,6 +3,7 @@
 #include "core_global.hpp"
 
 #include <cstddef>
+#include <concepts>
 
 V_CORE_NS_BEGIN
 
@@ -14,14 +15,12 @@ V_CORE_NS_BEGIN
  * base-class pointer and callers never need to downcast.
  */
 template <typename T>
-class ITreeNode
+class IHierarchyNode
 {
-    // 构造函数区块
   public:
     /** @brief Default virtual destructor. */
-    virtual ~ITreeNode() = default;
+    virtual ~IHierarchyNode() = default;
 
-    // 方法区块
   public:
     /**
      * @brief Returns the parent node.
@@ -78,7 +77,7 @@ class ITreeNode
      * @param node The node to test.
      * @return true when this node is a descendant of node.
      */
-    bool isDescendantOf(const ITreeNode* node) const noexcept
+    bool isDescendantOf(const T* node) const noexcept
     {
         if (!node) {
             return false;
@@ -92,6 +91,17 @@ class ITreeNode
 
         return false;
     }
+};
+
+/**
+ * @brief Concept for types that provide the node interface of
+ *        IHierarchyNode<T>.
+ */
+template <typename T>
+concept Hierarchical = requires(const T& t, std::size_t index) {
+    { t.parent() } -> std::same_as<T*>;
+    { t.childCount() } -> std::convertible_to<std::size_t>;
+    { t.childAt(index) } -> std::same_as<T*>;
 };
 
 V_CORE_NS_END

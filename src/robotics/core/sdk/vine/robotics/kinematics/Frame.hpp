@@ -5,7 +5,7 @@
 #include <cstddef>
 #include <vector>
 
-#include <vine/ITreeNode.hpp>
+#include <vine/IHierarchyNode.hpp>
 #include <vine/Object.hpp>
 #include <vine/SmallVector.hpp>
 #include <vine/String.hpp>
@@ -30,11 +30,11 @@ enum class FrameType
  * @brief Kinematic frame (joint coordinate system) of a kinematic chain.
  *
  * Frames form a tree through parent/child links. The ancestor algorithm is
- * inherited from ITreeNode and reused instead of being re-implemented. The
+ * inherited from IHierarchyNode and reused instead of being re-implemented. The
  * tree links are non-owning: frames are owned externally (e.g. by the robot
  * model) and must outlive the tree that references them.
  */
-class V_ROBOTICS_CORE_API Frame : public vine::Object, public vine::ITreeNode<Frame> {
+class V_ROBOTICS_CORE_API Frame : public vine::Object, public vine::IHierarchyNode<Frame> {
     V_OBJECT_META(Frame, vine::Object);
 
     // 构造函数区块

@@ -3,7 +3,7 @@
 
 #include <memory>
 
-#include <vine/RawPtr.hpp>
+#include <vine/raw_ptr.hpp>
 #include <vine/di/Registration.hpp>
 #include <vine/di/ServiceBase.hpp>
 
@@ -17,7 +17,7 @@ class V_APPFW_API ServiceManager {
 
   public:
     ServiceManager*   registerService(const di::Registration& reg);
-    RawPtr<vine::di::ServiceBase> service(TypeId type) const;
+    raw_ptr<vine::di::ServiceBase> service(TypeId type) const;
 
   private:
     struct Impl;

@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include "graphics_global.hpp"
 
-#include <vine/IntrusivePtr.hpp>
+#include <vine/intrusive_ptr.hpp>
 #include <vine/Object.hpp>
 #include <vine/RefCounted.hpp>
 
@@ -19,6 +19,6 @@ class V_GRAPHICS_API Drawable : public Object, public RefCounted<Drawable> {
     ;
 };
 
-using DrawablePtr = IntrusivePtr<Drawable>;
+using DrawablePtr = intrusive_ptr<Drawable>;
 
 V_GRAPHICS_NS_END

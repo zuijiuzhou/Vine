@@ -15,7 +15,7 @@ void UserIO::setCommandManager(CommandManager* manager)
 void UserIO::clear()
 {}
 
-RawPtr<CommandManager> UserIO::commandManager() const
+raw_ptr<CommandManager> UserIO::commandManager() const
 {
     return command_manager_;
 }

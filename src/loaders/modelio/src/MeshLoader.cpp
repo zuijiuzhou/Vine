@@ -202,7 +202,7 @@ void MeshLoader::setOptions(const Options& options)
     options_ = options;
 }
 
-vine::IntrusivePtr<Mesh> MeshLoader::load(const std::filesystem::path& file_path)
+vine::intrusive_ptr<Mesh> MeshLoader::load(const std::filesystem::path& file_path)
 {
     std::error_code ec;
     if (file_path.empty() || !std::filesystem::is_regular_file(file_path, ec) || ec) {
@@ -234,7 +234,7 @@ vine::IntrusivePtr<Mesh> MeshLoader::load(const std::filesystem::path& file_path
         return {};
     }
 
-    auto mesh = vine::IntrusivePtr<IndexedTriangleMesh>(new IndexedTriangleMesh());
+    auto mesh = vine::intrusive_ptr<IndexedTriangleMesh>(new IndexedTriangleMesh());
     mergeAssimpScene(*mesh, scene);
     applyScale(options_, *mesh);
 

@@ -5,7 +5,7 @@
 #include <memory>
 
 #include <vine/Object.hpp>
-#include <vine/RawPtr.hpp>
+#include <vine/raw_ptr.hpp>
 
 V_APPFW_NS_BEGIN
 
@@ -60,25 +60,25 @@ class V_APPFW_API Application : public Object {
 
     void exit(int code);
 
-    RawPtr<CommandManager> commandManager() const;
+    raw_ptr<CommandManager> commandManager() const;
 
-    RawPtr<PluginManager> pluginManager() const;
+    raw_ptr<PluginManager> pluginManager() const;
 
-    RawPtr<ServiceManager> serviceManager() const;
+    raw_ptr<ServiceManager> serviceManager() const;
 
     /// Application-level config manager (single instance, lives with Application).
-    RawPtr<ConfigManager> configManager() const;
+    raw_ptr<ConfigManager> configManager() const;
 
     /// Config item registry (single instance, lives with Application).
-    RawPtr<ConfigRegistry> configRegistry() const;
+    raw_ptr<ConfigRegistry> configRegistry() const;
 
     /// In-process publish/subscribe bus (single instance, lives with Application).
-    RawPtr<EventBus> eventBus() const;
+    raw_ptr<EventBus> eventBus() const;
 
     /// Main-thread marshaller used by EventBus for Main/Auto delivery.
-    RawPtr<MainThreadDispatcher> mainThreadDispatcher() const;
+    raw_ptr<MainThreadDispatcher> mainThreadDispatcher() const;
 
-    RawPtr<UserIO> userIO() const;
+    raw_ptr<UserIO> userIO() const;
 
     int argc() const;
 
@@ -96,7 +96,7 @@ class V_APPFW_API Application : public Object {
     bool isBusy() const;
 
   public:
-    static RawPtr<Application> current();
+    static raw_ptr<Application> current();
 };
 
 V_APPFW_NS_END

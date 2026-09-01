@@ -224,7 +224,7 @@ bool GuiApplication::followSystemTheme() const
     return d->follow_system;
 }
 
-RawPtr<MainWindow> GuiApplication::mainWindow() const
+raw_ptr<MainWindow> GuiApplication::mainWindow() const
 {
     const auto* d = static_cast<const GuiApplicationData*>(dptr());
     return d->main_window;

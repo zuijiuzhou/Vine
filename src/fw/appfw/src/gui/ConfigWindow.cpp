@@ -283,12 +283,12 @@ void ConfigWindow::reset()
     refresh();
 }
 
-RawPtr<ConfigRegistry> ConfigWindow::registry() const
+raw_ptr<ConfigRegistry> ConfigWindow::registry() const
 {
     return dptr()->registry;
 }
 
-RawPtr<ConfigManager> ConfigWindow::config() const
+raw_ptr<ConfigManager> ConfigWindow::config() const
 {
     return dptr()->config;
 }

@@ -2,7 +2,7 @@
 
 #include "core_global.hpp"
 
-#include <type_traits>
+#include <concepts>
 
 #include "Object.hpp"
 
@@ -28,9 +28,11 @@ class IComparable {
 };
 
 /**
- * @brief Concept for types that derive from IComparable.
+ * @brief Concept for types that provide a compareTo() method.
  */
 template <typename T>
-concept Comparable = std::is_base_of_v<IComparable, T>;
+concept Comparable = requires(const T& t, const Object& other) {
+    { t.compareTo(other) } -> std::convertible_to<int>;
+};
 
 V_CORE_NS_END

@@ -5,7 +5,7 @@
 #include <fstream>
 #include <string>
 
-#include <vine/IntrusivePtr.hpp>
+#include <vine/intrusive_ptr.hpp>
 #include <vine/Object.hpp>
 #include <vine/geometry/IndexedTriangleMesh.hpp>
 #include <vine/math/Vector3.hpp>
@@ -28,9 +28,9 @@ namespace
  *
  * @return The cube mesh (12 triangles).
  */
-vine::IntrusivePtr<IndexedTriangleMesh> makeCube()
+vine::intrusive_ptr<IndexedTriangleMesh> makeCube()
 {
-    auto mesh = vine::IntrusivePtr<IndexedTriangleMesh>(new IndexedTriangleMesh());
+    auto mesh = vine::intrusive_ptr<IndexedTriangleMesh>(new IndexedTriangleMesh());
 
     // 8 corners of a cube spanning [-1, 1]^3.
     const auto v0 = mesh->addVertex(Vec3f(-1, -1, -1));

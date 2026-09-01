@@ -71,7 +71,7 @@ void BrepLoader::setOptions(const Options& options)
     options_ = options;
 }
 
-vine::IntrusivePtr<vine::geometry::BrepShape> BrepLoader::load(const std::filesystem::path& file_path)
+vine::intrusive_ptr<vine::geometry::BrepShape> BrepLoader::load(const std::filesystem::path& file_path)
 {
     // TODO: STEP/IGES parsing requires OpenCASCADE (STEPControl_Reader /
     // IGESControl_Reader), which is not linked into the project yet. The

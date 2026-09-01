@@ -5,7 +5,7 @@
 #include <memory>
 #include <vector>
 
-#include <vine/RawPtr.hpp>
+#include <vine/raw_ptr.hpp>
 #include <vine/String.hpp>
 
 #include "ConfigStandard.hpp"
@@ -41,26 +41,26 @@ class V_APPFW_API PluginLoadContext {
      *
      * @return The Application this context was created for, or nullptr if none.
      */
-    RawPtr<Application> application() const;
+    raw_ptr<Application> application() const;
 
     /**
      * @brief Config registry: plugins register config items (ConfigItem) here.
      */
-    RawPtr<ConfigRegistry> configs() const;
+    raw_ptr<ConfigRegistry> configs() const;
 
     /**
      * @brief Command manager: plugins register their commands here during load().
      *
      * @return The command manager, or nullptr if no Application is set.
      */
-    RawPtr<CommandManager> commandManager() const;
+    raw_ptr<CommandManager> commandManager() const;
 
     /**
      * @brief The host publish/subscribe bus.
      *
      * @return The EventBus owned by the host Application, or nullptr if none.
      */
-    RawPtr<EventBus> eventBus() const;
+    raw_ptr<EventBus> eventBus() const;
 
     /**
      * @brief Name of the plugin this context belongs to.

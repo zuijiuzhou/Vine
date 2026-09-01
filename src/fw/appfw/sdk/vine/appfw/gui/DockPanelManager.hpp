@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#include <vine/RawPtr.hpp>
+#include <vine/raw_ptr.hpp>
 #include <vine/String.hpp>
 #include <vine/appfw/appfw_global.hpp>
 
@@ -35,7 +35,7 @@ class V_APPFW_API DockPanelManager final {
     void setCentralWidget(UIElement* widget);
 
     /** Get the root widget to embed in a window's central area */
-    RawPtr<UIElement> root() const;
+    raw_ptr<UIElement> root() const;
 
     /** Create and dock a DockPanel with title and content at the given area. */
     DockPanel* createDockPanel(const String& title, DockAreas area);

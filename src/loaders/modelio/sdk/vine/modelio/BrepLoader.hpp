@@ -7,7 +7,7 @@
 #include <functional>
 #include <unordered_map>
 
-#include <vine/IntrusivePtr.hpp>
+#include <vine/intrusive_ptr.hpp>
 #include <vine/crypto/ByteSequenceFingerprint.hpp>
 #include <vine/geometry/BrepShape.hpp>
 #include <vine/runtime/InMemoryCache.hpp>
@@ -112,14 +112,14 @@ class V_MODELIO_API BrepLoader
      * @param file_path The model file path (STEP, IGES).
      * @return The loaded solid, or null on failure.
      */
-    vine::IntrusivePtr<vine::geometry::BrepShape> load(const std::filesystem::path& file_path);
+    vine::intrusive_ptr<vine::geometry::BrepShape> load(const std::filesystem::path& file_path);
 
     // 类型声明区块
   private:
     /** @brief Per-file cached solids, grouped by load options. */
     struct CacheData
     {
-        std::unordered_map<Options, vine::IntrusivePtr<vine::geometry::BrepShape>, OptionsHash> option_shape_map;
+        std::unordered_map<Options, vine::intrusive_ptr<vine::geometry::BrepShape>, OptionsHash> option_shape_map;
     };
 
     // 字段区块

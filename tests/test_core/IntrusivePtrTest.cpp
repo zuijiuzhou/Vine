@@ -2,7 +2,7 @@
 
 #include <atomic>
 
-#include <vine/IntrusivePtr.hpp>
+#include <vine/intrusive_ptr.hpp>
 #include <vine/RefCounted.hpp>
 #include <vine/Object.hpp>
 

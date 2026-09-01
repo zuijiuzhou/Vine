@@ -24,7 +24,7 @@ concept RefObjectBased = std::is_base_of<RefObject, T>::value;
  *
  * @note RefObject cannot be moved or copied, otherwise it will cause memory
  *       leak or dangling pointer.
- * @deprecated Use RefCounted<Derived> together with IntrusivePtr<Derived>
+ * @deprecated Use RefCounted<Derived> together with intrusive_ptr<Derived>
  *             instead; no base class is required and no control block is
  *             allocated per object.
  */

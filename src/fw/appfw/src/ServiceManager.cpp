@@ -22,7 +22,7 @@ ServiceManager* ServiceManager::registerService(const di::Registration& reg)
     return this;
 }
 
-RawPtr<vine::di::ServiceBase> ServiceManager::service(TypeId type) const
+raw_ptr<vine::di::ServiceBase> ServiceManager::service(TypeId type) const
 {
     return d->container->resolve(type);
 }

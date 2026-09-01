@@ -1,7 +1,7 @@
 ﻿#include <vine/di/Container.hpp>
 
 #include <vine/Exception.hpp>
-#include <vine/IntrusivePtr.hpp>
+#include <vine/intrusive_ptr.hpp>
 #include <vine/di/Registration.hpp>
 
 V_DI_NS_BEGIN
@@ -26,7 +26,7 @@ V_OBJECT_META_IMPL(Container, ServiceBase)
 
 struct Container::Impl {
     std::unordered_map<TypeId, Registration>      regs;       // Keyed by service type.
-    std::unordered_map<TypeId, IntrusivePtr<ServiceBase>> singletons; // Lazily created singleton cache.
+    std::unordered_map<TypeId, intrusive_ptr<ServiceBase>> singletons; // Lazily created singleton cache.
 };
 
 Container::Container()
@@ -47,7 +47,7 @@ void Container::add(const Registration& reg)
     d->regs.emplace(type, reg);
 }
 
-RawPtr<ServiceBase> Container::resolve(TypeId type) const
+raw_ptr<ServiceBase> Container::resolve(TypeId type) const
 {
     auto it = d->regs.find(type);
     if (it == d->regs.end())

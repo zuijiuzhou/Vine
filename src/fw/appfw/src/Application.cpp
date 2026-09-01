@@ -102,47 +102,47 @@ bool Application::isBusy() const
     return vine::progress::ProgressHost::current() != nullptr;
 }
 
-RawPtr<CommandManager> Application::commandManager() const
+raw_ptr<CommandManager> Application::commandManager() const
 {
     return dptr()->command_manager.get();
 }
 
-RawPtr<PluginManager> Application::pluginManager() const
+raw_ptr<PluginManager> Application::pluginManager() const
 {
     return dptr()->plugin_manager.get();
 }
 
-RawPtr<ServiceManager> Application::serviceManager() const
+raw_ptr<ServiceManager> Application::serviceManager() const
 {
     return dptr()->service_manager.get();
 }
 
-RawPtr<ConfigManager> Application::configManager() const
+raw_ptr<ConfigManager> Application::configManager() const
 {
     return dptr()->config_manager.get();
 }
 
-RawPtr<ConfigRegistry> Application::configRegistry() const
+raw_ptr<ConfigRegistry> Application::configRegistry() const
 {
     return dptr()->config_registry.get();
 }
 
-RawPtr<EventBus> Application::eventBus() const
+raw_ptr<EventBus> Application::eventBus() const
 {
     return dptr()->event_bus.get();
 }
 
-RawPtr<MainThreadDispatcher> Application::mainThreadDispatcher() const
+raw_ptr<MainThreadDispatcher> Application::mainThreadDispatcher() const
 {
     return dptr()->main_dispatcher.get();
 }
 
-RawPtr<UserIO> Application::userIO() const
+raw_ptr<UserIO> Application::userIO() const
 {
     return dptr()->user_io.get();
 }
 
-RawPtr<Application> Application::current()
+raw_ptr<Application> Application::current()
 {
     return s_current_app;
 }

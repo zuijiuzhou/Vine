@@ -3,7 +3,7 @@
 
 #include <memory>
 
-#include <vine/RawPtr.hpp>
+#include <vine/raw_ptr.hpp>
 #include <vine/di/ServiceBase.hpp>
 
 V_DI_NS_BEGIN
@@ -21,10 +21,10 @@ V_DECLARE_PIMPL(Container)
  * creation; a transient instance is re-created on every resolve call.
  *
  * The container is Qt-free and depends only on the core runtime type system
- * (Type / ServiceBase / IntrusivePtr). resolve() returns a non-owning raw
+ * (Type / ServiceBase / intrusive_ptr). resolve() returns a non-owning raw
  * pointer: the container keeps ownership of pre-set and singleton instances,
  * while a transient instance must be adopted by the caller through
- * IntrusivePtr.
+ * intrusive_ptr.
  */
 class V_DI_API Container : public ServiceBase {
     V_OBJECT_META_DECL
@@ -57,7 +57,7 @@ class V_DI_API Container : public ServiceBase {
      * @return The resolved service instance, or nullptr when the type is not
      *         registered or cannot be created.
      */
-    RawPtr<ServiceBase> resolve(TypeId type) const;
+    raw_ptr<ServiceBase> resolve(TypeId type) const;
 
     /**
      * @brief Resolves the service registered for T.
@@ -66,7 +66,7 @@ class V_DI_API Container : public ServiceBase {
      * @return The resolved service instance cast to T*, or nullptr.
      */
     template <ObjectBased T>
-    RawPtr<T> resolve() const;
+    raw_ptr<T> resolve() const;
 
   private:
     struct Impl;
@@ -74,7 +74,7 @@ class V_DI_API Container : public ServiceBase {
 };
 
 template <ObjectBased T>
-RawPtr<T> Container::resolve() const
+raw_ptr<T> Container::resolve() const
 {
     return resolve(T::desc());
 }

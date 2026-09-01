@@ -2,7 +2,7 @@
 
 #include <vector>
 
-#include <vine/RawPtr.hpp>
+#include <vine/raw_ptr.hpp>
 
 #include "Gui.hpp"
 #include "Window.hpp"
@@ -32,9 +32,9 @@ class V_APPFW_API MainWindow : public Window {
     static MainWindow* current();
 
   public:
-    RawPtr<RibbonBar>        ribbonBar() const;
-    RawPtr<StatusBar>        statusBar() const;
-    RawPtr<DockPanelManager> dockPanelManager() const;
+    raw_ptr<RibbonBar>        ribbonBar() const;
+    raw_ptr<StatusBar>        statusBar() const;
+    raw_ptr<DockPanelManager> dockPanelManager() const;
 
   private:
     struct Impl;

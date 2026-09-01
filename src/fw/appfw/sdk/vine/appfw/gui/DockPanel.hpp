@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#include <vine/RawPtr.hpp>
+#include <vine/raw_ptr.hpp>
 
 #include "Control.hpp"
 #include "Gui.hpp"
@@ -28,7 +28,7 @@ class V_APPFW_API DockPanel : public Control {
     String id() const;
 
     void       setContent(UIElement* c);
-    RawPtr<UIElement> content() const;
+    raw_ptr<UIElement> content() const;
 
     // State queries
     bool      isFloating() const;

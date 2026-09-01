@@ -1,7 +1,7 @@
 ﻿#include <vine/di/Registration.hpp>
 
 #include <vine/Exception.hpp>
-#include <vine/IntrusivePtr.hpp>
+#include <vine/intrusive_ptr.hpp>
 
 V_DI_NS_BEGIN
 
@@ -17,7 +17,7 @@ Registration& Registration::instance(ServiceBase* inst)
     if (inst && !inst->isKindOf(service_type_)) {
         throw vine::Exception(vine::Exception::INVALID_ARGUMENTS, u8"The 'inst' is not kind of the service type.");
     }
-    inst_     = inst;                        // The container takes ownership through IntrusivePtr.
+    inst_     = inst;                        // The container takes ownership through intrusive_ptr.
     lifetime_ = Lifetime::Singleton; // A pre-set instance is inherently shared.
     return *this;
 }

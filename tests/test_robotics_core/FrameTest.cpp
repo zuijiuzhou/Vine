@@ -44,7 +44,7 @@ TEST(FrameTest, IsAncestorOfReused)
     root.addChild(&child2);
     child1.addChild(&grand);
 
-    // The inherited ITreeNode algorithm is reused by Frame.
+    // The inherited IHierarchyNode algorithm is reused by Frame.
     EXPECT_TRUE(root.isAncestorOf(&grand));
     EXPECT_TRUE(root.isAncestorOf(&child1));
     EXPECT_TRUE(child1.isAncestorOf(&grand));
@@ -65,7 +65,7 @@ TEST(FrameTest, IsDescendantOfReused)
     root.addChild(&child2);
     child1.addChild(&grand);
 
-    // The inherited ITreeNode algorithm is reused by Frame.
+    // The inherited IHierarchyNode algorithm is reused by Frame.
     EXPECT_TRUE(child1.isDescendantOf(&root));
     EXPECT_TRUE(grand.isDescendantOf(&root));
     EXPECT_TRUE(grand.isDescendantOf(&child1));

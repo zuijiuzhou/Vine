@@ -17,6 +17,25 @@
 
 V_ROBOTICS_WORKCELL_NS_BEGIN
 
+
+enum class DeviceKind
+{
+    // 机械臂
+    Manipulator = 1,
+    // 外部轴
+    ExternalAxis,
+    // 变位机
+    Positioner,
+    // 扫描仪
+    Scanner,
+    // 工具
+    Tool,
+    // 其他类型
+    Other = 255
+};
+
+class DeviceData{};
+
 /**
  * @brief Base class of all devices in a workcell.
  *
@@ -34,16 +53,17 @@ V_ROBOTICS_WORKCELL_NS_BEGIN
  * a device is removed).
  */
 class Device : public SceneObject {
-  public:
+
+  protected:
     /**
      * @brief Constructs a device with the given name.
      *
      * @param name The device name.
      */
-    explicit Device(const String& name)
-      : name_(name)
+    explicit Device()
     {}
 
+  public:
     /**
      * @brief Destroys the device.
      */
@@ -186,7 +206,7 @@ class Device : public SceneObject {
      *
      * @return The end frames.
      */
-    std::vector<kinematics::Frame*> getEndFrames() const
+    std::vector<kinematics::Frame*> getEnds() const
     {
         std::vector<kinematics::Frame*> ends;
         ends.reserve(ends_.size());
@@ -202,15 +222,16 @@ class Device : public SceneObject {
      * @param index The end index.
      * @return The end frame, or null when out of range.
      */
-    kinematics::Frame* getEndFrame(std::size_t index) const
+    kinematics::Frame* getEnd(std::size_t index) const
     {
         return index < ends_.size() ? ends_[index].get() : nullptr;
     }
 
+    void initDevice();
+
   private:
     String                                          name_;
     String                                          model_name_;
-    math::Isometry3d                                local_pose_;
     std::vector<std::unique_ptr<Link>>              links_;
     std::vector<std::unique_ptr<Joint>>             joints_;
     std::vector<std::unique_ptr<kinematics::Frame>> ends_;

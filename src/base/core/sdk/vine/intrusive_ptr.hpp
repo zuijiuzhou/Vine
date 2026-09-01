@@ -9,9 +9,9 @@
 V_CORE_NS_BEGIN
 
 /**
- * @brief Intrusive strong reference pointer (boost::IntrusivePtr style).
+ * @brief Intrusive strong reference pointer (boost::intrusive_ptr style).
  *
- * IntrusivePtr<T> is a single owning pointer managing T through the ADL free functions
+ * intrusive_ptr<T> is a single owning pointer managing T through the ADL free functions
  * intrusive_ptr_add_ref / intrusive_ptr_release. T does not need a common base
  * class: either provide those functions yourself, or derive T from
  * RefCounted<T>. There is no separate control block; the counter lives inside
@@ -21,10 +21,10 @@ V_CORE_NS_BEGIN
  *         intrusive_ptr_add_ref(T*) / intrusive_ptr_release(T*) via ADL.
  */
 template <typename T>
-class IntrusivePtr {
+class intrusive_ptr {
   private:
     template <typename U>
-    friend class IntrusivePtr;
+    friend class intrusive_ptr;
 
     T* px_{ nullptr };
 
@@ -46,14 +46,14 @@ class IntrusivePtr {
     /**
      * @brief Constructs a null pointer.
      */
-    IntrusivePtr() noexcept = default;
+    intrusive_ptr() noexcept = default;
 
     /**
      * @brief Takes ownership of p and adds a reference.
      *
      * @param p Raw pointer to adopt, or nullptr.
      */
-    explicit IntrusivePtr(T* p)
+    explicit intrusive_ptr(T* p)
       : px_(p)
     {
         addRef();
@@ -65,7 +65,7 @@ class IntrusivePtr {
      * @param p Raw pointer to adopt, or nullptr.
      * @param add_ref false to adopt an already-held reference.
      */
-    IntrusivePtr(T* p, bool add_ref)
+    intrusive_ptr(T* p, bool add_ref)
       : px_(p)
     {
         if (add_ref)
@@ -75,19 +75,19 @@ class IntrusivePtr {
     /**
      * @brief Copy constructor; increments the reference count.
      */
-    IntrusivePtr(const IntrusivePtr& other)
+    intrusive_ptr(const intrusive_ptr& other)
       : px_(other.px_)
     {
         addRef();
     }
 
     /**
-     * @brief Converting constructor from IntrusivePtr<U>.
+     * @brief Converting constructor from intrusive_ptr<U>.
      *
      * @tparam U Source element type convertible to T.
      */
     template <typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
-    IntrusivePtr(const IntrusivePtr<U>& other)
+    intrusive_ptr(const intrusive_ptr<U>& other)
       : px_(other.px_)
     {
         addRef();
@@ -96,7 +96,7 @@ class IntrusivePtr {
     /**
      * @brief Releases the reference.
      */
-    ~IntrusivePtr()
+    ~intrusive_ptr()
     {
         release();
     }
@@ -106,21 +106,21 @@ class IntrusivePtr {
      *
      * @return *this.
      */
-    IntrusivePtr& operator=(const IntrusivePtr& other)
+    intrusive_ptr& operator=(const intrusive_ptr& other)
     {
-        IntrusivePtr(other).swap(*this);
+        intrusive_ptr(other).swap(*this);
         return *this;
     }
 
     /**
-     * @brief Converting assignment from IntrusivePtr<U>.
+     * @brief Converting assignment from intrusive_ptr<U>.
      *
      * @return *this.
      */
     template <typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
-    IntrusivePtr& operator=(const IntrusivePtr<U>& other)
+    intrusive_ptr& operator=(const intrusive_ptr<U>& other)
     {
-        IntrusivePtr(other).swap(*this);
+        intrusive_ptr(other).swap(*this);
         return *this;
     }
 
@@ -129,9 +129,9 @@ class IntrusivePtr {
      *
      * @return *this.
      */
-    IntrusivePtr& operator=(T* p)
+    intrusive_ptr& operator=(T* p)
     {
-        IntrusivePtr(p).swap(*this);
+        intrusive_ptr(p).swap(*this);
         return *this;
     }
 
@@ -140,7 +140,7 @@ class IntrusivePtr {
      */
     void reset()
     {
-        IntrusivePtr().swap(*this);
+        intrusive_ptr().swap(*this);
     }
 
     /**
@@ -150,13 +150,13 @@ class IntrusivePtr {
      */
     void reset(T* p)
     {
-        IntrusivePtr(p).swap(*this);
+        intrusive_ptr(p).swap(*this);
     }
 
     /**
      * @brief Swaps with another pointer.
      */
-    void swap(IntrusivePtr& other) noexcept
+    void swap(intrusive_ptr& other) noexcept
     {
         std::swap(px_, other.px_);
     }
@@ -209,52 +209,52 @@ class IntrusivePtr {
         return px_ != nullptr;
     }
 
-    friend bool operator==(const IntrusivePtr& a, const IntrusivePtr& b) noexcept
+    friend bool operator==(const intrusive_ptr& a, const intrusive_ptr& b) noexcept
     {
         return a.px_ == b.px_;
     }
 
-    friend bool operator!=(const IntrusivePtr& a, const IntrusivePtr& b) noexcept
+    friend bool operator!=(const intrusive_ptr& a, const intrusive_ptr& b) noexcept
     {
         return a.px_ != b.px_;
     }
 
-    friend bool operator==(const IntrusivePtr& a, T* b) noexcept
+    friend bool operator==(const intrusive_ptr& a, T* b) noexcept
     {
         return a.px_ == b;
     }
 
-    friend bool operator==(T* a, const IntrusivePtr& b) noexcept
+    friend bool operator==(T* a, const intrusive_ptr& b) noexcept
     {
         return a == b.px_;
     }
 
-    friend bool operator!=(const IntrusivePtr& a, T* b) noexcept
+    friend bool operator!=(const intrusive_ptr& a, T* b) noexcept
     {
         return a.px_ != b;
     }
 
-    friend bool operator!=(T* a, const IntrusivePtr& b) noexcept
+    friend bool operator!=(T* a, const intrusive_ptr& b) noexcept
     {
         return a != b.px_;
     }
 
-    friend bool operator==(const IntrusivePtr& a, std::nullptr_t) noexcept
+    friend bool operator==(const intrusive_ptr& a, std::nullptr_t) noexcept
     {
         return a.px_ == nullptr;
     }
 
-    friend bool operator==(std::nullptr_t, const IntrusivePtr& a) noexcept
+    friend bool operator==(std::nullptr_t, const intrusive_ptr& a) noexcept
     {
         return a.px_ == nullptr;
     }
 
-    friend bool operator!=(const IntrusivePtr& a, std::nullptr_t) noexcept
+    friend bool operator!=(const intrusive_ptr& a, std::nullptr_t) noexcept
     {
         return a.px_ != nullptr;
     }
 
-    friend bool operator!=(std::nullptr_t, const IntrusivePtr& a) noexcept
+    friend bool operator!=(std::nullptr_t, const intrusive_ptr& a) noexcept
     {
         return a.px_ != nullptr;
     }
@@ -268,9 +268,9 @@ class IntrusivePtr {
  * @return A new owning pointer to the same object.
  */
 template <typename T, typename U>
-inline IntrusivePtr<T> static_pointer_cast(const IntrusivePtr<U>& r)
+inline intrusive_ptr<T> static_pointer_cast(const intrusive_ptr<U>& r)
 {
-    return IntrusivePtr<T>(static_cast<T*>(r.get()));
+    return intrusive_ptr<T>(static_cast<T*>(r.get()));
 }
 
 /**
@@ -281,9 +281,9 @@ inline IntrusivePtr<T> static_pointer_cast(const IntrusivePtr<U>& r)
  * @return A new owning pointer to the same object.
  */
 template <typename T, typename U>
-inline IntrusivePtr<T> const_pointer_cast(const IntrusivePtr<U>& r)
+inline intrusive_ptr<T> const_pointer_cast(const intrusive_ptr<U>& r)
 {
-    return IntrusivePtr<T>(const_cast<T*>(r.get()));
+    return intrusive_ptr<T>(const_cast<T*>(r.get()));
 }
 
 /**
@@ -294,15 +294,15 @@ inline IntrusivePtr<T> const_pointer_cast(const IntrusivePtr<U>& r)
  * @return A new owning pointer, or null when the cast fails.
  */
 template <typename T, typename U>
-inline IntrusivePtr<T> dynamic_pointer_cast(const IntrusivePtr<U>& r)
+inline intrusive_ptr<T> dynamic_pointer_cast(const intrusive_ptr<U>& r)
 {
-    return IntrusivePtr<T>(dynamic_cast<T*>(r.get()));
+    return intrusive_ptr<T>(dynamic_cast<T*>(r.get()));
 }
 
 /**
- * @brief Alias for IntrusivePtr.
+ * @brief Alias for intrusive_ptr.
  */
 template <typename T>
-using IPtr = IntrusivePtr<T>;
+using IPtr = intrusive_ptr<T>;
 
 V_CORE_NS_END

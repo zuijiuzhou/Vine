@@ -3,17 +3,17 @@
 #include <cstddef>
 #include <vector>
 
-#include <vine/ITreeNode.hpp>
+#include <vine/IHierarchyNode.hpp>
 
-using vine::ITreeNode;
+using vine::IHierarchyNode;
 
 namespace
 {
 
 /**
- * @brief Minimal concrete tree node used to exercise ITreeNode.
+ * @brief Minimal concrete tree node used to exercise IHierarchyNode.
  */
-class Node : public ITreeNode<Node> {
+class Node : public IHierarchyNode<Node> {
   public:
     explicit Node(Node* parent)
       : parent_(parent)
@@ -46,7 +46,7 @@ class Node : public ITreeNode<Node> {
 
 } // namespace
 
-TEST(ITreeNodeTest, BuildsTreeAndTraverses)
+TEST(IHierarchyNodeTest, BuildsTreeAndTraverses)
 {
     Node root(nullptr);
     Node child1(&root);
@@ -65,7 +65,7 @@ TEST(ITreeNodeTest, BuildsTreeAndTraverses)
     EXPECT_EQ(root.parent(), nullptr);
 }
 
-TEST(ITreeNodeTest, IsAncestorOf)
+TEST(IHierarchyNodeTest, IsAncestorOf)
 {
     Node root(nullptr);
     Node child1(&root);
@@ -90,7 +90,7 @@ TEST(ITreeNodeTest, IsAncestorOf)
     EXPECT_FALSE(root.isAncestorOf(nullptr));
 }
 
-TEST(ITreeNodeTest, IsDescendantOf)
+TEST(IHierarchyNodeTest, IsDescendantOf)
 {
     Node root(nullptr);
     Node child1(&root);
