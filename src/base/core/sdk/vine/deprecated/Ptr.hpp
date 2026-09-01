@@ -3,14 +3,13 @@
 #include <vine/core_global.hpp>
 
 #include <atomic>
-#include <memory>
 
 #include <vine/deprecated/RefObject.hpp>
 
 V_CORE_NS_BEGIN
 
 template <typename T>
-[[deprecated]] class SPtr {
+class [[deprecated]] SPtr {
   private:
     template <typename TOther>
     friend class SPtr;
@@ -198,7 +197,7 @@ template <typename T>
 };
 
 template <typename T>
-[[deprecated]] class WPtr {
+class [[deprecated]] WPtr {
   private:
     template <typename TOther>
     friend class WPtr;

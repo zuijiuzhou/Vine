@@ -416,8 +416,10 @@ void XmlIOBase::exportGeometry(ExportContext& ctx, const vine::geometry::Shape& 
             ctx.mesh_paths[&shape] = prefix;
         }
         auto xe_mesh = xe->GetDocument()->NewElement("triangle_mesh");
-        xe_mesh->SetAttribute("vertex_count", static_cast<unsigned long long>(mesh->vertexCount()));
-        xe_mesh->SetAttribute("triangle_count", static_cast<unsigned long long>(mesh->triangleCount()));
+        const auto vertex_count_str = std::to_string(mesh->vertexCount());
+        const auto triangle_count_str = std::to_string(mesh->triangleCount());
+        xe_mesh->SetAttribute("vertex_count", vertex_count_str.c_str());
+        xe_mesh->SetAttribute("triangle_count", triangle_count_str.c_str());
         setAttr(xe_mesh, "positions", prefix + String(u8".positions.bin"));
         if (!mesh->normals().empty()) {
             setAttr(xe_mesh, "normals", prefix + String(u8".normals.bin"));
@@ -448,8 +450,10 @@ void XmlIOBase::exportGeometry(ExportContext& ctx, const vine::geometry::Shape& 
             ctx.mesh_paths[&shape] = prefix;
         }
         auto xe_mesh = xe->GetDocument()->NewElement("indexed_triangle_mesh");
-        xe_mesh->SetAttribute("vertex_count", static_cast<unsigned long long>(mesh->vertexCount()));
-        xe_mesh->SetAttribute("triangle_count", static_cast<unsigned long long>(mesh->triangleCount()));
+        const auto vertex_count_str = std::to_string(mesh->vertexCount());
+        const auto triangle_count_str = std::to_string(mesh->triangleCount());
+        xe_mesh->SetAttribute("vertex_count", vertex_count_str.c_str());
+        xe_mesh->SetAttribute("triangle_count", triangle_count_str.c_str());
         setAttr(xe_mesh, "positions", prefix + String(u8".positions.bin"));
         if (!mesh->normals().empty()) {
             setAttr(xe_mesh, "normals", prefix + String(u8".normals.bin"));

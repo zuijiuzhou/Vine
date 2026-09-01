@@ -22,6 +22,8 @@ if(VINE_USE_FETCHCONTENT)
     # target, so point both at zlibstatic.
     set(ZLIB_INCLUDE_DIR "${zlib_SOURCE_DIR}" CACHE PATH "" FORCE)
     set(ZLIB_LIBRARY zlibstatic CACHE FILEPATH "" FORCE)
+    # Mark ZLIB as found to prevent find_package(ZLIB) from searching for system zlib
+    set(ZLIB_FOUND TRUE CACHE BOOL "" FORCE)
     if(NOT TARGET ZLIB::ZLIB)
         add_library(ZLIB::ZLIB ALIAS zlibstatic)
     endif()

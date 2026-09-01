@@ -79,7 +79,7 @@ class V_ROBOTICS_IO_API WorkcellIO : public XmlIOBase
      * @brief Loads a workcell from a workcell package held in a VFS.
      *
      * Reads workcell.xml from the VFS root, then the referenced device
-     * packages (devices/*.vdevpkg) and geoms bins from the same VFS.
+     * packages (*.vdevpkg) and geoms bins from the same VFS.
      *
      * @param vfs The virtual file system holding the workcell resources.
      * @return The workcell, owned by the caller.

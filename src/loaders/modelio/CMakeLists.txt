@@ -46,4 +46,4 @@ else()
 endif()
 
 target_link_libraries(${MODELIO_TARGET_NAME} PUBLIC vi::Runtime vi::Geometry vi::Crypto)
-target_link_libraries(${MODELIO_TARGET_NAME} PRIVATE assimp::assimp)
+target_link_libraries(${MODELIO_TARGET_NAME} PRIVATE assimp::assimp zlibstatic)

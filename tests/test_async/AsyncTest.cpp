@@ -1980,7 +1980,7 @@ TEST(SharedTaskTest, EmptySharedTask)
     EXPECT_FALSE(static_cast<bool>(st));
     EXPECT_FALSE(st.isReady());
     EXPECT_THROW(async::syncWait(sharedAwaitInt(st)), std::logic_error);
-    EXPECT_THROW(st.result(), std::logic_error);
+    EXPECT_THROW([&st]() { return st.result(); }(), std::logic_error);
 }
 
 TEST(SharedTaskTest, LazyDoesNotRunUntilFirstAwait)
