@@ -127,7 +127,7 @@ class V_GRAPHICS_API Camera : public Object, public RefCounted<Camera> {
     // Copy of the last projection parameters, used for queries.
     double near_plane_ = 0.1;
     double far_plane_ = 1000.0;
-    double fov_ = 60.0;
+    double fov_ = 45.0;
     double aspect_ratio_ = 1.0;
     double ortho_height_ = 10.0;
 };

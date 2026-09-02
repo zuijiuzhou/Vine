@@ -50,6 +50,15 @@ DockingPaneFlyoutWidget::DockingPaneFlyoutWidget(bool                  hasFocus,
 
     setAutoFillBackground(true);
 
+    // The flyout overlays the dock area, which may host a native child window
+    // (e.g. an embedded Vulkan render surface). Native child windows always
+    // paint above non-native sibling widgets, so a plain widget flyout would
+    // appear underneath the render area. Show the flyout as a top-level tool
+    // window instead: it then floats above the whole main window (and all its
+    // native children) without disturbing the render surface. The overlay
+    // geometry is computed in screen coordinates in setPositionAndSize().
+    setWindowFlags(Qt::Tool | Qt::FramelessWindowHint);
+
     if (!hasFocus) {
         setAttribute(Qt::WA_ShowWithoutActivating);
 
@@ -383,7 +392,10 @@ void DockingPaneFlyoutWidget::setActivePane(bool active)
 
 void DockingPaneFlyoutWidget::setPositionAndSize()
 {
-    QRect rc = parentWidget()->rect();
+    // The flyout is a top-level tool window, so its geometry is in screen
+    // coordinates. Start from the dock widget's rect mapped to the screen.
+    const QWidget* host   = parentWidget();
+    QRect          rc     = host ? QRect(host->mapToGlobal(host->rect().topLeft()), host->rect().size()) : QRect();
 
     switch (m_pos) {
     case Right:

@@ -71,13 +71,13 @@ class Frustum {
      * @param box World-space axis-aligned bounding box.
      * @return true when the box is fully outside the frustum.
      */
-    bool isOutside(const BoundingBox& box) const
+    bool isOutside(const Aabbd& box) const
     {
         for (const auto& p : planes_) {
             const Vec3d n(p.x, p.y, p.z);
-            const Vec3d pos{ (n.x >= 0.0) ? box.max.x : box.min.x,
-                             (n.y >= 0.0) ? box.max.y : box.min.y,
-                             (n.z >= 0.0) ? box.max.z : box.min.z };
+            const Vec3d pos{ (n.x >= 0.0) ? box.max().x : box.min().x,
+                             (n.y >= 0.0) ? box.max().y : box.min().y,
+                             (n.z >= 0.0) ? box.max().z : box.min().z };
             if (n.dot(pos) + p.w < 0.0) {
                 return true;
             }
@@ -229,9 +229,9 @@ void Scene::clear()
     nodes_.clear();
 }
 
-BoundingBox Scene::boundingBox() const
+Aabbd Scene::boundingBox() const
 {
-    BoundingBox box;
+    Aabbd box = Aabbd::empty();
     if (!visible_) {
         return box;
     }
@@ -239,9 +239,9 @@ BoundingBox Scene::boundingBox() const
         if (!node->isVisible()) {
             continue;
         }
-        const BoundingBox node_box = node->boundingBox();
+        const Aabbd node_box = node->boundingBox();
         if (node_box.isValid()) {
-            box.expand(node_box);
+            box.expandBy(node_box);
         }
     }
     return box;

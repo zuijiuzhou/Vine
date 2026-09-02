@@ -20,7 +20,7 @@ void Drawable::setName(const String& name)
     name_ = name;
 }
 
-BoundingBox Drawable::boundingBox() const
+Aabbd Drawable::boundingBox() const
 {
     return computeBoundingBox();
 }

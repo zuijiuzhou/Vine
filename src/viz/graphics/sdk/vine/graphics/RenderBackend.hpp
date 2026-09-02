@@ -104,6 +104,24 @@ class V_GRAPHICS_API RenderBackend : public Object, public RefCounted<RenderBack
      */
     virtual void resize(int width, int height) { (void)width; (void)height; }
 
+    /** @brief Restricts subsequent drawing to a sub-rectangle of the surface.
+     *
+     * Called by RenderPass::execute() before drawing a pass that owns a
+     * sub-viewport (e.g. an axis gizmo in a screen corner). Backends should
+     * combine the viewport and scissor to that rectangle. The default no-op
+     * keeps drawing to the full surface, which is correct for backends that
+     * do not support sub-viewports yet.
+     *
+     * @param x      Viewport origin x in device pixels.
+     * @param y      Viewport origin y in device pixels (top-left origin).
+     * @param width  Viewport width in device pixels.
+     * @param height Viewport height in device pixels.
+     */
+    virtual void setViewport(int x, int y, int width, int height)
+    {
+        (void)x; (void)y; (void)width; (void)height;
+    }
+
     /** @brief Gets the native handle the backend is currently attached to.
      *
      * Returns the native window handle (HWND on Windows) the backend bound

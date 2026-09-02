@@ -4,6 +4,8 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <limits>
+#include <span>
 
 #include "Math.hpp"
 
@@ -153,6 +155,43 @@ class Rect3 {
     }
 
     /**
+     * @brief Check whether the box is empty (an inverted min/max sentinel).
+     *
+     * Equivalent to isNeg(); an AABB built with empty() and only expanded is
+     * empty until the first expandBy().
+     */
+    [[nodiscard]]
+    constexpr bool isEmpty() const
+    {
+        return isNeg();
+    }
+
+    /**
+     * @brief Check whether the box is usable (min <= max on every axis).
+     */
+    [[nodiscard]]
+    constexpr bool isValid() const
+    {
+        return !isNeg();
+    }
+
+    /**
+     * @brief Returns an empty box (inverted sentinel) to start an expansion.
+     *
+     * The first expandBy() of a point/box turns it into that point/box.
+     */
+    [[nodiscard]]
+    static constexpr Rect3<T> empty()
+    {
+        return Rect3<T>(std::numeric_limits<T>::max(),
+                        std::numeric_limits<T>::max(),
+                        std::numeric_limits<T>::max(),
+                        std::numeric_limits<T>::lowest(),
+                        std::numeric_limits<T>::lowest(),
+                        std::numeric_limits<T>::lowest());
+    }
+
+    /**
      * @brief Fix inverted axes in-place so that min ≤ max on every axis.
      */
     constexpr void normalize()
@@ -191,6 +230,15 @@ class Rect3 {
     }
 
     /**
+     * @brief Compute the box enclosing a set of points.
+     *
+     * @param points Points to enclose (any axis order).
+     * @return Minimal enclosing box; the default (zero) box when empty.
+     */
+    [[nodiscard]]
+    static Rect3<T> compute(std::span<const Vector3<T>> points);
+
+    /**
      * @brief Check whether a point lies inside the box (inclusive).
      */
     [[nodiscard]]
@@ -203,6 +251,19 @@ class Rect3 {
     bool contains(const Point3<T>& pt) const;
 
     /* ---- modifiers ---- */
+
+    /**
+     * @brief Expand to include a point (as a vector, e.g. a vertex position).
+     */
+    void expandBy(const Vector3<T>& pt)
+    {
+        xmin = std::min<T>(xmin, pt.x);
+        ymin = std::min<T>(ymin, pt.y);
+        zmin = std::min<T>(zmin, pt.z);
+        xmax = std::max<T>(xmax, pt.x);
+        ymax = std::max<T>(ymax, pt.y);
+        zmax = std::max<T>(zmax, pt.z);
+    }
 
     /**
      * @brief Expand to include a point.
@@ -258,5 +319,21 @@ class Rect3 {
 using Rect3i = Rect3<int32_t>;
 using Rect3f = Rect3<float>;
 using Rect3d = Rect3<double>;
+
+using Aabbi = Rect3<int32_t>;
+using Aabbf = Rect3<float>;
+using Aabbd = Rect3<double>;
+
+/**
+ * @brief Alias of Rect3 under the conventional axis-aligned bounding box
+ * name.
+ *
+ * Aabb<T> is fully equivalent to Rect3<T>: the box may be inverted
+ * (max < min); use isNeg()/normalize() to detect or fix that state.
+ *
+ * @tparam T Scalar type.
+ */
+template <typename T>
+using Aabb = Rect3<T>;
 
 V_MATH_NS_END

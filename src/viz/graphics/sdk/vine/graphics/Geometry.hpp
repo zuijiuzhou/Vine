@@ -38,7 +38,7 @@ class V_GRAPHICS_API Geometry : public Drawable {
     std::size_t vertexCount() const;
 
   protected:
-    BoundingBox computeBoundingBox() const override;
+    Aabbd computeBoundingBox() const override;
 
   private:
     intrusive_ptr<vine::geometry::Shape> shape_;

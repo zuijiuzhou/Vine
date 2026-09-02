@@ -7,10 +7,11 @@
 #include <vine/String.hpp>
 #include <vector>
 
-#include "BoundingBox.hpp"
 #include "Node.hpp"
 
 V_GRAPHICS_NS_BEGIN
+
+using vine::math::Aabbd;
 
 class Camera;
 struct RenderCommand;
@@ -74,7 +75,7 @@ class V_GRAPHICS_API Scene : public Object, public RefCounted<Scene> {
     void clear();
 
     /** @brief Computes the bounding box of the whole scene. */
-    BoundingBox boundingBox() const;
+    Aabbd boundingBox() const;
 
     /** @brief Collects render commands for the given camera.
      *

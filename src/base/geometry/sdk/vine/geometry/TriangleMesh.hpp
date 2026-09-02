@@ -3,10 +3,7 @@
 #include "geometry_global.hpp"
 
 #include <cstddef>
-#include <utility>
-#include <vector>
 
-#include "Array.hpp"
 #include "Mesh.hpp"
 
 V_GEOMETRY_NS_BEGIN
@@ -23,49 +20,6 @@ class V_GEOMETRY_API TriangleMesh : public Mesh {
   public:
     TriangleMesh();
 
-  public:
-    /**
-     * @brief Returns the vertex positions.
-     *
-     * @return Position array (3 entries per triangle).
-     */
-    const Vec3fArray& positions() const;
-
-    /**
-     * @brief Returns the per-vertex normals.
-     *
-     * @return Normal array, may be empty.
-     */
-    const Vec3fArray& normals() const;
-
-    /**
-     * @brief Returns the per-vertex texture coordinates.
-     *
-     * @return Texcoord array, may be empty.
-     */
-    const Vec2fArray& texcoords() const;
-
-    /**
-     * @brief Replaces the vertex positions.
-     *
-     * @param positions New position array.
-     */
-    void setPositions(Vec3fArray positions);
-
-    /**
-     * @brief Replaces the per-vertex normals.
-     *
-     * @param normals New normal array.
-     */
-    void setNormals(Vec3fArray normals);
-
-    /**
-     * @brief Replaces the per-vertex texture coordinates.
-     *
-     * @param texcoords New texcoord array.
-     */
-    void setTexcoords(Vec2fArray texcoords);
-
     /**
      * @brief Appends one triangle.
      *
@@ -81,14 +35,6 @@ class V_GEOMETRY_API TriangleMesh : public Mesh {
     void clear();
 
     /**
-     * @brief Returns the number of stored vertices.
-     *
-     * @return Vertex count.
-     */
-    [[nodiscard]]
-    std::size_t vertexCount() const;
-
-    /**
      * @brief Returns the number of triangles.
      *
      * @return Triangle count.
@@ -98,14 +44,6 @@ class V_GEOMETRY_API TriangleMesh : public Mesh {
 
     [[nodiscard]]
     bool isValid() const override;
-
-  private:
-    /// Vertices, three per triangle.
-    Vec3fArray positions_;
-    /// Optional per-vertex normals (same size as positions when set).
-    Vec3fArray normals_;
-    /// Optional per-vertex texture coordinates (same size as positions when set).
-    Vec2fArray texcoords_;
 };
 
 V_GEOMETRY_NS_END

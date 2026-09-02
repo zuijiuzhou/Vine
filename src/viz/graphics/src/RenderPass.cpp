@@ -62,13 +62,55 @@ void RenderPass::setShouldClearDepth(bool clear)
     clear_depth_ = clear;
 }
 
+bool RenderPass::clearEnabled() const
+{
+    return clear_enabled_;
+}
+
+void RenderPass::setClearEnabled(bool enabled)
+{
+    clear_enabled_ = enabled;
+}
+
+void RenderPass::setViewport(int x, int y, int width, int height)
+{
+    viewport_x_ = x;
+    viewport_y_ = y;
+    viewport_w_ = width;
+    viewport_h_ = height;
+    has_viewport_ = true;
+}
+
+bool RenderPass::hasViewport() const
+{
+    return has_viewport_;
+}
+
+void RenderPass::getViewport(int& x, int& y, int& width, int& height) const
+{
+    x = viewport_x_;
+    y = viewport_y_;
+    width = viewport_w_;
+    height = viewport_h_;
+}
+
+void RenderPass::clearViewport()
+{
+    has_viewport_ = false;
+}
+
 void RenderPass::execute(Scene* scene, RenderBackend* backend)
 {
     if (backend == nullptr || scene == nullptr) {
         return;
     }
     backend->setRenderTarget(render_target_);
-    backend->clear(clear_color_, clear_depth_);
+    if (has_viewport_) {
+        backend->setViewport(viewport_x_, viewport_y_, viewport_w_, viewport_h_);
+    }
+    if (clear_enabled_) {
+        backend->clear(clear_color_, clear_depth_);
+    }
     const auto commands = scene->collectRenderCommands(camera_);
     if (camera_ != nullptr) {
         backend->render(commands, camera_);

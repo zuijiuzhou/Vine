@@ -28,8 +28,8 @@ src/viz/graphics/
   sdk/vine/graphics/
     graphics_global.hpp          # API export 宏 + 命名空间
 
-    # 场景与几何体
-    BoundingBox.hpp              # 轴对齐包围盒
+    # 场景与几何体（边界框类型使用 vine::math::Aabbd，即 Rect3<double>，
+    #            由 vine/math/Rect3.hpp 提供，BoundingBox 已移除）
     Node.hpp                     # 场景图节点（变换 + 子节点 + 可绘制对象）
     Drawable.hpp                 # 可绘制对象基类（几何 + 材质）
     Geometry.hpp                 # 几何体（包装 vine::geometry::Shape）
@@ -90,7 +90,7 @@ class V_GRAPHICS_API Drawable : public Object, public RefCounted<Drawable> {
     void setName(const String& name);
 
     /** @brief 局部坐标系边界框。 */
-    BoundingBox boundingBox() const;
+    Aabbd boundingBox() const;
 
     /** @brief 绑定的材质（可为空）。 */
     Material* material() const;
@@ -98,7 +98,7 @@ class V_GRAPHICS_API Drawable : public Object, public RefCounted<Drawable> {
 
   protected:
     /** @brief 子类实现：计算局部边界框。 */
-    virtual BoundingBox computeBoundingBox() const = 0;
+    virtual Aabbd computeBoundingBox() const = 0;
 
   private:
     struct Data;
@@ -134,7 +134,7 @@ class V_GRAPHICS_API Geometry : public Drawable {
     std::size_t vertexCount() const;
 
   protected:
-    BoundingBox computeBoundingBox() const override;
+    Aabbd computeBoundingBox() const override;
 
   private:
     struct Data;
@@ -231,7 +231,7 @@ class V_GRAPHICS_API Scene : public Object, public RefCounted<Scene> {
     void clear();
 
     /** @brief 场景总边界框。 */
-    BoundingBox boundingBox() const;
+    Aabbd boundingBox() const;
 
     /** @brief 收集渲染命令（含视锥剔除与排序）。
      *
@@ -365,7 +365,7 @@ class V_GRAPHICS_API Node : public Object, public RefCounted<Node> {
     std::vector<DrawablePtr> drawables() const;
 
     /** @brief 子树的世界空间包围盒。 */
-    BoundingBox boundingBox() const;
+    Aabbd boundingBox() const;
 
   private:
     struct Data;
@@ -703,7 +703,7 @@ class V_GRAPHICS_API RenderEngine : public Object, public RefCounted<RenderEngin
 ┌────────────────────────────────────────────┐
 │ graphics（基础与抽象层）                      │
 │  ├─ 数据结构：Scene/Node/Camera/Material    │
-│  ├─ 查询：RayIntersection/BoundingBox       │
+│  ├─ 查询：RayIntersection/boundingBox()       │
 │  ├─ 抽象接口：RenderBackend                 │
 │  └─ 驱动：RenderEngine/RenderPass           │
 └───────────────────┬────────────────────────┘
@@ -854,7 +854,6 @@ backend->swapBuffers();
 
 ### 头文件（sdk/vine/graphics/）
 - `graphics_global.hpp` — API 导出和命名空间宏
-- `BoundingBox.hpp` — 轴对齐包围盒
 - `Drawable.hpp` — 可绘制对象基类
 - `Geometry.hpp` — 几何体类（包装 Shape）
 - `Material.hpp` — 材质定义（纯属性）

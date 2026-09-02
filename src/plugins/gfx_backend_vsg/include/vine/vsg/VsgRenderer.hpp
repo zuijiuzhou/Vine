@@ -109,6 +109,20 @@ class V_VSG_API VsgRenderer : public vine::graphics::RenderBackend {
      */
     void resize(int width, int height) override;
 
+    /** @brief Restricts the next render() to a sub-viewport of the surface.
+     *
+     * Called by RenderPass::execute() before an overlay pass that owns a
+     * sub-viewport (e.g. an axis gizmo). The rectangle is consumed by the
+     * following render() call, which draws into its own RenderGraph. A pass
+     * without a sub-viewport renders the full surface.
+     *
+     * @param x      Viewport origin x in device pixels.
+     * @param y      Viewport origin y in device pixels (top-left origin).
+     * @param width  Viewport width in device pixels.
+     * @param height Viewport height in device pixels.
+     */
+    void setViewport(int x, int y, int width, int height) override;
+
     /** @brief Gets the native handle the renderer attached its window to.
      *
      * Returns the host surface handle (HWND on Windows) used when the window
@@ -137,6 +151,14 @@ class V_VSG_API VsgRenderer : public vine::graphics::RenderBackend {
     ::vsg::ref_ptr<::vsg::Node> vsgScene() const;
 
   private:
+    /** @brief Renders an overlay pass into its own sub-viewport RenderGraph. */
+    void renderOverlayPass(const std::vector<vine::graphics::RenderCommand>& commands,
+                           const vine::graphics::Camera* camera, int vp_x, int vp_y,
+                           int vp_w, int vp_h);
+
+    /** @brief Records and presents the frame (once, when swapBuffers is called). */
+    void submitFrame();
+
     struct Data;
     Data* const d;
 };

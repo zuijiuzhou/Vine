@@ -61,6 +61,26 @@ TMPL_PREFIX bool Rect3<T>::intersectWith(const Rect3<T>& rect, Rect3<T>& out) co
     return ix0 <= ix1 && iy0 <= iy1 && iz0 <= iz1;
 }
 
+TMPL_PREFIX Rect3<T> Rect3<T>::compute(std::span<const Vector3<T>> points)
+{
+    if (points.empty()) {
+        return Rect3<T>();
+    }
+    Rect3<T> box;
+    box.xmin = box.xmax = points.front().x;
+    box.ymin = box.ymax = points.front().y;
+    box.zmin = box.zmax = points.front().z;
+    for (const auto& p : points) {
+        box.xmin = std::min<T>(box.xmin, p.x);
+        box.ymin = std::min<T>(box.ymin, p.y);
+        box.zmin = std::min<T>(box.zmin, p.z);
+        box.xmax = std::max<T>(box.xmax, p.x);
+        box.ymax = std::max<T>(box.ymax, p.y);
+        box.zmax = std::max<T>(box.zmax, p.z);
+    }
+    return box;
+}
+
 #undef TMPL_PREFIX
 
 template class V_MATH_API Rect3<float>;

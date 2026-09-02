@@ -65,6 +65,20 @@ class V_APPFW_API RenderControl : public Control {
     /** @brief Renders one frame through the engine. */
     void renderFrame();
 
+    /** @brief Fits the whole scene into the view (falls back to the home
+     * view when the scene is empty) and renders a frame. */
+    void fitToScreen();
+
+    /** @brief Gets the render surface device pixel ratio.
+     *
+     * Qt reports widget sizes in logical pixels; a render backend draws into
+     * the native surface in device pixels, so overlay positioning on high-DPI
+     * displays must scale by this factor.
+     *
+     * @return Device pixel ratio (1.0 when the surface is not available).
+     */
+    double devicePixelRatio() const;
+
   private:
     /** @brief One-time wiring of the default backend and the surface/host
      * event filter. Idempotent. */
@@ -94,6 +108,9 @@ class V_APPFW_API RenderControl : public Control {
 
     /** @brief Initializes the engine once the native surface is exposed. */
     void initializeBackend();
+
+    /** @brief Pops up the view context menu at the cursor position. */
+    void showContextMenu();
 
     /** @brief Gets the native handle of the render surface (HWND on Windows). */
     void* nativeHandle() const;

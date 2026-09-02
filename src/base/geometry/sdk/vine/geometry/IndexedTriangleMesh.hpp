@@ -4,8 +4,6 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <utility>
-#include <vector>
 
 #include "Array.hpp"
 #include "Mesh.hpp"
@@ -25,55 +23,12 @@ class V_GEOMETRY_API IndexedTriangleMesh : public Mesh {
   public:
     IndexedTriangleMesh();
 
-  public:
-    /**
-     * @brief Returns the shared vertex positions.
-     *
-     * @return Position array.
-     */
-    const Vec3fArray& positions() const;
-
-    /**
-     * @brief Returns the per-vertex normals.
-     *
-     * @return Normal array, may be empty.
-     */
-    const Vec3fArray& normals() const;
-
-    /**
-     * @brief Returns the per-vertex texture coordinates.
-     *
-     * @return Texcoord array, may be empty.
-     */
-    const Vec2fArray& texcoords() const;
-
     /**
      * @brief Returns the triangle indices.
      *
      * @return Index array (3 entries per triangle).
      */
     const UInt32Array& indices() const;
-
-    /**
-     * @brief Replaces the shared vertex positions.
-     *
-     * @param positions New position array.
-     */
-    void setPositions(Vec3fArray positions);
-
-    /**
-     * @brief Replaces the per-vertex normals.
-     *
-     * @param normals New normal array.
-     */
-    void setNormals(Vec3fArray normals);
-
-    /**
-     * @brief Replaces the per-vertex texture coordinates.
-     *
-     * @param texcoords New texcoord array.
-     */
-    void setTexcoords(Vec2fArray texcoords);
 
     /**
      * @brief Replaces the triangle indices.
@@ -105,14 +60,6 @@ class V_GEOMETRY_API IndexedTriangleMesh : public Mesh {
     void clear();
 
     /**
-     * @brief Returns the number of vertices.
-     *
-     * @return Vertex count.
-     */
-    [[nodiscard]]
-    std::size_t vertexCount() const;
-
-    /**
      * @brief Returns the number of triangles.
      *
      * @return Triangle count.
@@ -124,12 +71,6 @@ class V_GEOMETRY_API IndexedTriangleMesh : public Mesh {
     bool isValid() const override;
 
   private:
-    /// Shared vertex positions.
-    Vec3fArray positions_;
-    /// Optional per-vertex normals (same size as positions when set).
-    Vec3fArray normals_;
-    /// Optional per-vertex texture coordinates (same size as positions when set).
-    Vec2fArray texcoords_;
     /// Vertex indices, three per triangle.
     UInt32Array indices_;
 };

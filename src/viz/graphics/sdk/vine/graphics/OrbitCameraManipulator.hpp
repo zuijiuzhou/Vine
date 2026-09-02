@@ -4,56 +4,91 @@
 
 V_GRAPHICS_NS_BEGIN
 
+class Scene;
+
 /**
- * @brief Orbit-style camera manipulator.
+ * @brief Orbit-style camera manipulator with pivot picking and projection
+ * agnostic controls.
  *
- * Implements the classic orbit/pan/zoom camera controls around a target
- * point: left-drag orbits (yaw/pitch), middle/right-drag pans, and the wheel
- * zooms. In FirstPerson mode it also supports WASD movement and arrow-key
- * rotation.
+ * Implements the classic orbit / pan / zoom camera controls with a pickable
+ * anchor point:
+ *
+ * - Left-drag orbits (yaw / pitch) around the anchor.
+ * - Middle/right-drag pans.
+ * - The wheel dollies along the view: it dives along the ray to the anchor
+ *   (the point under the cursor stays pinned to it) and, once the camera
+ *   reaches the surface, keeps moving forward so it can travel through the
+ *   scene instead of stopping at a fixed point.
+ *
+ * On every button press / scroll the manipulator ray-picks the scene under the
+ * cursor. When a model is hit, the hit point becomes the anchor (rotation
+ * centre); when nothing is hit the anchor falls back to the scene bounding-box
+ * centre, or to the world origin when there is no scene. In FirstPerson mode
+ * WASD / arrow keys drive movement instead.
+ *
+ * Both projection types are supported through a single distance parameter: the
+ * camera keeps an eye-to-centre distance, which drives the perspective dolly
+ * step and the orthographic frustum height.
  */
 class V_GRAPHICS_API OrbitCameraManipulator : public CameraManipulator {
   public:
     /** @brief Constructs an orbit manipulator bound to a camera.
      *
-     * The orbit center and radius are initialized from the camera's current
-     * view: center = camera target, radius = distance from eye to target.
+     * The orbit centre and distance are initialized from the camera's current
+     * view (centre = camera target, distance = distance from eye to target).
      *
      * @param camera Camera to manipulate. Must outlive the manipulator.
+     * @param scene  Optional scene used for ray picking, anchor fallback and
+     *               fitToScreen(). May be null (no picking / scene centre).
      */
-    explicit OrbitCameraManipulator(Camera* camera);
+    explicit OrbitCameraManipulator(Camera* camera, Scene* scene = nullptr);
+
+    /** @brief Destroys the manipulator. */
     ~OrbitCameraManipulator() override;
 
   public:
-    /** @brief Orbits the camera around the target (yaw/pitch rotation).
+    // ---- Orbit / pan / zoom ----
+
+    /** @brief Orbits the camera around the current centre (yaw/pitch).
      *
      * @param deltaYaw   Yaw angle change in radians.
      * @param deltaPitch Pitch angle change in radians.
      */
     void orbit(double deltaYaw, double deltaPitch);
 
-    /** @brief Sets the orbit center (target point). */
+    /** @brief Sets the orbit centre (target point). */
     void setOrbitCenter(const Vec3d& center);
 
-    /** @brief Gets the orbit radius. */
+    /** @brief Gets the orbit centre (target point). */
+    Vec3d orbitCenter() const;
+
+    /** @brief Gets the orbit radius (eye-to-centre distance). */
     double orbitRadius() const;
 
-    /** @brief Sets the orbit radius.
+    /** @brief Sets the orbit radius (eye-to-centre distance).
      *
-     * @param radius Distance from eye to orbit center.
+     * @param radius Distance from eye to orbit centre.
      */
     void setOrbitRadius(double radius);
 
     /** @brief Pans the camera based on screen-space deltas.
+     *
+     * The pan is scaled at the current anchor depth, so the grabbed world
+     * point stays under the cursor.
      *
      * @param screenDx Horizontal screen delta in pixels.
      * @param screenDy Vertical screen delta in pixels.
      */
     void pan(double screenDx, double screenDy);
 
-    /** @brief Zooms by a multiplicative factor (e.g. wheel delta).
+    /** @brief Zooms by a multiplicative factor.
      *
-     * @param factor Zoom factor; >1 zooms in, <1 zooms out.
+     * Keeps the current anchor fixed on screen when it lies on the cursor ray
+     * (see zoomToCursor()); otherwise scales the eye-to-centre distance.
+     * The distance is multiplied by the factor, so a factor below 1 moves the
+     * camera closer (zoom in) and a factor above 1 moves it away (zoom out).
+     *
+     * @param factor Zoom factor; <1 zooms in, >1 zooms out.
      */
     void zoom(double factor);
 
@@ -82,6 +117,97 @@ class V_GRAPHICS_API OrbitCameraManipulator : public CameraManipulator {
      */
     void rotate(double deltaYaw, double deltaPitch);
 
+    /** @brief Rolls the view around the forward axis.
+     *
+     * Only has an effect while fixedHead is disabled.
+     *
+     * @param deltaHead Roll angle change in radians.
+     */
+    void rotateHead(double deltaHead);
+
+    /** @brief Frames the whole scene into the view.
+     *
+     * Positions the orbit centre at the scene bounding-box centre and picks an
+     * eye-to-centre distance that fits the scene into the vertical/horizontal
+     * field of view (perspective) or the frustum height (orthographic).
+     *
+     * @return true when a scene with valid bounds was fitted.
+     */
+    bool fitToScreen();
+
+    /** @brief Restores the view captured when the manipulator was constructed. */
+    void home();
+
+    // ---- Properties ----
+
+    /** @brief Sets whether rolling about the forward axis is locked.
+     *
+     * When true (the default) the camera up vector is always the reference up,
+     * so orbiting never rolls the view. When false, rotateHead() allows a roll
+     * about the view axis.
+     *
+     * @param fixed True to lock the head (no roll).
+     */
+    void setFixedHead(bool fixed);
+
+    /** @brief Returns whether rolling about the forward axis is locked. */
+    bool isFixedHead() const;
+
+    /** @brief Sets whether wheel zoom keeps the cursor anchor fixed on screen.
+     *
+     * When enabled, zooming towards a picked point keeps that world point under
+     * the cursor; the orbit centre slides towards the anchor so successive
+     * rotations orbit around the zoomed region.
+     *
+     * @param enabled True to zoom towards the cursor anchor.
+     */
+    void setZoomToCursor(bool enabled);
+
+    /** @brief Returns whether wheel zoom anchors to the cursor. */
+    bool zoomToCursor() const;
+
+    /** @brief Sets the minimum eye-to-centre distance.
+     *
+     * Distance 0 (the default) derives the minimum from the camera near plane.
+     *
+     * @param distance Minimum distance; <= 0 means auto.
+     */
+    void setMinDistance(double distance);
+
+    /** @brief Gets the configured minimum distance (0 = auto). */
+    double minDistance() const;
+
+    /** @brief Sets the scene used for picking / anchor / fitToScreen.
+     *
+     * @param scene Scene, or null to disable scene features.
+     */
+    void setScene(Scene* scene);
+
+    /** @brief Gets the bound scene (may be null). */
+    Scene* scene() const;
+
+    /** @brief Ray-picks the scene under a screen point.
+     *
+     * @param screenX  Screen x in device pixels.
+     * @param screenY  Screen y in device pixels.
+     * @param outPoint Receives the world-space hit point on success.
+     * @return true when a model was hit.
+     */
+    bool pickAt(double screenX, double screenY, Vec3d& outPoint) const;
+
+    /** @brief Sets the orbit centre to the point under the cursor.
+     *
+     * Ray-picks the scene; on a hit the centre snaps to the hit point, on a
+     * miss it snaps to the scene bounding-box centre (or the world origin when
+     * there is no scene). The eye is left in place, so the view re-aims rather
+     * than teleports.
+     *
+     * @param screenX Screen x in device pixels.
+     * @param screenY Screen y in device pixels.
+     * @return true when a model was hit.
+     */
+    bool setCenterFromScreen(double screenX, double screenY);
+
     /** @brief Commits pending changes to the bound camera. */
     void apply() override;
 
@@ -100,29 +226,84 @@ class V_GRAPHICS_API OrbitCameraManipulator : public CameraManipulator {
     /** @brief Handles mouse wheel scroll, zooming the camera. */
     void onScroll(const vine::window::ScrollEvent& event) override;
 
-    /** @brief Handles a key press (first-person movement keys). */
+    /** @brief Handles a key press (first-person movement / Home = fit). */
     void onKeyDown(const vine::window::KeyEvent& event) override;
 
     /** @brief Handles a key release. */
     void onKeyUp(const vine::window::KeyEvent& event) override;
 
-    /** @brief Updates the camera projection aspect on a viewport resize. */
+    /** @brief Updates viewport size and the camera projection on a resize. */
     void onResize(const vine::window::ResizeEvent& event) override;
 
   private:
-    // ---- Orbit / drag state ----
+    /** @brief Ray from the camera through a screen pixel. */
+    void makeScreenRay(double screenX, double screenY, Vec3d& origin, Vec3d& direction) const;
 
-    Vec3d orbit_center_{ 0.0, 0.0, 0.0 };
-    double orbit_radius_ = 10.0;
+    /** @brief Computes the anchor (pick point / scene centre / origin). */
+    Vec3d resolveAnchor(double screenX, double screenY, bool& onRay) const;
+
+    /** @brief Re-aims the view at a point without moving the eye. */
+    void aimCenterAt(const Vec3d& point);
+
+    /** @brief Rotates the camera rig about the active pivot for a drag delta. */
+    void pivotRotate(double screenDx, double screenDy);
+
+    /** @brief Derives centre/distance/yaw/pitch from the camera state. */
+    void syncFromCamera();
+
+    /** @brief Keeps the camera eye outside the scene bounds (orthographic). */
+    void clampEyeOutsideBounds();
+
+    /** @brief Clamps distance to the allowed minimum. */
+    double clampDistance(double distance) const;
+
+    /** @brief Updates the orthographic projection from distance and aspect. */
+    void updateOrthoProjection();
+
+    /** @brief Reference (non-rolled) up direction. */
+    Vec3d referenceUp() const;
+
+    // ---- State ----
+
+    Scene* scene_ = nullptr;
+
+    Vec3d center_{ 0.0, 0.0, 0.0 };
+    double distance_ = 10.0;
     double yaw_ = 0.0;
     double pitch_ = 0.0;
+    double head_ = 0.0;
+
+    // Snapshot for home().
+    Vec3d home_center_{ 0.0, 0.0, 0.0 };
+    double home_distance_ = 10.0;
+    double home_yaw_ = 0.0;
+    double home_pitch_ = 0.0;
+    double home_head_ = 0.0;
+
+    Vec3d reference_up_{ 0.0, 1.0, 0.0 };
+
+    bool fixed_head_ = true;
+    bool zoom_to_cursor_ = true;
+    double min_distance_ = 0.0;  // 0 => derive from the near plane.
+
+    // Current interaction anchor (pick point, scene centre or origin). It also
+    // acts as the rotate pivot during a left-drag (see pivotRotate()).
+    Vec3d anchor_{ 0.0, 0.0, 0.0 };
+    bool anchor_on_ray_ = false;  // anchor was a geometry hit on the cursor ray.
 
     CameraManipulator::DragAction drag_ = CameraManipulator::DragAction::None;
     double last_x_ = 0.0;
     double last_y_ = 0.0;
+    bool pointer_known_ = false;
+
+    // Viewport size in device pixels (fed by onResize).
+    int viewport_w_ = 800;
+    int viewport_h_ = 600;
 
     // Sensitivity of drag-based interactions (radians / pixels).
     double drag_sensitivity_ = 0.01;
+    // Zoom factor per wheel notch.
+    double wheel_factor_ = 1.15;
     // First-person movement step per key event (world units).
     double move_step_ = 0.5;
     // First-person yaw/pitch rotation per key event (radians).

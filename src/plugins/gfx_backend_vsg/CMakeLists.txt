@@ -19,34 +19,21 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 include(FetchContent)
 if(VINE_USE_FETCHCONTENT)
-    # Enable VSG's runtime shader compiler: VSG's precompiled phong SPIR-V
-    # renders materials with a wrong fixed colour, so shaders must be compiled
-    # from GLSL at runtime via glslang.
-    FetchContent_Declare(glslang
-        GIT_REPOSITORY https://github.com/KhronosGroup/glslang.git
-        GIT_TAG        14.3.0
-    )
-    # glslang's SPIR-V optimizer pulls in SPIRV-Tools (extra dependency); VSG
-    # only needs glslang's core shader compiler, so disable it.
-    set(ENABLE_OPT OFF CACHE BOOL "" FORCE)
-    set(ENABLE_GLSLANG_BINARIES OFF CACHE BOOL "" FORCE)
-    FetchContent_MakeAvailable(glslang)
-    # glslang exports its CMake config into its build tree; point find_package
-    # at it so VSG's shader-compiler probe succeeds.
-    set(glslang_DIR "${glslang_BINARY_DIR}" CACHE PATH "glslang build config" FORCE)
-
-    FetchContent_Declare(vsg
-        GIT_REPOSITORY https://github.com/vsg-dev/VulkanSceneGraph.git
-        GIT_TAG        v1.1.16
-    )
-    set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)           # Static lib, baked into the DLL.
-    set(VSG_SUPPORTS_ShaderCompiler ON CACHE BOOL "" FORCE)
-    FetchContent_MakeAvailable(vsg)
-
-    # Group every third-party target under the third_party solution folder.
-    v_group_targets_folder(${vsg_SOURCE_DIR} third_party)
-    if(TARGET glslang)
-        v_group_targets_folder(${glslang_SOURCE_DIR} third_party)
+    # A FetchContent-built VSG (no glslang) uses its embedded precompiled phong
+    # SPIR-V, which renders correctly (verified). No runtime shader compiler is
+    # required. If an installed VSG (e.g. from vcpkg) is already on the search
+    # path, prefer it; otherwise fetch VSG v1.1.16.
+    find_package(vsg CONFIG QUIET)
+    if(NOT vsg_FOUND)
+        FetchContent_Declare(vsg
+            GIT_REPOSITORY https://github.com/vsg-dev/VulkanSceneGraph.git
+            GIT_TAG        v1.1.16
+        )
+        set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)   # Static lib, baked into the DLL.
+        FetchContent_MakeAvailable(vsg)
+        v_group_targets_folder(${vsg_SOURCE_DIR} third_party)
+    else()
+        message(STATUS "gfx_backend_vsg: using installed vsg")
     endif()
 else()
     # Consume vsg from vcpkg or a local install (e.g. /opt/opensrc/VSG on Linux).
@@ -67,3 +54,9 @@ target_link_libraries(${GFX_BACKEND_VSG_TARGET} PRIVATE
 add_executable(vsg_color_probe ${CMAKE_CURRENT_SOURCE_DIR}/vsg_probe/main.cpp)
 target_link_libraries(vsg_color_probe PRIVATE vsg::vsg)
 set_target_properties(vsg_color_probe PROPERTIES FOLDER third_party)
+
+# TEMP diagnostic: dump the embedded phong ShaderSet SPIR-V for inspection.
+# Remove after diagnosis.
+add_executable(vsg_shader_dump ${CMAKE_CURRENT_SOURCE_DIR}/vsg_shader_dump/main.cpp)
+target_link_libraries(vsg_shader_dump PRIVATE vsg::vsg)
+set_target_properties(vsg_shader_dump PROPERTIES FOLDER third_party)

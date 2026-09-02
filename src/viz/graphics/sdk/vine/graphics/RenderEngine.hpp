@@ -1,6 +1,8 @@
 #pragma once
 #include "graphics_global.hpp"
 
+#include <vector>
+
 #include <vine/intrusive_ptr.hpp>
 #include <vine/Object.hpp>
 #include <vine/RefCounted.hpp>
@@ -20,14 +22,16 @@ class Scene;
 class RenderPass;
 class RenderBackend;
 class CameraManipulator;
+class Overlay;
 
 /**
  * @brief High-level render engine managing the frame loop and render state.
  *
  * RenderEngine owns the default scene, camera, and main render pass, and
- * drives one frame per call to frame(): begin, execute the main pass, end,
- * and swap buffers. It is platform-independent and delegates actual drawing
- * to a RenderBackend supplied by the caller via setBackend().
+ * drives one frame per call to frame(): begin, execute the main pass, then
+ * the registered overlays in ascending zOrder, end, and swap buffers. It is
+ * platform-independent and delegates actual drawing to a RenderBackend
+ * supplied by the caller via setBackend().
  *
  * The engine may be given a host native window (setWindowHandle) so the
  * backend can attach its render surface to it; input and resize events are
@@ -69,8 +73,30 @@ class V_GRAPHICS_API RenderEngine : public Object, public RefCounted<RenderEngin
     /** @brief Releases backend resources. */
     void shutdown();
 
-    /** @brief Renders one frame (begin, main pass, end, swap). */
-    void frame();
+    /** @brief Renders one frame (begin, main pass, overlays, end, swap).
+     *
+     * @param dt Seconds elapsed since the previous frame (drives animated
+     *           overlays); the default 0 is fine for static overlays.
+     */
+    void frame(double dt = 0.0);
+
+    /** @brief Registers an overlay drawn after the main pass.
+     *
+     * The engine keeps a reference and draws overlays in ascending zOrder
+     * every frame.
+     *
+     * @param overlay Overlay to add.
+     */
+    void addOverlay(intrusive_ptr<Overlay> overlay);
+
+    /** @brief Removes a previously added overlay.
+     *
+     * @param overlay Overlay to remove (by pointer).
+     */
+    void removeOverlay(Overlay* overlay);
+
+    /** @brief Removes all registered overlays. */
+    void clearOverlays();
 
     /** @brief Sets the scene to render. */
     void setScene(Scene* scene);
@@ -152,6 +178,7 @@ class V_GRAPHICS_API RenderEngine : public Object, public RefCounted<RenderEngin
     intrusive_ptr<Scene> scene_;
     intrusive_ptr<Camera> camera_;
     intrusive_ptr<RenderPass> main_pass_;
+    std::vector<intrusive_ptr<Overlay>> overlays_;
     CameraManipulator* camera_manipulator_ = nullptr;
     void* native_handle_ = nullptr;
     bool initialized_ = false;

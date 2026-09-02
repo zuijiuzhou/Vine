@@ -1,7 +1,10 @@
 #include <vine/appfw/gui/RenderControl.hpp>
 
+#include <QAction>
+#include <QCursor>
 #include <QEvent>
 #include <QKeyEvent>
+#include <QMenu>
 #include <QMouseEvent>
 #include <QObject>
 #include <QPlatformSurfaceEvent>
@@ -13,6 +16,7 @@
 #include <QWidget>
 #include <QWindow>
 
+#include <vine/graphics/OrbitCameraManipulator.hpp>
 #include <vine/graphics/RenderBackendRegistry.hpp>
 #include <vine/graphics/RenderEngine.hpp>
 
@@ -303,9 +307,17 @@ struct RenderControl::Impl {
     vine::intrusive_ptr<vine::graphics::RenderEngine> engine;
     QWindow* surface = nullptr;
     QObject* surface_filter = nullptr;
+    vine::graphics::OrbitCameraManipulator* manipulator = nullptr;
     bool wired = false;
     bool initialized = false;
     bool init_ok = false;
+    // Whether a mouse button is currently held (drives drag refresh).
+    bool mouse_down = false;
+    // Right-button click tracking: distinguishes a plain right-click (opens
+    // the context menu) from a right-drag (pan).
+    bool right_press_active = false;
+    double right_press_x = 0.0;
+    double right_press_y = 0.0;
     // Whether the native surface currently exists and is laid out (cleared on
     // SurfaceAboutToBeDestroyed, set again on resize/surface-created).
     bool surface_ok = false;
@@ -332,6 +344,7 @@ RenderControl::RenderControl()
 RenderControl::~RenderControl()
 {
     delete d->surface_filter;
+    delete d->manipulator;
     delete d;
 }
 
@@ -353,6 +366,11 @@ int RenderControl::surfaceWidth() const
 int RenderControl::surfaceHeight() const
 {
     return (d->surface != nullptr) ? d->surface->height() : 0;
+}
+
+double RenderControl::devicePixelRatio() const
+{
+    return (d->surface != nullptr) ? d->surface->devicePixelRatio() : 1.0;
 }
 
 bool RenderControl::surfaceVisible() const
@@ -410,16 +428,62 @@ void RenderControl::wireEvents()
         }
     }
 
+    // Attach a default orbit manipulator bound to the engine camera and scene:
+    // left-drag rotates about the picked point (scene centre when nothing is
+    // hit), middle/right-drag pans and the wheel zooms to the cursor anchor.
+    // The engine forwards window input events to the manipulator.
+    if (d->manipulator == nullptr && d->engine->camera() != nullptr) {
+        d->manipulator = new vine::graphics::OrbitCameraManipulator(
+            d->engine->camera(), d->engine->scene());
+        d->engine->setCameraManipulator(d->manipulator);
+    }
+
     // The host widget is the Control's own QWidget; the surface QWindow is
     // nested inside it. One filter observes both (resize on the host also
     // covers maximize, on which the embedded QWindow misses its resize).
     auto* filter = new SurfaceHostFilter(d->surface, impl<QWidget>());
     d->surface_filter = filter;
 
-    // Qt-translated input is pushed to the engine explicitly.
-    filter->on_mouse  = [this](const vine::window::MouseEvent& e) { d->engine->pushEvent(e); };
-    filter->on_scroll = [this](const vine::window::ScrollEvent& e) { d->engine->pushEvent(e); };
-    filter->on_key    = [this](const vine::window::KeyEvent& e) { d->engine->pushEvent(e); };
+    // Qt-translated input is pushed to the engine (the camera manipulator), then
+    // a frame is rendered so the view follows the interaction live. The Vulkan
+    // surface is render-on-demand: vsg only draws when renderFrame() runs, so
+    // without a refresh here orbit/pan/zoom would update the camera but never
+    // repaint. Pure hover moves are skipped (no button held => the manipulator
+    // does not change the view); press/release and scroll/key always refresh.
+    filter->on_mouse = [this](const vine::window::MouseEvent& e) {
+        // A right press starts a pan drag; a release close to the press (no
+        // movement) is a plain right-click and opens the context menu.
+        const bool is_right = e.button == vine::window::MouseButton::Right;
+        if (is_right) {
+            if (e.pressed) {
+                d->right_press_active = true;
+                d->right_press_x = e.x;
+                d->right_press_y = e.y;
+            } else if (d->right_press_active) {
+                d->right_press_active = false;
+                const double dx = e.x - d->right_press_x;
+                const double dy = e.y - d->right_press_y;
+                if ((dx * dx + dy * dy) < 36.0) {  // within 6 px: a click
+                    QTimer::singleShot(0, [this] { showContextMenu(); });
+                }
+            }
+        }
+        d->engine->pushEvent(e);
+        if (e.button != vine::window::MouseButton::None) {
+            d->mouse_down = e.pressed;
+        }
+        if (e.button != vine::window::MouseButton::None || d->mouse_down) {
+            renderFrame();
+        }
+    };
+    filter->on_scroll = [this](const vine::window::ScrollEvent& e) {
+        d->engine->pushEvent(e);
+        renderFrame();
+    };
+    filter->on_key = [this](const vine::window::KeyEvent& e) {
+        d->engine->pushEvent(e);
+        renderFrame();
+    };
 
     filter->on_resize    = [this](int, int) { onSurfaceResized(); };
     filter->on_created   = [this] { onSurfaceResized(); };
@@ -546,6 +610,11 @@ void RenderControl::initializeBackend()
     if (d->init_ok) {
         d->initialized = true;
         d->initialized_handle = h;
+        // The camera projection aspect defaults to 1.0 (no manipulator is
+        // attached); deliver the current surface size so the first frame is
+        // rendered undistorted and the backend viewport tracks the surface.
+        d->engine->pushEvent(
+            vine::window::ResizeEvent{ surfaceWidth(), surfaceHeight() });
         renderFrame();
         // The first attach can land mid-layout (e.g. the deferred init from
         // app_shell runs at 100ms, before the dock layout has settled), so the
@@ -557,6 +626,27 @@ void RenderControl::initializeBackend()
         requestSettleFrames();
     }
     // On failure, initialized stays false so expose/resize can retry.
+}
+
+void RenderControl::fitToScreen()
+{
+    if (d->manipulator != nullptr) {
+        if (!d->manipulator->fitToScreen()) {
+            d->manipulator->home();
+        }
+    }
+    renderFrame();
+}
+
+void RenderControl::showContextMenu()
+{
+    if (d->manipulator == nullptr) {
+        return;
+    }
+    QMenu menu(impl<QWidget>());
+    QAction* fit = menu.addAction(QString::fromUtf8("适应屏幕"));
+    QObject::connect(fit, &QAction::triggered, [this] { fitToScreen(); });
+    menu.exec(QCursor::pos());
 }
 
 void RenderControl::renderFrame()

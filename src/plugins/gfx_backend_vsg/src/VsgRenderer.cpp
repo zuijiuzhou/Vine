@@ -14,8 +14,13 @@
 
 #include "VsgUtils.hpp"
 
+#include <vsg/commands/BindIndexBuffer.h>
+#include <vsg/commands/BindVertexBuffers.h>
+#include <vsg/commands/Commands.h>
+#include <vsg/commands/DrawIndexed.h>
 #include <vsg/app/CommandGraph.h>
 #include <vsg/app/RenderGraph.h>
+#include <vsg/app/View.h>
 #include <vsg/app/Viewer.h>
 #include <vsg/nodes/StateGroup.h>
 #include <vsg/nodes/VertexIndexDraw.h>
@@ -26,6 +31,8 @@
 #include <vsg/state/RasterizationState.h>
 #include <vsg/state/material.h>
 #include <vsg/state/ViewportState.h>
+#include <vsg/lighting/AmbientLight.h>
+#include <vsg/lighting/Light.h>
 #include <vsg/utils/GraphicsPipelineConfigurator.h>
 #include <vsg/utils/ShaderSet.h>
 
@@ -39,11 +46,50 @@
 #include <algorithm>
 #include <cstdio>
 #include <cstdlib>
+#include <map>
 
 V_VSG_NS_BEGIN
 
 namespace
 {
+
+/**
+ * @brief Builds the canonical Phong shader set with complete pipeline states.
+ *
+ * This vsg build's createPhongShaderSet() arrives without default pipeline
+ * states, so pipelines built by GraphicsPipelineConfigurator would lack a
+ * ViewportState and nothing would rasterize (makeRawDemoNode() must spell out
+ * the full state set for the same reason). Declare the canonical states here
+ * so every SceneBridge-built geometry pipeline is complete. The baked viewport
+ * matches the window size at attach; when the window drives a dynamic viewport
+ * it is overridden at record time anyway.
+ *
+ * @param extent     Window extent for the baked static viewport.
+ * @param depth_test When false, depth test/write are disabled so the geometry
+ *                   always draws on top of previously rendered content (used
+ *                   for HUD overlays such as the axis gizmo).
+ * @return Configured shader set.
+ */
+::vsg::ref_ptr<::vsg::ShaderSet> buildShaderSet(const VkExtent2D& extent, bool depth_test)
+{
+    auto shaderSet = ::vsg::createPhongShaderSet();
+    auto raster_state = ::vsg::RasterizationState::create();
+    raster_state->cullMode = VK_CULL_MODE_NONE;  // tolerate either winding order
+    auto depth_state = ::vsg::DepthStencilState::create();
+    if (!depth_test) {
+        depth_state->depthTestEnable = VK_FALSE;
+        depth_state->depthWriteEnable = VK_FALSE;
+    }
+    shaderSet->defaultGraphicsPipelineStates = ::vsg::GraphicsPipelineStates{
+        depth_state,
+        raster_state,
+        ::vsg::ColorBlendState::create(),
+        ::vsg::InputAssemblyState::create(),
+        ::vsg::MultisampleState::create(),
+        ::vsg::ViewportState::create(extent),
+    };
+    return shaderSet;
+}
 
 /**
  * @brief Temporary test escape hatch: when VINE_VSG_OWN_WINDOW is set, the
@@ -138,12 +184,14 @@ bool forceOwnWindow()
     auto stateGroup = ::vsg::StateGroup::create();
     config->copyTo(stateGroup, {});
 
-    auto vid = ::vsg::VertexIndexDraw::create();
-    vid->assignArrays(arrays);
-    vid->assignIndices(indices);
-    vid->indexCount = 3;
-    vid->firstBinding = config->baseAttributeBinding;
-    stateGroup->addChild(vid);
+    // NOTE: manual geometry must use explicit bind/draw commands, NOT a
+    // manually-assembled VertexIndexDraw, or nothing is rasterized (see
+    // vsgExamples utils/vsggraphicspipelineconfigurator).
+    auto drawCommands = ::vsg::Commands::create();
+    drawCommands->addChild(::vsg::BindVertexBuffers::create(config->baseAttributeBinding, arrays));
+    drawCommands->addChild(::vsg::BindIndexBuffer::create(indices));
+    drawCommands->addChild(::vsg::DrawIndexed::create(3, 1, 0, 0, 0));
+    stateGroup->addChild(drawCommands);
     return stateGroup;
 }
 
@@ -232,17 +280,37 @@ struct VsgRenderer::Data {
     vine::graphics::Scene* scene = nullptr;
     vine::graphics::Camera* camera = nullptr;
     SceneBridge sceneBridge;
+    // Second bridge for overlay (HUD) content: its pipelines have depth
+    // test/write disabled so overlays always draw on top of the main scene.
+    SceneBridge overlayBridge;
     CameraBridge cameraBridge;
     VsgMaterialManager materialManager;
     void* bound_handle = nullptr;
     ::vsg::ref_ptr<::vsg::Window> window;
     ::vsg::ref_ptr<::vsg::Viewer> viewer;
+    ::vsg::ref_ptr<::vsg::CommandGraph> command_graph;
     ::vsg::ref_ptr<::vsg::RenderGraph> render_graph;
     ::vsg::ref_ptr<::vsg::Camera> vsg_camera;
     ::vsg::ref_ptr<::vsg::Node> vsg_scene;
     vine::Color clear_color{ 51, 51, 51, 255 };
     bool clear_depth = true;
     bool initialized = false;
+
+    /** @brief One retained overlay view (a second View of the main render graph). */
+    struct OverlaySlot {
+        vine::graphics::Camera* camera = nullptr;
+        ::vsg::ref_ptr<::vsg::Camera> vsg_camera;
+        ::vsg::ref_ptr<::vsg::Group> root;
+        ::vsg::ref_ptr<::vsg::View> view;
+        bool ready = false;
+    };
+    std::map<vine::graphics::Camera*, OverlaySlot> overlay_slots;
+
+    // Sub-viewport queued by setViewport(), consumed by the next render().
+    bool has_pending_viewport = false;
+    int pending_viewport[4] = { 0, 0, 0, 0 };
+    // Set when a frame was drawn; consumed by swapBuffers()/submitFrame().
+    bool needs_submit = false;
 };
 
 VsgRenderer::VsgRenderer(vine::graphics::Scene* scene, vine::graphics::Camera* camera)
@@ -263,14 +331,14 @@ bool VsgRenderer::initialize()
     if (d->scene == nullptr || d->camera == nullptr) {
         return false;
     }
-
+    try {
     // Window. When a host native window is bound, attach to its surface (e.g.
     // a Qt QWindow) instead of creating a separate window.
     auto traits = ::vsg::WindowTraits::create();
     traits->windowTitle = "Vine";
     traits->width = 1280;
     traits->height = 720;
-    traits->debugLayer = true;
+    traits->debugLayer = false;
 
     void* host_handle = d->bound_handle;
     if (forceOwnWindow()) {
@@ -295,6 +363,7 @@ bool VsgRenderer::initialize()
     if (d->window == nullptr) {
         std::fprintf(stderr, "[VsgRenderer] Window::create FAILED (nativeWindow=%d, %ux%u)\n",
                      traits->nativeWindow.has_value() ? 1 : 0, traits->width, traits->height);
+        shutdown();
         return false;
     }
 
@@ -307,6 +376,8 @@ bool VsgRenderer::initialize()
     // Camera bridge.
     d->vsg_camera = d->cameraBridge.create(d->camera);
     if (d->vsg_camera == nullptr) {
+        std::fprintf(stderr, "[VsgRenderer] initialize: CameraBridge::create failed\n");
+        shutdown();
         return false;
     }
     // The camera must carry a viewport state for the render graph to know the
@@ -316,10 +387,17 @@ bool VsgRenderer::initialize()
     // Phong shader set (embedded SPIR-V, no runtime glslang required). Each
     // geometry gets its own pipeline + PhongMaterial descriptor built by
     // SceneBridge, so material properties propagate through to the GPU.
-    auto shaderSet = ::vsg::createPhongShaderSet();
+    auto shaderSet = buildShaderSet(d->window->extent2D(), true);
     d->sceneBridge.setShaderSet(shaderSet);
     d->sceneBridge.setMaterialManager(&d->materialManager);
     d->sceneBridge.clearCache();
+
+    // Overlays (HUD) render on top of the main scene: give them a second
+    // bridge whose pipelines disable depth test/write so the axis gizmo is
+    // never hidden by scene geometry in front of it.
+    d->overlayBridge.setShaderSet(buildShaderSet(d->window->extent2D(), false));
+    d->overlayBridge.setMaterialManager(&d->materialManager);
+    d->overlayBridge.clearCache();
 
     if (forceOwnWindow()) {
         // TEMP test: render a raw vsg triangle built directly, bypassing the
@@ -349,17 +427,26 @@ bool VsgRenderer::initialize()
     d->render_graph = renderGraph;
     auto commandGraph = ::vsg::CommandGraph::create(d->window);
     commandGraph->addChild(renderGraph);
+    d->command_graph = commandGraph;
     d->viewer->assignRecordAndSubmitTaskAndPresentation(::vsg::CommandGraphs{ commandGraph });
 
     const auto compileResult = d->viewer->compile();
     if (!compileResult) {
         std::fprintf(stderr, "[VsgRenderer] compile failed: %s\n",
                      compileResult.message.c_str());
+        shutdown();
         return false;
     }
 
     d->initialized = true;
     return true;
+    } catch (const std::exception& e) {
+        std::fprintf(stderr, "[VsgRenderer] initialize exception: %s\n", e.what());
+    } catch (...) {
+        std::fprintf(stderr, "[VsgRenderer] initialize unknown exception\n");
+    }
+    shutdown();
+    return false;
 }
 
 void VsgRenderer::shutdown()
@@ -383,6 +470,18 @@ void VsgRenderer::shutdown()
         d->window->releaseWindow();
         d->window = nullptr;
     }
+    // Drop the retained vsg scene, render graph and the per-geometry / material
+    // caches. Compiled pipelines and descriptor sets hold a reference to the
+    // old vsg::Device; if they survive a surface-recreate re-init, the next
+    // Window::create() allocates a second Device and trips vsg's
+    // VSG_MAX_DEVICES limit (== 1 in this build) with an uncaught exception
+    // (Device.cpp:63). Everything below must be released before a re-init can
+    // create a fresh device.
+    d->render_graph = nullptr;
+    d->vsg_scene = nullptr;
+    d->vsg_camera = nullptr;
+    d->sceneBridge.clearCache();
+    d->materialManager.clear();
     d->bound_handle = nullptr;
     d->initialized = false;
 }
@@ -427,29 +526,125 @@ void VsgRenderer::render(const std::vector<vine::graphics::RenderCommand>& comma
     if (!d->initialized || d->viewer == nullptr) {
         return;
     }
-    if (camera != nullptr) {
-        d->cameraBridge.apply(const_cast<vine::graphics::Camera*>(camera), d->vsg_camera);
-    }
-    // The command stream is the source of truth: reconcile the retained vsg
-    // scene against it (in-place for moves/material edits). Only subtrees that
-    // were built this frame need GPU compilation; compiling them incrementally
-    // (vsg CompileManager) avoids the full-graph compile spike on scene edits.
-    auto* root = d->vsg_scene.cast<::vsg::Group>().get();
-    if (!forceOwnWindow()) {
-        std::vector<::vsg::ref_ptr<::vsg::Node>> created;
-        d->sceneBridge.syncRenderCommands(commands, root, &created);
-        if (!created.empty()) {
-            // A full-graph compile keeps newly built/rebuild subtrees correct.
-            // vsg's ad-hoc compileManager->compile(subtree) is not reliably
-            // wired for our embedded window, so true incremental compilation is
-            // left as a later optimisation (see design doc §9 Phase 3).
-            const auto compileResult = d->viewer->compile();
-            if (!compileResult) {
-                std::fprintf(stderr, "[VsgRenderer] compile in render failed: %s\n",
-                             compileResult.message.c_str());
+
+    // Consume the sub-viewport queued by setViewport() just before this pass
+    // (overlays); the main pass never sets one and renders the full surface.
+    const bool has_vp = d->has_pending_viewport;
+    const int vp_x = d->pending_viewport[0];
+    const int vp_y = d->pending_viewport[1];
+    const int vp_w = d->pending_viewport[2];
+    const int vp_h = d->pending_viewport[3];
+    d->has_pending_viewport = false;
+
+    const bool is_main = (camera == nullptr || camera == d->camera);
+    if (is_main) {
+        if (camera != nullptr) {
+            d->cameraBridge.apply(const_cast<vine::graphics::Camera*>(camera), d->vsg_camera);
+        }
+        // The command stream is the source of truth: reconcile the retained
+        // vsg scene against it (in-place for moves/material edits).
+        auto* root = d->vsg_scene.cast<::vsg::Group>().get();
+        if (!forceOwnWindow()) {
+            std::vector<::vsg::ref_ptr<::vsg::Node>> created;
+            d->sceneBridge.syncRenderCommands(commands, root, &created);
+            if (!created.empty()) {
+                // A full-graph compile keeps newly built/rebuild subtrees
+                // correct (see design doc §9 Phase 3 for the incremental plan).
+                const auto compileResult = d->viewer->compile();
+                if (!compileResult) {
+                    std::fprintf(stderr, "[VsgRenderer] compile in render failed: %s\n",
+                                 compileResult.message.c_str());
+                }
             }
         }
+    } else if (camera != nullptr) {
+        renderOverlayPass(commands, camera, has_vp ? vp_x : 0, has_vp ? vp_y : 0,
+                          has_vp ? vp_w : 0, has_vp ? vp_h : 0);
     }
+
+    // Submission is deferred to swapBuffers() so one frame (main pass + all
+    // overlay passes) is recorded and presented exactly once.
+    d->needs_submit = true;
+}
+
+void VsgRenderer::renderOverlayPass(const std::vector<vine::graphics::RenderCommand>& commands,
+                                    const vine::graphics::Camera* camera, int vp_x, int vp_y,
+                                    int vp_w, int vp_h)
+{
+    auto* cam = const_cast<vine::graphics::Camera*>(camera);
+    auto& slot = d->overlay_slots[cam];
+    if (!slot.ready) {
+        slot.camera = cam;
+        slot.root = ::vsg::Group::create();
+        slot.vsg_camera = d->cameraBridge.create(cam);
+        if (slot.vsg_camera == nullptr) {
+            d->overlay_slots.erase(cam);
+            return;
+        }
+        // Add the overlay as a SECOND View of the SAME render graph as the
+        // main scene (the canonical vsg multi-viewport pattern). An earlier
+        // approach used a separate RenderGraph per overlay: its clear showed
+        // (the grey backdrop box) but the view content never rasterized, so
+        // overlay geometry is now drawn in the same render pass as the main
+        // scene; the overlay camera's viewportState clips it to the sub-rect.
+        auto view = ::vsg::View::create(slot.vsg_camera);
+        // Overlay (HUD) content is lit by a single ambient light: with a
+        // directional headlight the axis went dark/black from diagonal views
+        // because the light direction is fixed while the overlay camera (which
+        // mirrors the source) rotates. Ambient-only lighting makes phong's
+        // colour independent of surface orientation, giving flat sticks.
+        auto ambient = ::vsg::AmbientLight::create();
+        ambient->name = "overlay_ambient";
+        ambient->color.set(1.0f, 1.0f, 1.0f);
+        ambient->intensity = 1.0f;
+        view->addChild(ambient);
+        view->addChild(slot.root);
+        slot.view = view;
+        if (d->render_graph != nullptr) {
+            d->render_graph->addChild(view);
+        }
+        slot.ready = true;
+        // A newly added View must be compiled before it is recorded.
+        d->viewer->compile();
+    }
+
+    // Zero-size viewport means the full window.
+    if (vp_w <= 0 || vp_h <= 0) {
+        const auto extent = d->window->extent2D();
+        vp_w = static_cast<int>(extent.width);
+        vp_h = static_cast<int>(extent.height);
+    }
+    slot.vsg_camera->viewportState =
+        ::vsg::ViewportState::create(vp_x, vp_y, static_cast<uint32_t>(vp_w), static_cast<uint32_t>(vp_h));
+
+    d->cameraBridge.apply(cam, slot.vsg_camera);
+
+    std::vector<::vsg::ref_ptr<::vsg::Node>> created;
+    d->overlayBridge.syncRenderCommands(commands, slot.root.get(), &created);
+    if (!created.empty()) {
+        const auto compileResult = d->viewer->compile();
+        if (!compileResult) {
+            std::fprintf(stderr, "[VsgRenderer] overlay compile failed: %s\n",
+                         compileResult.message.c_str());
+        }
+    }
+}
+
+void VsgRenderer::setViewport(int x, int y, int width, int height)
+{
+    d->pending_viewport[0] = x;
+    d->pending_viewport[1] = y;
+    d->pending_viewport[2] = width;
+    d->pending_viewport[3] = height;
+    d->has_pending_viewport = true;
+}
+
+void VsgRenderer::submitFrame()
+{
+    if (!d->initialized || d->viewer == nullptr || !d->needs_submit) {
+        return;
+    }
+    d->needs_submit = false;
     d->viewer->recordAndSubmit();
     d->viewer->present();
 }
@@ -472,7 +667,8 @@ void VsgRenderer::clear(const vine::Color& backgroundColor, bool clearDepth)
 
 void VsgRenderer::swapBuffers()
 {
-    // present() already happened in render(); nothing left to do here.
+    // One record+submit+present per frame, after all passes were synced.
+    submitFrame();
 }
 
 vine::graphics::MaterialManager* VsgRenderer::materialManager()
@@ -492,6 +688,12 @@ void VsgRenderer::resize(int width, int height)
     if (d->window != nullptr) {
         d->window->resize();
     }
+    // The RenderGraph derives its render area from the camera's viewport state
+    // each frame; keep it at the live window size or content would keep
+    // rendering into the original region after a window resize.
+    if (d->vsg_camera != nullptr && d->window != nullptr) {
+        d->vsg_camera->viewportState = ::vsg::ViewportState::create(d->window->extent2D());
+    }
 }
 
 void* VsgRenderer::nativeHandle() const
@@ -508,6 +710,7 @@ void VsgRenderer::frame()
     beginFrame();
     endFrame();
     render({}, d->camera);
+    swapBuffers();
 }
 
 ::vsg::ref_ptr<::vsg::Viewer> VsgRenderer::viewer() const

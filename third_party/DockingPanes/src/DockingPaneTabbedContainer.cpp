@@ -220,6 +220,10 @@ DockingPaneFlyoutWidget* DockingPaneTabbedContainer::openFlyout(bool hasFocus, Q
 
     m_flyoutWidget->show();
 
+    // The flyout is a top-level tool window; raise it so it stays above the
+    // whole main window (including any native render surface).
+    m_flyoutWidget->raise();
+
     return (m_flyoutWidget);
 }
 

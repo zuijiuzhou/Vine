@@ -6,9 +6,11 @@
 #include <vine/RefCounted.hpp>
 #include <vine/String.hpp>
 
-#include "BoundingBox.hpp"
+#include <vine/math/Rect3.hpp>
 
 V_GRAPHICS_NS_BEGIN
+
+using vine::math::Aabbd;
 
 class Material;
 using MaterialPtr = intrusive_ptr<Material>;
@@ -35,7 +37,7 @@ class V_GRAPHICS_API Drawable : public Object, public RefCounted<Drawable> {
     void setName(const String& name);
 
     /** @brief Gets the local-space bounding box. */
-    BoundingBox boundingBox() const;
+    Aabbd boundingBox() const;
 
     /** @brief Gets the bound material. */
     Material* material() const;
@@ -76,7 +78,7 @@ class V_GRAPHICS_API Drawable : public Object, public RefCounted<Drawable> {
      *
      * @return Local-space bounding box.
      */
-    virtual BoundingBox computeBoundingBox() const = 0;
+    virtual Aabbd computeBoundingBox() const = 0;
 
   private:
     String name_;

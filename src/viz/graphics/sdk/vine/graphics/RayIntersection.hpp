@@ -51,7 +51,15 @@ struct V_GRAPHICS_API RayIntersectionResult {
  */
 class V_GRAPHICS_API RayIntersection {
   public:
+    /** @brief Ray query mode controlling how many hits are collected. */
+    enum class Mode {
+        Nearest,  ///< Only the closest intersection per geometry (fastest).
+        AllHits,  ///< Every triangle intersection, sorted near to far.
+    };
+
     /** @brief Tests ray intersection with a single geometry.
+     *
+     * Returns the closest intersection only.
      *
      * @param ray      The ray to test.
      * @param geometry The geometry to intersect with.
@@ -60,6 +68,22 @@ class V_GRAPHICS_API RayIntersection {
      */
     static RayIntersectionResult intersect(const Ray& ray, Geometry* geometry,
                                            const Mat4d& world);
+
+    /** @brief Tests ray intersection with a single geometry for a given mode.
+     *
+     * Nearest returns at most the closest hit; AllHits returns every triangle
+     * hit of the geometry (front and back faces), each tagged with the
+     * geometry, in no particular order — sort by distance when ordering is
+     * needed.
+     *
+     * @param ray      The ray to test.
+     * @param geometry The geometry to intersect with.
+     * @param world    World transform of the geometry.
+     * @param mode     Query mode.
+     * @return Vector of intersection results (may be empty).
+     */
+    static std::vector<RayIntersectionResult> intersect(const Ray& ray, Geometry* geometry,
+                                                        const Mat4d& world, Mode mode);
 
     /** @brief Tests ray intersection with all geometries in a scene.
      *
@@ -73,14 +97,18 @@ class V_GRAPHICS_API RayIntersection {
 
     /** @brief Tests ray intersection with all geometries in a scene.
      *
-     * Returns all intersections sorted by distance.
+     * Results are sorted by distance (near to far). Nearest returns the
+     * closest hit of every geometry; AllHits returns every triangle hit in
+     * the scene (multiple hits per geometry, including back faces).
      *
      * @param ray   The ray to test.
      * @param scene The scene containing geometries.
+     * @param mode  Query mode; defaults to AllHits.
      * @return Vector of intersection results (may be empty).
      */
     static std::vector<RayIntersectionResult> intersectSceneAll(const Ray& ray,
-                                                                 Scene* scene);
+                                                                 Scene* scene,
+                                                                 Mode mode = Mode::AllHits);
 };
 
 V_GRAPHICS_NS_END

@@ -21,22 +21,24 @@ namespace
  * @param world World transform.
  * @return World-space AABB.
  */
-BoundingBox transformBox(const BoundingBox& box, const Mat4d& world)
+Aabbd transformBox(const Aabbd& box, const Mat4d& world)
 {
-    BoundingBox result;
-    const Vec3d corners[8] = {
-        box.min,
-        { box.max.x, box.min.y, box.min.z },
-        { box.min.x, box.max.y, box.min.z },
-        { box.max.x, box.max.y, box.min.z },
-        { box.min.x, box.min.y, box.max.z },
-        { box.max.x, box.min.y, box.max.z },
-        { box.min.x, box.max.y, box.max.z },
-        box.max,
+    Aabbd result = Aabbd::empty();
+    const auto mn = box.min();
+    const auto mx = box.max();
+    const vine::math::Point3d corners[8] = {
+        mn,
+        vine::math::Point3d(mx.x, mn.y, mn.z),
+        vine::math::Point3d(mn.x, mx.y, mn.z),
+        vine::math::Point3d(mx.x, mx.y, mn.z),
+        vine::math::Point3d(mn.x, mn.y, mx.z),
+        vine::math::Point3d(mx.x, mn.y, mx.z),
+        vine::math::Point3d(mn.x, mx.y, mx.z),
+        mx,
     };
     for (const auto& c : corners) {
-        const auto p = world * vine::math::Point3d(c.x, c.y, c.z);
-        result.expand(Vec3d(p.x, p.y, p.z));
+        const auto p = world * c;
+        result.expandBy(Vec3d(p.x, p.y, p.z));
     }
     return result;
 }
@@ -156,17 +158,17 @@ std::vector<DrawablePtr> Node::drawables() const
     return drawables_;
 }
 
-BoundingBox Node::boundingBox() const
+Aabbd Node::boundingBox() const
 {
-    BoundingBox box;
+    Aabbd box = Aabbd::empty();
     const Mat4d world = worldTransform();
     for (const auto& drawable : drawables_) {
-        box.expand(transformBox(drawable->boundingBox(), world));
+        box.expandBy(transformBox(drawable->boundingBox(), world));
     }
     for (const auto& child : children_) {
-        const BoundingBox child_box = child->boundingBox();
+        const Aabbd child_box = child->boundingBox();
         if (child_box.isValid()) {
-            box.expand(child_box);
+            box.expandBy(child_box);
         }
     }
     return box;

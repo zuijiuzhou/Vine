@@ -6,14 +6,15 @@
 #include <vine/RefCounted.hpp>
 #include <vine/String.hpp>
 #include <vine/math/Matrix4x4.hpp>
+#include <vine/math/Rect3.hpp>
 #include <vector>
 
-#include "BoundingBox.hpp"
 #include "Drawable.hpp"
 
 V_GRAPHICS_NS_BEGIN
 
 using vine::math::Mat4d;
+using vine::math::Aabbd;
 
 /**
  * @brief Scene graph node carrying a transform, children, and an optional drawable.
@@ -99,7 +100,7 @@ class V_GRAPHICS_API Node : public Object, public RefCounted<Node> {
     std::vector<DrawablePtr> drawables() const;
 
     /** @brief Computes the world-space bounding box of this subtree. */
-    BoundingBox boundingBox() const;
+    Aabbd boundingBox() const;
 
   private:
     String name_;

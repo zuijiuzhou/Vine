@@ -169,6 +169,10 @@ DockingPaneFlyoutWidget* DockingPaneContainer::openFlyout(bool hasFocus, QWidget
 
     m_flyoutWidget->show();
 
+    // The flyout is a top-level tool window; raise it so it stays above the
+    // whole main window (including any native render surface).
+    m_flyoutWidget->raise();
+
     return (m_flyoutWidget);
 }
 
@@ -209,6 +213,20 @@ void DockingPaneContainer::setClientWidget(QWidget* widget)
 {
     while (m_clientLayout->count()) {
         m_clientLayout->takeAt(0);
+    }
+
+    // Keep the member in sync: m_clientWidget must always be the widget that is
+    // actually shown in the layout, not the widget passed to the constructor
+    // (a host may swap the content after creation, e.g. replace the temporary
+    // placeholder; leaving the stale pointer behind made clientWidget() return
+    // a dangling widget once the old one was deleted).
+    m_clientWidget = widget;
+
+    // The title bar forwards focus to the client; keep the proxy in sync with
+    // the current client for the same reason as m_clientWidget above (a stale
+    // proxy pointing at a replaced/deleted content widget crashes on focus).
+    if (m_titleWidget) {
+        m_titleWidget->setFocusProxy(widget);
     }
 
     // A layout cannot hold a null widget (QGridLayout::addWidget(nullptr)

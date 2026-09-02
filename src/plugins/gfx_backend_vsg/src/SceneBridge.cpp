@@ -8,6 +8,10 @@
 #include <vine/geometry/IndexedTriangleMesh.hpp>
 #include <vine/geometry/TriangleMesh.hpp>
 #include <vine/vsg/VsgMaterialManager.hpp>
+#include <vsg/commands/BindIndexBuffer.h>
+#include <vsg/commands/BindVertexBuffers.h>
+#include <vsg/commands/Commands.h>
+#include <vsg/commands/DrawIndexed.h>
 #include <vsg/core/Array.h>
 #include <vsg/io/Options.h>
 #include <vsg/maths/mat4.h>
@@ -16,7 +20,6 @@
 #include <vsg/nodes/Group.h>
 #include <vsg/nodes/MatrixTransform.h>
 #include <vsg/nodes/StateGroup.h>
-#include <vsg/nodes/VertexIndexDraw.h>
 #include <vsg/state/ColorBlendState.h>
 #include <vsg/state/material.h>
 #include <vsg/utils/GraphicsPipelineConfigurator.h>
@@ -418,12 +421,16 @@ bool SceneBridge::syncRenderCommands(
     auto stateGroup = ::vsg::StateGroup::create();
     config->copyTo(stateGroup, shared_objects_);
 
-    auto vid = ::vsg::VertexIndexDraw::create();
-    vid->assignArrays(arrays);
-    vid->assignIndices(indices);
-    vid->indexCount = static_cast<uint32_t>(indices->size());
-    vid->firstBinding = config->baseAttributeBinding;
-    stateGroup->addChild(vid);
+    // NOTE: manual geometry must use explicit bind/draw commands, NOT a
+    // manually-assembled VertexIndexDraw, or nothing is rasterized (same
+    // finding as VsgRenderer::makeRawDemoNode).
+    auto drawCommands = ::vsg::Commands::create();
+    drawCommands->addChild(
+        ::vsg::BindVertexBuffers::create(config->baseAttributeBinding, arrays));
+    drawCommands->addChild(::vsg::BindIndexBuffer::create(indices));
+    drawCommands->addChild(::vsg::DrawIndexed::create(
+        static_cast<uint32_t>(indices->size()), 1, 0, 0, 0));
+    stateGroup->addChild(drawCommands);
 
     return stateGroup;
 }

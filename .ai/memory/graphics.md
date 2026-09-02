@@ -41,6 +41,18 @@ Object
 - 参数：shininess, opacity (透明度)
 - 可选：纹理文件路径
 
+## 边界框类型（Aabbd）
+
+- `Scene/Node/Drawable/Geometry::boundingBox()` / `computeBoundingBox()` 返回
+  `vine::math::Aabbd`（`Rect3<double>` 别名，见 `vine/math/Rect3.hpp`）。
+  原来的 `vine::graphics::BoundingBox` 已移除。
+- **语义**：`Rect3` 默认构造为零点在原点的合法零盒；累积式构建必须用
+  `Aabbd::empty()`（反转哨兵）起步，再用 `expandBy(Point3/Vector3/Rect3)`。
+  空盒 `isEmpty()==true`、`isValid()==false`。
+- **注意**：`Rect3.hpp` 只前向声明 `Point3/Vector3`，`min()/max()/center()/size()`
+  的调用方需自行 include `vine/math/Point3.hpp`/`Vector3.hpp`；
+  `vine::math::Point3d` 别名仅定义于 `Point3.hpp`。
+
 ## 设计特点
 
 ✓ **引用计数**：所有核心类继承 `RefCounted<T>`，用 `intrusive_ptr` 管理

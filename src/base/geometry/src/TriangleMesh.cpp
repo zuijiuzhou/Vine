@@ -9,36 +9,6 @@ TriangleMesh::TriangleMesh()
     shape_type_ = ShapeType::TriangleMesh;
 }
 
-const Vec3fArray& TriangleMesh::positions() const
-{
-    return positions_;
-}
-
-const Vec3fArray& TriangleMesh::normals() const
-{
-    return normals_;
-}
-
-const Vec2fArray& TriangleMesh::texcoords() const
-{
-    return texcoords_;
-}
-
-void TriangleMesh::setPositions(Vec3fArray positions)
-{
-    positions_ = std::move(positions);
-}
-
-void TriangleMesh::setNormals(Vec3fArray normals)
-{
-    normals_ = std::move(normals);
-}
-
-void TriangleMesh::setTexcoords(Vec2fArray texcoords)
-{
-    texcoords_ = std::move(texcoords);
-}
-
 void TriangleMesh::addTriangle(const vine::math::Vec3f& a, const vine::math::Vec3f& b, const vine::math::Vec3f& c)
 {
     positions_.push_back(a);
@@ -48,14 +18,7 @@ void TriangleMesh::addTriangle(const vine::math::Vec3f& a, const vine::math::Vec
 
 void TriangleMesh::clear()
 {
-    positions_.clear();
-    normals_.clear();
-    texcoords_.clear();
-}
-
-std::size_t TriangleMesh::vertexCount() const
-{
-    return positions_.size();
+    clearAttributes();
 }
 
 std::size_t TriangleMesh::triangleCount() const
