@@ -1,11 +1,14 @@
 #include <vine/graphics/BoundingBox.hpp>
 #include <vine/graphics/Camera.hpp>
 #include <vine/graphics/CameraManipulator.hpp>
+#include <vine/graphics/OrbitCameraManipulator.hpp>
 #include <vine/graphics/Geometry.hpp>
 #include <vine/graphics/Node.hpp>
 #include <vine/graphics/Material.hpp>
 #include <vine/graphics/Ray.hpp>
 #include <vine/graphics/RenderBackend.hpp>
+#include <vine/graphics/RenderBackendRegistry.hpp>
+#include <vine/graphics/RenderCommand.hpp>
 #include <vine/graphics/RenderEngine.hpp>
 #include <vine/graphics/RenderPass.hpp>
 #include <vine/graphics/RayIntersection.hpp>
@@ -39,6 +42,28 @@ intrusive_ptr<vine::geometry::TriangleMesh> makeUnitTriangle()
                       vine::math::Vec3f(1.0f, 0.0f, 0.0f),
                       vine::math::Vec3f(0.0f, 1.0f, 0.0f));
     return mesh;
+}
+
+/**
+ * @brief Builds a node holding a single triangle at a world-space position.
+ *
+ * @param position World-space translation of the node.
+ * @param material Material to apply to the geometry (may be null).
+ * @param name     Name assigned to the geometry drawable.
+ * @return Node with one triangle drawable.
+ */
+intrusive_ptr<Node> makeTriangleNode(const Vec3d& position, Material* material,
+                                     const vine::String& name = {})
+{
+    auto node = intrusive_ptr<Node>(new Node());
+    auto geom = intrusive_ptr<Geometry>(new Geometry());
+    auto mesh = makeUnitTriangle();
+    geom->setShape(mesh.get());
+    geom->setMaterial(material);
+    geom->setName(name);
+    node->addDrawable(geom.get());
+    node->setLocalTransform(vine::math::translate(position));
+    return node;
 }
 
 }  // namespace
@@ -103,6 +128,215 @@ TEST(SceneTest, InvisibleNodeExcludedFromBoundingBox)
     EXPECT_TRUE(box.isEmpty());
 }
 
+// ============ RenderCommand collection / culling ============
+
+/**
+ * @brief Configures a camera at (0,0,5) looking at the origin.
+ *
+ * @param cam Camera to configure in place (avoids the deleted copy ctor).
+ */
+void setupLookAtCamera(Camera& cam)
+{
+    cam.setViewMatrixAsLookAt(Vec3d(0, 0, 5), Vec3d(0, 0, 0), Vec3d(0, 1, 0));
+    cam.setProjectionMatrixAsPerspective(60.0, 1.0, 0.1, 1000.0);
+}
+
+TEST(SceneTest, CollectCommandsSortsOpaqueFrontToBack)
+{
+    Scene scene;
+    // Nearer triangle (z=-2) and farther triangle (z=-5).
+    auto near_node = makeTriangleNode(Vec3d(0, 0, -2), nullptr, u8"near");
+    auto far_node = makeTriangleNode(Vec3d(0, 0, -5), nullptr, u8"far");
+    scene.addNode(far_node.get());
+    scene.addNode(near_node.get());
+
+    Camera cam;
+    setupLookAtCamera(cam);
+    auto commands = scene.collectRenderCommands(&cam);
+
+    ASSERT_EQ(commands.size(), 2u);
+    EXPECT_EQ(commands[0].drawable->name(), u8"near");
+    EXPECT_EQ(commands[1].drawable->name(), u8"far");
+    EXPECT_FALSE(commands[0].isTransparent);
+}
+
+TEST(SceneTest, CollectCommandsSortsTransparentBackToFrontAfterOpaque)
+{
+    Scene scene;
+    auto opaque_mat = intrusive_ptr<Material>(new Material());
+    auto trans_mat = intrusive_ptr<Material>(new Material());
+    trans_mat->setOpacity(0.5f);
+
+    // Opaque far, transparent far, transparent near.
+    auto opaque_far = makeTriangleNode(Vec3d(0, 0, -10), opaque_mat.get(), u8"opaque-far");
+    auto trans_far = makeTriangleNode(Vec3d(0, 0, -6), trans_mat.get(), u8"trans-far");
+    auto trans_near = makeTriangleNode(Vec3d(0, 0, -2), trans_mat.get(), u8"trans-near");
+    scene.addNode(trans_near.get());
+    scene.addNode(opaque_far.get());
+    scene.addNode(trans_far.get());
+
+    Camera cam;
+    setupLookAtCamera(cam);
+    auto commands = scene.collectRenderCommands(&cam);
+
+    ASSERT_EQ(commands.size(), 3u);
+    // Opaque batch first (regardless of depth).
+    EXPECT_EQ(commands[0].drawable->name(), u8"opaque-far");
+    EXPECT_FALSE(commands[0].isTransparent);
+    // Transparent drawn back-to-front.
+    EXPECT_EQ(commands[1].drawable->name(), u8"trans-far");
+    EXPECT_TRUE(commands[1].isTransparent);
+    EXPECT_EQ(commands[2].drawable->name(), u8"trans-near");
+    EXPECT_TRUE(commands[2].isTransparent);
+}
+
+TEST(SceneTest, CollectCommandsCullsOutOfView)
+{
+    Scene scene;
+    // A node far outside the frustum (behind the camera) must be culled.
+    auto visible = makeTriangleNode(Vec3d(0, 0, -3), nullptr, u8"visible");
+    auto behind = makeTriangleNode(Vec3d(0, 0, 100), nullptr, u8"behind");
+    scene.addNode(behind.get());
+    scene.addNode(visible.get());
+
+    Camera cam;
+    setupLookAtCamera(cam);
+    auto commands = scene.collectRenderCommands(&cam);
+
+    ASSERT_EQ(commands.size(), 1u);
+    EXPECT_EQ(commands[0].drawable->name(), u8"visible");
+}
+
+TEST(SceneTest, CollectCommandsCullsOffToTheSide)
+{
+    Scene scene;
+    // Far off to the side, outside the horizontal FOV.
+    auto visible = makeTriangleNode(Vec3d(0, 0, -3), nullptr, u8"visible");
+    auto side = makeTriangleNode(Vec3d(50, 0, -3), nullptr, u8"side");
+    scene.addNode(side.get());
+    scene.addNode(visible.get());
+
+    Camera cam;
+    setupLookAtCamera(cam);
+    auto commands = scene.collectRenderCommands(&cam);
+
+    ASSERT_EQ(commands.size(), 1u);
+    EXPECT_EQ(commands[0].drawable->name(), u8"visible");
+}
+
+TEST(SceneTest, CollectCommandsNullCameraYieldsEmpty)
+{
+    Scene scene;
+    auto node = makeTriangleNode(Vec3d(0, 0, -3), nullptr);
+    scene.addNode(node.get());
+
+    auto commands = scene.collectRenderCommands(nullptr);
+    EXPECT_TRUE(commands.empty());
+}
+
+TEST(SceneTest, CollectCommandsHidesWholeScene)
+{
+    Scene scene;
+    scene.addNode(makeTriangleNode(Vec3d(0, 0, -3), nullptr, u8"tri").get());
+    scene.setVisible(false);
+
+    Camera cam;
+    setupLookAtCamera(cam);
+    auto commands = scene.collectRenderCommands(&cam);
+    EXPECT_TRUE(commands.empty());
+}
+
+TEST(SceneTest, CollectCommandsHidesNode)
+{
+    Scene scene;
+    auto hidden = makeTriangleNode(Vec3d(0, 0, -3), nullptr, u8"hidden");
+    auto shown = makeTriangleNode(Vec3d(0, 0, -5), nullptr, u8"shown");
+    hidden->setVisible(false);
+    scene.addNode(hidden.get());
+    scene.addNode(shown.get());
+
+    Camera cam;
+    setupLookAtCamera(cam);
+    auto commands = scene.collectRenderCommands(&cam);
+    ASSERT_EQ(commands.size(), 1u);
+    EXPECT_EQ(commands[0].drawable->name(), u8"shown");
+}
+
+TEST(SceneTest, CollectCommandsHidesDrawable)
+{
+    Scene scene;
+    auto node = intrusive_ptr<Node>(new Node());
+    auto g1 = intrusive_ptr<Geometry>(new Geometry());
+    g1->setShape(makeUnitTriangle().get());
+    g1->setName(u8"g1");
+    auto g2 = intrusive_ptr<Geometry>(new Geometry());
+    g2->setShape(makeUnitTriangle().get());
+    g2->setName(u8"g2");
+    g1->setVisible(false);
+    node->addDrawable(g1.get());
+    node->addDrawable(g2.get());
+    node->setLocalTransform(vine::math::translate(Vec3d(0, 0, -3)));
+    scene.addNode(node.get());
+
+    Camera cam;
+    setupLookAtCamera(cam);
+    auto commands = scene.collectRenderCommands(&cam);
+    ASSERT_EQ(commands.size(), 1u);
+    EXPECT_EQ(commands[0].drawable->name(), u8"g2");
+}
+
+TEST(SceneTest, CollectCommandsEffectiveOpacity)
+{
+    Scene scene;
+    auto node = makeTriangleNode(Vec3d(0, 0, -3), nullptr, u8"tri");
+    scene.addNode(node.get());
+    scene.setOpacity(0.5f);
+    node->setOpacity(0.5f);
+    node->drawables().front()->setOpacity(0.5f);
+
+    Camera cam;
+    setupLookAtCamera(cam);
+    auto commands = scene.collectRenderCommands(&cam);
+    ASSERT_EQ(commands.size(), 1u);
+    EXPECT_NEAR(commands[0].opacity, 0.5f * 0.5f * 0.5f, 1e-5f);
+    EXPECT_TRUE(commands[0].isTransparent);
+}
+
+TEST(SceneTest, CollectCommandsOpacityIncludesMaterial)
+{
+    Scene scene;
+    auto mat = intrusive_ptr<Material>(new Material());
+    mat->setOpacity(0.5f);
+    auto node = makeTriangleNode(Vec3d(0, 0, -3), mat.get(), u8"tri");
+    node->setOpacity(0.5f);
+    scene.addNode(node.get());
+
+    Camera cam;
+    setupLookAtCamera(cam);
+    auto commands = scene.collectRenderCommands(&cam);
+    ASSERT_EQ(commands.size(), 1u);
+    EXPECT_NEAR(commands[0].opacity, 0.5f * 0.5f, 1e-5f);
+    EXPECT_TRUE(commands[0].isTransparent);
+}
+
+TEST(SceneTest, CollectCommandsOpacityMultipliesAlongHierarchy)
+{
+    Scene scene;
+    auto parent = intrusive_ptr<Node>(new Node());
+    auto child = makeTriangleNode(Vec3d(0, 0, -3), nullptr, u8"tri");
+    parent->addChild(child.get());
+    parent->setOpacity(0.5f);
+    child->setOpacity(0.5f);
+    scene.addNode(parent.get());
+
+    Camera cam;
+    setupLookAtCamera(cam);
+    auto commands = scene.collectRenderCommands(&cam);
+    ASSERT_EQ(commands.size(), 1u);
+    EXPECT_NEAR(commands[0].opacity, 0.25f, 1e-5f);
+    EXPECT_TRUE(commands[0].isTransparent);
+}
+
 // ============ Camera ============
 
 TEST(CameraTest, Defaults)
@@ -153,7 +387,7 @@ TEST(CameraManipulatorTest, OrbitKeepsTarget)
     auto cam = intrusive_ptr<Camera>(new Camera());
     cam->setViewMatrixAsLookAt(Vec3d(0, 0, 10), Vec3d(0, 0, 0), Vec3d(0, 1, 0));
 
-    CameraManipulator manip(cam.get());
+    OrbitCameraManipulator manip(cam.get());
     manip.orbit(0.5, 0.0);
 
     // Target remains fixed at origin.
@@ -169,7 +403,7 @@ TEST(CameraManipulatorTest, ZoomChangesRadius)
     auto cam = intrusive_ptr<Camera>(new Camera());
     cam->setViewMatrixAsLookAt(Vec3d(0, 0, 10), Vec3d(0, 0, 0), Vec3d(0, 1, 0));
 
-    CameraManipulator manip(cam.get());
+    OrbitCameraManipulator manip(cam.get());
     const double before = manip.orbitRadius();
     manip.zoom(0.5);
     EXPECT_LT(manip.orbitRadius(), before);
@@ -390,43 +624,47 @@ class MockBackend : public RenderBackend {
 
 TEST(RenderEngineTest, InitializeCallsBackend)
 {
-    MockBackend backend;
-    auto engine = intrusive_ptr<RenderEngine>(new RenderEngine(&backend));
+    auto backend = intrusive_ptr<MockBackend>(new MockBackend());
+    auto engine  = intrusive_ptr<RenderEngine>(new RenderEngine());
+    engine->setBackend(backend);
 
     EXPECT_TRUE(engine->initialize());
-    EXPECT_TRUE(backend.ok);
-    EXPECT_EQ(engine->backend(), &backend);
+    EXPECT_TRUE(backend->ok);
+    EXPECT_EQ(engine->backend(), backend.get());
 }
 
 TEST(RenderEngineTest, FrameRunsPipeline)
 {
-    MockBackend backend;
-    auto engine = intrusive_ptr<RenderEngine>(new RenderEngine(&backend));
+    auto backend = intrusive_ptr<MockBackend>(new MockBackend());
+    auto engine  = intrusive_ptr<RenderEngine>(new RenderEngine());
+    engine->setBackend(backend);
     engine->initialize();
 
     engine->frame();
 
-    EXPECT_EQ(backend.begin_calls, 1);
-    EXPECT_EQ(backend.end_calls, 1);
-    EXPECT_EQ(backend.swap_calls, 1);
-    EXPECT_GE(backend.clear_calls, 1);
+    EXPECT_EQ(backend->begin_calls, 1);
+    EXPECT_EQ(backend->end_calls, 1);
+    EXPECT_EQ(backend->swap_calls, 1);
+    EXPECT_GE(backend->clear_calls, 1);
 }
 
 TEST(RenderEngineTest, FrameBeforeInitializeIsNoOp)
 {
-    MockBackend backend;
-    auto engine = intrusive_ptr<RenderEngine>(new RenderEngine(&backend));
+    auto backend = intrusive_ptr<MockBackend>(new MockBackend());
+    auto engine  = intrusive_ptr<RenderEngine>(new RenderEngine());
+    engine->setBackend(backend);
 
     // Not initialized: frame should do nothing.
     engine->frame();
-    EXPECT_EQ(backend.begin_calls, 0);
-    EXPECT_EQ(backend.swap_calls, 0);
+    EXPECT_EQ(backend->begin_calls, 0);
+    EXPECT_EQ(backend->swap_calls, 0);
 }
 
 TEST(RenderEngineTest, DefaultObjectsCreated)
 {
-    MockBackend backend;
-    auto engine = intrusive_ptr<RenderEngine>(new RenderEngine(&backend));
+    auto backend = intrusive_ptr<MockBackend>(new MockBackend());
+    auto engine  = intrusive_ptr<RenderEngine>(new RenderEngine());
+    engine->setBackend(backend);
 
     EXPECT_NE(engine->scene(), nullptr);
     EXPECT_NE(engine->camera(), nullptr);
@@ -436,8 +674,9 @@ TEST(RenderEngineTest, DefaultObjectsCreated)
 
 TEST(RenderEngineTest, SetSceneAndCamera)
 {
-    MockBackend backend;
-    auto engine = intrusive_ptr<RenderEngine>(new RenderEngine(&backend));
+    auto backend = intrusive_ptr<MockBackend>(new MockBackend());
+    auto engine  = intrusive_ptr<RenderEngine>(new RenderEngine());
+    engine->setBackend(backend);
 
     auto scene = intrusive_ptr<Scene>(new Scene());
     auto camera = intrusive_ptr<Camera>(new Camera());
@@ -453,11 +692,111 @@ TEST(RenderEngineTest, SetSceneAndCamera)
 
 TEST(RenderEngineTest, ShutdownReleasesBackend)
 {
-    MockBackend backend;
-    auto engine = intrusive_ptr<RenderEngine>(new RenderEngine(&backend));
+    auto backend = intrusive_ptr<MockBackend>(new MockBackend());
+    auto engine  = intrusive_ptr<RenderEngine>(new RenderEngine());
+    engine->setBackend(backend);
     engine->initialize();
-    EXPECT_TRUE(backend.ok);
+    EXPECT_TRUE(backend->ok);
 
     engine->shutdown();
-    EXPECT_FALSE(backend.ok);
+    EXPECT_FALSE(backend->ok);
 }
+
+// ============ RenderBackendRegistry ============
+
+namespace
+{
+
+/**
+ * @brief A named factory producing a MockBackend for registry tests.
+ */
+class MockBackendFactory : public RenderBackendFactory {
+  public:
+    MockBackendFactory() = default;
+
+    explicit MockBackendFactory(const vine::String& name)
+      : name_(name)
+    {
+    }
+
+    RenderBackendInfo info() const override
+    {
+        const auto name = name_.empty() ? u8"mock3" : name_;
+        return RenderBackendInfo{ name, name, u8"mock backend", u8"1.0.0", u8"test",
+                                  RenderApi::Vulkan | RenderApi::OpenGL3 };
+    }
+
+    vine::intrusive_ptr<RenderBackend> create(Scene*, Camera*) override
+    {
+        return vine::intrusive_ptr<RenderBackend>(new MockBackend());
+    }
+
+  private:
+    vine::String name_;
+};
+
+}  // namespace
+
+TEST(RenderBackendRegistryTest, RegisterAndCreateByName)
+{
+    auto& registry = RenderBackendRegistry::instance();
+    static MockBackendFactory factory(u8"mock");
+
+    registry.registerFactory(&factory);
+    EXPECT_TRUE(registry.has(u8"mock"));
+
+    auto backend = registry.create(u8"mock", nullptr, nullptr);
+    ASSERT_NE(backend, nullptr);
+
+    // Unknown names return null.
+    EXPECT_EQ(registry.create(u8"nope", nullptr, nullptr), nullptr);
+    EXPECT_FALSE(registry.has(u8"nope"));
+}
+
+TEST(RenderBackendRegistryTest, EnumerateNames)
+{
+    auto& registry = RenderBackendRegistry::instance();
+    static MockBackendFactory factory(u8"mock2");
+    registry.registerFactory(&factory);
+
+    const auto names = registry.names();
+    EXPECT_FALSE(names.empty());
+    const bool found = std::find(names.begin(), names.end(), u8"mock2") != names.end();
+    EXPECT_TRUE(found);
+}
+
+TEST(RenderBackendRegistryTest, EnumerateEntries)
+{
+    auto& registry = RenderBackendRegistry::instance();
+    static MockBackendFactory factory(u8"mock4");
+    registry.registerFactory(&factory);
+
+    const auto entries = registry.entries();
+    EXPECT_FALSE(entries.empty());
+
+    // Iterate and query each registered backend by name/metadata.
+    bool found = false;
+    for (const auto& entry : entries) {
+        if (entry.info.name == u8"mock4") {
+            found = true;
+            EXPECT_NE(entry.factory, nullptr);
+            EXPECT_EQ(entry.factory->name(), u8"mock4");
+            EXPECT_FALSE(entry.info.description.empty());
+            EXPECT_TRUE(vine::testFlag(entry.info.api_flags, RenderApi::Vulkan));
+            EXPECT_TRUE(vine::testFlag(entry.info.api_flags, RenderApi::OpenGL3));
+            EXPECT_EQ(renderApiToString(entry.info.api_flags), u8"vulkan | opengl3");
+        }
+    }
+    EXPECT_TRUE(found);
+}
+
+TEST(RenderBackendRegistryTest, RegistrarSelfRegisters)
+{
+    auto& registry = RenderBackendRegistry::instance();
+    // Static: the registrar's embedded factory must outlive the process, as
+    // the registry keeps a raw pointer to it.
+    static RenderBackendRegistry::Registrar<MockBackendFactory> registrar;
+    // The registrar's constructor self-registers; the factory is embedded.
+    EXPECT_TRUE(registry.has(u8"mock3"));
+}
+

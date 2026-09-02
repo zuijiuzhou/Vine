@@ -46,6 +46,29 @@ class V_GRAPHICS_API Drawable : public Object, public RefCounted<Drawable> {
      */
     void setMaterial(Material* m);
 
+    /** @brief Returns whether the drawable is rendered. */
+    bool isVisible() const;
+
+    /** @brief Sets whether the drawable is rendered.
+     *
+     * Hidden drawables are skipped by command collection; the render backend
+     * may keep their resources cached so that toggling visibility back on is
+     * cheap.
+     *
+     * @param visible true to render, false to hide.
+     */
+    void setVisible(bool visible);
+
+    /** @brief Gets the drawable opacity multiplier in [0, 1].
+     *
+     * Multiplied with the scene/node opacities and the bound material's
+     * opacity to produce the effective per-drawable transparency.
+     */
+    float opacity() const;
+
+    /** @brief Sets the drawable opacity multiplier in [0, 1]. */
+    void setOpacity(float opacity);
+
   protected:
     /** @brief Computes the local-space bounding box.
      *
@@ -56,8 +79,10 @@ class V_GRAPHICS_API Drawable : public Object, public RefCounted<Drawable> {
     virtual BoundingBox computeBoundingBox() const = 0;
 
   private:
-    struct Data;
-    Data* const d;
+    String name_;
+    bool visible_ = true;
+    float opacity_ = 1.0f;
+    intrusive_ptr<Material> material_;
 };
 
 using DrawablePtr = intrusive_ptr<Drawable>;

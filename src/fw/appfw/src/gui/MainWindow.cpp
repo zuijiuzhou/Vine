@@ -28,6 +28,7 @@ struct MainWindow::Impl : public UIElementData {
     std::unique_ptr<RibbonBar>        ribbon_bar;
     std::unique_ptr<StatusBar>        status_bar;
     std::unique_ptr<DockPanelManager> dock_panel_mgr;
+    RenderControl*                    primary_render_control = nullptr;
 
     ~Impl();
 };
@@ -122,6 +123,16 @@ raw_ptr<StatusBar> MainWindow::statusBar() const
 raw_ptr<DockPanelManager> MainWindow::dockPanelManager() const
 {
     return dptr()->dock_panel_mgr.get();
+}
+
+void MainWindow::setPrimaryRenderControl(RenderControl* control)
+{
+    dptr()->primary_render_control = control;
+}
+
+RenderControl* MainWindow::primaryRenderControl() const
+{
+    return dptr()->primary_render_control;
 }
 
 inline auto MainWindow::dptr() -> Impl*

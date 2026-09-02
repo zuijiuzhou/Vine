@@ -1,19 +1,93 @@
 #include <vine/graphics/Scene.hpp>
 
+#include <vine/graphics/Camera.hpp>
 #include <vine/graphics/Drawable.hpp>
+#include <vine/graphics/Material.hpp>
 #include <vine/graphics/RenderCommand.hpp>
+#include <vine/math/Transform3.hpp>
+
+#include <algorithm>
+#include <array>
 
 V_GRAPHICS_NS_BEGIN
 
-V_OBJECT_META_IMPL(Scene, vine::Object);
+using vine::math::Vec3d;
+using vine::math::Vec4d;
 
-struct Scene::Data {
-    String name;
-    std::vector<NodePtr> nodes;
-};
+V_OBJECT_META_IMPL(Scene, vine::Object);
 
 namespace
 {
+
+/**
+ * @brief View frustum defined by six planes, used for culling.
+ *
+ * Planes are stored in the order: left, right, bottom, top, near, far.
+ * Each plane is a 4-vector (a, b, c, d) satisfying
+ * a*x + b*y + c*z + d = 0 in world space.
+ */
+class Frustum {
+  public:
+    /** @brief Extracts the frustum from a combined view-projection matrix.
+     *
+     * @param vp Combined projection * view matrix.
+     * @return Frustum with normalized plane equations.
+     */
+    static Frustum fromViewProjection(const Mat4d& vp)
+    {
+        Frustum f;
+        const auto row = [&vp](int r) {
+            return Vec4d(vp.element(r, 0), vp.element(r, 1), vp.element(r, 2),
+                         vp.element(r, 3));
+        };
+        const Vec4d r0 = row(0);
+        const Vec4d r1 = row(1);
+        const Vec4d r2 = row(2);
+        const Vec4d r3 = row(3);
+        f.planes_[0] = r3 + r0;  // left
+        f.planes_[1] = r3 - r0;  // right
+        f.planes_[2] = r3 + r1;  // bottom
+        f.planes_[3] = r3 - r1;  // top
+        f.planes_[4] = r3 + r2;  // near
+        f.planes_[5] = r3 - r2;  // far
+        for (auto& p : f.planes_) {
+            const Vec3d n(p.x, p.y, p.z);
+            const double len = n.length();
+            if (len > 1e-12) {
+                p.x /= len;
+                p.y /= len;
+                p.z /= len;
+                p.w /= len;
+            }
+        }
+        return f;
+    }
+
+    /** @brief Tests whether a box lies fully outside the frustum.
+     *
+     * Uses the p-vertex test: the box is outside when its corner most in the
+     * direction of a plane normal is still behind that plane.
+     *
+     * @param box World-space axis-aligned bounding box.
+     * @return true when the box is fully outside the frustum.
+     */
+    bool isOutside(const BoundingBox& box) const
+    {
+        for (const auto& p : planes_) {
+            const Vec3d n(p.x, p.y, p.z);
+            const Vec3d pos{ (n.x >= 0.0) ? box.max.x : box.min.x,
+                             (n.y >= 0.0) ? box.max.y : box.min.y,
+                             (n.z >= 0.0) ? box.max.z : box.min.z };
+            if (n.dot(pos) + p.w < 0.0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+  private:
+    std::array<Vec4d, 6> planes_{};
+};
 
 /**
  * @brief Recursively finds a node by name.
@@ -42,41 +116,76 @@ NodePtr findNodeRecursive(const Node* node, const String& name)
 /**
  * @brief Recursively collects render commands from a node subtree.
  *
- * @param node Root node to traverse.
- * @param out  Output command list.
+ * Nodes fully outside the frustum (and their subtrees) are culled.
+ *
+ * @param node    Root node to traverse.
+ * @param frustum View frustum for culling.
+ * @param out     Output command list.
  */
-void collectNodeCommands(const Node* node, std::vector<RenderCommand>& out)
+void collectNodeCommands(const Node* node, const Frustum& frustum, float opacity,
+                         std::vector<RenderCommand>& out)
 {
     if (node == nullptr || !node->isVisible()) {
         return;
     }
+    if (frustum.isOutside(node->boundingBox())) {
+        return;
+    }
+    // Opacity multiplies down the hierarchy: scene x ancestors x node. The
+    // final effective opacity for a drawable also includes the drawable and
+    // its bound material.
+    const float node_opacity = opacity * node->opacity();
     for (const auto& drawable : node->drawables()) {
-        out.emplace_back(drawable.get(), drawable->material(), node->worldTransform());
+        if (!drawable->isVisible()) {
+            continue;
+        }
+        Material* material = drawable->material();
+        const float material_opacity = material != nullptr ? material->opacity() : 1.0f;
+        const float effective = std::clamp(
+            node_opacity * drawable->opacity() * material_opacity, 0.0f, 1.0f);
+        auto& cmd = out.emplace_back(drawable.get(), material, node->worldTransform());
+        cmd.opacity = effective;
+        cmd.isTransparent = effective < 1.0f - 1e-6f;
     }
     for (const auto& child : node->children()) {
-        collectNodeCommands(child.get(), out);
+        collectNodeCommands(child.get(), frustum, node_opacity, out);
     }
 }
 
 }  // namespace
 
-Scene::Scene()
-  : d(new Data())
-{}
+Scene::Scene() = default;
 
-Scene::~Scene()
-{
-    delete d;
-}
+Scene::~Scene() = default;
 
 String Scene::name() const
 {
-    return d->name;
+    return name_;
 }
 
 void Scene::setName(const String& name)
 {
-    d->name = name;
+    name_ = name;
+}
+
+bool Scene::isVisible() const
+{
+    return visible_;
+}
+
+void Scene::setVisible(bool visible)
+{
+    visible_ = visible;
+}
+
+float Scene::opacity() const
+{
+    return opacity_;
+}
+
+void Scene::setOpacity(float opacity)
+{
+    opacity_ = opacity;
 }
 
 void Scene::addNode(Node* node)
@@ -84,7 +193,7 @@ void Scene::addNode(Node* node)
     if (node == nullptr) {
         return;
     }
-    d->nodes.emplace_back(node);
+    nodes_.emplace_back(node);
 }
 
 void Scene::removeNode(Node* node)
@@ -92,21 +201,21 @@ void Scene::removeNode(Node* node)
     if (node == nullptr) {
         return;
     }
-    auto it = std::find_if(d->nodes.begin(), d->nodes.end(),
+    auto it = std::find_if(nodes_.begin(), nodes_.end(),
                            [node](const NodePtr& ptr) { return ptr.get() == node; });
-    if (it != d->nodes.end()) {
-        d->nodes.erase(it);
+    if (it != nodes_.end()) {
+        nodes_.erase(it);
     }
 }
 
 std::vector<NodePtr> Scene::nodes() const
 {
-    return d->nodes;
+    return nodes_;
 }
 
 NodePtr Scene::findNode(const String& name) const
 {
-    for (const auto& node : d->nodes) {
+    for (const auto& node : nodes_) {
         NodePtr found = findNodeRecursive(node.get(), name);
         if (found != nullptr) {
             return found;
@@ -117,13 +226,16 @@ NodePtr Scene::findNode(const String& name) const
 
 void Scene::clear()
 {
-    d->nodes.clear();
+    nodes_.clear();
 }
 
 BoundingBox Scene::boundingBox() const
 {
     BoundingBox box;
-    for (const auto& node : d->nodes) {
+    if (!visible_) {
+        return box;
+    }
+    for (const auto& node : nodes_) {
         if (!node->isVisible()) {
             continue;
         }
@@ -138,9 +250,29 @@ BoundingBox Scene::boundingBox() const
 std::vector<RenderCommand> Scene::collectRenderCommands(const Camera* camera) const
 {
     std::vector<RenderCommand> commands;
-    for (const auto& node : d->nodes) {
-        collectNodeCommands(node.get(), commands);
+    if (camera == nullptr || !visible_) {
+        return commands;
     }
+    const Mat4d view_proj = camera->projectionMatrix() * camera->viewMatrix();
+    const Frustum frustum = Frustum::fromViewProjection(view_proj);
+    for (const auto& node : nodes_) {
+        collectNodeCommands(node.get(), frustum, opacity_, commands);
+    }
+    // Sort: opaque front-to-back (near first), transparent back-to-front
+    // (far first) after the opaque batch. Transparent objects need painter's
+    // order for correct alpha blending.
+    const Vec3d eye = camera->eye();
+    std::stable_sort(commands.begin(), commands.end(),
+                     [&eye](const RenderCommand& lhs, const RenderCommand& rhs) {
+                         if (lhs.isTransparent != rhs.isTransparent) {
+                             return !lhs.isTransparent;
+                         }
+                         const auto lhs_pos = lhs.modelMatrix * vine::math::Point3d(0.0, 0.0, 0.0);
+                         const auto rhs_pos = rhs.modelMatrix * vine::math::Point3d(0.0, 0.0, 0.0);
+                         const double lhs_dist = (lhs_pos.asVector() - eye).length();
+                         const double rhs_dist = (rhs_pos.asVector() - eye).length();
+                         return lhs.isTransparent ? lhs_dist > rhs_dist : lhs_dist < rhs_dist;
+                     });
     return commands;
 }
 

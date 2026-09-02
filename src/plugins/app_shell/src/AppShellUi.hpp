@@ -7,6 +7,7 @@ V_APPFW_NS_BEGIN
 namespace gui {
 class MainWindow;
 class ConsolePanel;
+class RenderControl;
 }
 
 /**
@@ -25,6 +26,8 @@ void buildAppShellRibbon(gui::MainWindow* wnd);
 struct AppShellDock {
     /// Console panel created as the bottom dock (owned by the dock manager).
     gui::ConsolePanel* console_panel = nullptr;
+    /// Render view placed in the central client area (owned by the dock manager).
+    gui::RenderControl* render_control = nullptr;
 };
 
 /**

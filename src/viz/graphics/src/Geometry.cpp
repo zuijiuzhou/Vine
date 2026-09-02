@@ -7,32 +7,23 @@ V_GRAPHICS_NS_BEGIN
 
 V_OBJECT_META_IMPL(Geometry, Drawable);
 
-struct Geometry::Data {
-    intrusive_ptr<vine::geometry::Shape> shape;
-};
+Geometry::Geometry() = default;
 
-Geometry::Geometry()
-  : d(new Data())
-{}
-
-Geometry::~Geometry()
-{
-    delete d;
-}
+Geometry::~Geometry() = default;
 
 const vine::geometry::Shape* Geometry::shape() const
 {
-    return d->shape.get();
+    return shape_.get();
 }
 
 void Geometry::setShape(vine::geometry::Shape* shape)
 {
-    d->shape = shape;
+    shape_ = shape;
 }
 
 std::size_t Geometry::triangleCount() const
 {
-    const auto* shape = d->shape.get();
+    const auto* shape = shape_.get();
     if (shape == nullptr) {
         return 0;
     }
@@ -53,7 +44,7 @@ std::size_t Geometry::triangleCount() const
 
 std::size_t Geometry::vertexCount() const
 {
-    const auto* shape = d->shape.get();
+    const auto* shape = shape_.get();
     if (shape == nullptr) {
         return 0;
     }
@@ -74,7 +65,7 @@ std::size_t Geometry::vertexCount() const
 
 BoundingBox Geometry::computeBoundingBox() const
 {
-    const auto* shape = d->shape.get();
+    const auto* shape = shape_.get();
     if (shape == nullptr) {
         return BoundingBox();
     }

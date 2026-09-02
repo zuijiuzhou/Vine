@@ -6,28 +6,18 @@ V_GRAPHICS_NS_BEGIN
 
 V_OBJECT_META_IMPL(Drawable, vine::Object);
 
-struct Drawable::Data {
-    String name;
-    intrusive_ptr<Material> material;
-};
+Drawable::Drawable() = default;
 
-Drawable::Drawable()
-  : d(new Data())
-{}
-
-Drawable::~Drawable()
-{
-    delete d;
-}
+Drawable::~Drawable() = default;
 
 String Drawable::name() const
 {
-    return d->name;
+    return name_;
 }
 
 void Drawable::setName(const String& name)
 {
-    d->name = name;
+    name_ = name;
 }
 
 BoundingBox Drawable::boundingBox() const
@@ -37,12 +27,32 @@ BoundingBox Drawable::boundingBox() const
 
 Material* Drawable::material() const
 {
-    return d->material.get();
+    return material_.get();
 }
 
 void Drawable::setMaterial(Material* m)
 {
-    d->material = m;
+    material_ = m;
+}
+
+bool Drawable::isVisible() const
+{
+    return visible_;
+}
+
+void Drawable::setVisible(bool visible)
+{
+    visible_ = visible;
+}
+
+float Drawable::opacity() const
+{
+    return opacity_;
+}
+
+void Drawable::setOpacity(float opacity)
+{
+    opacity_ = opacity;
 }
 
 V_GRAPHICS_NS_END

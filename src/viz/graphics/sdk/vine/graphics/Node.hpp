@@ -43,6 +43,14 @@ class V_GRAPHICS_API Node : public Object, public RefCounted<Node> {
     /** @brief Sets whether this node (and its subtree) is visible. */
     void setVisible(bool visible);
 
+    /** @brief Gets the node opacity multiplier in [0, 1], applied to the
+     * whole subtree. */
+    float opacity() const;
+
+    /** @brief Sets the node opacity multiplier in [0, 1], applied to the
+     * whole subtree. */
+    void setOpacity(float opacity);
+
     /** @brief Gets the local transform. */
     Mat4d localTransform() const;
 
@@ -94,8 +102,13 @@ class V_GRAPHICS_API Node : public Object, public RefCounted<Node> {
     BoundingBox boundingBox() const;
 
   private:
-    struct Data;
-    Data* const d;
+    String name_;
+    bool visible_ = true;
+    float opacity_ = 1.0f;
+    Mat4d local_;
+    Node* parent_ = nullptr;
+    std::vector<intrusive_ptr<Node>> children_;
+    std::vector<DrawablePtr> drawables_;
 };
 
 using NodePtr = intrusive_ptr<Node>;

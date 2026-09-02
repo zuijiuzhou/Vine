@@ -36,6 +36,18 @@ class V_GRAPHICS_API Scene : public Object, public RefCounted<Scene> {
     /** @brief Sets the scene name. */
     void setName(const String& name);
 
+    /** @brief Returns whether the whole scene is rendered. */
+    bool isVisible() const;
+
+    /** @brief Sets whether the whole scene is rendered. */
+    void setVisible(bool visible);
+
+    /** @brief Gets the scene-level opacity multiplier in [0, 1]. */
+    float opacity() const;
+
+    /** @brief Sets the scene-level opacity multiplier in [0, 1]. */
+    void setOpacity(float opacity);
+
     /** @brief Adds a root-level node.
      *
      * @param node Node to add. Ownership is retained by the caller.
@@ -72,8 +84,10 @@ class V_GRAPHICS_API Scene : public Object, public RefCounted<Scene> {
     std::vector<RenderCommand> collectRenderCommands(const Camera* camera) const;
 
   private:
-    struct Data;
-    Data* const d;
+    String name_;
+    bool visible_ = true;
+    float opacity_ = 1.0f;
+    std::vector<NodePtr> nodes_;
 };
 
 using ScenePtr = intrusive_ptr<Scene>;

@@ -74,8 +74,12 @@ class V_GRAPHICS_API RenderTarget : public Object, public RefCounted<RenderTarge
     std::vector<float> readDepthBuffer() const;
 
   private:
-    struct Data;
-    Data* const d;
+    ColorFormat color_format_ = ColorFormat::RGBA8;
+    DepthFormat depth_format_ = DepthFormat::D24;
+    bool has_color_ = false;
+    bool has_depth_ = false;
+    int width_ = 1;
+    int height_ = 1;
 };
 
 using RenderTargetPtr = intrusive_ptr<RenderTarget>;

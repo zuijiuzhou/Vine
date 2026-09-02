@@ -11,15 +11,6 @@ using vine::math::Vec3d;
 
 V_OBJECT_META_IMPL(Node, vine::Object);
 
-struct Node::Data {
-    String name;
-    bool visible = true;
-    Mat4d local;
-    Node* parent = nullptr;
-    std::vector<NodePtr> children;
-    std::vector<DrawablePtr> drawables;
-};
-
 namespace
 {
 
@@ -52,56 +43,61 @@ BoundingBox transformBox(const BoundingBox& box, const Mat4d& world)
 
 }  // namespace
 
-Node::Node()
-  : d(new Data())
-{}
+Node::Node() = default;
 
-Node::~Node()
-{
-    delete d;
-}
+Node::~Node() = default;
 
 String Node::name() const
 {
-    return d->name;
+    return name_;
 }
 
 void Node::setName(const String& name)
 {
-    d->name = name;
+    name_ = name;
 }
 
 bool Node::isVisible() const
 {
-    return d->visible;
+    return visible_;
 }
 
 void Node::setVisible(bool visible)
 {
-    d->visible = visible;
+    visible_ = visible;
+}
+
+float Node::opacity() const
+{
+    return opacity_;
+}
+
+void Node::setOpacity(float opacity)
+{
+    opacity_ = opacity;
 }
 
 Mat4d Node::localTransform() const
 {
-    return d->local;
+    return local_;
 }
 
 void Node::setLocalTransform(const Mat4d& transform)
 {
-    d->local = transform;
+    local_ = transform;
 }
 
 Mat4d Node::worldTransform() const
 {
-    if (d->parent != nullptr) {
-        return d->parent->worldTransform() * d->local;
+    if (parent_ != nullptr) {
+        return parent_->worldTransform() * local_;
     }
-    return d->local;
+    return local_;
 }
 
 Node* Node::parent() const
 {
-    return d->parent;
+    return parent_;
 }
 
 void Node::addChild(Node* child)
@@ -110,11 +106,11 @@ void Node::addChild(Node* child)
         return;
     }
     // Detach from an existing parent.
-    if (child->d->parent != nullptr) {
-        child->d->parent->removeChild(child);
+    if (child->parent_ != nullptr) {
+        child->parent_->removeChild(child);
     }
-    child->d->parent = this;
-    d->children.emplace_back(child);
+    child->parent_ = this;
+    children_.emplace_back(child);
 }
 
 void Node::removeChild(Node* child)
@@ -122,17 +118,17 @@ void Node::removeChild(Node* child)
     if (child == nullptr) {
         return;
     }
-    auto it = std::find_if(d->children.begin(), d->children.end(),
+    auto it = std::find_if(children_.begin(), children_.end(),
                            [child](const NodePtr& ptr) { return ptr.get() == child; });
-    if (it != d->children.end()) {
-        child->d->parent = nullptr;
-        d->children.erase(it);
+    if (it != children_.end()) {
+        child->parent_ = nullptr;
+        children_.erase(it);
     }
 }
 
 std::vector<NodePtr> Node::children() const
 {
-    return d->children;
+    return children_;
 }
 
 void Node::addDrawable(Drawable* drawable)
@@ -140,7 +136,7 @@ void Node::addDrawable(Drawable* drawable)
     if (drawable == nullptr) {
         return;
     }
-    d->drawables.emplace_back(drawable);
+    drawables_.emplace_back(drawable);
 }
 
 void Node::removeDrawable(Drawable* drawable)
@@ -148,26 +144,26 @@ void Node::removeDrawable(Drawable* drawable)
     if (drawable == nullptr) {
         return;
     }
-    auto it = std::find_if(d->drawables.begin(), d->drawables.end(),
+    auto it = std::find_if(drawables_.begin(), drawables_.end(),
                            [drawable](const DrawablePtr& ptr) { return ptr.get() == drawable; });
-    if (it != d->drawables.end()) {
-        d->drawables.erase(it);
+    if (it != drawables_.end()) {
+        drawables_.erase(it);
     }
 }
 
 std::vector<DrawablePtr> Node::drawables() const
 {
-    return d->drawables;
+    return drawables_;
 }
 
 BoundingBox Node::boundingBox() const
 {
     BoundingBox box;
     const Mat4d world = worldTransform();
-    for (const auto& drawable : d->drawables) {
+    for (const auto& drawable : drawables_) {
         box.expand(transformBox(drawable->boundingBox(), world));
     }
-    for (const auto& child : d->children) {
+    for (const auto& child : children_) {
         const BoundingBox child_box = child->boundingBox();
         if (child_box.isValid()) {
             box.expand(child_box);

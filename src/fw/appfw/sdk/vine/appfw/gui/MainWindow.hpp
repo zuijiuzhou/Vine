@@ -12,6 +12,7 @@ V_APPFWGUI_NS_BEGIN
 class RibbonBar;
 class StatusBar;
 class DockPanelManager;
+class RenderControl;
 
 class V_APPFW_API MainWindow : public Window {
     V_OBJECT_META_DECL
@@ -35,6 +36,22 @@ class V_APPFW_API MainWindow : public Window {
     raw_ptr<RibbonBar>        ribbonBar() const;
     raw_ptr<StatusBar>        statusBar() const;
     raw_ptr<DockPanelManager> dockPanelManager() const;
+
+    /** @brief Registers the central render view control.
+     *
+     * The app shell sets the single 3D view it hosts here so other plugins
+     * (e.g. tests, editors) can reach the render engine/scene without
+     * depending on app shell internals.
+     *
+     * @param control Render control, or nullptr to clear.
+     */
+    void setPrimaryRenderControl(RenderControl* control);
+
+    /** @brief Gets the registered central render view control.
+     *
+     * @return The render control, or nullptr when none was registered.
+     */
+    RenderControl* primaryRenderControl() const;
 
   private:
     struct Impl;

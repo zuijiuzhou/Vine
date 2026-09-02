@@ -41,8 +41,7 @@ class V_GRAPHICS_API Geometry : public Drawable {
     BoundingBox computeBoundingBox() const override;
 
   private:
-    struct Data;
-    Data* const d;
+    intrusive_ptr<vine::geometry::Shape> shape_;
 };
 
 using GeometryPtr = intrusive_ptr<Geometry>;

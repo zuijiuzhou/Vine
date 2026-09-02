@@ -10,8 +10,11 @@ RenderCommand::RenderCommand(Drawable* d, Material* m, const Mat4d& model)
   , material(m)
   , modelMatrix(model)
 {
-    if (m != nullptr && m->opacity() < 1.0f) {
-        isTransparent = true;
+    if (m != nullptr) {
+        opacity = m->opacity();
+        if (opacity < 1.0f) {
+            isTransparent = true;
+        }
     }
 }
 

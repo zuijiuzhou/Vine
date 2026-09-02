@@ -116,8 +116,20 @@ class V_GRAPHICS_API Camera : public Object, public RefCounted<Camera> {
     Ray screenToWorldRay(const Vec2d& screenPos) const;
 
   private:
-    struct Data;
-    Data* const d;
+    String name_;
+    Mat4d view_{ Mat4d() };
+    Mat4d projection_{ Mat4d() };
+    ProjectionType projection_type_ = ProjectionType::Perspective;
+    // Copy of the last look-at parameters, used for ray generation.
+    Vec3d eye_{ 0.0, 0.0, 5.0 };
+    Vec3d center_{ 0.0, 0.0, 0.0 };
+    Vec3d up_{ 0.0, 1.0, 0.0 };
+    // Copy of the last projection parameters, used for queries.
+    double near_plane_ = 0.1;
+    double far_plane_ = 1000.0;
+    double fov_ = 60.0;
+    double aspect_ratio_ = 1.0;
+    double ortho_height_ = 10.0;
 };
 
 using CameraPtr = intrusive_ptr<Camera>;

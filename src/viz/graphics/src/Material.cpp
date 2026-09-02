@@ -4,88 +4,76 @@ V_GRAPHICS_NS_BEGIN
 
 V_OBJECT_META_IMPL(Material, vine::Object);
 
-struct Material::Data {
-    String name;
-    Colorf diffuse{ 0.8f, 0.8f, 0.8f, 1.0f };
-    Colorf specular{ 1.0f, 1.0f, 1.0f, 0.5f };
-    Colorf ambient{ 0.2f, 0.2f, 0.2f, 1.0f };
-    float shininess = 32.0f;
-    float opacity = 1.0f;
-    String texture_file;
-};
-
-Material::Material()
-  : d(new Data())
-{}
+Material::Material() = default;
 
 String Material::name() const
 {
-    return d->name;
+    return name_;
 }
 
 void Material::setName(const String& name)
 {
-    d->name = name;
+    name_ = name;
 }
 
 Colorf Material::diffuse() const
 {
-    return d->diffuse;
+    return diffuse_;
 }
 
 void Material::setDiffuse(const Colorf& color)
 {
-    d->diffuse = color;
+    diffuse_ = color;
 }
 
 Colorf Material::specular() const
 {
-    return d->specular;
+    return specular_;
 }
 
 void Material::setSpecular(const Colorf& color)
 {
-    d->specular = color;
+    specular_ = color;
 }
 
 Colorf Material::ambient() const
 {
-    return d->ambient;
+    return ambient_;
 }
 
 void Material::setAmbient(const Colorf& color)
 {
-    d->ambient = color;
+    ambient_ = color;
 }
 
 float Material::shininess() const
 {
-    return d->shininess;
+    return shininess_;
 }
 
 void Material::setShininess(float shine)
 {
-    d->shininess = shine;
+    shininess_ = shine;
 }
 
 float Material::opacity() const
 {
-    return d->opacity;
+    return opacity_;
 }
 
 void Material::setOpacity(float alpha)
 {
-    d->opacity = alpha;
+    opacity_ = alpha;
 }
 
 String Material::textureFile() const
 {
-    return d->texture_file;
+    return texture_file_;
 }
 
 void Material::setTextureFile(const String& path)
 {
-    d->texture_file = path;
+    texture_file_ = path;
 }
 
 V_GRAPHICS_NS_END

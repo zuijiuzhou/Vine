@@ -30,6 +30,9 @@ struct V_GRAPHICS_API RenderCommand {
     /** Whether the object is transparent (requires sorted rendering). */
     bool isTransparent = false;
 
+    /** Effective opacity in [0, 1]: scene x node x drawable x material. */
+    float opacity = 1.0f;
+
     /** @brief Default constructor. */
     RenderCommand() = default;
 

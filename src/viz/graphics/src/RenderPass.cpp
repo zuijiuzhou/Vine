@@ -10,66 +10,56 @@ V_GRAPHICS_NS_BEGIN
 
 V_OBJECT_META_IMPL(RenderPass, vine::Object);
 
-struct RenderPass::Data {
-    String name;
-    RenderTarget* render_target = nullptr;
-    Camera* camera = nullptr;
-    Color clear_color{ 51, 51, 51, 255 };
-    bool clear_depth = true;
-};
-
-RenderPass::RenderPass()
-  : d(new Data())
-{}
+RenderPass::RenderPass() = default;
 
 String RenderPass::name() const
 {
-    return d->name;
+    return name_;
 }
 
 void RenderPass::setName(const String& name)
 {
-    d->name = name;
+    name_ = name;
 }
 
 RenderTarget* RenderPass::renderTarget() const
 {
-    return d->render_target;
+    return render_target_;
 }
 
 void RenderPass::setRenderTarget(RenderTarget* target)
 {
-    d->render_target = target;
+    render_target_ = target;
 }
 
 Camera* RenderPass::camera() const
 {
-    return d->camera;
+    return camera_;
 }
 
 void RenderPass::setCamera(Camera* camera)
 {
-    d->camera = camera;
+    camera_ = camera;
 }
 
 Color RenderPass::clearColor() const
 {
-    return d->clear_color;
+    return clear_color_;
 }
 
 void RenderPass::setClearColor(const Color& color)
 {
-    d->clear_color = color;
+    clear_color_ = color;
 }
 
 bool RenderPass::shouldClearDepth() const
 {
-    return d->clear_depth;
+    return clear_depth_;
 }
 
 void RenderPass::setShouldClearDepth(bool clear)
 {
-    d->clear_depth = clear;
+    clear_depth_ = clear;
 }
 
 void RenderPass::execute(Scene* scene, RenderBackend* backend)
@@ -77,11 +67,11 @@ void RenderPass::execute(Scene* scene, RenderBackend* backend)
     if (backend == nullptr || scene == nullptr) {
         return;
     }
-    backend->setRenderTarget(d->render_target);
-    backend->clear(d->clear_color, d->clear_depth);
-    const auto commands = scene->collectRenderCommands(d->camera);
-    if (d->camera != nullptr) {
-        backend->render(commands, d->camera);
+    backend->setRenderTarget(render_target_);
+    backend->clear(clear_color_, clear_depth_);
+    const auto commands = scene->collectRenderCommands(camera_);
+    if (camera_ != nullptr) {
+        backend->render(commands, camera_);
     }
 }
 

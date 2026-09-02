@@ -1,12 +1,17 @@
 #pragma once
 #include "graphics_global.hpp"
 
-#include <vine/Color.hpp>
 #include <vector>
+
+#include <vine/Color.hpp>
+#include <vine/Object.hpp>
+#include <vine/RefCounted.hpp>
+#include <vine/intrusive_ptr.hpp>
 
 V_GRAPHICS_NS_BEGIN
 
 class Camera;
+class MaterialManager;
 class RenderTarget;
 class RenderPass;
 struct RenderCommand;
@@ -17,8 +22,14 @@ struct RenderCommand;
  * Defines the contract that concrete graphics backends (OpenGL, Vulkan, etc.)
  * must implement. Supports both high-level pass execution and low-level
  * command rendering.
+ *
+ * RenderBackend is reference-counted: factories return an intrusive_ptr and
+ * RenderEngine keeps its own reference, so ownership and lifetime are
+ * explicit.
  */
-class V_GRAPHICS_API RenderBackend {
+class V_GRAPHICS_API RenderBackend : public Object, public RefCounted<RenderBackend> {
+    V_OBJECT_META_DECL;
+
   public:
     virtual ~RenderBackend() = default;
 
@@ -65,6 +76,46 @@ class V_GRAPHICS_API RenderBackend {
 
     /** @brief Swaps buffers (double buffering). */
     virtual void swapBuffers() = 0;
+
+    /** @brief Gets the backend's material manager.
+     *
+     * Returns nullptr when the backend has no material manager, e.g. before
+     * initialize() or when the backend does not support materials. The
+     * returned manager stays valid for the backend's lifetime.
+     *
+     * @return The backend material manager, or nullptr.
+     */
+    virtual MaterialManager* materialManager() { return nullptr; }
+
+    /** @brief Binds a host native window the backend may render into.
+     *
+     * Called by RenderEngine before initialize() when the host provides an
+     * existing native window (e.g. a Qt QWindow handle). The backend attaches
+     * to it instead of creating its own window. Default no-op.
+     *
+     * @param native_handle Native window handle (HWND on Windows), or nullptr.
+     */
+    virtual void setWindowHandle(void* native_handle) { (void)native_handle; }
+
+    /** @brief Handles a change of the rendering surface size.
+     *
+     * @param width  New surface width in pixels.
+     * @param height New surface height in pixels.
+     */
+    virtual void resize(int width, int height) { (void)width; (void)height; }
+
+    /** @brief Gets the native handle the backend is currently attached to.
+     *
+     * Returns the native window handle (HWND on Windows) the backend bound
+     * its render surface to during initialize(), or nullptr when the backend
+     * is not attached to a host surface (standalone window or not yet
+     * initialized). Host code can compare this against the current window
+     * context handle to detect when the windowing system recreated the native
+     * surface underneath the backend.
+     *
+     * @return The attached native handle, or nullptr.
+     */
+    virtual void* nativeHandle() const { return nullptr; }
 
   protected:
     RenderBackend() = default;

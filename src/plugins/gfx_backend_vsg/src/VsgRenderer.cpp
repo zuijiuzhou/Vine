@@ -1,0 +1,528 @@
+#include <vine/vsg/VsgRenderer.hpp>
+
+#include <vine/graphics/Camera.hpp>
+#include <vine/graphics/Drawable.hpp>
+#include <vine/graphics/Material.hpp>
+#include <vine/graphics/Node.hpp>
+#include <vine/graphics/RenderCommand.hpp>
+#include <vine/graphics/RenderPass.hpp>
+#include <vine/graphics/Scene.hpp>
+
+#include <vine/vsg/CameraBridge.hpp>
+#include <vine/vsg/SceneBridge.hpp>
+#include <vine/vsg/VsgMaterialManager.hpp>
+
+#include "VsgUtils.hpp"
+
+#include <vsg/app/CommandGraph.h>
+#include <vsg/app/RenderGraph.h>
+#include <vsg/app/Viewer.h>
+#include <vsg/nodes/StateGroup.h>
+#include <vsg/nodes/VertexIndexDraw.h>
+#include <vsg/state/ColorBlendState.h>
+#include <vsg/state/DepthStencilState.h>
+#include <vsg/state/InputAssemblyState.h>
+#include <vsg/state/MultisampleState.h>
+#include <vsg/state/RasterizationState.h>
+#include <vsg/state/material.h>
+#include <vsg/state/ViewportState.h>
+#include <vsg/utils/GraphicsPipelineConfigurator.h>
+#include <vsg/utils/ShaderSet.h>
+
+#ifdef _WIN32
+#    ifndef NOMINMAX
+#        define NOMINMAX
+#    endif
+#    include <windows.h>
+#endif
+
+#include <algorithm>
+#include <cstdio>
+#include <cstdlib>
+
+V_VSG_NS_BEGIN
+
+namespace
+{
+
+/**
+ * @brief Temporary test escape hatch: when VINE_VSG_OWN_WINDOW is set, the
+ * backend creates its own independent vsg window instead of binding to the
+ * Qt-hosted surface.
+ *
+ * Used to verify rendering end-to-end independent of the Qt child-window
+ * compositing path (see design notes). Remove once the on-screen path is
+ * decided.
+ */
+bool forceOwnWindow()
+{
+    const char* value = std::getenv("VINE_VSG_OWN_WINDOW");
+    return value != nullptr && value[0] != '\0';
+}
+
+/**
+ * @brief Builds a raw vsg red triangle, bypassing SceneBridge entirely.
+ *
+ * TEMP test helper for the independent-window path: builds the geometry and
+ * its Phong pipeline directly with the canonical vsg API so rendering can be
+ * validated without the Vine scene/node abstraction in between.
+ *
+ * @return A state group containing the triangle draw.
+ */
+::vsg::ref_ptr<::vsg::Node> makeRawDemoNode()
+{
+    auto shaderSet = ::vsg::createPhongShaderSet();
+    // The phong shader set ships without default pipeline states in this vsg
+    // build, and GraphicsPipelineConfigurator only fills DepthStencil /
+    // Rasterization / ColorBlend / etc. — never a ViewportState. Explicitly
+    // provide the full set so the pipeline has a viewport and correct state.
+    shaderSet->defaultGraphicsPipelineStates = ::vsg::GraphicsPipelineStates{
+        ::vsg::DepthStencilState::create(),
+        ::vsg::RasterizationState::create(),
+        ::vsg::ColorBlendState::create(),
+        ::vsg::InputAssemblyState::create(),
+        ::vsg::MultisampleState::create(),
+        ::vsg::ViewportState::create(VkExtent2D{ 640, 360 }),
+    };
+    static bool s_dumped = false;
+    if (!s_dumped) {
+        s_dumped = true;
+        FILE* f = std::fopen("raw_layout.txt", "w");
+        if (f != nullptr) {
+            std::fprintf(f, "[raw] attributeBindings:\n");
+            for (const auto& ab : shaderSet->attributeBindings) {
+                std::fprintf(f, "[raw]   attr name=%s loc=%u fmt=%d\n",
+                             ab.name.c_str(), ab.location, static_cast<int>(ab.format));
+            }
+            std::fprintf(f, "[raw] descriptorBindings:\n");
+            for (const auto& db : shaderSet->descriptorBindings) {
+                std::fprintf(f, "[raw]   desc name=%s set=%u binding=%u type=%d count=%u\n",
+                             db.name.c_str(), db.set, db.binding, static_cast<int>(db.descriptorType), db.descriptorCount);
+            }
+            std::fprintf(f, "[raw] defaultPipelineStates=%zu\n", shaderSet->defaultGraphicsPipelineStates.size());
+            std::fclose(f);
+        }
+    }
+    auto config = ::vsg::GraphicsPipelineConfigurator::create(shaderSet);
+
+    auto vertices = ::vsg::vec3Array::create(3);
+    (*vertices)[0] = ::vsg::vec3(-1.0f, -1.0f, 0.0f);
+    (*vertices)[1] = ::vsg::vec3(1.0f, -1.0f, 0.0f);
+    (*vertices)[2] = ::vsg::vec3(0.0f, 1.0f, 0.0f);
+    auto normals = ::vsg::vec3Array::create(3);
+    for (auto& normal : *normals) {
+        normal = ::vsg::vec3(0.0f, 0.0f, 1.0f);
+    }
+    auto colors = ::vsg::vec4Array::create(3);
+    for (auto& color : *colors) {
+        color = ::vsg::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+    }
+    auto indices = ::vsg::uintArray::create(3);
+    (*indices)[0] = 0;
+    (*indices)[1] = 1;
+    (*indices)[2] = 2;
+
+    ::vsg::DataList arrays;
+    config->assignArray(arrays, "vsg_Vertex", VK_VERTEX_INPUT_RATE_VERTEX, vertices);
+    config->assignArray(arrays, "vsg_Normal", VK_VERTEX_INPUT_RATE_VERTEX, normals);
+    config->assignArray(arrays, "vsg_Color", VK_VERTEX_INPUT_RATE_VERTEX, colors);
+
+    auto material = ::vsg::PhongMaterialValue::create();
+    material->value().ambient = ::vsg::vec4(1.0f, 0.0f, 0.0f, 1.0f);  // red ambient test
+    material->value().diffuse = ::vsg::vec4(1.0f, 0.0f, 0.0f, 1.0f);
+    material->value().specular = ::vsg::vec4(0.2f, 0.2f, 0.2f, 1.0f);
+    material->value().shininess = 32.0f;
+    config->assignDescriptor("material", material);
+
+    config->init();
+    auto stateGroup = ::vsg::StateGroup::create();
+    config->copyTo(stateGroup, {});
+
+    auto vid = ::vsg::VertexIndexDraw::create();
+    vid->assignArrays(arrays);
+    vid->assignIndices(indices);
+    vid->indexCount = 3;
+    vid->firstBinding = config->baseAttributeBinding;
+    stateGroup->addChild(vid);
+    return stateGroup;
+}
+
+/**
+ * @brief Collects one render command per visible drawable, ignoring frustum culling.
+ *
+ * The per-frame path (Scene::collectRenderCommands) frustum-culls against the
+ * camera, so content outside the frustum is not compiled until it becomes
+ * visible. To make startup content visible from the very first frame we need
+ * to populate the retained vsg graph before the viewer compiles, so this
+ * walker gathers every visible drawable with its world transform, effective
+ * opacity and material — mirroring Scene::collectRenderCommands but without
+ * the camera test.
+ *
+ * @param scene  The Vine scene to walk.
+ * @return One render command per visible drawable.
+ */
+std::vector<vine::graphics::RenderCommand> collectSceneCommandsNoCull(vine::graphics::Scene* scene)
+{
+    std::vector<vine::graphics::RenderCommand> commands;
+    if (scene == nullptr || !scene->isVisible()) {
+        return commands;
+    }
+
+    struct NodeWalker {
+        /** @brief Walks one node and its subtree, accumulating render commands. */
+        void operator()(const vine::graphics::Node* node, float opacity,
+                        std::vector<vine::graphics::RenderCommand>& out) const
+        {
+            if (node == nullptr || !node->isVisible()) {
+                return;
+            }
+            const float node_opacity = opacity * node->opacity();
+            const auto world = node->worldTransform();
+            for (const auto& drawable : node->drawables()) {
+                if (!drawable->isVisible()) {
+                    continue;
+                }
+                vine::graphics::Material* material = drawable->material();
+                const float material_opacity = material != nullptr ? material->opacity() : 1.0f;
+                const float effective = std::clamp(node_opacity * drawable->opacity() * material_opacity, 0.0f, 1.0f);
+                auto& command = out.emplace_back(drawable.get(), material, world);
+                command.opacity = effective;
+                command.isTransparent = effective < (1.0f - 1e-6f);
+            }
+            for (const auto& child : node->children()) {
+                (*this)(child.get(), node_opacity, out);
+            }
+        }
+    };
+
+    NodeWalker walk;
+    for (const auto& node : scene->nodes()) {
+        walk(node.get(), scene->opacity(), commands);
+    }
+    return commands;
+}
+
+/**
+ * @brief vsg::Viewer whose pollEvents() does not pump the native message queue.
+ *
+ * vsg's Win32_Window::pollEvents() drains and dispatches the thread's Windows
+ * message queue (PeekMessage/DispatchMessage). That is correct for a
+ * standalone vsg application, but when vsg is embedded in a GUI toolkit such
+ * as Qt — which owns the message loop — dispatching from inside a frame call
+ * re-enters the toolkit: the dispatched message triggers a Qt event, which can
+ * request another frame, which pumps again, recursing until the stack
+ * overflows. Input is delivered by the host instead, so window polling is
+ * disabled; only the buffered vsg events are dropped.
+ */
+class EmbeddedViewer : public ::vsg::Viewer {
+  public:
+    /** @brief Discards stale events without polling any attached window. */
+    bool pollEvents(bool discardPreviousEvents) override
+    {
+        if (discardPreviousEvents) {
+            this->getEvents().clear();
+        }
+        return false;
+    }
+};
+
+}  // namespace
+
+struct VsgRenderer::Data {
+    vine::graphics::Scene* scene = nullptr;
+    vine::graphics::Camera* camera = nullptr;
+    SceneBridge sceneBridge;
+    CameraBridge cameraBridge;
+    VsgMaterialManager materialManager;
+    void* bound_handle = nullptr;
+    ::vsg::ref_ptr<::vsg::Window> window;
+    ::vsg::ref_ptr<::vsg::Viewer> viewer;
+    ::vsg::ref_ptr<::vsg::RenderGraph> render_graph;
+    ::vsg::ref_ptr<::vsg::Camera> vsg_camera;
+    ::vsg::ref_ptr<::vsg::Node> vsg_scene;
+    vine::Color clear_color{ 51, 51, 51, 255 };
+    bool clear_depth = true;
+    bool initialized = false;
+};
+
+VsgRenderer::VsgRenderer(vine::graphics::Scene* scene, vine::graphics::Camera* camera)
+  : d(new Data())
+{
+    d->scene = scene;
+    d->camera = camera;
+}
+
+VsgRenderer::~VsgRenderer()
+{
+    shutdown();
+    delete d;
+}
+
+bool VsgRenderer::initialize()
+{
+    if (d->scene == nullptr || d->camera == nullptr) {
+        return false;
+    }
+
+    // Window. When a host native window is bound, attach to its surface (e.g.
+    // a Qt QWindow) instead of creating a separate window.
+    auto traits = ::vsg::WindowTraits::create();
+    traits->windowTitle = "Vine";
+    traits->width = 1280;
+    traits->height = 720;
+    traits->debugLayer = true;
+
+    void* host_handle = d->bound_handle;
+    if (forceOwnWindow()) {
+        // Temporary test path: create vsg's own window, ignoring the Qt-hosted
+        // surface handle, to verify rendering independent of Qt compositing.
+        host_handle = nullptr;
+    }
+    if (host_handle != nullptr) {
+#ifdef _WIN32
+        traits->nativeWindow = reinterpret_cast<HWND>(host_handle);
+        RECT client_rect{};
+        if (::GetClientRect(reinterpret_cast<HWND>(host_handle), &client_rect)
+            && client_rect.right > client_rect.left && client_rect.bottom > client_rect.top) {
+            traits->width = client_rect.right - client_rect.left;
+            traits->height = client_rect.bottom - client_rect.top;
+        }
+#else
+        traits->nativeWindow = host_handle;
+#endif
+    }
+    d->window = ::vsg::Window::create(traits);
+    if (d->window == nullptr) {
+        std::fprintf(stderr, "[VsgRenderer] Window::create FAILED (nativeWindow=%d, %ux%u)\n",
+                     traits->nativeWindow.has_value() ? 1 : 0, traits->width, traits->height);
+        return false;
+    }
+
+    // Retained vsg root: SceneBridge fills it each frame from the render
+    // command stream, so scene edits (move / recolor / add / remove) show up
+    // without re-initializing the backend.
+    auto root = ::vsg::Group::create();
+    d->vsg_scene = root;
+
+    // Camera bridge.
+    d->vsg_camera = d->cameraBridge.create(d->camera);
+    if (d->vsg_camera == nullptr) {
+        return false;
+    }
+    // The camera must carry a viewport state for the render graph to know the
+    // render area; CameraBridge intentionally leaves it null (it has no window).
+    d->vsg_camera->viewportState = ::vsg::ViewportState::create(d->window->extent2D());
+
+    // Phong shader set (embedded SPIR-V, no runtime glslang required). Each
+    // geometry gets its own pipeline + PhongMaterial descriptor built by
+    // SceneBridge, so material properties propagate through to the GPU.
+    auto shaderSet = ::vsg::createPhongShaderSet();
+    d->sceneBridge.setShaderSet(shaderSet);
+    d->sceneBridge.setMaterialManager(&d->materialManager);
+    d->sceneBridge.clearCache();
+
+    if (forceOwnWindow()) {
+        // TEMP test: render a raw vsg triangle built directly, bypassing the
+        // Vine scene/SceneBridge layer, to validate vsg rendering in the
+        // independent window.
+        root->addChild(makeRawDemoNode());
+    } else {
+        // Pre-populate the retained graph from the current scene so existing
+        // content is compiled once here, before any frame runs. Compiling
+        // freshly added geometry at runtime inside render() has proven
+        // unreliable, so all content present at startup is built and compiled
+        // now; runtime additions are still attempted later via
+        // syncRenderCommands.
+        const auto initial_commands = collectSceneCommandsNoCull(d->scene);
+        std::vector<::vsg::ref_ptr<::vsg::Node>> created_at_init;
+        d->sceneBridge.syncRenderCommands(initial_commands, root, &created_at_init);
+    }
+
+    // Viewer + render graph. assignHeadlight = true adds a headlight so the
+    // Phong fragment shader has a light source to shade against. EmbeddedViewer
+    // disables vsg's native message pumping (Qt owns the message loop here).
+    d->viewer = ::vsg::ref_ptr<::vsg::Viewer>(new EmbeddedViewer());
+    d->viewer->addWindow(d->window);
+
+    auto renderGraph = ::vsg::createRenderGraphForView(d->window, d->vsg_camera, d->vsg_scene,
+                                                       VK_SUBPASS_CONTENTS_INLINE, true);
+    d->render_graph = renderGraph;
+    auto commandGraph = ::vsg::CommandGraph::create(d->window);
+    commandGraph->addChild(renderGraph);
+    d->viewer->assignRecordAndSubmitTaskAndPresentation(::vsg::CommandGraphs{ commandGraph });
+
+    const auto compileResult = d->viewer->compile();
+    if (!compileResult) {
+        std::fprintf(stderr, "[VsgRenderer] compile failed: %s\n",
+                     compileResult.message.c_str());
+        return false;
+    }
+
+    d->initialized = true;
+    return true;
+}
+
+void VsgRenderer::shutdown()
+{
+    if (d->viewer != nullptr) {
+        d->viewer->deviceWaitIdle();
+        // Detach the window from the viewer so its command graphs are dropped
+        // before the viewer is released.
+        if (d->window != nullptr) {
+            d->viewer->removeWindow(d->window);
+        }
+        d->viewer->close();
+        d->viewer = nullptr;
+    }
+    if (d->window != nullptr) {
+        // Release the native handle the platform window wraps. When the
+        // reference is dropped below, the Win32_Window destructor would call
+        // ::DestroyWindow() (and ::UnregisterClass()) on the HOST's window —
+        // here a Qt-owned HWND that Qt is itself tearing down. releaseWindow()
+        // nulls the internal HWND so the destructor leaves Qt's window alone.
+        d->window->releaseWindow();
+        d->window = nullptr;
+    }
+    d->bound_handle = nullptr;
+    d->initialized = false;
+}
+
+void VsgRenderer::beginFrame()
+{
+    if (d->viewer == nullptr) {
+        return;
+    }
+    d->viewer->advanceToNextFrame();
+    d->viewer->handleEvents();
+}
+
+void VsgRenderer::endFrame()
+{
+    if (d->viewer == nullptr) {
+        return;
+    }
+    d->viewer->update();
+}
+
+void VsgRenderer::executePass(const vine::graphics::RenderPass* pass,
+                              const std::vector<vine::graphics::RenderCommand>& commands)
+{
+    if (pass == nullptr) {
+        return;
+    }
+    clear(pass->clearColor(), pass->shouldClearDepth());
+    render(commands, pass->camera());
+}
+
+void VsgRenderer::setRenderTarget(vine::graphics::RenderTarget* target)
+{
+    // Only the default framebuffer is supported. Off-screen targets are a
+    // future extension.
+    (void)target;
+}
+
+void VsgRenderer::render(const std::vector<vine::graphics::RenderCommand>& commands,
+                         const vine::graphics::Camera* camera)
+{
+    if (!d->initialized || d->viewer == nullptr) {
+        return;
+    }
+    if (camera != nullptr) {
+        d->cameraBridge.apply(const_cast<vine::graphics::Camera*>(camera), d->vsg_camera);
+    }
+    // The command stream is the source of truth: reconcile the retained vsg
+    // scene against it (in-place for moves/material edits). Only subtrees that
+    // were built this frame need GPU compilation; compiling them incrementally
+    // (vsg CompileManager) avoids the full-graph compile spike on scene edits.
+    auto* root = d->vsg_scene.cast<::vsg::Group>().get();
+    if (!forceOwnWindow()) {
+        std::vector<::vsg::ref_ptr<::vsg::Node>> created;
+        d->sceneBridge.syncRenderCommands(commands, root, &created);
+        if (!created.empty()) {
+            // A full-graph compile keeps newly built/rebuild subtrees correct.
+            // vsg's ad-hoc compileManager->compile(subtree) is not reliably
+            // wired for our embedded window, so true incremental compilation is
+            // left as a later optimisation (see design doc §9 Phase 3).
+            const auto compileResult = d->viewer->compile();
+            if (!compileResult) {
+                std::fprintf(stderr, "[VsgRenderer] compile in render failed: %s\n",
+                             compileResult.message.c_str());
+            }
+        }
+    }
+    d->viewer->recordAndSubmit();
+    d->viewer->present();
+}
+
+void VsgRenderer::clear(const vine::Color& backgroundColor, bool clearDepth)
+{
+    d->clear_color = backgroundColor;
+    d->clear_depth = clearDepth;
+    if (d->render_graph != nullptr) {
+        // The vsg render graph captured the window's clear color when it was
+        // created; push the requested color through so the pass clear state
+        // actually reaches the GPU clear. The color components are floats in
+        // [0,1]; clear_color is stored as 0-255 bytes.
+        const VkClearColorValue clear_value{
+            { backgroundColor.r / 255.0f, backgroundColor.g / 255.0f, backgroundColor.b / 255.0f, backgroundColor.a / 255.0f }
+        };
+        d->render_graph->setClearValues(clear_value, VkClearDepthStencilValue{ 0.0f, 0 });
+    }
+}
+
+void VsgRenderer::swapBuffers()
+{
+    // present() already happened in render(); nothing left to do here.
+}
+
+vine::graphics::MaterialManager* VsgRenderer::materialManager()
+{
+    return &d->materialManager;
+}
+
+void VsgRenderer::setWindowHandle(void* native_handle)
+{
+    d->bound_handle = native_handle;
+}
+
+void VsgRenderer::resize(int width, int height)
+{
+    (void)width;
+    (void)height;
+    if (d->window != nullptr) {
+        d->window->resize();
+    }
+}
+
+void* VsgRenderer::nativeHandle() const
+{
+    return d->bound_handle;
+}
+
+void VsgRenderer::frame()
+{
+    if (!d->initialized || d->viewer == nullptr) {
+        return;
+    }
+    // VSG frame order: advance -> handleEvents -> update -> record -> present.
+    beginFrame();
+    endFrame();
+    render({}, d->camera);
+}
+
+::vsg::ref_ptr<::vsg::Viewer> VsgRenderer::viewer() const
+{
+    return d->viewer;
+}
+
+::vsg::ref_ptr<::vsg::Camera> VsgRenderer::vsgCamera() const
+{
+    return d->vsg_camera;
+}
+
+::vsg::ref_ptr<::vsg::Node> VsgRenderer::vsgScene() const
+{
+    return d->vsg_scene;
+}
+
+V_VSG_NS_END

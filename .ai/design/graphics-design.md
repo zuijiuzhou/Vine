@@ -1,6 +1,6 @@
 # Graphics 模块设计（现代化架构）
 
-> 状态：设计稿 v2（完整功能集）
+> 状态：已对齐代码（2026-09-02），设计稿 v3
 >
 > **目标**：为 Vine 提供场景图管理和渲染抽象层，支持多相机、多渲染通道、交互操纵、拾取。
 > 核心功能：场景树管理、可视对象、相机操纵、射线求交、渲染管道、后端抽象。
@@ -8,12 +8,12 @@
 ## 1. 背景与目标
 
 `Graphics` 模块是 Vine 可视化系统的中间层，负责：
-1. **场景管理**：以树形结构组织可渲染对象
+1. **场景管理**：以树形结构（`Scene`/`Node`）组织可渲染对象
 2. **相机系统**：支持多相机、视图矩阵、投影矩阵
 3. **相机操纵**：轨道、摇移、缩放、第一人称等交互方式
-4. **拾取系统**：射线-几何体求交、选择框选
+4. **拾取系统**：射线-几何体求交
 5. **渲染管道**：多 Pass、多 RenderTarget 支持
-6. **渲染抽象**：定义后端接口，支持 OpenGL/Vulkan/等
+6. **渲染抽象**：定义后端接口，支持 OpenGL/Vulkan 等
 
 不负责：
 - 实际渲染实现（交给后端 RenderBackend）
@@ -25,60 +25,60 @@
 ```
 src/viz/graphics/
   CMakeLists.txt
-  include/vine/graphics/
+  sdk/vine/graphics/
     graphics_global.hpp          # API export 宏 + 命名空间
-    
+
     # 场景与几何体
-    Drawable.hpp                 # 可绘制对象基类
-    Geometry.hpp                 # 几何体（Mesh/BRep）
-    Material.hpp                 # 材质定义
-    Scene.hpp                    # 场景容器
-    
+    BoundingBox.hpp              # 轴对齐包围盒
+    Node.hpp                     # 场景图节点（变换 + 子节点 + 可绘制对象）
+    Drawable.hpp                 # 可绘制对象基类（几何 + 材质）
+    Geometry.hpp                 # 几何体（包装 vine::geometry::Shape）
+    Material.hpp                 # 材质定义（纯属性）
+    MaterialManager.hpp          # 材质管理器抽象基类（后端实现转换/缓存）
+    Scene.hpp                    # 场景容器（管理根节点）
+
     # 相机与视图
-    Camera.hpp                   # 相机（替代旧 View）
-    Viewport.hpp                 # 视口（屏幕区域）
-    CameraManipulator.hpp        # 相机操纵器（轨道/摇移/缩放）
-    
+    Camera.hpp                   # 相机（视图矩阵 + 投影矩阵）
+    CameraManipulator.hpp        # 相机操纵器（轨道/摇移/缩放/第一人称）
+
     # 拾取与求交
     Ray.hpp                      # 射线定义
     RayIntersection.hpp          # 射线-几何体求交
-    Pickable.hpp                 # 可拾取对象接口
-    
+
     # 渲染管道
     RenderPass.hpp               # 渲染通道（相机+目标+清除状态）
     RenderTarget.hpp             # 渲染目标（颜色+深度缓冲）
     RenderCommand.hpp            # 渲染命令
+    RenderEngine.hpp             # 高层渲染引擎（帧循环）
     RenderBackend.hpp            # 渲染后端抽象接口
-    
-    # 可选
-    Light.hpp                    # 光源
-    
+    RenderBackendRegistry.hpp    # 渲染后端自注册表（按名创建，无编译期依赖）
+
   src/
+    Camera.cpp
+    CameraManipulator.cpp
     Drawable.cpp
     Geometry.cpp
     Material.cpp
-    Scene.cpp
-    Camera.cpp
-    Viewport.cpp
-    CameraManipulator.cpp
+    Node.cpp
     Ray.cpp
     RayIntersection.cpp
+    RenderBackendRegistry.cpp
+    RenderCommand.cpp
+    RenderEngine.cpp
     RenderPass.cpp
     RenderTarget.cpp
-    RenderCommand.cpp
-    RenderBackend.cpp
+    Scene.cpp
 ```
 
 ## 3. 核心类设计
 
 ### 3.1 `Drawable`（可绘制对象基类）
 
-所有可在场景中渲染的对象的基类。
+纯可渲染对象（几何 + 材质）。不携带场景图变换或层级，那些由所属 `Node` 提供。
 
 ```cpp
 class V_GRAPHICS_API Drawable : public Object, public RefCounted<Drawable> {
     V_OBJECT_META_DECL;
-    V_DISABLE_COPY(Drawable);
 
   public:
     Drawable();
@@ -89,23 +89,12 @@ class V_GRAPHICS_API Drawable : public Object, public RefCounted<Drawable> {
     String name() const;
     void setName(const String& name);
 
-    /** @brief 对象是否可见。*/
-    bool isVisible() const;
-    void setVisible(bool visible);
-
-    /** @brief 获取模型矩阵（局部坐标系）。 */
-    Mat4d localTransform() const;
-    void setLocalTransform(const Mat4d& transform);
-
-    /** @brief 获取世界坐标系矩阵（由父节点计算）。 */
-    Mat4d worldTransform() const;
-
-    /** @brief 边界框（局部坐标系）。 */
+    /** @brief 局部坐标系边界框。 */
     BoundingBox boundingBox() const;
 
-    /** @brief 材质引用。 */
-    intrusive_ptr<Material> material();
-    void setMaterial(Material* material);
+    /** @brief 绑定的材质（可为空）。 */
+    Material* material() const;
+    void setMaterial(Material* m);
 
   protected:
     /** @brief 子类实现：计算局部边界框。 */
@@ -119,36 +108,29 @@ class V_GRAPHICS_API Drawable : public Object, public RefCounted<Drawable> {
 using DrawablePtr = intrusive_ptr<Drawable>;
 ```
 
+> 说明：可见性、局部/世界变换不放在 `Drawable`，而是由所属 `Node` 管理（见 3.5b）。
+
 ### 3.2 `Geometry`（几何体）
 
-表示网格、BRep 等可绘制的几何对象。
+包装 `vine::geometry::Shape` 的几何可绘制对象。
 
 ```cpp
 class V_GRAPHICS_API Geometry : public Drawable {
     V_OBJECT_META_DECL;
 
   public:
-    enum class Type {
-        TriangleMesh,      // 三角网格
-        IndexedMesh,       // 有索引网格
-        BRep,              // 边界表示（OCCT）
-        Primitive,         // 基本体（球、立方体等）
-    };
+    Geometry();
+    ~Geometry();
 
   public:
-    Geometry();
-
-    /** @brief 几何体类型。 */
-    Type geometryType() const;
-
-    /** @brief 获取关联的 vine::geometry::Shape（可为空）。 */
+    /** @brief 关联的 vine::geometry::Shape（可为空）。 */
     const vine::geometry::Shape* shape() const;
     void setShape(vine::geometry::Shape* shape);
 
-    /** @brief 三角形数量。 */
+    /** @brief 三角形数量（非网格形状返回 0）。 */
     std::size_t triangleCount() const;
 
-    /** @brief 顶点数量。 */
+    /** @brief 顶点数量（非网格形状返回 0）。 */
     std::size_t vertexCount() const;
 
   protected:
@@ -161,6 +143,9 @@ class V_GRAPHICS_API Geometry : public Drawable {
 
 using GeometryPtr = intrusive_ptr<Geometry>;
 ```
+
+> 说明：具体形状类型通过 `shape->shapeType()` 查询（`ShapeType` 定义于
+> `vine::geometry`），不再在 `Geometry` 上复制一份类型枚举。
 
 ### 3.3 `Material`（材质）
 
@@ -179,22 +164,22 @@ class V_GRAPHICS_API Material : public Object, public RefCounted<Material> {
     void setName(const String& name);
 
     /** @brief 漫反射颜色 RGBA。 */
-    Color diffuse() const;
-    void setDiffuse(const Color& color);
+    Colorf diffuse() const;
+    void setDiffuse(const Colorf& color);
 
     /** @brief 高光颜色 RGB，A=镜面强度。 */
-    Color specular() const;
-    void setSpecular(const Color& color);
+    Colorf specular() const;
+    void setSpecular(const Colorf& color);
 
     /** @brief 环境光颜色 RGB。 */
-    Color ambient() const;
-    void setAmbient(const Color& color);
+    Colorf ambient() const;
+    void setAmbient(const Colorf& color);
 
     /** @brief 光泽度（Phong 指数）。 */
     float shininess() const;
     void setShininess(float shine);
 
-    /** @brief 透明度 [0, 1]，0=完全透明，1=完全不透明。 */
+    /** @brief 透明度 [0, 1]，1=完全不透明。 */
     float opacity() const;
     void setOpacity(float alpha);
 
@@ -210,9 +195,11 @@ class V_GRAPHICS_API Material : public Object, public RefCounted<Material> {
 using MaterialPtr = intrusive_ptr<Material>;
 ```
 
+> 说明：颜色使用浮点 `Colorf`（[0,1]），而非 8-bit 的 `Color`。
+
 ### 3.4 `Scene`（场景）
 
-场景图容器，管理所有可绘制对象的树形关系。
+场景图容器，管理所有根级 `Node` 的树形关系。
 
 ```cpp
 class V_GRAPHICS_API Scene : public Object, public RefCounted<Scene> {
@@ -228,26 +215,30 @@ class V_GRAPHICS_API Scene : public Object, public RefCounted<Scene> {
     String name() const;
     void setName(const String& name);
 
-    /** @brief 添加根级可绘制对象。 */
-    void addDrawable(Drawable* drawable);
+    /** @brief 添加根级节点。 */
+    void addNode(Node* node);
 
-    /** @brief 移除根级可绘制对象。 */
-    void removeDrawable(Drawable* drawable);
+    /** @brief 移除根级节点。 */
+    void removeNode(Node* node);
 
-    /** @brief 获取所有根级可绘制对象。 */
-    std::vector<DrawablePtr> drawables() const;
+    /** @brief 获取所有根级节点。 */
+    std::vector<NodePtr> nodes() const;
 
-    /** @brief 根据名称查找对象（递归搜索）。 */
-    DrawablePtr findDrawable(const String& name) const;
+    /** @brief 根据名称递归查找节点。 */
+    NodePtr findNode(const String& name) const;
 
-    /** @brief 删除所有对象。 */
+    /** @brief 删除所有节点。 */
     void clear();
 
-    /** @brief 场景中所有对象的总边界框。 */
+    /** @brief 场景总边界框。 */
     BoundingBox boundingBox() const;
 
-    /** @brief 收集所有需要渲染的命令。 */
-    std::vector<RenderCommand> collectRenderCommands(const View* view) const;
+    /** @brief 收集渲染命令（含视锥剔除与排序）。
+     *
+     * @param camera 相机；为 nullptr 时返回空列表。
+     * @return 渲染命令（不透明近→远在前，透明远→近在后）。
+     */
+    std::vector<RenderCommand> collectRenderCommands(const Camera* camera) const;
 
   private:
     struct Data;
@@ -257,12 +248,15 @@ class V_GRAPHICS_API Scene : public Object, public RefCounted<Scene> {
 using ScenePtr = intrusive_ptr<Scene>;
 ```
 
+> 说明：场景直接管理 `Node`（而非 `Drawable`）。命令收集内部会先按相机
+> view-projection 做视锥剔除，再按深度排序透明/不透明物体。
+
 ### 3.5 `Camera`（相机）
 
 仅管理相机参数和矩阵计算，不管理渲染目标或视口。
 
 ```cpp
-class V_GRAPHICS_API Camera : public Drawable {
+class V_GRAPHICS_API Camera : public Object, public RefCounted<Camera> {
     V_OBJECT_META_DECL;
 
   public:
@@ -276,48 +270,43 @@ class V_GRAPHICS_API Camera : public Drawable {
     ~Camera();
 
   public:
+    /** @brief 相机名称。 */
+    String name() const;
+    void setName(const String& name);
+
     /** @brief 投影类型。 */
     ProjectionType projectionType() const;
-    void setProjectionType(ProjectionType type);
 
-    // 相机参数（全局坐标系）
-    /** @brief 相机位置。 */
+    /** @brief 用 look-at 参数设置视图矩阵。 */
+    void setViewMatrixAsLookAt(const Vec3d& eye, const Vec3d& center, const Vec3d& up);
+
+    /** @brief 用透视参数设置投影矩阵。 */
+    void setProjectionMatrixAsPerspective(double fovy, double aspect, double zNear, double zFar);
+
+    /** @brief 用正交参数设置投影矩阵。 */
+    void setProjectionMatrixAsOrtho(double left, double right, double bottom, double top,
+                                    double zNear, double zFar);
+
+    // 相机参数（最近一次 setViewMatrixAsLookAt 的记录）
     Vec3d eye() const;
-    void setEye(const Vec3d& position);
-
-    /** @brief 相机看向的目标点。 */
     Vec3d target() const;
-    void setTarget(const Vec3d& point);
-
-    /** @brief 向上向量。 */
     Vec3d up() const;
-    void setUp(const Vec3d& upVector);
 
-    // 视锥参数
-    /** @brief 近裁剪面距离。 */
+    // 视锥参数（最近一次投影设置的记录）
     double nearPlane() const;
-    void setNearPlane(double distance);
-
-    /** @brief 远裁剪面距离。 */
     double farPlane() const;
-    void setFarPlane(double distance);
-
-    // 透视投影参数
-    /** @brief 视角（FOV，度数）。 */
     double fieldOfView() const;
-    void setFieldOfView(double fovDegrees);
-
-    // 正交投影参数
-    /** @brief 正交投影的视口高度。 */
+    double aspectRatio() const;
     double orthographicHeight() const;
-    void setOrthographicHeight(double height);
 
-  public:
-    /** @brief 计算视图矩阵。 */
+    /** @brief 视图矩阵。 */
     Mat4d viewMatrix() const;
 
-    /** @brief 屏幕坐标转世界坐标（射线）。 */
-    Ray screenToWorldRay(const Vec2d& screenPos, const Viewport* viewport) const;
+    /** @brief 投影矩阵。 */
+    Mat4d projectionMatrix() const;
+
+    /** @brief 屏幕坐标（归一化 [0,1]）转世界射线。 */
+    Ray screenToWorldRay(const Vec2d& screenPos) const;
 
   private:
     struct Data;
@@ -327,41 +316,63 @@ class V_GRAPHICS_API Camera : public Drawable {
 using CameraPtr = intrusive_ptr<Camera>;
 ```
 
-### 3.5b `Viewport`（视口）
+> 说明：镜像 OSG 相机 API，视图/投影矩阵一次性整体设置，避免中间不一致状态。
+> 宽高比直接由调用方传入 `setProjectionMatrixAsPerspective`，无独立 `Viewport` 概念。
 
-管理屏幕区域和投影参数。
+### 3.5b `Node`（场景图节点）
+
+场景层级的基本单元，携带局部变换、父子链接、可见性和可绘制对象列表。
 
 ```cpp
-class V_GRAPHICS_API Viewport {
-  public:
-    Viewport();
-    ~Viewport();
+class V_GRAPHICS_API Node : public Object, public RefCounted<Node> {
+    V_OBJECT_META_DECL;
 
   public:
-    /** @brief 视口宽度（像素）。 */
-    int width() const;
-    void setWidth(int w);
+    Node();
+    ~Node();
 
-    /** @brief 视口高度（像素）。 */
-    int height() const;
-    void setHeight(int h);
+  public:
+    /** @brief 节点名称。 */
+    String name() const;
+    void setName(const String& name);
 
-    /** @brief 设置视口尺寸。 */
-    void setSize(int w, int h);
+    /** @brief 节点（及子树）是否可见。 */
+    bool isVisible() const;
+    void setVisible(bool visible);
 
-    /** @brief 视口宽高比。 */
-    double aspectRatio() const { return static_cast<double>(width()) / height(); }
+    /** @brief 局部变换。 */
+    Mat4d localTransform() const;
+    void setLocalTransform(const Mat4d& transform);
 
-    /** @brief 计算透视投影矩阵。 */
-    Mat4d perspectiveMatrix(double fov, double nearPlane, double farPlane) const;
+    /** @brief 世界变换（父链级联）。 */
+    Mat4d worldTransform() const;
 
-    /** @brief 计算正交投影矩阵。 */
-    Mat4d orthographicMatrix(double height, double nearPlane, double farPlane) const;
+    /** @brief 父节点（根节点为 null）。 */
+    Node* parent() const;
+
+    /** @brief 添加/移除子节点。 */
+    void addChild(Node* child);
+    void removeChild(Node* child);
+
+    /** @brief 所有子节点。 */
+    std::vector<intrusive_ptr<Node>> children() const;
+
+    /** @brief 添加/移除可绘制对象。 */
+    void addDrawable(Drawable* drawable);
+    void removeDrawable(Drawable* drawable);
+
+    /** @brief 所有可绘制对象。 */
+    std::vector<DrawablePtr> drawables() const;
+
+    /** @brief 子树的世界空间包围盒。 */
+    BoundingBox boundingBox() const;
 
   private:
     struct Data;
     Data* const d;
 };
+
+using NodePtr = intrusive_ptr<Node>;
 ```
 
 ### 3.5c `CameraManipulator`（相机操纵器）
@@ -379,7 +390,7 @@ class V_GRAPHICS_API CameraManipulator {
     };
 
   public:
-    CameraManipulator(Camera* camera);
+    explicit CameraManipulator(Camera* camera);
 
   public:
     /** @brief 当前模式。 */
@@ -387,31 +398,21 @@ class V_GRAPHICS_API CameraManipulator {
     void setMode(Mode m);
 
     // 轨道模式
-    /** @brief 轨道旋转（绕目标点）。 */
     void orbit(double deltaYaw, double deltaPitch);
-
-    /** @brief 设置轨道中心（目标点）。 */
     void setOrbitCenter(const Vec3d& center);
-
-    /** @brief 获取轨道半径。 */
     double orbitRadius() const;
     void setOrbitRadius(double radius);
 
-    // 摇移模式
-    /** @brief 摇移相机（屏幕坐标）。 */
-    void pan(double screenDx, double screenDy, const Viewport* viewport);
+    // 摇移模式（屏幕像素增量）
+    void pan(double screenDx, double screenDy);
 
-    // 缩放模式
-    /** @brief 缩放（滚轮）。 */
+    // 缩放模式（滚轮）
     void zoom(double factor);
 
     // 第一人称模式
-    /** @brief 第一人称前后移动。 */
     void moveForward(double distance);
     void moveRight(double distance);
     void moveUp(double distance);
-
-    /** @brief 第一人称旋转。 */
     void rotate(double deltaYaw, double deltaPitch);
 
     // 通用
@@ -423,6 +424,8 @@ class V_GRAPHICS_API CameraManipulator {
     Data* const d;
 };
 ```
+
+> 说明：`pan()` 直接接收屏幕像素增量，内部按当前轨道半径换算世界位移，无需 `Viewport`。
 
 ### 3.6 `RenderCommand`（渲染命令）
 
@@ -442,30 +445,15 @@ struct V_GRAPHICS_API RenderCommand {
     /** 是否透明（需要后序渲染）。 */
     bool isTransparent = false;
 
-    /** 几何体数据引用。 */
-    const vine::geometry::Shape* shape = nullptr;
-
-    /** @brief 默认构造。 */
     RenderCommand() = default;
 
-    /** @brief 构造并初始化。 */
-    RenderCommand(Drawable* d, Material* m, const Mat4d& model)
-      : drawable(d), material(m), modelMatrix(model)
-    {
-        if (d) {
-            isTransparent = (m && m->opacity() < 1.0f);
-        }
-    }
-
-    /** @brief 计算渲染优先级（用于排序）。 */
-    float depth(const Vec3d& cameraEye) const
-    {
-        if (!drawable) return 0.0f;
-        Vec3d center = modelMatrix * Vec3d::Zero();
-        return static_cast<float>((center - cameraEye).norm());
-    }
+    /** @brief 构造并初始化（材质透明度 < 1 时标记为透明）。 */
+    RenderCommand(Drawable* d, Material* m, const Mat4d& model);
 };
 ```
+
+> 说明：排序由 `Scene::collectRenderCommands` 完成（不透明近→远、透明远→近），
+> `RenderCommand` 本身不提供 depth 计算。
 
 ### 3.7 `RenderBackend`（渲染后端抽象）
 
@@ -488,35 +476,177 @@ class V_GRAPHICS_API RenderBackend {
     /** @brief 结束一帧渲染。 */
     virtual void endFrame() = 0;
 
-    /** @brief 执行渲染命令列表。 */
-    virtual void render(const std::vector<RenderCommand>& commands, const View* view) = 0;
+    /** @brief 执行一个渲染通道（含命令收集）。 */
+    virtual void executePass(const RenderPass* pass,
+                             const std::vector<RenderCommand>& commands) = 0;
 
-    /** @brief 清空颜色和深度缓冲。 */
-    virtual void clear(const Color& backgroundColor) = 0;
+    /** @brief 设置渲染目标（nullptr 为默认帧缓冲）。 */
+    virtual void setRenderTarget(RenderTarget* target) = 0;
 
-    /** @brief 设置视口大小。 */
-    virtual void setViewport(int x, int y, int width, int height) = 0;
+    /** @brief 渲染命令列表。 */
+    virtual void render(const std::vector<RenderCommand>& commands,
+                        const Camera* camera) = 0;
 
-    /** @brief 交换缓冲区（用于 double buffer）。 */
+    /** @brief 清空缓冲。 */
+    virtual void clear(const Color& backgroundColor, bool clearDepth = true) = 0;
+
+    /** @brief 交换缓冲区（double buffer）。 */
     virtual void swapBuffers() = 0;
 
   protected:
     RenderBackend() = default;
 };
-
-using RenderBackendPtr = std::unique_ptr<RenderBackend>;
 ```
+
+### 3.8 `RenderPass`（渲染通道）
+
+描述一个完整的渲染阶段：相机 + 渲染目标 + 清除状态。
+
+```cpp
+class V_GRAPHICS_API RenderPass : public Object, public RefCounted<RenderPass> {
+    V_OBJECT_META_DECL;
+
+  public:
+    RenderPass();
+
+  public:
+    /** @brief 通道名称。 */
+    String name() const;
+    void setName(const String& name);
+
+    /** @brief 渲染目标（可为空，表示默认帧缓冲）。 */
+    RenderTarget* renderTarget() const;
+    void setRenderTarget(RenderTarget* target);
+
+    /** @brief 通道使用的相机。 */
+    Camera* camera() const;
+    void setCamera(Camera* camera);
+
+    /** @brief 清除颜色。 */
+    Color clearColor() const;
+    void setClearColor(const Color& color);
+
+    /** @brief 是否清除深度缓冲。 */
+    bool shouldClearDepth() const;
+    void setShouldClearDepth(bool clear);
+
+    /** @brief 执行此通道：清屏 → 收集命令 → 交给后端渲染。 */
+    void execute(Scene* scene, RenderBackend* backend);
+
+  private:
+    struct Data;
+    Data* const d;
+};
+
+using RenderPassPtr = intrusive_ptr<RenderPass>;
+```
+
+### 3.9 `RenderTarget`（渲染目标）
+
+离屏帧缓冲，管理颜色与深度缓冲。
+
+```cpp
+class V_GRAPHICS_API RenderTarget : public Object, public RefCounted<RenderTarget> {
+    V_OBJECT_META_DECL;
+
+  public:
+    enum class ColorFormat {
+        RGBA8,    ///< 8-bit unsigned normalized RGBA.
+        RGBA16F,  ///< 16-bit float RGBA.
+        RGBA32F,  ///< 32-bit float RGBA.
+    };
+
+    enum class DepthFormat {
+        D16,   ///< 16-bit depth.
+        D24,   ///< 24-bit depth.
+        D32,   ///< 32-bit unsigned depth.
+        D32F,  ///< 32-bit float depth.
+    };
+
+  public:
+    RenderTarget();
+
+  public:
+    /** @brief 附加颜色缓冲。 */
+    void attachColor(ColorFormat format);
+
+    /** @brief 附加深度缓冲。 */
+    void attachDepth(DepthFormat format);
+
+    /** @brief 渲染目标尺寸。 */
+    int width() const;
+    int height() const;
+    void setSize(int w, int h);
+
+    /** @brief 回读颜色缓冲（RGBA8，w*h*4 字节）。 */
+    std::vector<std::uint8_t> readColorBuffer() const;
+
+    /** @brief 回读深度缓冲（[0,1]，w*h 个 float）。 */
+    std::vector<float> readDepthBuffer() const;
+
+  private:
+    struct Data;
+    Data* const d;
+};
+
+using RenderTargetPtr = intrusive_ptr<RenderTarget>;
+```
+
+### 3.10 `RenderEngine`（高层渲染引擎）
+
+平台无关的帧循环驱动：begin → 主通道 → end → swap。
+
+```cpp
+class V_GRAPHICS_API RenderEngine : public Object, public RefCounted<RenderEngine> {
+    V_OBJECT_META_DECL;
+
+  public:
+    explicit RenderEngine(RenderBackend* backend);
+    ~RenderEngine();
+
+  public:
+    /** @brief 绑定的后端。 */
+    RenderBackend* backend() const;
+
+    /** @brief 初始化后端。 */
+    bool initialize();
+
+    /** @brief 释放后端资源。 */
+    void shutdown();
+
+    /** @brief 渲染一帧（begin → 主通道 → end → swap）。 */
+    void frame();
+
+    /** @brief 场景。 */
+    void setScene(Scene* scene);
+    Scene* scene() const;
+
+    /** @brief 主通道相机。 */
+    void setCamera(Camera* camera);
+    Camera* camera() const;
+
+    /** @brief 主通道。 */
+    void setMainPass(RenderPass* pass);
+    RenderPass* mainPass() const;
+
+  private:
+    struct Data;
+    Data* const d;
+};
+```
+
+> 说明：引擎构造时自动创建默认场景、相机与主通道，主通道默认绑定该相机。
 
 ## 4. 设计模式与约定
 
 ### 4.1 引用计数
-- `Scene`、`View`、`Drawable`、`Material` 都继承 `RefCounted<T>`
+- `Scene`、`Camera`、`Drawable`、`Material`、`Node`、`RenderPass`、`RenderTarget`、`RenderEngine` 都继承 `RefCounted<T>`
 - 使用 `intrusive_ptr<T>` 管理所有权
 - 公开 API 接受原始指针（调用者管理生命周期）或返回 `intrusive_ptr`
 
 ### 4.2 不可复制/移动
-- `Scene` / `View` 使用 `V_DISABLE_COPY_MOVE` 防止意外复制
-- `Drawable` 允许移动（子类可选择禁用）
+- `Scene` 使用 `V_DISABLE_COPY_MOVE` 防止意外复制
+- 其余核心类因继承 `RefCounted<T>` 隐式不可拷贝
 
 ### 4.3 数据隐藏（Pimpl）
 - 所有公开类都使用 `Data* const d` 指针隐藏实现
@@ -531,46 +661,152 @@ using RenderBackendPtr = std::unique_ptr<RenderBackend>;
 
 ## 5. 实现阶段规划
 
-### 阶段 1：框架（当前）
-- [ ] 定义所有公开头文件和 API
-- [ ] 实现基础类框架（空 Data 结构）
-- [ ] 编写单元测试框架
+### 阶段 1：框架（已完成）
+- [x] 定义所有公开头文件和 API
+- [x] 实现基础类框架（Pimpl + Data 结构）
+- [x] 编写单元测试框架
 
-### 阶段 2：场景管理
-- [ ] 实现 `Scene` 树形结构
-- [ ] 实现 `Drawable` 的层级变换
-- [ ] 递归边界框计算
-- [ ] 场景查询接口
+### 阶段 2：场景管理（已完成）
+- [x] 实现 `Scene`/`Node` 树形结构
+- [x] 实现 `Node` 的层级变换（worldTransform 级联）
+- [x] 递归边界框计算
+- [x] 场景查询接口（findNode / drawables）
 
-### 阶段 3：视图管理
-- [ ] 实现 `View` 相机参数
-- [ ] 视图矩阵和投影矩阵计算
-- [ ] 屏幕-世界坐标转换
-- [ ] 视锥剔除（Frustum Culling）
+### 阶段 3：视图管理（已完成）
+- [x] 实现 `Camera` 相机参数（OSG 风格矩阵式）
+- [x] 视图矩阵和投影矩阵计算
+- [x] 屏幕-世界坐标转换（screenToWorldRay）
+- [x] 视锥剔除（Frustum Culling，位于 `collectRenderCommands`）
 
-### 阶段 4：几何与材质
-- [ ] 集成 `vine::geometry::Shape`
-- [ ] `Geometry` 包装层
-- [ ] `Material` 属性管理
-- [ ] 纹理管理（可选）
+### 阶段 4：几何与材质（已完成）
+- [x] 集成 `vine::geometry::Shape`
+- [x] `Geometry` 包装层
+- [x] `Material` 属性管理
+- [ ] 纹理管理（可选，未实现——仅存纹理文件路径）
 
-### 阶段 5：渲染后端
-- [ ] 定义 `RenderBackend` 接口
-- [ ] OpenGL 后端实现（可选）
-- [ ] 命令缓冲系统
-- [ ] 排序与批处理
+### 阶段 5：渲染后端（部分完成）
+- [x] 定义 `RenderBackend` 接口
+- [x] 命令缓冲系统（`Scene::collectRenderCommands` + 排序）
+- [x] 排序与批处理（不透明/透明排序已实现；批处理未实现）
+- [x] 首个 `RenderBackend` 实现（`gfx_backend_vsg` 插件；手撸 Vulkan 后续提供）
 
-## 6. 依赖关系
+## 6. 分层架构与依赖关系
+
+### 6.1 分层定位（重要）
+
+`graphics` 是**基础与抽象层**，不绑定任何具体图形 API。渲染后端通过
+`RenderBackend` 接口注入，**vsg 只是其中一种实现**，后续还会有纯手撸
+（如手写 Vulkan/OpenGL）实现。所有后端一律实现同一个 `RenderBackend`
+接口，上层代码（`RenderEngine`/`RenderPass`）只依赖抽象。
+
+```
+┌────────────────────────────────────────────┐
+│ graphics（基础与抽象层）                      │
+│  ├─ 数据结构：Scene/Node/Camera/Material    │
+│  ├─ 查询：RayIntersection/BoundingBox       │
+│  ├─ 抽象接口：RenderBackend                 │
+│  └─ 驱动：RenderEngine/RenderPass           │
+└───────────────────┬────────────────────────┘
+                    │ 实现 RenderBackend
+      ┌─────────────┴──────────────┐
+      │                            │
+┌─────▼──────────────┐    ┌───────▼────────┐
+│ gfx_backend_vsg    │    │ 手撸（实现 2）  │
+│ （插件，实现 1）    │    │ (未来)         │
+│ VsgRenderer       │    │                │
+└───────────────────┘    └────────────────┘
+```
+
+后端实现原则：
+- 后端只实现 `RenderBackend` 接口，不反向依赖 graphics 之外的模块
+- 场景图/相机等数据结构由 graphics 层定义，后端只做"翻译 + 提交"
+- `RenderEngine` 负责帧循环，后端负责具体 API 调用
+- 换后端 = 换一个 `RenderBackend` 实现，上层代码零改动
+
+### 6.2 依赖关系
 
 ```
 Graphics
   ├── vi::Core              (Object, RefCounted, intrusive_ptr)
-  ├── vi::Global            (Math: Vec3d, Mat4d, Color, etc.)
-  ├── vi::Geometry          (Shape, BoundingBox)
-  └── [可选] vi::RenderBackend
+  ├── vi::Global            (Math: Vec3d, Mat4d, Color, Colorf, etc.)
+  ├── vi::Geometry          (Shape, TriangleMesh, IndexedTriangleMesh)
+  └── 实现层（可选，均为 appfw 插件，运行时加载）：
+      ├── gfx_backend_vsg   (vsg 实现：VsgRenderer 实现 RenderBackend)
+      └── (未来) gfx_backend_vulkan (手撸实现)
 ```
 
-不反向依赖其他模块。
+`graphics` 本身不反向依赖任何实现层；后端插件也只依赖 `vi::Appfw` +
+`vi::Graphics` + 各自的三方库。
+
+### 6.3 后端自注册（RenderBackendRegistry）
+
+应用创建具体后端时，**不应直接 `new`**（会引入对后端模块及其三方库的编译期
+依赖）。改为**自注册工厂**：
+
+```
+┌─ graphics ────────────────────────────────────┐
+│ RenderApi（技术族位标志集合）                  │
+│   None/Vulkan/OpenGL2/OpenGL3/OpenGLES/       │
+│   Direct3D（V_ENABLE_ENUM_FLAGS 位运算）       │
+│   renderApiToString() → "vulkan | opengl3"    │
+│ RenderBackendInfo（元数据）                    │
+│   name / display_name / description /         │
+│   version / vendor / api_flags(RenderApi 位集) │
+│ RenderBackendFactory（抽象基类）                │
+│   info() → RenderBackendInfo                  │
+│   name() → info().name（便捷）                 │
+│   create(scene, camera) → intrusive_ptr<RenderBackend> │
+│ RenderBackendRegistry（单例）                  │
+│   registerFactory(factory)  ← 后端自注册        │
+│   create(name, scene, camera) → intrusive_ptr<RenderBackend>│
+│   names() / has(name) / entries()（遍历查询）   │
+│   Registrar<TFactory>（RAII 静态自注册助手）     │
+└──────────────────────┬────────────────────────┘
+                       │ 实现并注册
+      ┌────────────────┴────────────────┐
+      │                                 │
+┌─────▼────────────────────┐    ┌───────▼────────┐
+│ gfx_backend_vsg 插件      │    │ gfx_backend_ogre│
+│ VsgRenderBackendFactory  │    │ （未来）        │
+│ api_flags=Vulkan,        │    │ api_flags=      │
+│ 注册 "vsg"               │    │  OpenGL|GLES|   │
+│                          │    │  Direct3D|Vulkan│
+│                          │    │ 注册 "ogre"     │
+└──────────────────────────┘    └────────────────┘
+```
+
+**一个后端插件可注册多个后端实现**（如不同 GL 版本）：Registry 是
+`map<name, factory>`，每个实现一个工厂、各带自己的 `RenderBackendInfo`；
+`entries()` 遍历时天然包含同一插件注册的全部后端。
+
+用法（上层不 include 任何后端头）：
+```cpp
+// create() 返回引用计数句柄 intrusive_ptr<RenderBackend>；后端生命周期自动管理
+auto backend = RenderBackendRegistry::instance().create(u8"vsg", scene, camera);
+engine->setBackend(backend);  // RenderEngine 持有引用，后端不早于引擎销毁
+
+// 遍历已注册后端及其元数据（如 show_render_backends 命令）
+for (const auto& entry : RenderBackendRegistry::instance().entries()) {
+    const auto& info = entry.info;   // name / description / version ...
+}
+```
+
+后端作为 appfw 插件注册（插件 `load()` 内）：
+```cpp
+// GfxBackendVsgPlugin.cpp
+RenderBackendRegistry::instance().registerFactory(&s_factory);  // static VsgRenderBackendFactory s_factory;
+...
+V_DECLARE_PLUGIN(vine::vsg::GfxBackendVsgPlugin, u8"gfx_backend_vsg", ...);
+```
+
+`Registrar<T>` 助手也保留（供非插件、静态链接场景使用）。
+
+要点与限制：
+- **编译期**不依赖后端模块；`gfx_backend_vsg` 走纯运行时插件（DLL 部署到
+  `<exe>/plugins/vine`，`PluginManager::loadAll()` 加载后注册）。
+- 插件 `load()` 显式注册，规避跨 TU 静态初始化序问题，且卸载时机可控。
+- 静态 `Registrar<T>` 自注册场景下：应在模块已链接后再 `create()`（如从
+  `RenderEngine::initialize()` 或 main 之后），而非依赖注册先于 main 完成。
 
 ## 7. API 示例
 
@@ -584,71 +820,105 @@ scene->setName(u8"Main Scene");
 // 创建材质
 auto material = make_intrusive<Material>();
 material->setName(u8"RedPlastic");
-material->setDiffuse(Color(1.0f, 0.0f, 0.0f, 1.0f));
+material->setDiffuse(Colorf(1.0f, 0.0f, 0.0f, 1.0f));
 material->setOpacity(0.8f);
 
-// 从 Shape 创建几何体
+// 从 Shape 创建几何体，挂到节点上
+auto node = make_intrusive<Node>();
 auto geom = make_intrusive<Geometry>();
 geom->setName(u8"Sphere");
 geom->setShape(sphere_shape);
 geom->setMaterial(material.get());
-geom->setLocalTransform(transform);
+node->setLocalTransform(transform);
+node->addDrawable(geom.get());
 
 // 添加到场景
-scene->addDrawable(geom.get());
+scene->addNode(node.get());
 
-// 创建视图
-auto view = make_intrusive<View>();
-view->setName(u8"MainCamera");
-view->setScene(scene.get());
-view->setEye(Vec3d(0, 10, 15));
-view->setTarget(Vec3d(0, 0, 0));
-view->setUp(Vec3d(0, 1, 0));
-view->setFieldOfView(60.0);
-view->setAspectRatio(16.0 / 9.0);
+// 创建相机
+auto camera = make_intrusive<Camera>();
+camera->setName(u8"MainCamera");
+camera->setViewMatrixAsLookAt(Vec3d(0, 10, 15), Vec3d(0, 0, 0), Vec3d(0, 1, 0));
+camera->setProjectionMatrixAsPerspective(60.0, 16.0 / 9.0, 0.1, 1000.0);
 
-// 收集渲染命令
-auto commands = scene->collectRenderCommands(view.get());
+// 收集渲染命令（自动视锥剔除 + 排序）
+auto commands = scene->collectRenderCommands(camera.get());
 
-// 渲染
-backend->clear(Color(0.2f, 0.2f, 0.2f, 1.0f));
-backend->render(commands, view.get());
+// 渲染（后端由调用方提供）
+backend->clear(Color(51, 51, 51, 255));
+backend->render(commands, camera.get());
 backend->swapBuffers();
 ```
 
 ## 8. 文件清单
 
-### 头文件（include/vine/graphics/）
+### 头文件（sdk/vine/graphics/）
 - `graphics_global.hpp` — API 导出和命名空间宏
+- `BoundingBox.hpp` — 轴对齐包围盒
 - `Drawable.hpp` — 可绘制对象基类
-- `Geometry.hpp` — 几何体类
-- `Material.hpp` — 材质定义
+- `Geometry.hpp` — 几何体类（包装 Shape）
+- `Material.hpp` — 材质定义（纯属性）
+- `MaterialManager.hpp` — 材质管理器抽象基类
+- `Node.hpp` — 场景图节点
 - `Scene.hpp` — 场景容器
-- `View.hpp` — 视图/相机
+- `Camera.hpp` — 相机
+- `CameraManipulator.hpp` — 相机操纵器
+- `Ray.hpp` — 射线
+- `RayIntersection.hpp` — 射线求交
 - `RenderCommand.hpp` — 渲染命令结构
+- `RenderPass.hpp` — 渲染通道
+- `RenderTarget.hpp` — 渲染目标
+- `RenderEngine.hpp` — 渲染引擎
 - `RenderBackend.hpp` — 后端抽象接口
 
 ### 实现文件（src/）
+- `Camera.cpp`
+- `CameraManipulator.cpp`
 - `Drawable.cpp`
 - `Geometry.cpp`
 - `Material.cpp`
-- `Scene.cpp`
-- `View.cpp`
+- `MaterialManager.cpp`
+- `Node.cpp`
+- `Ray.cpp`
+- `RayIntersection.cpp`
 - `RenderCommand.cpp`
+- `RenderEngine.cpp`
+- `RenderPass.cpp`
+- `RenderTarget.cpp`
+- `Scene.cpp`
 
 ### 测试文件（tests/test_graphics/）
-- `GraphicsTest.cpp` — 基本功能测试
-- `SceneTest.cpp` — 场景树操作测试
-- `ViewTest.cpp` — 相机变换测试
+- `GraphicsTest.cpp` — 全部功能测试（场景/相机/操纵器/求交/渲染引擎 + 排序/剔除）
 
 ## 9. 未来扩展点
 
-1. **光源系统**：环境光、定向光、点光源、聚光灯
+1. **光源系统**：环境光、定向光、点光源、聚光灯（`Light.hpp` 设计稿曾有，未实现）
 2. **阴影**：阴影贴图、实时阴影
 3. **粒子系统**：粒子发射、动画
 4. **动画系统**：骨骼动画、关键帧插值
-5. **优化**：八叉树加速、脏标记、缓存策略
-6. **多渲染后端**：OpenGL、Vulkan、软光栅化
+5. **优化**：八叉树加速、脏标记、缓存策略、批处理（draw call 合并）
+6. **多渲染后端**：OpenGL、Vulkan、软光栅化（`RenderBackend` 接口已就绪）
 7. **UI 集成**：ImGui 或自定义 UI 系统
-8. **拾取**：射线检测、拾取缓冲
+
+## 10. 可见性 / 透明度三级模型（2026-09 落地）
+
+为统一控制，`Scene`/`Node`/`Drawable` 各带**可见性**与**透明度**，`Material` 保留自身
+`opacity()`：
+
+- **可见性（AND）**：对象可绘制 ⇔ `Scene.isVisible ∧ 路径上每个 Node.isVisible ∧
+  Drawable.isVisible`。命令收集时逐级判断，隐藏对象不进 `RenderCommand`。
+- **透明度（乘积）**：有效 `opacity = Scene.opacity × Node.opacity（沿祖先链）×
+  Drawable.opacity × Material.opacity`，`collectRenderCommands` 对每个 drawable
+  算好写入 `RenderCommand.opacity`；`isTransparent = opacity < 1` 驱动不透明/
+  透明分组 painter 排序。
+- 新增 API：`Scene/Node/Drawable::opacity()/setOpacity()`；
+  `Scene/Drawable::isVisible()/setVisible()`（`Node` 原有）。
+- `RenderCommand` 语义升级：携带“已解析”的有效透明度（不再是后端各自再算）。
+- vsg 后端把有效透明度写进逐顶点 alpha（blending 常开），任意一级透明度变化实时
+  生效、零重建；具体见 `.ai/design/vsg-design.md` §9。
+8. **拾取增强**：选择框选（框选）、可拾取对象接口（`Pickable.hpp` 设计稿曾有，未实现）
+9. **视口系统**：独立 `Viewport` 类（设计稿曾有，当前宽高比直接传给 Camera）；
+   跨平台窗口与输入事件由 `base/window` 模块（`vi::Window`）提供，`graphics`
+   通过 Signal 订阅其事件驱动相机操纵
+10. **纹理加载**：从文件加载纹理资源（当前 `Material` 仅存路径）
 

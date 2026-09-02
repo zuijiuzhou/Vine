@@ -83,8 +83,13 @@ class V_GRAPHICS_API Material : public Object, public RefCounted<Material> {
     void setTextureFile(const String& path);
 
   private:
-    struct Data;
-    Data* const d;
+    String name_;
+    Colorf diffuse_{ 0.8f, 0.8f, 0.8f, 1.0f };
+    Colorf specular_{ 1.0f, 1.0f, 1.0f, 0.5f };
+    Colorf ambient_{ 0.2f, 0.2f, 0.2f, 1.0f };
+    float shininess_ = 32.0f;
+    float opacity_ = 1.0f;
+    String texture_file_;
 };
 
 using MaterialPtr = intrusive_ptr<Material>;

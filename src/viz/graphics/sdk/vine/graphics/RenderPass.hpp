@@ -70,8 +70,11 @@ class V_GRAPHICS_API RenderPass : public Object, public RefCounted<RenderPass> {
     void execute(Scene* scene, RenderBackend* backend);
 
   private:
-    struct Data;
-    Data* const d;
+    String name_;
+    RenderTarget* render_target_ = nullptr;
+    Camera* camera_ = nullptr;
+    Color clear_color_{ 51, 51, 51, 255 };
+    bool clear_depth_ = true;
 };
 
 using RenderPassPtr = intrusive_ptr<RenderPass>;
