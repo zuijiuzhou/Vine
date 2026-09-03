@@ -15,14 +15,14 @@ Geometry::Geometry() = default;
 
 Geometry::~Geometry() = default;
 
-const vine::geometry::Shape* Geometry::shape() const
+raw_ptr<const vine::geometry::Shape> Geometry::shape() const
 {
     return shape_.get();
 }
 
-void Geometry::setShape(vine::geometry::Shape* shape)
+void Geometry::setShape(intrusive_ptr<vine::geometry::Shape> shape)
 {
-    shape_ = shape;
+    shape_ = std::move(shape);
 }
 
 std::size_t Geometry::triangleCount() const

@@ -4,6 +4,7 @@
 #include "Material.hpp"
 
 #include <vine/intrusive_ptr.hpp>
+#include <vine/raw_ptr.hpp>
 #include <vine/math/Matrix4x4.hpp>
 
 V_GRAPHICS_NS_BEGIN
@@ -42,7 +43,7 @@ struct V_GRAPHICS_API RenderCommand {
      * @param m     Material to use.
      * @param model World-space model matrix.
      */
-    RenderCommand(Drawable* d, Material* m, const Mat4d& model);
+    RenderCommand(intrusive_ptr<Drawable> d, intrusive_ptr<Material> m, const Mat4d& model);
 };
 
 V_GRAPHICS_NS_END

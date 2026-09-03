@@ -158,7 +158,7 @@ void SceneBridge::setShaderSet(::vsg::ref_ptr<::vsg::ShaderSet> shaderSet)
     shader_set_ = shaderSet;
 }
 
-void SceneBridge::setMaterialManager(VsgMaterialManager* manager)
+void SceneBridge::setMaterialManager(vine::raw_ptr<VsgMaterialManager> manager)
 {
     material_manager_ = manager;
 }
@@ -337,8 +337,8 @@ bool SceneBridge::syncRenderCommands(
 }
 
 ::vsg::ref_ptr<::vsg::Node> SceneBridge::buildGeometry(
-    const vine::graphics::Geometry* geometry,
-    vine::graphics::Material* material,
+    vine::raw_ptr<const vine::graphics::Geometry> geometry,
+    vine::raw_ptr<vine::graphics::Material> material,
     ::vsg::ref_ptr<::vsg::vec4Array>& out_colors)
 {
     if (geometry == nullptr) {

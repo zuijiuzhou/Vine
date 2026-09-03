@@ -3,9 +3,10 @@
 
 #include <vector>
 
-#include <vine/intrusive_ptr.hpp>
 #include <vine/Object.hpp>
 #include <vine/RefCounted.hpp>
+#include <vine/intrusive_ptr.hpp>
+#include <vine/raw_ptr.hpp>
 #include <vine/window/window_global.hpp>
 
 V_WINDOW_NS_BEGIN
@@ -52,7 +53,7 @@ class V_GRAPHICS_API RenderEngine : public Object, public RefCounted<RenderEngin
 
   public:
     /** @brief Gets the bound render backend, or nullptr when unset. */
-    RenderBackend* backend() const;
+    raw_ptr<RenderBackend> backend() const;
 
     /** @brief Sets the render backend used for drawing.
      *
@@ -93,41 +94,43 @@ class V_GRAPHICS_API RenderEngine : public Object, public RefCounted<RenderEngin
      *
      * @param overlay Overlay to remove (by pointer).
      */
-    void removeOverlay(Overlay* overlay);
+    void removeOverlay(raw_ptr<Overlay> overlay);
 
     /** @brief Removes all registered overlays. */
     void clearOverlays();
 
     /** @brief Sets the scene to render. */
-    void setScene(Scene* scene);
+    void setScene(intrusive_ptr<Scene> scene);
 
     /** @brief Gets the scene to render. */
-    Scene* scene() const;
+    raw_ptr<Scene> scene() const;
 
     /** @brief Sets the camera used by the main pass. */
-    void setCamera(Camera* camera);
+    void setCamera(intrusive_ptr<Camera> camera);
 
     /** @brief Gets the camera used by the main pass. */
-    Camera* camera() const;
+    raw_ptr<Camera> camera() const;
 
     /** @brief Sets the main render pass. */
-    void setMainPass(RenderPass* pass);
+    void setMainPass(intrusive_ptr<RenderPass> pass);
 
     /** @brief Gets the main render pass. */
-    RenderPass* mainPass() const;
+    raw_ptr<RenderPass> mainPass() const;
 
     /** @brief Sets the camera manipulator driving the engine camera.
      *
      * The manipulator must be bound to the engine's camera (or the camera it
      * will use). Window input events (from the bound WindowContext) are
-     * forwarded to it.
+     * forwarded to it. The engine keeps the given reference for as long as
+     * the manipulator is set, so it stays alive until a different
+     * manipulator (or nullptr) is set or the engine is destroyed.
      *
-     * @param manipulator Manipulator, or nullptr to clear.
+     * @param manipulator Manipulator handle, or null to clear.
      */
-    void setCameraManipulator(CameraManipulator* manipulator);
+    void setCameraManipulator(intrusive_ptr<CameraManipulator> manipulator);
 
     /** @brief Gets the camera manipulator, or nullptr when unset. */
-    CameraManipulator* cameraManipulator() const;
+    raw_ptr<CameraManipulator> cameraManipulator() const;
 
     /** @brief Pushes a mouse event to the camera manipulator.
      *
@@ -174,14 +177,14 @@ class V_GRAPHICS_API RenderEngine : public Object, public RefCounted<RenderEngin
     void setWindowHandle(void* native_handle);
 
   private:
-    intrusive_ptr<RenderBackend> backend_;
-    intrusive_ptr<Scene> scene_;
-    intrusive_ptr<Camera> camera_;
-    intrusive_ptr<RenderPass> main_pass_;
+    intrusive_ptr<RenderBackend>        backend_;
+    intrusive_ptr<Scene>                scene_;
+    intrusive_ptr<Camera>               camera_;
+    intrusive_ptr<RenderPass>           main_pass_;
     std::vector<intrusive_ptr<Overlay>> overlays_;
-    CameraManipulator* camera_manipulator_ = nullptr;
-    void* native_handle_ = nullptr;
-    bool initialized_ = false;
+    intrusive_ptr<CameraManipulator>    camera_manipulator_;
+    void*                               native_handle_      = nullptr;
+    bool                                initialized_        = false;
 };
 
 V_GRAPHICS_NS_END

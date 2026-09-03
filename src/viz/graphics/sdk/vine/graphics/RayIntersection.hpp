@@ -6,6 +6,7 @@
 #include <vine/math/Vector2.hpp>
 #include <vine/math/Matrix4x4.hpp>
 #include <vine/intrusive_ptr.hpp>
+#include <vine/raw_ptr.hpp>
 #include <vector>
 #include <limits>
 
@@ -66,7 +67,7 @@ class V_GRAPHICS_API RayIntersection {
      * @param world    World transform of the geometry.
      * @return Intersection result. hit=false if no intersection.
      */
-    static RayIntersectionResult intersect(const Ray& ray, Geometry* geometry,
+    static RayIntersectionResult intersect(const Ray& ray, raw_ptr<Geometry> geometry,
                                            const Mat4d& world);
 
     /** @brief Tests ray intersection with a single geometry for a given mode.
@@ -82,7 +83,7 @@ class V_GRAPHICS_API RayIntersection {
      * @param mode     Query mode.
      * @return Vector of intersection results (may be empty).
      */
-    static std::vector<RayIntersectionResult> intersect(const Ray& ray, Geometry* geometry,
+    static std::vector<RayIntersectionResult> intersect(const Ray& ray, raw_ptr<Geometry> geometry,
                                                         const Mat4d& world, Mode mode);
 
     /** @brief Tests ray intersection with all geometries in a scene.
@@ -93,7 +94,7 @@ class V_GRAPHICS_API RayIntersection {
      * @param scene The scene containing geometries.
      * @return Intersection result. hit=false if no intersection.
      */
-    static RayIntersectionResult intersectScene(const Ray& ray, Scene* scene);
+    static RayIntersectionResult intersectScene(const Ray& ray, raw_ptr<Scene> scene);
 
     /** @brief Tests ray intersection with all geometries in a scene.
      *
@@ -107,8 +108,8 @@ class V_GRAPHICS_API RayIntersection {
      * @return Vector of intersection results (may be empty).
      */
     static std::vector<RayIntersectionResult> intersectSceneAll(const Ray& ray,
-                                                                 Scene* scene,
-                                                                 Mode mode = Mode::AllHits);
+                                                                raw_ptr<Scene> scene,
+                                                                Mode mode = Mode::AllHits);
 };
 
 V_GRAPHICS_NS_END

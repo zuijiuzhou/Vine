@@ -379,8 +379,12 @@ using NodePtr = intrusive_ptr<Node>;
 
 处理用户交互，更新相机参数。
 
+`CameraManipulator` 与其他核心类一致继承 `RefCounted<CameraManipulator>`；
+`RenderEngine` 以 `intrusive_ptr` 持有当前操纵器，`setCameraManipulator`
+收 `intrusive_ptr`（retain），`cameraManipulator()` 返 `raw_ptr`（借用）。
+
 ```cpp
-class V_GRAPHICS_API CameraManipulator {
+class V_GRAPHICS_API CameraManipulator : public RefCounted<CameraManipulator> {
   public:
     enum class Mode {
         Orbit,           // 轨道（绕目标点旋转）
@@ -640,8 +644,12 @@ class V_GRAPHICS_API RenderEngine : public Object, public RefCounted<RenderEngin
 ## 4. 设计模式与约定
 
 ### 4.1 引用计数
-- `Scene`、`Camera`、`Drawable`、`Material`、`Node`、`RenderPass`、`RenderTarget`、`RenderEngine` 都继承 `RefCounted<T>`
+- `Scene`、`Camera`、`Drawable`、`Material`、`Node`、`RenderPass`、`RenderTarget`、`RenderEngine`、`CameraManipulator` 都继承 `RefCounted<T>`
 - 使用 `intrusive_ptr<T>` 管理所有权
+- 借用/所有权分界：getter 返回与“不 retain”的借用入参用 `vine::raw_ptr<T>`；
+  会 retain（存入 owning 字段/容器）的 setter/add 入参用 `intrusive_ptr<T>`
+  （by value + `std::move`），与 `setBackend`/`addOverlay` 及 robotics
+  `Visual::setMaterial(const intrusive_ptr<...>&)` 一致
 - 公开 API 接受原始指针（调用者管理生命周期）或返回 `intrusive_ptr`
 
 ### 4.2 不可复制/移动
@@ -828,12 +836,12 @@ auto node = make_intrusive<Node>();
 auto geom = make_intrusive<Geometry>();
 geom->setName(u8"Sphere");
 geom->setShape(sphere_shape);
-geom->setMaterial(material.get());
+geom->setMaterial(material);
 node->setLocalTransform(transform);
-node->addDrawable(geom.get());
+node->addDrawable(geom);
 
 // 添加到场景
-scene->addNode(node.get());
+scene->addNode(node);
 
 // 创建相机
 auto camera = make_intrusive<Camera>();

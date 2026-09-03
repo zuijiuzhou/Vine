@@ -136,18 +136,18 @@ vine::intrusive_ptr<vine::graphics::Node> addDemoCube(vine::graphics::Scene* sce
 
     auto geometry = vine::intrusive_ptr<vine::graphics::Geometry>(new vine::graphics::Geometry());
     geometry->setName(name);
-    geometry->setShape(mesh.get());
+    geometry->setShape(mesh);
 
     auto material = vine::intrusive_ptr<vine::graphics::Material>(new vine::graphics::Material());
     material->setDiffuse(diffuse);
-    geometry->setMaterial(material.get());
+    geometry->setMaterial(material);
 
     auto node = vine::intrusive_ptr<vine::graphics::Node>(new vine::graphics::Node());
     node->setName(name);
     node->setLocalTransform(vine::math::translate(centre));
-    node->addDrawable(geometry.get());
+    node->addDrawable(geometry);
 
-    scene->addNode(node.get());
+    scene->addNode(node);
     return node;
 }
 

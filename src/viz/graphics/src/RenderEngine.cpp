@@ -27,7 +27,7 @@ RenderEngine::~RenderEngine()
     shutdown();
 }
 
-RenderBackend* RenderEngine::backend() const
+raw_ptr<RenderBackend> RenderEngine::backend() const
 {
     return backend_.get();
 }
@@ -115,7 +115,7 @@ void RenderEngine::addOverlay(intrusive_ptr<Overlay> overlay)
     }
 }
 
-void RenderEngine::removeOverlay(Overlay* overlay)
+void RenderEngine::removeOverlay(raw_ptr<Overlay> overlay)
 {
     overlays_.erase(std::remove_if(overlays_.begin(), overlays_.end(),
                                    [overlay](const intrusive_ptr<Overlay>& p) {
@@ -129,45 +129,45 @@ void RenderEngine::clearOverlays()
     overlays_.clear();
 }
 
-void RenderEngine::setScene(Scene* scene)
+void RenderEngine::setScene(intrusive_ptr<Scene> scene)
 {
-    scene_ = scene;
+    scene_ = std::move(scene);
 }
 
-Scene* RenderEngine::scene() const
+raw_ptr<Scene> RenderEngine::scene() const
 {
     return scene_.get();
 }
 
-void RenderEngine::setCamera(Camera* camera)
+void RenderEngine::setCamera(intrusive_ptr<Camera> camera)
 {
-    camera_ = camera;
-    main_pass_->setCamera(camera);
+    camera_ = std::move(camera);
+    main_pass_->setCamera(camera_.get());
 }
 
-Camera* RenderEngine::camera() const
+raw_ptr<Camera> RenderEngine::camera() const
 {
     return camera_.get();
 }
 
-void RenderEngine::setMainPass(RenderPass* pass)
+void RenderEngine::setMainPass(intrusive_ptr<RenderPass> pass)
 {
-    main_pass_ = pass;
+    main_pass_ = std::move(pass);
 }
 
-RenderPass* RenderEngine::mainPass() const
+raw_ptr<RenderPass> RenderEngine::mainPass() const
 {
     return main_pass_.get();
 }
 
-void RenderEngine::setCameraManipulator(CameraManipulator* manipulator)
+void RenderEngine::setCameraManipulator(intrusive_ptr<CameraManipulator> manipulator)
 {
-    camera_manipulator_ = manipulator;
+    camera_manipulator_ = std::move(manipulator);
 }
 
-CameraManipulator* RenderEngine::cameraManipulator() const
+raw_ptr<CameraManipulator> RenderEngine::cameraManipulator() const
 {
-    return camera_manipulator_;
+    return camera_manipulator_.get();
 }
 
 void RenderEngine::pushEvent(const vine::window::MouseEvent& event)

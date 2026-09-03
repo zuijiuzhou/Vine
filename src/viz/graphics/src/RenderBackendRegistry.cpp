@@ -61,7 +61,7 @@ RenderBackendRegistry& RenderBackendRegistry::instance()
     return registry;
 }
 
-void RenderBackendRegistry::registerFactory(RenderBackendFactory* factory)
+void RenderBackendRegistry::registerFactory(raw_ptr<RenderBackendFactory> factory)
 {
     if (factory == nullptr) {
         return;
@@ -70,8 +70,9 @@ void RenderBackendRegistry::registerFactory(RenderBackendFactory* factory)
     d->factories[factory->name()] = factory;
 }
 
-vine::intrusive_ptr<RenderBackend> RenderBackendRegistry::create(const String& name, Scene* scene,
-                                                                 Camera* camera) const
+vine::intrusive_ptr<RenderBackend> RenderBackendRegistry::create(const String& name,
+                                                                 raw_ptr<Scene> scene,
+                                                                 raw_ptr<Camera> camera) const
 {
     std::lock_guard<std::mutex> lock(d->mutex);
     const auto it = d->factories.find(name);

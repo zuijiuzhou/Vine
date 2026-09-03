@@ -5,6 +5,7 @@
 #include <vine/Object.hpp>
 #include <vine/RefCounted.hpp>
 #include <vine/String.hpp>
+#include <vine/raw_ptr.hpp>
 
 #include <vine/math/Rect3.hpp>
 
@@ -40,13 +41,15 @@ class V_GRAPHICS_API Drawable : public Object, public RefCounted<Drawable> {
     Aabbd boundingBox() const;
 
     /** @brief Gets the bound material. */
-    Material* material() const;
+    raw_ptr<Material> material() const;
 
     /** @brief Sets the bound material.
      *
+     * The drawable keeps a reference to the material.
+     *
      * @param m Material, or nullptr to clear.
      */
-    void setMaterial(Material* m);
+    void setMaterial(intrusive_ptr<Material> m);
 
     /** @brief Returns whether the drawable is rendered. */
     bool isVisible() const;

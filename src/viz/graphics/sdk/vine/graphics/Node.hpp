@@ -7,6 +7,7 @@
 #include <vine/String.hpp>
 #include <vine/math/Matrix4x4.hpp>
 #include <vine/math/Rect3.hpp>
+#include <vine/raw_ptr.hpp>
 #include <vector>
 
 #include "Drawable.hpp"
@@ -65,36 +66,39 @@ class V_GRAPHICS_API Node : public Object, public RefCounted<Node> {
     Mat4d worldTransform() const;
 
     /** @brief Gets the parent node (null for root nodes). */
-    Node* parent() const;
+    raw_ptr<Node> parent() const;
 
     /** @brief Adds a child node.
      *
-     * @param child Child to add. Ownership is retained by this node.
+     * The node keeps a reference to the child.
+     *
+     * @param child Child to add.
      */
-    void addChild(Node* child);
+    void addChild(intrusive_ptr<Node> child);
 
     /** @brief Removes a child node.
      *
      * @param child Child to remove.
      */
-    void removeChild(Node* child);
+    void removeChild(raw_ptr<Node> child);
 
     /** @brief Gets all child nodes. */
     std::vector<intrusive_ptr<Node>> children() const;
 
     /** @brief Adds a drawable to this node.
      *
-     * A node can hold multiple drawables, like osg::Geode.
+     * A node can hold multiple drawables, like osg::Geode. The node keeps a
+     * reference to the drawable.
      *
      * @param drawable Drawable to attach.
      */
-    void addDrawable(Drawable* drawable);
+    void addDrawable(intrusive_ptr<Drawable> drawable);
 
     /** @brief Removes a drawable from this node.
      *
      * @param drawable Drawable to detach.
      */
-    void removeDrawable(Drawable* drawable);
+    void removeDrawable(raw_ptr<Drawable> drawable);
 
     /** @brief Gets all drawables attached to this node. */
     std::vector<DrawablePtr> drawables() const;
@@ -107,7 +111,7 @@ class V_GRAPHICS_API Node : public Object, public RefCounted<Node> {
     bool visible_ = true;
     float opacity_ = 1.0f;
     Mat4d local_;
-    Node* parent_ = nullptr;
+    raw_ptr<Node> parent_ = nullptr;
     std::vector<intrusive_ptr<Node>> children_;
     std::vector<DrawablePtr> drawables_;
 };

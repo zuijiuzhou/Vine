@@ -3,6 +3,7 @@
 #include "graphics_global.hpp"
 
 #include <vine/intrusive_ptr.hpp>
+#include <vine/raw_ptr.hpp>
 #include <vine/geometry/Shape.hpp>
 #include <cstddef>
 
@@ -23,13 +24,15 @@ class V_GRAPHICS_API Geometry : public Drawable {
 
   public:
     /** @brief Gets the associated shape (may be null). */
-    const vine::geometry::Shape* shape() const;
+    raw_ptr<const vine::geometry::Shape> shape() const;
 
     /** @brief Sets the associated shape.
      *
+     * The geometry keeps a reference to the shape.
+     *
      * @param shape Shape to render, or nullptr to clear.
      */
-    void setShape(vine::geometry::Shape* shape);
+    void setShape(intrusive_ptr<vine::geometry::Shape> shape);
 
     /** @brief Gets the triangle count (0 when not a mesh shape). */
     std::size_t triangleCount() const;

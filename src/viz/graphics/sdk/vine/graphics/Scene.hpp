@@ -4,6 +4,7 @@
 #include <vine/Object.hpp>
 #include <vine/RefCounted.hpp>
 #include <vine/intrusive_ptr.hpp>
+#include <vine/raw_ptr.hpp>
 #include <vine/String.hpp>
 #include <vector>
 
@@ -51,15 +52,17 @@ class V_GRAPHICS_API Scene : public Object, public RefCounted<Scene> {
 
     /** @brief Adds a root-level node.
      *
-     * @param node Node to add. Ownership is retained by the caller.
+     * The scene keeps a reference to the node.
+     *
+     * @param node Node to add.
      */
-    void addNode(Node* node);
+    void addNode(intrusive_ptr<Node> node);
 
     /** @brief Removes a root-level node.
      *
      * @param node Node to remove.
      */
-    void removeNode(Node* node);
+    void removeNode(raw_ptr<Node> node);
 
     /** @brief Gets all root-level nodes. */
     std::vector<NodePtr> nodes() const;
@@ -82,7 +85,7 @@ class V_GRAPHICS_API Scene : public Object, public RefCounted<Scene> {
      * @param camera Camera used for culling/ordering.
      * @return Collected render commands.
      */
-    std::vector<RenderCommand> collectRenderCommands(const Camera* camera) const;
+    std::vector<RenderCommand> collectRenderCommands(raw_ptr<const Camera> camera) const;
 
   private:
     String name_;

@@ -2,6 +2,8 @@
 
 #include "CameraManipulator.hpp"
 
+#include <vine/raw_ptr.hpp>
+
 V_GRAPHICS_NS_BEGIN
 
 class Scene;
@@ -41,7 +43,7 @@ class V_GRAPHICS_API OrbitCameraManipulator : public CameraManipulator {
      * @param scene  Optional scene used for ray picking, anchor fallback and
      *               fitToScreen(). May be null (no picking / scene centre).
      */
-    explicit OrbitCameraManipulator(Camera* camera, Scene* scene = nullptr);
+    explicit OrbitCameraManipulator(raw_ptr<Camera> camera, raw_ptr<Scene> scene = nullptr);
 
     /** @brief Destroys the manipulator. */
     ~OrbitCameraManipulator() override;
@@ -181,10 +183,10 @@ class V_GRAPHICS_API OrbitCameraManipulator : public CameraManipulator {
      *
      * @param scene Scene, or null to disable scene features.
      */
-    void setScene(Scene* scene);
+    void setScene(raw_ptr<Scene> scene);
 
     /** @brief Gets the bound scene (may be null). */
-    Scene* scene() const;
+    raw_ptr<Scene> scene() const;
 
     /** @brief Ray-picks the scene under a screen point.
      *
@@ -265,7 +267,7 @@ class V_GRAPHICS_API OrbitCameraManipulator : public CameraManipulator {
 
     // ---- State ----
 
-    Scene* scene_ = nullptr;
+    raw_ptr<Scene> scene_ = nullptr;
 
     Vec3d center_{ 0.0, 0.0, 0.0 };
     double distance_ = 10.0;

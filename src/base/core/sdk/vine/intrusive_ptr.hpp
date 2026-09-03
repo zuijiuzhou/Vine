@@ -49,6 +49,16 @@ class intrusive_ptr {
     intrusive_ptr() noexcept = default;
 
     /**
+     * @brief Constructs a null pointer from nullptr.
+     *
+     * Allows passing nullptr to functions taking an owning intrusive_ptr
+     * parameter (e.g. to clear a slot), mirroring std smart pointers.
+     */
+    intrusive_ptr(std::nullptr_t) noexcept
+      : px_(nullptr)
+    {}
+
+    /**
      * @brief Takes ownership of p and adds a reference.
      *
      * @param p Raw pointer to adopt, or nullptr.

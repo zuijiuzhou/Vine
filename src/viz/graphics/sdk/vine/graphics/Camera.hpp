@@ -3,19 +3,19 @@
 
 #include "Ray.hpp"
 
-#include <vine/intrusive_ptr.hpp>
 #include <vine/Object.hpp>
 #include <vine/RefCounted.hpp>
 #include <vine/String.hpp>
+#include <vine/intrusive_ptr.hpp>
 #include <vine/math/Matrix4x4.hpp>
 #include <vine/math/Vector2.hpp>
 #include <vine/math/Vector3.hpp>
 
 V_GRAPHICS_NS_BEGIN
 
-using vine::math::Vec3d;
-using vine::math::Vec2d;
 using vine::math::Mat4d;
+using vine::math::Vec2d;
+using vine::math::Vec3d;
 
 /**
  * @brief Camera class managing view and projection matrices.
@@ -29,9 +29,10 @@ class V_GRAPHICS_API Camera : public Object, public RefCounted<Camera> {
     V_OBJECT_META_DECL;
 
   public:
-    enum class ProjectionType {
-        Perspective,    ///< Perspective projection.
-        Orthographic,   ///< Orthographic projection.
+    enum class ProjectionType
+    {
+        Perspective,  ///< Perspective projection.
+        Orthographic, ///< Orthographic projection.
     };
 
   public:
@@ -74,8 +75,7 @@ class V_GRAPHICS_API Camera : public Object, public RefCounted<Camera> {
      * @param zNear  Near clipping plane distance.
      * @param zFar   Far clipping plane distance.
      */
-    void setProjectionMatrixAsOrtho(double left, double right, double bottom, double top,
-                                    double zNear, double zFar);
+    void setProjectionMatrixAsOrtho(double left, double right, double bottom, double top, double zNear, double zFar);
 
     /** @brief Gets the camera eye position (last set via setViewMatrixAsLookAt). */
     Vec3d eye() const;
@@ -116,18 +116,18 @@ class V_GRAPHICS_API Camera : public Object, public RefCounted<Camera> {
     Ray screenToWorldRay(const Vec2d& screenPos) const;
 
   private:
-    String name_;
-    Mat4d view_{ Mat4d() };
-    Mat4d projection_{ Mat4d() };
+    String         name_;
+    Mat4d          view_{ Mat4d() };
+    Mat4d          projection_{ Mat4d() };
     ProjectionType projection_type_ = ProjectionType::Perspective;
     // Copy of the last look-at parameters, used for ray generation.
     Vec3d eye_{ 0.0, 0.0, 5.0 };
     Vec3d center_{ 0.0, 0.0, 0.0 };
     Vec3d up_{ 0.0, 1.0, 0.0 };
     // Copy of the last projection parameters, used for queries.
-    double near_plane_ = 0.1;
-    double far_plane_ = 1000.0;
-    double fov_ = 45.0;
+    double near_plane_   = 0.1;
+    double far_plane_    = 1000.0;
+    double fov_          = 45.0;
     double aspect_ratio_ = 1.0;
     double ortho_height_ = 10.0;
 };

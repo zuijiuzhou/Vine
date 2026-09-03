@@ -2,14 +2,14 @@
 
 V_GRAPHICS_NS_BEGIN
 
-CameraManipulator::CameraManipulator(Camera* camera)
+CameraManipulator::CameraManipulator(raw_ptr<Camera> camera)
   : camera_(camera)
 {
 }
 
 CameraManipulator::~CameraManipulator() = default;
 
-Camera* CameraManipulator::camera() const
+raw_ptr<Camera> CameraManipulator::camera() const
 {
     return camera_;
 }

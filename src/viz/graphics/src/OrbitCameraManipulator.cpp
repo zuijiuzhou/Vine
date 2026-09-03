@@ -30,7 +30,7 @@ Vec3d rotateAround(const Vec3d& v, const Vec3d& axis, double angle)
 
 }  // namespace
 
-OrbitCameraManipulator::OrbitCameraManipulator(Camera* camera, Scene* scene)
+OrbitCameraManipulator::OrbitCameraManipulator(raw_ptr<Camera> camera, raw_ptr<Scene> scene)
   : CameraManipulator(camera)
   , scene_(scene)
 {
@@ -279,12 +279,12 @@ double OrbitCameraManipulator::minDistance() const
     return min_distance_;
 }
 
-void OrbitCameraManipulator::setScene(Scene* scene)
+void OrbitCameraManipulator::setScene(raw_ptr<Scene> scene)
 {
     scene_ = scene;
 }
 
-Scene* OrbitCameraManipulator::scene() const
+raw_ptr<Scene> OrbitCameraManipulator::scene() const
 {
     return scene_;
 }

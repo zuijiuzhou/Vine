@@ -50,8 +50,7 @@ class V_GRAPHICS_API RenderBackend : public Object, public RefCounted<RenderBack
      * @param pass     The render pass to execute.
      * @param commands Render commands collected for the pass.
      */
-    virtual void executePass(const RenderPass* pass,
-                             const std::vector<RenderCommand>& commands) = 0;
+    virtual void executePass(const RenderPass* pass, const std::vector<RenderCommand>& commands) = 0;
 
     /** @brief Sets the active render target.
      *
@@ -64,8 +63,7 @@ class V_GRAPHICS_API RenderBackend : public Object, public RefCounted<RenderBack
      * @param commands Render commands to draw.
      * @param camera   Camera used for view/projection.
      */
-    virtual void render(const std::vector<RenderCommand>& commands,
-                        const Camera* camera) = 0;
+    virtual void render(const std::vector<RenderCommand>& commands, const Camera* camera) = 0;
 
     /** @brief Clears buffers.
      *
@@ -85,7 +83,10 @@ class V_GRAPHICS_API RenderBackend : public Object, public RefCounted<RenderBack
      *
      * @return The backend material manager, or nullptr.
      */
-    virtual MaterialManager* materialManager() { return nullptr; }
+    virtual MaterialManager* materialManager()
+    {
+        return nullptr;
+    }
 
     /** @brief Binds a host native window the backend may render into.
      *
@@ -95,14 +96,21 @@ class V_GRAPHICS_API RenderBackend : public Object, public RefCounted<RenderBack
      *
      * @param native_handle Native window handle (HWND on Windows), or nullptr.
      */
-    virtual void setWindowHandle(void* native_handle) { (void)native_handle; }
+    virtual void setWindowHandle(void* native_handle)
+    {
+        (void)native_handle;
+    }
 
     /** @brief Handles a change of the rendering surface size.
      *
      * @param width  New surface width in pixels.
      * @param height New surface height in pixels.
      */
-    virtual void resize(int width, int height) { (void)width; (void)height; }
+    virtual void resize(int width, int height)
+    {
+        (void)width;
+        (void)height;
+    }
 
     /** @brief Restricts subsequent drawing to a sub-rectangle of the surface.
      *
@@ -119,7 +127,10 @@ class V_GRAPHICS_API RenderBackend : public Object, public RefCounted<RenderBack
      */
     virtual void setViewport(int x, int y, int width, int height)
     {
-        (void)x; (void)y; (void)width; (void)height;
+        (void)x;
+        (void)y;
+        (void)width;
+        (void)height;
     }
 
     /** @brief Gets the native handle the backend is currently attached to.
@@ -133,7 +144,10 @@ class V_GRAPHICS_API RenderBackend : public Object, public RefCounted<RenderBack
      *
      * @return The attached native handle, or nullptr.
      */
-    virtual void* nativeHandle() const { return nullptr; }
+    virtual void* nativeHandle() const
+    {
+        return nullptr;
+    }
 
   protected:
     RenderBackend() = default;

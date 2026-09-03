@@ -1,7 +1,9 @@
 #pragma once
 #include "graphics_global.hpp"
 
+#include <vine/RefCounted.hpp>
 #include <vine/math/Vector3.hpp>
+#include <vine/raw_ptr.hpp>
 #include <vine/window/InputEvent.hpp>
 #include <vine/window/KeyCode.hpp>
 #include <vine/window/MouseButton.hpp>
@@ -21,8 +23,12 @@ class Camera;
  * are driven either directly through their motion methods or through the
  * window input callbacks (onMousePress/onMouseMove/onScroll/onKeyDown...).
  * A RenderEngine typically forwards vine::window events to these callbacks.
+ *
+ * CameraManipulator is reference counted (RefCounted<CameraManipulator>): a
+ * RenderEngine that drives it keeps an intrusive_ptr so the manipulator stays
+ * alive as long as it is attached. The camera must outlive the manipulator.
  */
-class V_GRAPHICS_API CameraManipulator {
+class V_GRAPHICS_API CameraManipulator : public RefCounted<CameraManipulator> {
   public:
     enum class Mode {
         Orbit,        ///< Orbit around a target point.
@@ -43,7 +49,7 @@ class V_GRAPHICS_API CameraManipulator {
     virtual ~CameraManipulator();
 
     /** @brief Gets the camera being manipulated. */
-    Camera* camera() const;
+    raw_ptr<Camera> camera() const;
 
     /** @brief Gets the current interaction mode. */
     Mode mode() const;
@@ -110,11 +116,11 @@ class V_GRAPHICS_API CameraManipulator {
      *
      * @param camera Camera to manipulate. Must outlive the manipulator.
      */
-    explicit CameraManipulator(Camera* camera);
+    explicit CameraManipulator(raw_ptr<Camera> camera);
 
     // ---- State shared with derived classes ----
 
-    Camera* camera_ = nullptr;
+    raw_ptr<Camera> camera_ = nullptr;
     Mode mode_ = Mode::Orbit;
 };
 

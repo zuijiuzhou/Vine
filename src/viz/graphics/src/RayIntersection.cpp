@@ -397,7 +397,7 @@ void collectNodeHits(const Ray& ray, const Node* node,
 
 }  // namespace
 
-RayIntersectionResult RayIntersection::intersect(const Ray& ray, Geometry* geometry,
+RayIntersectionResult RayIntersection::intersect(const Ray& ray, raw_ptr<Geometry> geometry,
                                                  const Mat4d& world)
 {
     RayIntersectionResult result;
@@ -420,7 +420,8 @@ RayIntersectionResult RayIntersection::intersect(const Ray& ray, Geometry* geome
     return result;
 }
 
-std::vector<RayIntersectionResult> RayIntersection::intersect(const Ray& ray, Geometry* geometry,
+std::vector<RayIntersectionResult> RayIntersection::intersect(const Ray& ray,
+                                                              raw_ptr<Geometry> geometry,
                                                               const Mat4d& world, Mode mode)
 {
     std::vector<RayIntersectionResult> results;
@@ -447,7 +448,7 @@ std::vector<RayIntersectionResult> RayIntersection::intersect(const Ray& ray, Ge
     return results;
 }
 
-RayIntersectionResult RayIntersection::intersectScene(const Ray& ray, Scene* scene)
+RayIntersectionResult RayIntersection::intersectScene(const Ray& ray, raw_ptr<Scene> scene)
 {
     RayIntersectionResult best;
     if (scene == nullptr) {
@@ -459,7 +460,8 @@ RayIntersectionResult RayIntersection::intersectScene(const Ray& ray, Scene* sce
     return best;
 }
 
-std::vector<RayIntersectionResult> RayIntersection::intersectSceneAll(const Ray& ray, Scene* scene,
+std::vector<RayIntersectionResult> RayIntersection::intersectSceneAll(const Ray& ray,
+                                                                      raw_ptr<Scene> scene,
                                                                       Mode mode)
 {
     std::vector<RayIntersectionResult> results;

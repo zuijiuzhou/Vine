@@ -55,7 +55,12 @@ Object
 
 ## 设计特点
 
-✓ **引用计数**：所有核心类继承 `RefCounted<T>`，用 `intrusive_ptr` 管理
+✓ **引用计数**：所有核心类（含 `CameraManipulator`）继承 `RefCounted<T>`，用
+  `intrusive_ptr` 管理
+✓ **借用/所有权分界**：getter 返回与“不 retain”的借用入参用 `vine::raw_ptr<T>`；
+  会 retain（存入 owning 字段/容器）的 setter/add 入参用 `intrusive_ptr<T>`
+  （by value + std::move，如 `setMaterial`、`Node::addChild`、`setScene`）；
+  引擎持有操纵器经 `setCameraManipulator(intrusive_ptr<...>)`，`cameraManipulator()` 返 `raw_ptr`
 ✓ **Pimpl**：数据隐藏，二进制兼容性
 ✓ **无环依赖**：只依赖 Core、Global、Geometry；不反向依赖
 ✓ **后端抽象**：`RenderBackend` 接口支持多个实现（OpenGL/Vulkan）

@@ -58,7 +58,7 @@ VsgMaterialManager::~VsgMaterialManager()
 }
 
 ::vsg::ref_ptr<::vsg::PhongMaterialValue> VsgMaterialManager::getOrCreate(
-    vine::graphics::Material* material)
+    vine::raw_ptr<vine::graphics::Material> material)
 {
     auto it = d->cache.find(material);
     if (it != d->cache.end()) {
@@ -69,7 +69,7 @@ VsgMaterialManager::~VsgMaterialManager()
     return phong;
 }
 
-void VsgMaterialManager::updateMaterial(vine::graphics::Material* material)
+void VsgMaterialManager::updateMaterial(vine::raw_ptr<vine::graphics::Material> material)
 {
     if (material == nullptr) {
         return;
@@ -77,7 +77,7 @@ void VsgMaterialManager::updateMaterial(vine::graphics::Material* material)
     d->cache[material] = makePhongMaterial(material);
 }
 
-void VsgMaterialManager::releaseMaterial(vine::graphics::Material* material)
+void VsgMaterialManager::releaseMaterial(vine::raw_ptr<vine::graphics::Material> material)
 {
     d->cache.erase(material);
 }

@@ -4,6 +4,7 @@
 #include <vine/Object.hpp>
 #include <vine/RefCounted.hpp>
 #include <vine/intrusive_ptr.hpp>
+#include <vine/raw_ptr.hpp>
 
 #include "RenderPass.hpp"
 
@@ -59,7 +60,7 @@ class V_GRAPHICS_API Overlay : public Object, public RefCounted<Overlay> {
     virtual void update(double dt);
 
     /** @brief Gets the pass that draws this overlay. */
-    RenderPass* pass() const;
+    raw_ptr<RenderPass> pass() const;
 
     /** @brief Sets the pass that draws this overlay.
      *
@@ -67,10 +68,10 @@ class V_GRAPHICS_API Overlay : public Object, public RefCounted<Overlay> {
      *
      * @param pass Render pass, or null to clear.
      */
-    void setPass(RenderPass* pass);
+    void setPass(intrusive_ptr<RenderPass> pass);
 
     /** @brief Gets the content scene drawn by this overlay. */
-    Scene* content() const;
+    raw_ptr<Scene> content() const;
 
     /** @brief Sets the content scene drawn by this overlay.
      *
@@ -78,7 +79,7 @@ class V_GRAPHICS_API Overlay : public Object, public RefCounted<Overlay> {
      *
      * @param content Content scene, or null to clear.
      */
-    void setContent(Scene* content);
+    void setContent(intrusive_ptr<Scene> content);
 
     /** @brief Gets the draw order relative to other overlays (lower first). */
     int zOrder() const;
@@ -107,7 +108,7 @@ class V_GRAPHICS_API Overlay : public Object, public RefCounted<Overlay> {
      *
      * @param camera Source camera, or null to disable mirroring.
      */
-    void setSourceCamera(Camera* camera);
+    void setSourceCamera(raw_ptr<Camera> camera);
 
     /** @brief Called by the engine when the rendering surface is resized.
      *
@@ -126,7 +127,7 @@ class V_GRAPHICS_API Overlay : public Object, public RefCounted<Overlay> {
     int z_order_ = 0;
     bool visible_ = true;
     MirrorMode mirror_mode_ = MirrorMode::None;
-    Camera* source_camera_ = nullptr;  ///< Non-owning source camera.
+    raw_ptr<Camera> source_camera_ = nullptr;  ///< Non-owning source camera.
 };
 
 using OverlayPtr = intrusive_ptr<Overlay>;

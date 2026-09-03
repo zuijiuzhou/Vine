@@ -22,22 +22,22 @@ void RenderPass::setName(const String& name)
     name_ = name;
 }
 
-RenderTarget* RenderPass::renderTarget() const
+raw_ptr<RenderTarget> RenderPass::renderTarget() const
 {
     return render_target_;
 }
 
-void RenderPass::setRenderTarget(RenderTarget* target)
+void RenderPass::setRenderTarget(raw_ptr<RenderTarget> target)
 {
     render_target_ = target;
 }
 
-Camera* RenderPass::camera() const
+raw_ptr<Camera> RenderPass::camera() const
 {
     return camera_;
 }
 
-void RenderPass::setCamera(Camera* camera)
+void RenderPass::setCamera(raw_ptr<Camera> camera)
 {
     camera_ = camera;
 }
@@ -99,7 +99,7 @@ void RenderPass::clearViewport()
     has_viewport_ = false;
 }
 
-void RenderPass::execute(Scene* scene, RenderBackend* backend)
+void RenderPass::execute(raw_ptr<Scene> scene, raw_ptr<RenderBackend> backend)
 {
     if (backend == nullptr || scene == nullptr) {
         return;

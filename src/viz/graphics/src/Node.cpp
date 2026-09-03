@@ -97,25 +97,25 @@ Mat4d Node::worldTransform() const
     return local_;
 }
 
-Node* Node::parent() const
+raw_ptr<Node> Node::parent() const
 {
     return parent_;
 }
 
-void Node::addChild(Node* child)
+void Node::addChild(intrusive_ptr<Node> child)
 {
-    if (child == nullptr || child == this) {
+    if (child == nullptr || child.get() == this) {
         return;
     }
     // Detach from an existing parent.
     if (child->parent_ != nullptr) {
-        child->parent_->removeChild(child);
+        child->parent_->removeChild(child.get());
     }
     child->parent_ = this;
-    children_.emplace_back(child);
+    children_.emplace_back(std::move(child));
 }
 
-void Node::removeChild(Node* child)
+void Node::removeChild(raw_ptr<Node> child)
 {
     if (child == nullptr) {
         return;
@@ -133,15 +133,15 @@ std::vector<NodePtr> Node::children() const
     return children_;
 }
 
-void Node::addDrawable(Drawable* drawable)
+void Node::addDrawable(intrusive_ptr<Drawable> drawable)
 {
     if (drawable == nullptr) {
         return;
     }
-    drawables_.emplace_back(drawable);
+    drawables_.emplace_back(std::move(drawable));
 }
 
-void Node::removeDrawable(Drawable* drawable)
+void Node::removeDrawable(raw_ptr<Drawable> drawable)
 {
     if (drawable == nullptr) {
         return;

@@ -5,6 +5,7 @@
 #include <vector>
 
 #include <vine/String.hpp>
+#include <vine/raw_ptr.hpp>
 
 #include "RenderBackend.hpp"
 
@@ -86,7 +87,7 @@ class V_GRAPHICS_API RenderBackendFactory {
      * @param camera Camera used by the backend (must outlive the backend).
      * @return Newly created backend; the caller owns the returned reference.
      */
-    virtual vine::intrusive_ptr<RenderBackend> create(Scene* scene, Camera* camera) = 0;
+    virtual vine::intrusive_ptr<RenderBackend> create(raw_ptr<Scene> scene, raw_ptr<Camera> camera) = 0;
 };
 
 /**
@@ -102,7 +103,7 @@ class V_GRAPHICS_API RenderBackendRegistry {
     /** @brief Read-only snapshot of a registered backend factory. */
     struct Entry {
         RenderBackendInfo info;        ///< Backend metadata (name, description, ...).
-        RenderBackendFactory* factory; ///< Registered factory (not owned by the registry).
+        raw_ptr<RenderBackendFactory> factory;  ///< Registered factory (not owned by the registry).
     };
 
     /** @brief Gets the process-wide registry singleton. */
@@ -114,7 +115,7 @@ class V_GRAPHICS_API RenderBackendRegistry {
      *
      * @param factory Factory to register.
      */
-    void registerFactory(RenderBackendFactory* factory);
+    void registerFactory(raw_ptr<RenderBackendFactory> factory);
 
     /** @brief Creates a backend by name.
      *
@@ -124,7 +125,8 @@ class V_GRAPHICS_API RenderBackendRegistry {
      * @return New backend, or null when no factory with that name is
      *         registered.
      */
-    vine::intrusive_ptr<RenderBackend> create(const String& name, Scene* scene, Camera* camera) const;
+    vine::intrusive_ptr<RenderBackend> create(const String& name, raw_ptr<Scene> scene,
+                                              raw_ptr<Camera> camera) const;
 
     /** @brief Gets the names of all registered backends. */
     std::vector<String> names() const;

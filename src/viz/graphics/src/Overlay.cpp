@@ -17,24 +17,24 @@ Overlay::Overlay()
 
 Overlay::~Overlay() = default;
 
-RenderPass* Overlay::pass() const
+raw_ptr<RenderPass> Overlay::pass() const
 {
     return pass_.get();
 }
 
-void Overlay::setPass(RenderPass* pass)
+void Overlay::setPass(intrusive_ptr<RenderPass> pass)
 {
-    pass_ = pass;
+    pass_ = std::move(pass);
 }
 
-Scene* Overlay::content() const
+raw_ptr<Scene> Overlay::content() const
 {
     return content_.get();
 }
 
-void Overlay::setContent(Scene* content)
+void Overlay::setContent(intrusive_ptr<Scene> content)
 {
-    content_ = content;
+    content_ = std::move(content);
 }
 
 int Overlay::zOrder() const
@@ -68,7 +68,7 @@ Overlay::MirrorMode Overlay::mirrorMode() const
     return mirror_mode_;
 }
 
-void Overlay::setSourceCamera(Camera* camera)
+void Overlay::setSourceCamera(raw_ptr<Camera> camera)
 {
     source_camera_ = camera;
     applyMirror();

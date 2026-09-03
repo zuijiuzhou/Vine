@@ -2,6 +2,7 @@
 #include "vsg_global.hpp"
 
 #include <vine/graphics/RenderBackendRegistry.hpp>
+#include <vine/raw_ptr.hpp>
 
 V_VSG_NS_BEGIN
 
@@ -31,8 +32,9 @@ class V_VSG_API VsgRenderBackendFactory : public vine::graphics::RenderBackendFa
      * @param camera Camera used by the backend.
      * @return New VsgRenderer; the caller owns it.
      */
-    vine::intrusive_ptr<vine::graphics::RenderBackend> create(vine::graphics::Scene* scene,
-                                                              vine::graphics::Camera* camera) override;
+    vine::intrusive_ptr<vine::graphics::RenderBackend> create(
+        vine::raw_ptr<vine::graphics::Scene> scene,
+        vine::raw_ptr<vine::graphics::Camera> camera) override;
 };
 
 V_VSG_NS_END

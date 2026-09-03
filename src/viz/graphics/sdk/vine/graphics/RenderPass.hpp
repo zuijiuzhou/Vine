@@ -4,6 +4,7 @@
 #include <vine/intrusive_ptr.hpp>
 #include <vine/Object.hpp>
 #include <vine/RefCounted.hpp>
+#include <vine/raw_ptr.hpp>
 #include <vine/Color.hpp>
 #include <string>
 #include <vector>
@@ -36,19 +37,19 @@ class V_GRAPHICS_API RenderPass : public Object, public RefCounted<RenderPass> {
     void setName(const String& name);
 
     /** @brief Gets the associated render target. */
-    RenderTarget* renderTarget() const;
+    raw_ptr<RenderTarget> renderTarget() const;
 
     /** @brief Sets the render target.
      *
      * @param target Render target to render into.
      */
-    void setRenderTarget(RenderTarget* target);
+    void setRenderTarget(raw_ptr<RenderTarget> target);
 
     /** @brief Gets the camera used by this pass. */
-    Camera* camera() const;
+    raw_ptr<Camera> camera() const;
 
     /** @brief Sets the camera used by this pass. */
-    void setCamera(Camera* camera);
+    void setCamera(raw_ptr<Camera> camera);
 
     /** @brief Gets the clear color. */
     Color clearColor() const;
@@ -109,12 +110,12 @@ class V_GRAPHICS_API RenderPass : public Object, public RefCounted<RenderPass> {
      * @param scene   Scene containing drawables.
      * @param backend Backend to render with.
      */
-    void execute(Scene* scene, RenderBackend* backend);
+    void execute(raw_ptr<Scene> scene, raw_ptr<RenderBackend> backend);
 
   private:
     String name_;
-    RenderTarget* render_target_ = nullptr;
-    Camera* camera_ = nullptr;
+    raw_ptr<RenderTarget> render_target_ = nullptr;
+    raw_ptr<Camera> camera_ = nullptr;
     Color clear_color_{ 51, 51, 51, 255 };
     bool clear_depth_ = true;
     bool clear_enabled_ = true;

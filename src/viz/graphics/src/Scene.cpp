@@ -143,7 +143,8 @@ void collectNodeCommands(const Node* node, const Frustum& frustum, float opacity
         const float material_opacity = material != nullptr ? material->opacity() : 1.0f;
         const float effective = std::clamp(
             node_opacity * drawable->opacity() * material_opacity, 0.0f, 1.0f);
-        auto& cmd = out.emplace_back(drawable.get(), material, node->worldTransform());
+        auto& cmd = out.emplace_back(drawable, intrusive_ptr<Material>(material),
+                                     node->worldTransform());
         cmd.opacity = effective;
         cmd.isTransparent = effective < 1.0f - 1e-6f;
     }
@@ -188,15 +189,15 @@ void Scene::setOpacity(float opacity)
     opacity_ = opacity;
 }
 
-void Scene::addNode(Node* node)
+void Scene::addNode(intrusive_ptr<Node> node)
 {
     if (node == nullptr) {
         return;
     }
-    nodes_.emplace_back(node);
+    nodes_.emplace_back(std::move(node));
 }
 
-void Scene::removeNode(Node* node)
+void Scene::removeNode(raw_ptr<Node> node)
 {
     if (node == nullptr) {
         return;
@@ -247,7 +248,7 @@ Aabbd Scene::boundingBox() const
     return box;
 }
 
-std::vector<RenderCommand> Scene::collectRenderCommands(const Camera* camera) const
+std::vector<RenderCommand> Scene::collectRenderCommands(raw_ptr<const Camera> camera) const
 {
     std::vector<RenderCommand> commands;
     if (camera == nullptr || !visible_) {

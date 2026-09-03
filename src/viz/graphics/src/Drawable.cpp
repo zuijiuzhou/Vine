@@ -25,14 +25,14 @@ Aabbd Drawable::boundingBox() const
     return computeBoundingBox();
 }
 
-Material* Drawable::material() const
+raw_ptr<Material> Drawable::material() const
 {
     return material_.get();
 }
 
-void Drawable::setMaterial(Material* m)
+void Drawable::setMaterial(intrusive_ptr<Material> m)
 {
-    material_ = m;
+    material_ = std::move(m);
 }
 
 bool Drawable::isVisible() const

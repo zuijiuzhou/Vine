@@ -2,17 +2,20 @@
 #include "vsg_global.hpp"
 
 #include <vine/graphics/RenderBackend.hpp>
+#include <vine/raw_ptr.hpp>
 
 #include <vsg/app/Viewer.h>
 #include <vsg/core/ref_ptr.h>
 
 namespace vine::graphics
 {
+
 class Scene;
 class Camera;
 class RenderPass;
 struct RenderCommand;
-}
+
+} // namespace vine::graphics
 
 V_VSG_NS_BEGIN
 
@@ -32,7 +35,7 @@ class V_VSG_API VsgRenderer : public vine::graphics::RenderBackend {
      * @param scene  Vine scene to render (must outlive the renderer).
      * @param camera Vine camera used for the view.
      */
-    VsgRenderer(vine::graphics::Scene* scene, vine::graphics::Camera* camera);
+    VsgRenderer(vine::raw_ptr<vine::graphics::Scene> scene, vine::raw_ptr<vine::graphics::Camera> camera);
     ~VsgRenderer() override;
 
     // ---- RenderBackend interface ----
@@ -57,8 +60,7 @@ class V_VSG_API VsgRenderer : public vine::graphics::RenderBackend {
      * @param pass     The pass to execute (clear state applied).
      * @param commands Render commands collected for the pass.
      */
-    void executePass(const vine::graphics::RenderPass* pass,
-                     const std::vector<vine::graphics::RenderCommand>& commands) override;
+    void executePass(vine::raw_ptr<const vine::graphics::RenderPass> pass, const std::vector<vine::graphics::RenderCommand>& commands) override;
 
     /** @brief Sets the render target.
      *
@@ -67,7 +69,7 @@ class V_VSG_API VsgRenderer : public vine::graphics::RenderBackend {
      *
      * @param target Render target, or nullptr for the default framebuffer.
      */
-    void setRenderTarget(vine::graphics::RenderTarget* target) override;
+    void setRenderTarget(vine::raw_ptr<vine::graphics::RenderTarget> target) override;
 
     /** @brief Renders the current frame from the render command stream.
      *
@@ -77,8 +79,7 @@ class V_VSG_API VsgRenderer : public vine::graphics::RenderBackend {
      * @param commands Render commands for this frame.
      * @param camera   Camera used for view/projection.
      */
-    void render(const std::vector<vine::graphics::RenderCommand>& commands,
-                const vine::graphics::Camera* camera) override;
+    void render(const std::vector<vine::graphics::RenderCommand>& commands, vine::raw_ptr<const vine::graphics::Camera> camera) override;
 
     /** @brief Sets the clear color and depth-clear state. */
     void clear(const vine::Color& backgroundColor, bool clearDepth) override;
@@ -93,7 +94,7 @@ class V_VSG_API VsgRenderer : public vine::graphics::RenderBackend {
      *
      * @return The VSG material manager.
      */
-    vine::graphics::MaterialManager* materialManager() override;
+    vine::raw_ptr<vine::graphics::MaterialManager> materialManager() override;
 
     /** @brief Binds a host native window; when present, the renderer renders
      * into that window's native surface instead of creating its own window.
@@ -152,9 +153,8 @@ class V_VSG_API VsgRenderer : public vine::graphics::RenderBackend {
 
   private:
     /** @brief Renders an overlay pass into its own sub-viewport RenderGraph. */
-    void renderOverlayPass(const std::vector<vine::graphics::RenderCommand>& commands,
-                           const vine::graphics::Camera* camera, int vp_x, int vp_y,
-                           int vp_w, int vp_h);
+    void
+    renderOverlayPass(const std::vector<vine::graphics::RenderCommand>& commands, vine::raw_ptr<const vine::graphics::Camera> camera, int vp_x, int vp_y, int vp_w, int vp_h);
 
     /** @brief Records and presents the frame (once, when swapBuffers is called). */
     void submitFrame();

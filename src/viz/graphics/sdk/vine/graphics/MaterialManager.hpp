@@ -4,6 +4,7 @@
 #include <vine/intrusive_ptr.hpp>
 #include <vine/Object.hpp>
 #include <vine/RefCounted.hpp>
+#include <vine/raw_ptr.hpp>
 
 V_GRAPHICS_NS_BEGIN
 
@@ -35,13 +36,13 @@ class V_GRAPHICS_API MaterialManager : public Object, public RefCounted<Material
      *
      * @param material Material whose backend resource must be (re)built.
      */
-    virtual void updateMaterial(Material* material) = 0;
+    virtual void updateMaterial(raw_ptr<Material> material) = 0;
 
     /** @brief Releases the backend resource for a material.
      *
      * @param material Material whose backend resource is released.
      */
-    virtual void releaseMaterial(Material* material) = 0;
+    virtual void releaseMaterial(raw_ptr<Material> material) = 0;
 
     /** @brief Releases all cached backend resources. */
     virtual void clear() = 0;

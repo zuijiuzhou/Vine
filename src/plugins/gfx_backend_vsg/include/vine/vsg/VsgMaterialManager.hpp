@@ -2,6 +2,7 @@
 #include "vsg_global.hpp"
 
 #include <vine/graphics/MaterialManager.hpp>
+#include <vine/raw_ptr.hpp>
 
 #include <vsg/core/ref_ptr.h>
 #include <vsg/state/material.h>
@@ -35,14 +36,14 @@ class V_VSG_API VsgMaterialManager : public vine::graphics::MaterialManager {
      * @param material Vine material (may be null → default grey).
      * @return Cached Phong material value.
      */
-    ::vsg::ref_ptr<::vsg::PhongMaterialValue> getOrCreate(vine::graphics::Material* material);
+    ::vsg::ref_ptr<::vsg::PhongMaterialValue> getOrCreate(vine::raw_ptr<vine::graphics::Material> material);
 
   public:
     /** @brief Rebuilds the cached resource for a material. */
-    void updateMaterial(vine::graphics::Material* material) override;
+    void updateMaterial(vine::raw_ptr<vine::graphics::Material> material) override;
 
     /** @brief Releases the cached resource for a material. */
-    void releaseMaterial(vine::graphics::Material* material) override;
+    void releaseMaterial(vine::raw_ptr<vine::graphics::Material> material) override;
 
     /** @brief Releases all cached resources. */
     void clear() override;

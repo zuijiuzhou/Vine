@@ -5,13 +5,14 @@
 
 V_GRAPHICS_NS_BEGIN
 
-RenderCommand::RenderCommand(Drawable* d, Material* m, const Mat4d& model)
-  : drawable(d)
-  , material(m)
+RenderCommand::RenderCommand(intrusive_ptr<Drawable> d, intrusive_ptr<Material> m,
+                             const Mat4d& model)
+  : drawable(std::move(d))
+  , material(std::move(m))
   , modelMatrix(model)
 {
-    if (m != nullptr) {
-        opacity = m->opacity();
+    if (material != nullptr) {
+        opacity = material->opacity();
         if (opacity < 1.0f) {
             isTransparent = true;
         }

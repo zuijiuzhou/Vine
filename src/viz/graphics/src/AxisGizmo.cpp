@@ -175,7 +175,7 @@ void AxisGizmo::rebuild()
         mesh->setIndices(std::move(indices));
 
         auto geometry = intrusive_ptr<Geometry>(new Geometry());
-        geometry->setShape(mesh.get());
+        geometry->setShape(mesh);
 
         auto material = intrusive_ptr<Material>(new Material());
         material->setDiffuse(stick.color);
@@ -187,13 +187,13 @@ void AxisGizmo::rebuild()
         material->setAmbient(Colorf(1.0f, 1.0f, 1.0f, 1.0f));
         // Black specular avoids any white highlight.
         material->setSpecular(Colorf(0.0f, 0.0f, 0.0f, 1.0f));
-        geometry->setMaterial(material.get());
+        geometry->setMaterial(material);
 
         auto node = intrusive_ptr<Node>(new Node());
-        node->addDrawable(geometry.get());
-        scene->addNode(node.get());
+        node->addDrawable(geometry);
+        scene->addNode(node);
     }
-    setContent(scene.get());
+    setContent(scene);
 }
 
 V_GRAPHICS_NS_END

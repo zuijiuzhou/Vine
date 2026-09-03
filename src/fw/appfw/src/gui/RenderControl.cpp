@@ -307,7 +307,7 @@ struct RenderControl::Impl {
     vine::intrusive_ptr<vine::graphics::RenderEngine> engine;
     QWindow* surface = nullptr;
     QObject* surface_filter = nullptr;
-    vine::graphics::OrbitCameraManipulator* manipulator = nullptr;
+    vine::intrusive_ptr<vine::graphics::OrbitCameraManipulator> manipulator;
     bool wired = false;
     bool initialized = false;
     bool init_ok = false;
@@ -344,7 +344,6 @@ RenderControl::RenderControl()
 RenderControl::~RenderControl()
 {
     delete d->surface_filter;
-    delete d->manipulator;
     delete d;
 }
 

@@ -55,16 +55,16 @@ intrusive_ptr<vine::geometry::TriangleMesh> makeUnitTriangle()
  * @param name     Name assigned to the geometry drawable.
  * @return Node with one triangle drawable.
  */
-intrusive_ptr<Node> makeTriangleNode(const Vec3d& position, Material* material,
+intrusive_ptr<Node> makeTriangleNode(const Vec3d& position, intrusive_ptr<Material> material,
                                      const vine::String& name = {})
 {
     auto node = intrusive_ptr<Node>(new Node());
     auto geom = intrusive_ptr<Geometry>(new Geometry());
     auto mesh = makeUnitTriangle();
-    geom->setShape(mesh.get());
-    geom->setMaterial(material);
+    geom->setShape(mesh);
+    geom->setMaterial(std::move(material));
     geom->setName(name);
-    node->addDrawable(geom.get());
+    node->addDrawable(geom);
     node->setLocalTransform(vine::math::translate(position));
     return node;
 }
@@ -81,7 +81,7 @@ TEST(SceneTest, AddRemoveFind)
 
     auto node = intrusive_ptr<Node>(new Node());
     node->setName(u8"node1");
-    scene.addNode(node.get());
+    scene.addNode(node);
 
     EXPECT_EQ(scene.nodes().size(), 1u);
     auto found = scene.findNode(u8"node1");
@@ -105,9 +105,9 @@ TEST(SceneTest, BoundingBoxAggregates)
     auto node = intrusive_ptr<Node>(new Node());
     auto geom = intrusive_ptr<Geometry>(new Geometry());
     auto mesh = makeUnitTriangle();
-    geom->setShape(mesh.get());
-    node->addDrawable(geom.get());
-    scene.addNode(node.get());
+    geom->setShape(mesh);
+    node->addDrawable(geom);
+    scene.addNode(node);
 
     Aabbd box = scene.boundingBox();
     EXPECT_TRUE(box.isValid());
@@ -122,10 +122,10 @@ TEST(SceneTest, InvisibleNodeExcludedFromBoundingBox)
     auto node = intrusive_ptr<Node>(new Node());
     auto geom = intrusive_ptr<Geometry>(new Geometry());
     auto mesh = makeUnitTriangle();
-    geom->setShape(mesh.get());
-    node->addDrawable(geom.get());
+    geom->setShape(mesh);
+    node->addDrawable(geom);
     node->setVisible(false);
-    scene.addNode(node.get());
+    scene.addNode(node);
 
     Aabbd box = scene.boundingBox();
     EXPECT_TRUE(box.isEmpty());
@@ -150,8 +150,8 @@ TEST(SceneTest, CollectCommandsSortsOpaqueFrontToBack)
     // Nearer triangle (z=-2) and farther triangle (z=-5).
     auto near_node = makeTriangleNode(Vec3d(0, 0, -2), nullptr, u8"near");
     auto far_node = makeTriangleNode(Vec3d(0, 0, -5), nullptr, u8"far");
-    scene.addNode(far_node.get());
-    scene.addNode(near_node.get());
+    scene.addNode(far_node);
+    scene.addNode(near_node);
 
     Camera cam;
     setupLookAtCamera(cam);
@@ -171,12 +171,12 @@ TEST(SceneTest, CollectCommandsSortsTransparentBackToFrontAfterOpaque)
     trans_mat->setOpacity(0.5f);
 
     // Opaque far, transparent far, transparent near.
-    auto opaque_far = makeTriangleNode(Vec3d(0, 0, -10), opaque_mat.get(), u8"opaque-far");
-    auto trans_far = makeTriangleNode(Vec3d(0, 0, -6), trans_mat.get(), u8"trans-far");
-    auto trans_near = makeTriangleNode(Vec3d(0, 0, -2), trans_mat.get(), u8"trans-near");
-    scene.addNode(trans_near.get());
-    scene.addNode(opaque_far.get());
-    scene.addNode(trans_far.get());
+    auto opaque_far = makeTriangleNode(Vec3d(0, 0, -10), opaque_mat, u8"opaque-far");
+    auto trans_far = makeTriangleNode(Vec3d(0, 0, -6), trans_mat, u8"trans-far");
+    auto trans_near = makeTriangleNode(Vec3d(0, 0, -2), trans_mat, u8"trans-near");
+    scene.addNode(trans_near);
+    scene.addNode(opaque_far);
+    scene.addNode(trans_far);
 
     Camera cam;
     setupLookAtCamera(cam);
@@ -199,8 +199,8 @@ TEST(SceneTest, CollectCommandsCullsOutOfView)
     // A node far outside the frustum (behind the camera) must be culled.
     auto visible = makeTriangleNode(Vec3d(0, 0, -3), nullptr, u8"visible");
     auto behind = makeTriangleNode(Vec3d(0, 0, 100), nullptr, u8"behind");
-    scene.addNode(behind.get());
-    scene.addNode(visible.get());
+    scene.addNode(behind);
+    scene.addNode(visible);
 
     Camera cam;
     setupLookAtCamera(cam);
@@ -216,8 +216,8 @@ TEST(SceneTest, CollectCommandsCullsOffToTheSide)
     // Far off to the side, outside the horizontal FOV.
     auto visible = makeTriangleNode(Vec3d(0, 0, -3), nullptr, u8"visible");
     auto side = makeTriangleNode(Vec3d(50, 0, -3), nullptr, u8"side");
-    scene.addNode(side.get());
-    scene.addNode(visible.get());
+    scene.addNode(side);
+    scene.addNode(visible);
 
     Camera cam;
     setupLookAtCamera(cam);
@@ -231,7 +231,7 @@ TEST(SceneTest, CollectCommandsNullCameraYieldsEmpty)
 {
     Scene scene;
     auto node = makeTriangleNode(Vec3d(0, 0, -3), nullptr);
-    scene.addNode(node.get());
+    scene.addNode(node);
 
     auto commands = scene.collectRenderCommands(nullptr);
     EXPECT_TRUE(commands.empty());
@@ -240,7 +240,7 @@ TEST(SceneTest, CollectCommandsNullCameraYieldsEmpty)
 TEST(SceneTest, CollectCommandsHidesWholeScene)
 {
     Scene scene;
-    scene.addNode(makeTriangleNode(Vec3d(0, 0, -3), nullptr, u8"tri").get());
+    scene.addNode(makeTriangleNode(Vec3d(0, 0, -3), nullptr, u8"tri"));
     scene.setVisible(false);
 
     Camera cam;
@@ -255,8 +255,8 @@ TEST(SceneTest, CollectCommandsHidesNode)
     auto hidden = makeTriangleNode(Vec3d(0, 0, -3), nullptr, u8"hidden");
     auto shown = makeTriangleNode(Vec3d(0, 0, -5), nullptr, u8"shown");
     hidden->setVisible(false);
-    scene.addNode(hidden.get());
-    scene.addNode(shown.get());
+    scene.addNode(hidden);
+    scene.addNode(shown);
 
     Camera cam;
     setupLookAtCamera(cam);
@@ -270,16 +270,16 @@ TEST(SceneTest, CollectCommandsHidesDrawable)
     Scene scene;
     auto node = intrusive_ptr<Node>(new Node());
     auto g1 = intrusive_ptr<Geometry>(new Geometry());
-    g1->setShape(makeUnitTriangle().get());
+    g1->setShape(makeUnitTriangle());
     g1->setName(u8"g1");
     auto g2 = intrusive_ptr<Geometry>(new Geometry());
-    g2->setShape(makeUnitTriangle().get());
+    g2->setShape(makeUnitTriangle());
     g2->setName(u8"g2");
     g1->setVisible(false);
-    node->addDrawable(g1.get());
-    node->addDrawable(g2.get());
+    node->addDrawable(g1);
+    node->addDrawable(g2);
     node->setLocalTransform(vine::math::translate(Vec3d(0, 0, -3)));
-    scene.addNode(node.get());
+    scene.addNode(node);
 
     Camera cam;
     setupLookAtCamera(cam);
@@ -292,7 +292,7 @@ TEST(SceneTest, CollectCommandsEffectiveOpacity)
 {
     Scene scene;
     auto node = makeTriangleNode(Vec3d(0, 0, -3), nullptr, u8"tri");
-    scene.addNode(node.get());
+    scene.addNode(node);
     scene.setOpacity(0.5f);
     node->setOpacity(0.5f);
     node->drawables().front()->setOpacity(0.5f);
@@ -310,9 +310,9 @@ TEST(SceneTest, CollectCommandsOpacityIncludesMaterial)
     Scene scene;
     auto mat = intrusive_ptr<Material>(new Material());
     mat->setOpacity(0.5f);
-    auto node = makeTriangleNode(Vec3d(0, 0, -3), mat.get(), u8"tri");
+    auto node = makeTriangleNode(Vec3d(0, 0, -3), mat, u8"tri");
     node->setOpacity(0.5f);
-    scene.addNode(node.get());
+    scene.addNode(node);
 
     Camera cam;
     setupLookAtCamera(cam);
@@ -327,10 +327,10 @@ TEST(SceneTest, CollectCommandsOpacityMultipliesAlongHierarchy)
     Scene scene;
     auto parent = intrusive_ptr<Node>(new Node());
     auto child = makeTriangleNode(Vec3d(0, 0, -3), nullptr, u8"tri");
-    parent->addChild(child.get());
+    parent->addChild(child);
     parent->setOpacity(0.5f);
     child->setOpacity(0.5f);
-    scene.addNode(parent.get());
+    scene.addNode(parent);
 
     Camera cam;
     setupLookAtCamera(cam);
@@ -417,7 +417,7 @@ TEST(CameraManipulatorTest, ZoomChangesRadius)
 TEST(CameraManipulatorTest, PressOnGeometryKeepsCentre)
 {
     Scene scene;
-    scene.addNode(makeTriangleNode(Vec3d(0, 0, 0), nullptr, u8"tri").get());
+    scene.addNode(makeTriangleNode(Vec3d(0, 0, 0), nullptr, u8"tri"));
 
     auto cam = intrusive_ptr<Camera>(new Camera());
     // Aim at a point BEHIND the triangle plane, so the centre-pixel ray hits
@@ -455,7 +455,7 @@ TEST(CameraManipulatorTest, PressOnGeometryKeepsCentre)
 TEST(CameraManipulatorTest, PressOnEmptyKeepsCentre)
 {
     Scene scene;
-    scene.addNode(makeTriangleNode(Vec3d(2, 0, -3), nullptr, u8"tri").get());
+    scene.addNode(makeTriangleNode(Vec3d(2, 0, -3), nullptr, u8"tri"));
 
     auto cam = intrusive_ptr<Camera>(new Camera());
     // Look at the origin; the triangle sits off to the right, so the centre
@@ -489,7 +489,7 @@ TEST(CameraManipulatorTest, PressOnEmptyKeepsCentre)
 TEST(CameraManipulatorTest, RotateOnEmptySpaceKeepsModelCentrePinned)
 {
     Scene scene;
-    scene.addNode(makeTriangleNode(Vec3d(2, 0, -3), nullptr, u8"tri").get());
+    scene.addNode(makeTriangleNode(Vec3d(2, 0, -3), nullptr, u8"tri"));
 
     auto cam = intrusive_ptr<Camera>(new Camera());
     // Look at the origin; the triangle sits off to the right, so the centre
@@ -561,7 +561,7 @@ TEST(CameraManipulatorTest, RotateOnEmptySpaceKeepsModelCentrePinned)
 TEST(CameraManipulatorTest, SetCenterFromScreenRecentersOnPick)
 {
     Scene scene;
-    scene.addNode(makeTriangleNode(Vec3d(0, 0, 0), nullptr, u8"tri").get());
+    scene.addNode(makeTriangleNode(Vec3d(0, 0, 0), nullptr, u8"tri"));
 
     auto cam = intrusive_ptr<Camera>(new Camera());
     // Camera target is behind the triangle; explicit re-centring should move
@@ -597,7 +597,7 @@ TEST(CameraManipulatorTest, ZoomClampsAtMinimumDistance)
 TEST(CameraManipulatorTest, FitToScreenFramesScene)
 {
     Scene scene;
-    scene.addNode(makeTriangleNode(Vec3d(0, 0, -3), nullptr, u8"tri").get());
+    scene.addNode(makeTriangleNode(Vec3d(0, 0, -3), nullptr, u8"tri"));
     const Aabbd box = scene.boundingBox();
 
     auto cam = intrusive_ptr<Camera>(new Camera());
@@ -658,7 +658,7 @@ TEST(RayIntersectionTest, HitsTriangle)
 {
     auto geom = intrusive_ptr<Geometry>(new Geometry());
     auto mesh = makeUnitTriangle();
-    geom->setShape(mesh.get());
+    geom->setShape(mesh);
 
     Ray ray(Vec3d(0.25, 0.25, 1.0), Vec3d(0, 0, -1));
     RayIntersectionResult result = RayIntersection::intersect(ray, geom.get(), Mat4d());
@@ -674,7 +674,7 @@ TEST(RayIntersectionTest, MissesTriangle)
 {
     auto geom = intrusive_ptr<Geometry>(new Geometry());
     auto mesh = makeUnitTriangle();
-    geom->setShape(mesh.get());
+    geom->setShape(mesh);
 
     // Ray aimed outside the triangle.
     Ray ray(Vec3d(5, 5, 1), Vec3d(0, 0, -1));
@@ -689,9 +689,9 @@ TEST(RayIntersectionTest, SceneQuery)
     auto geom = intrusive_ptr<Geometry>(new Geometry());
     auto mesh = makeUnitTriangle();
     geom->setName(u8"tri");
-    geom->setShape(mesh.get());
-    node->addDrawable(geom.get());
-    scene->addNode(node.get());
+    geom->setShape(mesh);
+    node->addDrawable(geom);
+    scene->addNode(node);
 
     Ray ray(Vec3d(0.25, 0.25, 1.0), Vec3d(0, 0, -1));
     RayIntersectionResult result = RayIntersection::intersectScene(ray, scene.get());
@@ -714,9 +714,9 @@ TEST(RayIntersectionTest, AllHitsCollectsEveryTriangleSortedByDepth)
     mesh->addTriangle(vine::math::Vec3f(0.0f, 0.0f, -2.0f),
                       vine::math::Vec3f(1.0f, 0.0f, -2.0f),
                       vine::math::Vec3f(0.0f, 1.0f, -2.0f));
-    geom->setShape(mesh.get());
-    node->addDrawable(geom.get());
-    scene->addNode(node.get());
+    geom->setShape(mesh);
+    node->addDrawable(geom);
+    scene->addNode(node);
 
     Ray ray(Vec3d(0.25, 0.25, 1.0), Vec3d(0, 0, -1));
 
@@ -773,7 +773,7 @@ TEST(GeometryTest, MeshCounts)
 {
     auto geom = intrusive_ptr<Geometry>(new Geometry());
     auto mesh = makeUnitTriangle();
-    geom->setShape(mesh.get());
+    geom->setShape(mesh);
 
     EXPECT_EQ(geom->triangleCount(), 1u);
     EXPECT_EQ(geom->vertexCount(), 3u);
@@ -793,7 +793,7 @@ TEST(NodeTest, DrawableBinding)
 {
     Node node;
     auto geom = intrusive_ptr<Geometry>(new Geometry());
-    node.addDrawable(geom.get());
+    node.addDrawable(geom);
     EXPECT_EQ(node.drawables().size(), 1u);
     EXPECT_EQ(node.drawables()[0].get(), geom.get());
     node.removeDrawable(geom.get());
@@ -805,8 +805,8 @@ TEST(NodeTest, MultipleDrawables)
     Node node;
     auto geom1 = intrusive_ptr<Geometry>(new Geometry());
     auto geom2 = intrusive_ptr<Geometry>(new Geometry());
-    node.addDrawable(geom1.get());
-    node.addDrawable(geom2.get());
+    node.addDrawable(geom1);
+    node.addDrawable(geom2);
 
     EXPECT_EQ(node.drawables().size(), 2u);
     EXPECT_EQ(node.drawables()[0].get(), geom1.get());
@@ -817,7 +817,7 @@ TEST(NodeTest, ChildHierarchy)
 {
     auto parent = intrusive_ptr<Node>(new Node());
     auto child = intrusive_ptr<Node>(new Node());
-    parent->addChild(child.get());
+    parent->addChild(child);
 
     EXPECT_EQ(parent->children().size(), 1u);
     EXPECT_EQ(child->parent(), parent.get());
@@ -831,7 +831,7 @@ TEST(NodeTest, WorldTransformCascades)
 {
     auto parent = intrusive_ptr<Node>(new Node());
     auto child = intrusive_ptr<Node>(new Node());
-    parent->addChild(child.get());
+    parent->addChild(child);
 
     // Parent translates by (1, 0, 0), child by (2, 0, 0).
     parent->setLocalTransform(vine::math::translate(Vec3d(1, 0, 0)));
@@ -849,8 +849,8 @@ TEST(NodeTest, BoundingBoxWithTransform)
     auto node = intrusive_ptr<Node>(new Node());
     auto geom = intrusive_ptr<Geometry>(new Geometry());
     auto mesh = makeUnitTriangle();
-    geom->setShape(mesh.get());
-    node->addDrawable(geom.get());
+    geom->setShape(mesh);
+    node->addDrawable(geom);
     node->setLocalTransform(vine::math::translate(Vec3d(10, 0, 0)));
 
     Aabbd box = node->boundingBox();
@@ -916,7 +916,7 @@ TEST(GeometryTest, BoundingBoxUsesMeshAabbCache)
     auto mesh = makeUnitTriangle();
 
     // No cache yet: bounding box falls back to scanning positions.
-    geom->setShape(mesh.get());
+    geom->setShape(mesh);
     Aabbd box = geom->boundingBox();
     EXPECT_TRUE(box.isValid());
     EXPECT_NEAR(box.min().x, 0.0, 1e-9);
@@ -1037,8 +1037,8 @@ TEST(RenderEngineTest, SetSceneAndCamera)
     auto camera = intrusive_ptr<Camera>(new Camera());
     camera->setName(u8"cam");
 
-    engine->setScene(scene.get());
-    engine->setCamera(camera.get());
+    engine->setScene(scene);
+    engine->setCamera(camera);
 
     EXPECT_EQ(engine->scene(), scene.get());
     EXPECT_EQ(engine->camera(), camera.get());
@@ -1099,17 +1099,17 @@ TEST(OverlayTest, EngineDrawsVisibleOverlaysSortedByZOrder)
 
     int next = 0;
     auto z10 = intrusive_ptr<SeqOverlay>(new SeqOverlay(&next));
-    z10->setContent(scene.get());
+    z10->setContent(scene);
     z10->pass()->setCamera(overlay_cam.get());
     z10->setZOrder(10);
 
     auto z5 = intrusive_ptr<SeqOverlay>(new SeqOverlay(&next));
-    z5->setContent(scene.get());
+    z5->setContent(scene);
     z5->pass()->setCamera(overlay_cam.get());
     z5->setZOrder(5);
 
     auto hidden = intrusive_ptr<SeqOverlay>(new SeqOverlay(&next));
-    hidden->setContent(scene.get());
+    hidden->setContent(scene);
     hidden->pass()->setCamera(overlay_cam.get());
     hidden->setZOrder(0);
     hidden->setVisible(false);
@@ -1140,7 +1140,7 @@ TEST(OverlayTest, PassViewportAndClearPolicy)
     auto scene = intrusive_ptr<Scene>(new Scene());
 
     auto overlay = intrusive_ptr<Overlay>(new Overlay());
-    overlay->setContent(scene.get());
+    overlay->setContent(scene);
     overlay->pass()->setCamera(overlay_cam.get());
     // An overlay never clears the surface it draws over.
     EXPECT_FALSE(overlay->pass()->clearEnabled());

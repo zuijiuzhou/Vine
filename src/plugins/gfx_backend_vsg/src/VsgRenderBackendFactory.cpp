@@ -38,7 +38,7 @@ vine::graphics::RenderBackendInfo VsgRenderBackendFactory::info() const
 }
 
 vine::intrusive_ptr<vine::graphics::RenderBackend> VsgRenderBackendFactory::create(
-    vine::graphics::Scene* scene, vine::graphics::Camera* camera)
+    vine::raw_ptr<vine::graphics::Scene> scene, vine::raw_ptr<vine::graphics::Camera> camera)
 {
     return vine::intrusive_ptr<vine::graphics::RenderBackend>(new VsgRenderer(scene, camera));
 }

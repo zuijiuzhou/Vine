@@ -1,6 +1,8 @@
 #pragma once
 #include "vsg_global.hpp"
 
+#include <vine/raw_ptr.hpp>
+
 #include <vsg/app/Camera.h>
 #include <vsg/core/ref_ptr.h>
 
@@ -25,14 +27,14 @@ class V_VSG_API CameraBridge {
      * @param camera Vine camera to translate.
      * @return Newly created vsg camera.
      */
-    ::vsg::ref_ptr<::vsg::Camera> create(vine::graphics::Camera* camera);
+    ::vsg::ref_ptr<::vsg::Camera> create(vine::raw_ptr<vine::graphics::Camera> camera);
 
     /** @brief Copies Vine camera matrices into an existing vsg camera.
      *
      * @param camera    Vine camera source.
      * @param vsgCamera Target vsg camera (matrices are updated in place).
      */
-    void apply(vine::graphics::Camera* camera, ::vsg::ref_ptr<::vsg::Camera> vsgCamera);
+    void apply(vine::raw_ptr<vine::graphics::Camera> camera, ::vsg::ref_ptr<::vsg::Camera> vsgCamera);
 };
 
 V_VSG_NS_END

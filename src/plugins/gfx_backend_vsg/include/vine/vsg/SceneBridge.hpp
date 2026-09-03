@@ -12,6 +12,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include <vine/raw_ptr.hpp>
 #include <vine/vsg/VsgMaterialManager.hpp>
 
 namespace vine::graphics
@@ -55,7 +56,7 @@ class V_VSG_API SceneBridge {
      *
      * @param manager Material manager to use.
      */
-    void setMaterialManager(VsgMaterialManager* manager);
+    void setMaterialManager(vine::raw_ptr<VsgMaterialManager> manager);
 
     /** @brief Reconciles the retained scene under root against the commands.
      *
@@ -93,12 +94,13 @@ class V_VSG_API SceneBridge {
      * @return Built vsg node, or null when not buildable.
      */
     ::vsg::ref_ptr<::vsg::Node> buildGeometry(
-        const vine::graphics::Geometry* geometry, vine::graphics::Material* material,
+        vine::raw_ptr<const vine::graphics::Geometry> geometry,
+        vine::raw_ptr<vine::graphics::Material> material,
         ::vsg::ref_ptr<::vsg::vec4Array>& out_colors);
 
     ::vsg::ref_ptr<::vsg::ShaderSet> shader_set_;
     ::vsg::ref_ptr<::vsg::SharedObjects> shared_objects_;
-    VsgMaterialManager* material_manager_ = nullptr;
+    vine::raw_ptr<VsgMaterialManager> material_manager_ = nullptr;
     // Default manager used when the renderer does not inject one.
     VsgMaterialManager default_manager_;
     // Retained per-geometry nodes, keyed by geometry pointer for O(1) lookup.
