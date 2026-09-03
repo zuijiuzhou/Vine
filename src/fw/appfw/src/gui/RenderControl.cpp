@@ -16,9 +16,12 @@
 #include <QWidget>
 #include <QWindow>
 
+#include <vine/graphics/Camera.hpp>
 #include <vine/graphics/OrbitCameraManipulator.hpp>
 #include <vine/graphics/RenderBackendRegistry.hpp>
 #include <vine/graphics/RenderEngine.hpp>
+#include <vine/graphics/RenderPass.hpp>
+#include <vine/graphics/Scene.hpp>
 
 #include <vine/window/InputEvent.hpp>
 #include <vine/window/KeyCode.hpp>
@@ -339,6 +342,18 @@ RenderControl::RenderControl()
     d->surface = surface;
     d->engine  = vine::intrusive_ptr<vine::graphics::RenderEngine>(
         new vine::graphics::RenderEngine());
+    // Design B: RenderEngine starts empty (no scene / master camera, no
+    // passes). As the plain-viewer convenience layer, RenderControl provisions
+    // a default content scene + master camera that app code fills (content)
+    // and the backend factory binds; the window pass is registered in init().
+    if (d->engine->scene() == nullptr) {
+        d->engine->setScene(
+            vine::intrusive_ptr<vine::graphics::Scene>(new vine::graphics::Scene()));
+    }
+    if (d->engine->masterCamera() == nullptr) {
+        d->engine->setMasterCamera(
+            vine::intrusive_ptr<vine::graphics::Camera>(new vine::graphics::Camera()));
+    }
 }
 
 RenderControl::~RenderControl()
@@ -393,6 +408,20 @@ bool RenderControl::init()
     // init(), or a later surface/resize notice re-attaches, so we never fall
     // back to creating a separate window.
     wireEvents();
+
+    // Design B: the engine auto-registers no pipeline. RenderControl is the
+    // plain-viewer convenience layer, so it provisions the minimal default
+    // viewer - a window pass drawing the (default) content scene through the
+    // master camera to the backbuffer - only when the app has registered no
+    // scene pass of its own. Apps assembling an explicit pipeline via
+    // addPass()/RenderPipelineBuilder have a non-zero passCount here and keep
+    // full control.
+    if (d->engine->scene() != nullptr && d->engine->masterCamera() != nullptr && d->engine->passCount() == 0) {
+        auto window_pass = vine::intrusive_ptr<vine::graphics::RenderPass>(new vine::graphics::RenderPass());
+        window_pass->setCamera(d->engine->masterCamera());
+        d->engine->addPass(window_pass, 0);
+    }
+
     if (nativeHandle() != nullptr) {
         initializeBackend();
     }
@@ -423,17 +452,19 @@ void RenderControl::wireEvents()
         const auto entries = vine::graphics::RenderBackendRegistry::instance().entries();
         if (!entries.empty()) {
             d->engine->setBackend(
-                entries.front().factory->create(d->engine->scene(), d->engine->camera()));
+                entries.front().factory->create(d->engine->scene(), d->engine->masterCamera()));
         }
     }
 
-    // Attach a default orbit manipulator bound to the engine camera and scene:
+    // Attach a default orbit manipulator bound to the master camera and scene:
     // left-drag rotates about the picked point (scene centre when nothing is
     // hit), middle/right-drag pans and the wheel zooms to the cursor anchor.
-    // The engine forwards window input events to the manipulator.
-    if (d->manipulator == nullptr && d->engine->camera() != nullptr) {
+    // The engine forwards window input events to the manipulator. Without a
+    // master camera the manipulator would have nothing to drive, so it is
+    // only attached when one exists.
+    if (d->manipulator == nullptr && d->engine->masterCamera() != nullptr) {
         d->manipulator = new vine::graphics::OrbitCameraManipulator(
-            d->engine->camera(), d->engine->scene());
+            d->engine->masterCamera(), d->engine->scene());
         d->engine->setCameraManipulator(d->manipulator);
     }
 

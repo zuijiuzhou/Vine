@@ -12,6 +12,8 @@ V_OBJECT_META_IMPL(RenderPass, vine::Object);
 
 RenderPass::RenderPass() = default;
 
+RenderPass::~RenderPass() = default;
+
 String RenderPass::name() const
 {
     return name_;
@@ -24,12 +26,12 @@ void RenderPass::setName(const String& name)
 
 raw_ptr<RenderTarget> RenderPass::renderTarget() const
 {
-    return render_target_;
+    return render_target_.get();
 }
 
-void RenderPass::setRenderTarget(raw_ptr<RenderTarget> target)
+void RenderPass::setRenderTarget(intrusive_ptr<RenderTarget> target)
 {
-    render_target_ = target;
+    render_target_ = std::move(target);
 }
 
 raw_ptr<Camera> RenderPass::camera() const
@@ -99,12 +101,39 @@ void RenderPass::clearViewport()
     has_viewport_ = false;
 }
 
+void RenderPass::setOutputName(const String& name)
+{
+    output_name_ = name;
+}
+
+String RenderPass::outputName() const
+{
+    return output_name_;
+}
+
+void RenderPass::addInputName(const String& name)
+{
+    if (!name.empty()) {
+        input_names_.push_back(name);
+    }
+}
+
+const std::vector<String>& RenderPass::inputNames() const
+{
+    return input_names_;
+}
+
+void RenderPass::clearInputNames()
+{
+    input_names_.clear();
+}
+
 void RenderPass::execute(raw_ptr<Scene> scene, raw_ptr<RenderBackend> backend)
 {
     if (backend == nullptr || scene == nullptr) {
         return;
     }
-    backend->setRenderTarget(render_target_);
+    backend->setRenderTarget(render_target_.get());
     if (has_viewport_) {
         backend->setViewport(viewport_x_, viewport_y_, viewport_w_, viewport_h_);
     }
@@ -113,6 +142,14 @@ void RenderPass::execute(raw_ptr<Scene> scene, raw_ptr<RenderBackend> backend)
     }
     const auto commands = scene->collectRenderCommands(camera_);
     if (camera_ != nullptr) {
+        // The pass lights whatever content scene it renders: forward the
+        // scene's lights so the backend can match this pass's view lighting.
+        std::vector<raw_ptr<const Light>> light_ptrs;
+        light_ptrs.reserve(scene->lights().size());
+        for (const auto& light : scene->lights()) {
+            light_ptrs.push_back(light.get());
+        }
+        backend->setLights(light_ptrs);
         backend->render(commands, camera_);
     }
 }

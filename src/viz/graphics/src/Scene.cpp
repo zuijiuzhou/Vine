@@ -230,6 +230,41 @@ void Scene::clear()
     nodes_.clear();
 }
 
+void Scene::addLight(intrusive_ptr<Light> light)
+{
+    if (light == nullptr) {
+        return;
+    }
+    lights_.emplace_back(std::move(light));
+}
+
+void Scene::removeLight(raw_ptr<Light> light)
+{
+    if (light == nullptr) {
+        return;
+    }
+    auto it = std::find_if(lights_.begin(), lights_.end(),
+                           [light](const LightPtr& ptr) { return ptr.get() == light; });
+    if (it != lights_.end()) {
+        lights_.erase(it);
+    }
+}
+
+void Scene::clearLights()
+{
+    lights_.clear();
+}
+
+const std::vector<LightPtr>& Scene::lights() const
+{
+    return lights_;
+}
+
+bool Scene::hasLights() const
+{
+    return !lights_.empty();
+}
+
 Aabbd Scene::boundingBox() const
 {
     Aabbd box = Aabbd::empty();

@@ -34,6 +34,31 @@ void RenderTarget::setSize(int w, int h)
     height_ = h;
 }
 
+bool RenderTarget::hasColor() const
+{
+    return has_color_;
+}
+
+bool RenderTarget::hasDepth() const
+{
+    return has_depth_;
+}
+
+RenderTarget::ColorFormat RenderTarget::colorFormat() const
+{
+    return color_format_;
+}
+
+RenderTarget::DepthFormat RenderTarget::depthFormat() const
+{
+    return depth_format_;
+}
+
+bool RenderTarget::valid() const
+{
+    return (has_color_ || has_depth_) && width_ > 0 && height_ > 0;
+}
+
 std::vector<std::uint8_t> RenderTarget::readColorBuffer() const
 {
     // Backend-specific implementation fills this buffer. Without a bound

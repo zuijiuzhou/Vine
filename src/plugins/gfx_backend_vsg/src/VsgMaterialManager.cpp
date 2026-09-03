@@ -87,4 +87,30 @@ void VsgMaterialManager::clear()
     d->cache.clear();
 }
 
+std::size_t VsgMaterialManager::materialCount() const
+{
+    return d->cache.size();
+}
+
+bool VsgMaterialManager::hasMaterial(vine::raw_ptr<vine::graphics::Material> material) const
+{
+    return d->cache.find(material) != d->cache.end();
+}
+
+void VsgMaterialManager::forEachMaterial(
+    const std::function<void(vine::raw_ptr<vine::graphics::Material>)>& visitor) const
+{
+    for (const auto& entry : d->cache) {
+        visitor(entry.first);
+    }
+}
+
+::vsg::ref_ptr<::vsg::PhongMaterialValue> VsgMaterialManager::find(
+    vine::raw_ptr<vine::graphics::Material> material) const
+{
+    const auto it = d->cache.find(material);
+    return (it != d->cache.end()) ? it->second
+                                  : ::vsg::ref_ptr<::vsg::PhongMaterialValue>();
+}
+
 V_VSG_NS_END

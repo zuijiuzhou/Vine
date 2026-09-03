@@ -641,6 +641,35 @@ class V_GRAPHICS_API RenderEngine : public Object, public RefCounted<RenderEngin
 
 > 说明：引擎构造时自动创建默认场景、相机与主通道，主通道默认绑定该相机。
 
+#### 现状对齐：有序场景通道管线（2026-09 落地）
+
+`RenderEngine` 每帧执行一条以主通道（order 0）为锚的**有序场景通道管线**：
+
+```
+pre passes (order < 0)  →  main pass (order 0)  →  post passes (order > 0)  →  overlays (升序 zOrder)
+```
+
+- `addPass(intrusive_ptr<RenderPass> pass, int order)` 注册额外场景通道，同一 order 内按
+  插入顺序稳定执行；`removePass` / `clearPasses` / `passCount` 管理。
+- **内容关联由 Engine 管理**：`addPass(pass, content, order)` 给通道绑显式场景；
+  `bindPassContent(pass, scene)` 运行时重绑（null = 回落引擎场景）；`contentOf(pass)`
+  返回“有效内容”。执行时解析 `slot.content ?: engine.scene_`，因此 `setScene()` 对
+  未绑定的通道是**单点更新**。`RenderPass` 本身**不携带 Scene**（可复用 stage）。
+- **RenderPass = 借用的 view(Camera) + 持有的输出 RenderTarget + clear/viewport**：
+  `setRenderTarget` 收 `intrusive_ptr`（通道持有输出资源，析构在 .cpp 出外联）；
+  `renderTarget()==nullptr` 表示画到默认 backbuffer。Camera 仍是借用（共享视图）。
+- 每个额外通道用自己的 camera / renderTarget / clear 状态绘制引擎场景或其绑定的 content。
+  典型用途：`order<0` 的 shadow map / depth / g-buffer 预通道；`order>0` 的后处理 / 合成通道。
+- **顺序必须显式且确定**：渲染正确性依赖先后（阴影贴图必须先于被照亮几何体、后处理必须
+  在着色之后、UI 覆盖最后）。引擎按 int `order` 升序、稳定排序，正是为此提供确定序。
+- Overlay（HUD，自带内容 + 2D 覆盖语义）始终在所有场景通道之后绘制，与 3D 场景分层。
+- ⚠ 2026-09-03 **Design B 变更**：上述“主通道锚点”模型已重构——`RenderEngine` 不再有
+  main pass / `setMainPass` / `mainPass`，空启动，pipeline 完全显式（统一 `passes_` 按 order
+  执行 + overlays 最后）；引擎只保留可选的 `scene()`(默认内容) 与 `masterCamera()`(交互主相机，
+  manipulator 驱动，可 null)。“窗口 pass”= camera==masterCamera 且 RT==null 的注册 pass。
+  默认 viewer 由 fw `RenderControl` 引导。`graphics-render-pipeline.md` 顶部有完整变更记录。
+- 多 Pass 调度 / 内容关联 / pass 衔接的**完整设计基线**：见 `graphics-render-pipeline.md`。
+
 ## 4. 设计模式与约定
 
 ### 4.1 引用计数
@@ -899,7 +928,9 @@ backend->swapBuffers();
 
 ## 9. 未来扩展点
 
-1. **光源系统**：环境光、定向光、点光源、聚光灯（`Light.hpp` 设计稿曾有，未实现）
+1. **光源系统**：环境光、定向光、点光源、聚光灯（`Light.hpp` 设计稿曾有，未实现）。
+   计划：光源挂在 `Scene` 上；有序通道管线天然支撑 shadow map（以光源相机为
+   `order<0` 通道）与 forward/deferred 光照通道；后处理通道消费前序通道的 RenderTarget。
 2. **阴影**：阴影贴图、实时阴影
 3. **粒子系统**：粒子发射、动画
 4. **动画系统**：骨骼动画、关键帧插值

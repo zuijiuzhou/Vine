@@ -61,6 +61,29 @@ class V_GRAPHICS_API RenderTarget : public Object, public RefCounted<RenderTarge
      */
     void setSize(int w, int h);
 
+    /** @brief Returns whether a color attachment is configured. */
+    bool hasColor() const;
+
+    /** @brief Returns whether a depth attachment is configured. */
+    bool hasDepth() const;
+
+    /** @brief Gets the configured color attachment format. */
+    ColorFormat colorFormat() const;
+
+    /** @brief Gets the configured depth attachment format. */
+    DepthFormat depthFormat() const;
+
+    /** @brief Returns whether this is a usable off-screen buffer.
+     *
+     * A target is valid when it has at least one attachment and positive
+     * dimensions; a valid (non-null) target passed to a backend means
+     * "render into this off-screen buffer" as opposed to the default
+     * framebuffer.
+     *
+     * @return true when the target has an attachment and a positive size.
+     */
+    bool valid() const;
+
     /** @brief Reads back the color buffer.
      *
      * @return Packed RGBA8 pixel data (width * height * 4 bytes).

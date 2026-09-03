@@ -8,6 +8,7 @@
 #include <vine/String.hpp>
 #include <vector>
 
+#include "Light.hpp"
 #include "Node.hpp"
 
 V_GRAPHICS_NS_BEGIN
@@ -18,10 +19,11 @@ class Camera;
 struct RenderCommand;
 
 /**
- * @brief Scene graph container managing root nodes.
+ * @brief Scene graph container managing root nodes and lights.
  *
- * Holds the root nodes of the scene hierarchy and provides tree queries:
- * bounding box computation, name-based search, and render command collection.
+ * Holds the root nodes of the scene hierarchy and the scene's light sources,
+ * and provides tree queries: bounding box computation, name-based search,
+ * and render command collection.
  */
 class V_GRAPHICS_API Scene : public Object, public RefCounted<Scene> {
     V_OBJECT_META_DECL;
@@ -77,6 +79,30 @@ class V_GRAPHICS_API Scene : public Object, public RefCounted<Scene> {
     /** @brief Removes all nodes. */
     void clear();
 
+    /** @brief Adds a light source to the scene.
+     *
+     * The scene keeps a reference to the light. Passes rendering this scene
+     * light their content with the scene's lights (RenderBackend::setLights).
+     *
+     * @param light Light to add.
+     */
+    void addLight(intrusive_ptr<Light> light);
+
+    /** @brief Removes a light source from the scene.
+     *
+     * @param light Light to remove (by pointer).
+     */
+    void removeLight(raw_ptr<Light> light);
+
+    /** @brief Removes all light sources. */
+    void clearLights();
+
+    /** @brief Gets the scene's light sources. */
+    const std::vector<LightPtr>& lights() const;
+
+    /** @brief Returns whether the scene has at least one light source. */
+    bool hasLights() const;
+
     /** @brief Computes the bounding box of the whole scene. */
     Aabbd boundingBox() const;
 
@@ -91,7 +117,8 @@ class V_GRAPHICS_API Scene : public Object, public RefCounted<Scene> {
     String name_;
     bool visible_ = true;
     float opacity_ = 1.0f;
-    std::vector<NodePtr> nodes_;
+    std::vector<NodePtr>  nodes_;
+    std::vector<LightPtr> lights_;
 };
 
 using ScenePtr = intrusive_ptr<Scene>;

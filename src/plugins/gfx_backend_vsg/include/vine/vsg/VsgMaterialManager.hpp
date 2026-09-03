@@ -1,6 +1,9 @@
 #pragma once
 #include "vsg_global.hpp"
 
+#include <cstddef>
+#include <functional>
+
 #include <vine/graphics/MaterialManager.hpp>
 #include <vine/raw_ptr.hpp>
 
@@ -38,6 +41,17 @@ class V_VSG_API VsgMaterialManager : public vine::graphics::MaterialManager {
      */
     ::vsg::ref_ptr<::vsg::PhongMaterialValue> getOrCreate(vine::raw_ptr<vine::graphics::Material> material);
 
+    /** @brief Gets the cached Phong resource for a material without creating one.
+     *
+     * Non-mutating lookup of the backend resource registered for @p material;
+     * unlike getOrCreate() it never builds a new resource.
+     *
+     * @param material Vine material to look up (by pointer).
+     * @return The cached Phong value, or null when the material is not
+     *         registered.
+     */
+    ::vsg::ref_ptr<::vsg::PhongMaterialValue> find(vine::raw_ptr<vine::graphics::Material> material) const;
+
   public:
     /** @brief Rebuilds the cached resource for a material. */
     void updateMaterial(vine::raw_ptr<vine::graphics::Material> material) override;
@@ -47,6 +61,15 @@ class V_VSG_API VsgMaterialManager : public vine::graphics::MaterialManager {
 
     /** @brief Releases all cached resources. */
     void clear() override;
+
+    /** @brief Gets the number of materials with a registered Phong resource. */
+    std::size_t materialCount() const override;
+
+    /** @brief Whether a material has a registered Phong resource. */
+    bool hasMaterial(vine::raw_ptr<vine::graphics::Material> material) const override;
+
+    /** @brief Invokes @p visitor for every registered material. */
+    void forEachMaterial(const std::function<void(vine::raw_ptr<vine::graphics::Material>)>& visitor) const override;
 
   private:
     struct Data;

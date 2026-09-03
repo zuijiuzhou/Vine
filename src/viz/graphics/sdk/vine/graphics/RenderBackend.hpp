@@ -1,5 +1,6 @@
 #pragma once
 #include "graphics_global.hpp"
+#include "ShaderPreset.hpp"
 
 #include <vector>
 
@@ -7,10 +8,12 @@
 #include <vine/Object.hpp>
 #include <vine/RefCounted.hpp>
 #include <vine/intrusive_ptr.hpp>
+#include <vine/raw_ptr.hpp>
 
 V_GRAPHICS_NS_BEGIN
 
 class Camera;
+class Light;
 class MaterialManager;
 class RenderTarget;
 class RenderPass;
@@ -54,9 +57,87 @@ class V_GRAPHICS_API RenderBackend : public Object, public RefCounted<RenderBack
 
     /** @brief Sets the active render target.
      *
+     * Pass nullptr to render into the default (window) framebuffer. When the
+     * backend reports supportsRenderTargets() and a valid off-screen target
+     * is passed, the backend creates and manages the target's GPU
+     * attachments (created lazily on first bind, rebuilt when the target is
+     * resized) and renders into it until another target is set. The backend
+     * owns the attachments; the RenderTarget stays a logical description.
+     *
      * @param target Render target, or nullptr for the default framebuffer.
      */
     virtual void setRenderTarget(RenderTarget* target) = 0;
+
+    /** @brief Returns whether off-screen render targets are supported.
+     *
+     * Backends that support them honour non-null RenderTargets in
+     * setRenderTarget() by creating and binding GPU attachments. Backends
+     * that do not support them only accept nullptr (the default framebuffer)
+     * and should ignore off-screen targets.
+     *
+     * @return true when setRenderTarget() accepts off-screen targets.
+     */
+    virtual bool supportsRenderTargets()
+    {
+        return false;
+    }
+
+    /** @brief Draws a full-screen textured pass sampling a target's colour.
+     *
+     * Samples the colour attachment of @p source (a target written earlier in
+     * the same frame, e.g. an off-screen render-to-texture pass) through a
+     * full-screen textured triangle drawn into the CURRENT target — the one
+     * set by the most recent setRenderTarget() (nullptr = the default
+     * framebuffer) — respecting any sub-viewport configured via setViewport().
+     * This is the low-level primitive behind a screen/composite pass; the
+     * target to sample stays a logical RenderTarget and the backend resolves
+     * it to its own GPU texture. The default no-op lets backends without
+     * texture-input support ignore the call.
+     *
+     * @param source Target whose colour texture to sample, or nullptr.
+     */
+    virtual void drawScreenTexture(vine::graphics::RenderTarget* source)
+    {
+        (void)source;
+    }
+
+    /** @brief Releases backend resources for a removed overlay.
+     *
+     * Called by the engine just before an overlay is dropped so the backend
+     * can stop drawing it and free its GPU objects (view / pipelines / view
+     * slots). An overlay draws through its pass, so the overlay's camera here
+     * is the pass camera (pass->camera()); the backend retains the overlay's
+     * sub-view keyed by that camera, and this call removes that key. Overlays
+     * carry no Vine-side GPU state, so the backend is the only owner of these
+     * resources. The engine only calls this after confirming the pass is no
+     * longer used elsewhere (main pass / extra pass / another overlay). The
+     * default no-op lets backends that keep no per-overlay GPU state ignore
+     * the call.
+     *
+     * @param overlay_camera The overlay's pass camera (the key the backend
+     *                       used to retain the overlay's view), or nullptr.
+     */
+    virtual void releaseOverlay(raw_ptr<const Camera> overlay_camera)
+    {
+        (void)overlay_camera;
+    }
+
+    /** @brief Releases backend GPU resources for a removed render target.
+     *
+     * Called by the engine before a target's owning pass/slot is destroyed.
+     * The backend owns the target's GPU attachments (images / views / render
+     * passes / framebuffers / a per-target scene bridge) plus any sampling
+     * (PiP) state, so it must free them here to keep a closed resource loop.
+     * The target object itself stays a logical description owned by the
+     * caller. The default no-op lets backends without off-screen targets
+     * ignore the call.
+     *
+     * @param target The render target being removed, or nullptr.
+     */
+    virtual void releaseRenderTarget(vine::graphics::RenderTarget* target)
+    {
+        (void)target;
+    }
 
     /** @brief Renders a list of commands.
      *
@@ -64,6 +145,22 @@ class V_GRAPHICS_API RenderBackend : public Object, public RefCounted<RenderBack
      * @param camera   Camera used for view/projection.
      */
     virtual void render(const std::vector<RenderCommand>& commands, const Camera* camera) = 0;
+
+    /** @brief Sets the light sources for the upcoming render() pass.
+     *
+     * Called by RenderPass::execute() from the pass's content scene before
+     * render(), so every pass lights whatever scene it renders. Backends that
+     * support scene lights replace any view-level default light (e.g. a
+     * headlight) with the given lights; an empty list restores the backend
+     * default. Lights are borrowed for the duration of the call.
+     *
+     * @param lights Lights of the content scene, or empty for the backend
+     *               default.
+     */
+    virtual void setLights(const std::vector<raw_ptr<const Light>>& lights)
+    {
+        (void)lights;
+    }
 
     /** @brief Clears buffers.
      *
@@ -86,6 +183,20 @@ class V_GRAPHICS_API RenderBackend : public Object, public RefCounted<RenderBack
     virtual MaterialManager* materialManager()
     {
         return nullptr;
+    }
+
+    /** @brief Selects the shading-model preset for scene geometry.
+     *
+     * Must be called before initialize(); the backend maps the preset onto its
+     * shader/material pipeline (vsg: Phong vs flat ShaderSet). Presets without
+     * a backend implementation yet (Pbr / ShadowedPhong) fall back to
+     * StandardPhong. Default no-op.
+     *
+     * @param preset Shading-model preset.
+     */
+    virtual void setShaderPreset(ShaderPreset preset)
+    {
+        (void)preset;
     }
 
     /** @brief Binds a host native window the backend may render into.

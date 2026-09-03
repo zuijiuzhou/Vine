@@ -18,7 +18,7 @@ V_GRAPHICS_NS_BEGIN
  * Example:
  * \code
  * auto gizmo = intrusive_ptr<AxisGizmo>(new AxisGizmo());
- * gizmo->setSourceCamera(engine->camera());
+ * gizmo->setSourceCamera(engine->masterCamera());
  * engine->addOverlay(gizmo);
  * \endcode
  */

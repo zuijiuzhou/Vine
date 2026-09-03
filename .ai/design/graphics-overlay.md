@@ -79,7 +79,7 @@ engine->addOverlay(crosshair);    // 以后加准星/小地图/水印… 都是�
 - 代价：单 pass 多视图无法给 overlay 做独立清屏 → **无灰色不透明底块**（轴直接叠在 3D 场景上），
   用户已接受（不再需要底块）。场景残影/深度穿帮由深度关闭解决。
 - App 接线：`app_shell/AppShellUi::addAxisGizmo()` 创建 `AxisGizmo`、
-  `setSourceCamera(engine->camera())` 并 `engine->addOverlay(...)`（demo dock 构建时调用）。
+  `setSourceCamera(engine->masterCamera())` 并 `engine->addOverlay(...)`（demo dock 构建时调用）。
 - 状态：编译/单测全绿（test_graphics），运行期用户已确认：轴在左下角显示、随视角旋转、
   任意角度保持纯色不黑、不被立方体遮挡。
 

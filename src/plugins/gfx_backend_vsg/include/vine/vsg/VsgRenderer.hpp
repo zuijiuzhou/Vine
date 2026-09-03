@@ -12,7 +12,9 @@ namespace vine::graphics
 
 class Scene;
 class Camera;
+class Light;
 class RenderPass;
+class RenderTarget;
 struct RenderCommand;
 
 } // namespace vine::graphics
@@ -71,6 +73,36 @@ class V_VSG_API VsgRenderer : public vine::graphics::RenderBackend {
      */
     void setRenderTarget(vine::raw_ptr<vine::graphics::RenderTarget> target) override;
 
+    /** @brief Returns whether off-screen render targets are supported.
+     *
+     * @return true.
+     */
+    bool supportsRenderTargets() override;
+
+    /** @brief Draws a full-screen textured pass sampling a target's colour.
+     *
+     * Samples the colour attachment of @p source (an off-screen target this
+     * backend rendered earlier in the same frame) through a full-screen
+     * textured triangle drawn into the CURRENT target (the one set by
+     * setRenderTarget(), nullptr = the window) within the sub-viewport set
+     * by setViewport() (picture-in-picture). EXPERIMENTAL.
+     *
+     * @param source Off-screen target whose colour texture to sample.
+     */
+    void drawScreenTexture(vine::graphics::RenderTarget* source) override;
+
+    /** @brief Stops drawing and frees GPU state for a removed overlay.
+     *
+     * @param overlay_camera Overlay camera retained by this backend, or null.
+     */
+    void releaseOverlay(raw_ptr<const vine::graphics::Camera> overlay_camera) override;
+
+    /** @brief Frees GPU state (offscreen graph + PiP slot) for a removed target.
+     *
+     * @param target Render target being removed, or null.
+     */
+    void releaseRenderTarget(vine::graphics::RenderTarget* target) override;
+
     /** @brief Renders the current frame from the render command stream.
      *
      * The retained vsg scene is reconciled against the commands (SceneBridge)
@@ -80,6 +112,18 @@ class V_VSG_API VsgRenderer : public vine::graphics::RenderBackend {
      * @param camera   Camera used for view/projection.
      */
     void render(const std::vector<vine::graphics::RenderCommand>& commands, vine::raw_ptr<const vine::graphics::Camera> camera) override;
+
+    /** @brief Sets the light sources for the upcoming render() pass.
+     *
+     * Called by RenderPass::execute() from the pass's content scene before
+     * render(). The lights replace the view's default light (the headlight on
+     * the main view / the ambient fill on off-screen views); an empty list
+     * keeps the view's default. Lights are borrowed for the duration of the
+     * call and translated to vsg light nodes immediately.
+     *
+     * @param lights Lights of the content scene, or empty for the default.
+     */
+    void setLights(const std::vector<vine::raw_ptr<const vine::graphics::Light>>& lights) override;
 
     /** @brief Sets the clear color and depth-clear state. */
     void clear(const vine::Color& backgroundColor, bool clearDepth) override;
@@ -133,6 +177,16 @@ class V_VSG_API VsgRenderer : public vine::graphics::RenderBackend {
      */
     void* nativeHandle() const override;
 
+    /** @brief Selects the shading-model preset for scene geometry.
+     *
+     * Forwarded by the engine before initialize(); maps onto vsg's Phong or
+     * flat ShaderSet. Reserved presets (Pbr / ShadowedPhong) fall back to
+     * Phong until implemented.
+     *
+     * @param preset Shading-model preset.
+     */
+    void setShaderPreset(vine::graphics::ShaderPreset preset) override;
+
     // ---- VSG convenience interface ----
 
     /** @brief Convenience: runs one full frame loop (begin/render/end/swap).
@@ -155,6 +209,21 @@ class V_VSG_API VsgRenderer : public vine::graphics::RenderBackend {
     /** @brief Renders an overlay pass into its own sub-viewport RenderGraph. */
     void
     renderOverlayPass(const std::vector<vine::graphics::RenderCommand>& commands, vine::raw_ptr<const vine::graphics::Camera> camera, int vp_x, int vp_y, int vp_w, int vp_h);
+
+    /** @brief Renders the command stream into an off-screen RenderTarget.
+     *
+     * Creates (on first use) an off-screen render graph for the target and
+     * records the scene into it. EXPERIMENTAL: needs on-device validation.
+     *
+     * @param target   Off-screen target to render into.
+     * @param commands Render commands for this pass.
+     * @param camera   Camera used for view/projection.
+     * @param lights   Content scene lights (empty keeps the view default).
+     */
+    void renderOffscreenTarget(vine::graphics::RenderTarget* target,
+                               const std::vector<vine::graphics::RenderCommand>& commands,
+                               vine::raw_ptr<const vine::graphics::Camera> camera,
+                               const std::vector<const vine::graphics::Light*>& lights);
 
     /** @brief Records and presents the frame (once, when swapBuffers is called). */
     void submitFrame();

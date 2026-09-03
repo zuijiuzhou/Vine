@@ -1,6 +1,9 @@
 #pragma once
 #include "graphics_global.hpp"
 
+#include <cstddef>
+#include <functional>
+
 #include <vine/intrusive_ptr.hpp>
 #include <vine/Object.hpp>
 #include <vine/RefCounted.hpp>
@@ -21,7 +24,9 @@ class Material;
  * resource.
  *
  * The interface deliberately exposes no backend types; resource translation
- * and caching happen inside the concrete implementation.
+ * and caching happen inside the concrete implementation. Basic introspection
+ * (materialCount() / hasMaterial() / forEachMaterial()) lets callers query
+ * which materials are registered without seeing backend types.
  */
 class V_GRAPHICS_API MaterialManager : public Object, public RefCounted<MaterialManager> {
     V_OBJECT_META_DECL;
@@ -46,6 +51,35 @@ class V_GRAPHICS_API MaterialManager : public Object, public RefCounted<Material
 
     /** @brief Releases all cached backend resources. */
     virtual void clear() = 0;
+
+    /** @brief Gets the number of materials with a registered backend resource.
+     *
+     * A material counts as registered from the moment a backend resource was
+     * built for it (updateMaterial() or the backend's create path) until
+     * releaseMaterial() or clear() drops it.
+     *
+     * @return Number of registered materials.
+     */
+    virtual std::size_t materialCount() const = 0;
+
+    /** @brief Whether a material has a registered backend resource.
+     *
+     * @param material Material to look up (by pointer).
+     * @return true when the material is registered; false for null or unknown
+     *         materials.
+     */
+    virtual bool hasMaterial(raw_ptr<Material> material) const = 0;
+
+    /** @brief Invokes @p visitor for every registered material.
+     *
+     * Enumerates the registered material pointers without exposing any backend
+     * type. The visit order is the backend cache's internal order (unspecified
+     * to callers). The visitor must not call updateMaterial() / releaseMaterial()
+     * / clear() while the iteration is running.
+     *
+     * @param visitor Callback invoked once per registered material.
+     */
+    virtual void forEachMaterial(const std::function<void(raw_ptr<Material>)>& visitor) const = 0;
 
   protected:
     MaterialManager() = default;

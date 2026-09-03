@@ -64,7 +64,13 @@ class V_GRAPHICS_API Overlay : public Object, public RefCounted<Overlay> {
 
     /** @brief Sets the pass that draws this overlay.
      *
-     * The overlay keeps a reference.
+     * The overlay draws through this pass (content scene, clear policy and
+     * optional sub-viewport); the pass's camera identifies the overlay to the
+     * render backend, which retains the overlay's view keyed by that camera.
+     * The overlay keeps a reference. Whether the backend releases the pass's
+     * GPU resources when the overlay is removed depends on whether the same
+     * pass is still used by the engine (main / extra passes) or another
+     * overlay.
      *
      * @param pass Render pass, or null to clear.
      */

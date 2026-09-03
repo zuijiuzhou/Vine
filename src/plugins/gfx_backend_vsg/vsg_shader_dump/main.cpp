@@ -1,51 +1,51 @@
-// Diagnostic tool: load the embedded phong ShaderSet via vsg and dump each
-// shader stage's SPIR-V (and GLSL source, if present) to disk for inspection
-// with spirv-dis. Removed after diagnosis.
+// Diagnostic tool: dump the built-in vsg shader-set presets (flat / phong /
+// pbr) with their attribute + descriptor bindings (incl. each descriptor's
+// data type), used to check preset feasibility against the Vine material path.
 #include <vsg/io/Options.h>
-#include <vsg/state/ShaderModule.h>
-#include <vsg/state/ShaderStage.h>
 #include <vsg/utils/ShaderSet.h>
 
-#include <fstream>
 #include <iostream>
 
 int main()
 {
     try {
-        auto shaderSet = vsg::createPhongShaderSet();
-        std::cerr << "stages: " << shaderSet->stages.size() << "\n";
-        std::cerr << "attributeBindings: " << shaderSet->attributeBindings.size() << "\n";
-        for (const auto& ab : shaderSet->attributeBindings) {
-            std::cerr << "  attr name=" << ab.name
-                      << " location=" << ab.location
-                      << " format=" << ab.format << "\n";
-        }
-        std::cerr << "descriptorBindings: " << shaderSet->descriptorBindings.size() << "\n";
-        for (const auto& db : shaderSet->descriptorBindings) {
-            std::cerr << "  desc name=" << db.name
-                      << " set=" << db.set
-                      << " binding=" << db.binding
-                      << " type=" << db.descriptorType
-                      << " stageFlags=" << db.stageFlags
-                      << " count=" << db.descriptorCount << "\n";
-        }
-
-        for (size_t i = 0; i < shaderSet->stages.size(); ++i) {
-            const auto& st = shaderSet->stages[i];
-            const auto& module = st->module;
-            std::cerr << "stage[" << i << "] stage=" << st->stage
-                      << " sourceLen=" << module->source.size()
-                      << " codeWords=" << module->code.size() << "\n";
-            const std::string ext = (st->stage == VK_SHADER_STAGE_VERTEX_BIT) ? ".vert" : ".frag";
-            {
-                std::ofstream f("dump_stage_" + std::to_string(i) + ".spv", std::ios::binary);
-                for (uint32_t w : module->code) {
-                    f.write(reinterpret_cast<const char*>(&w), sizeof(w));
-                }
+        struct Factory {
+            const char* name;
+            vsg::ref_ptr<vsg::ShaderSet> (*make)();
+        };
+        const Factory factories[] = {
+            { "flat",  +[] { return vsg::createFlatShadedShaderSet(); } },
+            { "phong", +[] { return vsg::createPhongShaderSet(); } },
+            { "pbr",   +[] { return vsg::createPhysicsBasedRenderingShaderSet(); } },
+        };
+        for (const auto& f : factories) {
+            const auto ss = f.make();
+            std::cerr << "== " << f.name << "\n";
+            std::cerr << "  stages=" << ss->stages.size()
+                      << " attributeBindings=" << ss->attributeBindings.size()
+                      << " descriptorBindings=" << ss->descriptorBindings.size()
+                      << " pushConstantRanges=" << ss->pushConstantRanges.size()
+                      << " optionalDefines=" << ss->optionalDefines.size()
+                      << "\n";
+            for (const auto& pc : ss->pushConstantRanges) {
+                std::cerr << "  push name=" << pc.name
+                          << " define=" << pc.define
+                          << " stage=" << pc.range.stageFlags
+                          << " offset=" << pc.range.offset
+                          << " size=" << pc.range.size << "\n";
             }
-            if (!module->source.empty()) {
-                std::ofstream f("dump_stage_" + std::to_string(i) + ext);
-                f << module->source;
+            for (const auto& ab : ss->attributeBindings) {
+                std::cerr << "  attr name=" << ab.name
+                          << " loc=" << ab.location
+                          << " format=" << ab.format << "\n";
+            }
+            for (const auto& db : ss->descriptorBindings) {
+                std::cerr << "  desc name=" << db.name
+                          << " set=" << db.set
+                          << " binding=" << db.binding
+                          << " type=" << db.descriptorType
+                          << " data=" << (db.data ? db.data->className() : "(null)")
+                          << "\n";
             }
         }
         std::cerr << "done\n";

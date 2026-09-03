@@ -1,12 +1,16 @@
 ﻿#include <vine/appfw/gui/MainWindow.hpp>
 
+#include <algorithm>
 #include <memory>
 
 #include <QApplication>
 #include <QDockWidget>
+#include <QGuiApplication>
 #include <QPalette>
+#include <QScreen>
 #include <QSize>
 #include <QTimer>
+#include <QWindow>
 #include <SARibbon.h>
 
 #include <vine/appfw/Application.hpp>
@@ -47,6 +51,8 @@ MainWindow* s_current_main_window = nullptr;
 MainWindowImpl::MainWindowImpl(QWidget* parent)
   : SARibbonMainWindow(parent)
 {
+    setScreen(qApp->primaryScreen());
+
     // Subscribe to the app theme: GuiApplication is the sole theme authority;
     // here we only map and apply it.
     if (auto* app = obj_cast<GuiApplication>(Application::current())) {
