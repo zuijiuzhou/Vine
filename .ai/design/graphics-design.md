@@ -1,6 +1,13 @@
 # Graphics 模块设计（现代化架构）
 
-> 状态：已对齐代码（2026-09-02），设计稿 v3
+> ⚠ **本文为早期总体设计稿（v3）**，其 `Node/Drawable/Geometry(持 Shape)`/addDrawable/
+> RenderCommand.drawable 等描述**已被场景图重构取代**（2026-09-03）：`Node` 拆基类、
+> `Drawable` 已删除（职责并入叶子 `Geometry`）、变换归 `MatrixTransform`、Geometry 纯数据化
+> (buffers)。**场景图/状态/着色请以 `graphics-scene-graph.md` / `graphics-state.md` /
+> `graphics-shader.md` 及各自顶部落地记录为准**；本文仅保留相机/管道/后端抽象等仍有效部分。
+> 待后续按需重写或并入三稿。
+>
+> 状态：已对齐代码（2026-09-02），设计稿 v3（场景图部分已过时，见上）
 >
 > **目标**：为 Vine 提供场景图管理和渲染抽象层，支持多相机、多渲染通道、交互操纵、拾取。
 > 核心功能：场景树管理、可视对象、相机操纵、射线求交、渲染管道、后端抽象。
@@ -111,6 +118,9 @@ using DrawablePtr = intrusive_ptr<Drawable>;
 > 说明：可见性、局部/世界变换不放在 `Drawable`，而是由所属 `Node` 管理（见 3.5b）。
 
 ### 3.2 `Geometry`（几何体）
+
+> ⚠ 本节为**历史草稿**（`Drawable` 基类 + `shape()` 已弃）。`triangleCount()` 已于 2026-09-04 移除：
+> Geometry 现为开放 loc buffer 数据面，不保证是三角网格；图元计数只留 `vertexCount()`。
 
 包装 `vine::geometry::Shape` 的几何可绘制对象。
 

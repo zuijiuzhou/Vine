@@ -2,7 +2,11 @@
 #include <vine/graphics/CameraManipulator.hpp>
 #include <vine/graphics/OrbitCameraManipulator.hpp>
 #include <vine/graphics/Geometry.hpp>
+#include <vine/graphics/Group.hpp>
+#include <vine/graphics/MatrixTransform.hpp>
 #include <vine/graphics/Node.hpp>
+#include <vine/graphics/ShaderProgram.hpp>
+#include <vine/graphics/StateNode.hpp>
 #include <vine/graphics/Material.hpp>
 #include <vine/graphics/MaterialManager.hpp>
 #include <vine/graphics/AxisGizmo.hpp>
@@ -63,17 +67,17 @@ intrusive_ptr<vine::geometry::TriangleMesh> makeUnitTriangle()
  * @param name     Name assigned to the geometry drawable.
  * @return Node with one triangle drawable.
  */
-intrusive_ptr<Node> makeTriangleNode(const Vec3d& position, intrusive_ptr<Material> material,
-                                     const vine::String& name = {})
+intrusive_ptr<MatrixTransform> makeTriangleNode(const Vec3d& position, intrusive_ptr<Material> material,
+                                                const vine::String& name = {})
 {
-    auto node = intrusive_ptr<Node>(new Node());
+    auto node = intrusive_ptr<MatrixTransform>(new MatrixTransform());
     auto geom = intrusive_ptr<Geometry>(new Geometry());
     auto mesh = makeUnitTriangle();
     geom->setShape(mesh);
     geom->setMaterial(std::move(material));
     geom->setName(name);
-    node->addDrawable(geom);
-    node->setLocalTransform(vine::math::translate(position));
+    node->setMatrix(vine::math::translate(position));
+    node->addChild(geom);
     return node;
 }
 
@@ -110,11 +114,11 @@ TEST(SceneTest, NullAddIsIgnored)
 TEST(SceneTest, BoundingBoxAggregates)
 {
     Scene scene;
-    auto node = intrusive_ptr<Node>(new Node());
+    auto node = intrusive_ptr<Group>(new Group());
     auto geom = intrusive_ptr<Geometry>(new Geometry());
     auto mesh = makeUnitTriangle();
     geom->setShape(mesh);
-    node->addDrawable(geom);
+    node->addChild(geom);
     scene.addNode(node);
 
     Aabbd box = scene.boundingBox();
@@ -127,11 +131,11 @@ TEST(SceneTest, BoundingBoxAggregates)
 TEST(SceneTest, InvisibleNodeExcludedFromBoundingBox)
 {
     Scene scene;
-    auto node = intrusive_ptr<Node>(new Node());
+    auto node = intrusive_ptr<Group>(new Group());
     auto geom = intrusive_ptr<Geometry>(new Geometry());
     auto mesh = makeUnitTriangle();
     geom->setShape(mesh);
-    node->addDrawable(geom);
+    node->addChild(geom);
     node->setVisible(false);
     scene.addNode(node);
 
@@ -166,22 +170,21 @@ TEST(SceneTest, CollectCommandsSortsOpaqueFrontToBack)
     auto commands = scene.collectRenderCommands(&cam);
 
     ASSERT_EQ(commands.size(), 2u);
-    EXPECT_EQ(commands[0].drawable->name(), u8"near");
-    EXPECT_EQ(commands[1].drawable->name(), u8"far");
+    EXPECT_EQ(commands[0].geometry->name(), u8"near");
+    EXPECT_EQ(commands[1].geometry->name(), u8"far");
     EXPECT_FALSE(commands[0].isTransparent);
 }
 
 TEST(SceneTest, CollectCommandsSortsTransparentBackToFrontAfterOpaque)
 {
     Scene scene;
-    auto opaque_mat = intrusive_ptr<Material>(new Material());
-    auto trans_mat = intrusive_ptr<Material>(new Material());
-    trans_mat->setOpacity(0.5f);
-
-    // Opaque far, transparent far, transparent near.
-    auto opaque_far = makeTriangleNode(Vec3d(0, 0, -10), opaque_mat, u8"opaque-far");
-    auto trans_far = makeTriangleNode(Vec3d(0, 0, -6), trans_mat, u8"trans-far");
-    auto trans_near = makeTriangleNode(Vec3d(0, 0, -2), trans_mat, u8"trans-near");
+    // Opaque far, transparent far, transparent near. Transparency is a leaf
+    // MatrixTransform-opacity property, not a material one.
+    auto opaque_far = makeTriangleNode(Vec3d(0, 0, -10), nullptr, u8"opaque-far");
+    auto trans_far = makeTriangleNode(Vec3d(0, 0, -6), nullptr, u8"trans-far");
+    auto trans_near = makeTriangleNode(Vec3d(0, 0, -2), nullptr, u8"trans-near");
+    trans_far->setOpacity(0.5f);
+    trans_near->setOpacity(0.5f);
     scene.addNode(trans_near);
     scene.addNode(opaque_far);
     scene.addNode(trans_far);
@@ -192,12 +195,12 @@ TEST(SceneTest, CollectCommandsSortsTransparentBackToFrontAfterOpaque)
 
     ASSERT_EQ(commands.size(), 3u);
     // Opaque batch first (regardless of depth).
-    EXPECT_EQ(commands[0].drawable->name(), u8"opaque-far");
+    EXPECT_EQ(commands[0].geometry->name(), u8"opaque-far");
     EXPECT_FALSE(commands[0].isTransparent);
     // Transparent drawn back-to-front.
-    EXPECT_EQ(commands[1].drawable->name(), u8"trans-far");
+    EXPECT_EQ(commands[1].geometry->name(), u8"trans-far");
     EXPECT_TRUE(commands[1].isTransparent);
-    EXPECT_EQ(commands[2].drawable->name(), u8"trans-near");
+    EXPECT_EQ(commands[2].geometry->name(), u8"trans-near");
     EXPECT_TRUE(commands[2].isTransparent);
 }
 
@@ -215,7 +218,7 @@ TEST(SceneTest, CollectCommandsCullsOutOfView)
     auto commands = scene.collectRenderCommands(&cam);
 
     ASSERT_EQ(commands.size(), 1u);
-    EXPECT_EQ(commands[0].drawable->name(), u8"visible");
+    EXPECT_EQ(commands[0].geometry->name(), u8"visible");
 }
 
 TEST(SceneTest, CollectCommandsCullsOffToTheSide)
@@ -232,7 +235,7 @@ TEST(SceneTest, CollectCommandsCullsOffToTheSide)
     auto commands = scene.collectRenderCommands(&cam);
 
     ASSERT_EQ(commands.size(), 1u);
-    EXPECT_EQ(commands[0].drawable->name(), u8"visible");
+    EXPECT_EQ(commands[0].geometry->name(), u8"visible");
 }
 
 TEST(SceneTest, CollectCommandsNullCameraYieldsEmpty)
@@ -270,13 +273,13 @@ TEST(SceneTest, CollectCommandsHidesNode)
     setupLookAtCamera(cam);
     auto commands = scene.collectRenderCommands(&cam);
     ASSERT_EQ(commands.size(), 1u);
-    EXPECT_EQ(commands[0].drawable->name(), u8"shown");
+    EXPECT_EQ(commands[0].geometry->name(), u8"shown");
 }
 
 TEST(SceneTest, CollectCommandsHidesDrawable)
 {
     Scene scene;
-    auto node = intrusive_ptr<Node>(new Node());
+    auto node = intrusive_ptr<MatrixTransform>(new MatrixTransform());
     auto g1 = intrusive_ptr<Geometry>(new Geometry());
     g1->setShape(makeUnitTriangle());
     g1->setName(u8"g1");
@@ -284,16 +287,16 @@ TEST(SceneTest, CollectCommandsHidesDrawable)
     g2->setShape(makeUnitTriangle());
     g2->setName(u8"g2");
     g1->setVisible(false);
-    node->addDrawable(g1);
-    node->addDrawable(g2);
-    node->setLocalTransform(vine::math::translate(Vec3d(0, 0, -3)));
+    node->addChild(g1);
+    node->addChild(g2);
+    node->setMatrix(vine::math::translate(Vec3d(0, 0, -3)));
     scene.addNode(node);
 
     Camera cam;
     setupLookAtCamera(cam);
     auto commands = scene.collectRenderCommands(&cam);
     ASSERT_EQ(commands.size(), 1u);
-    EXPECT_EQ(commands[0].drawable->name(), u8"g2");
+    EXPECT_EQ(commands[0].geometry->name(), u8"g2");
 }
 
 TEST(SceneTest, CollectCommandsEffectiveOpacity)
@@ -303,7 +306,7 @@ TEST(SceneTest, CollectCommandsEffectiveOpacity)
     scene.addNode(node);
     scene.setOpacity(0.5f);
     node->setOpacity(0.5f);
-    node->drawables().front()->setOpacity(0.5f);
+    dynamic_cast<Geometry*>(node->children().front().get())->setOpacity(0.5f);
 
     Camera cam;
     setupLookAtCamera(cam);
@@ -313,13 +316,14 @@ TEST(SceneTest, CollectCommandsEffectiveOpacity)
     EXPECT_TRUE(commands[0].isTransparent);
 }
 
-TEST(SceneTest, CollectCommandsOpacityIncludesMaterial)
+TEST(SceneTest, CollectCommandsOpacityLeafAndNode)
 {
     Scene scene;
-    auto mat = intrusive_ptr<Material>(new Material());
-    mat->setOpacity(0.5f);
-    auto node = makeTriangleNode(Vec3d(0, 0, -3), mat, u8"tri");
+    // Leaf geometry opacity x ancestor (MatrixTransform) opacity; no material
+    // involvement.
+    auto node = makeTriangleNode(Vec3d(0, 0, -3), nullptr, u8"tri");
     node->setOpacity(0.5f);
+    dynamic_cast<Geometry*>(node->children().front().get())->setOpacity(0.5f);
     scene.addNode(node);
 
     Camera cam;
@@ -333,7 +337,7 @@ TEST(SceneTest, CollectCommandsOpacityIncludesMaterial)
 TEST(SceneTest, CollectCommandsOpacityMultipliesAlongHierarchy)
 {
     Scene scene;
-    auto parent = intrusive_ptr<Node>(new Node());
+    auto parent = intrusive_ptr<Group>(new Group());
     auto child = makeTriangleNode(Vec3d(0, 0, -3), nullptr, u8"tri");
     parent->addChild(child);
     parent->setOpacity(0.5f);
@@ -693,12 +697,12 @@ TEST(RayIntersectionTest, MissesTriangle)
 TEST(RayIntersectionTest, SceneQuery)
 {
     auto scene = intrusive_ptr<Scene>(new Scene());
-    auto node = intrusive_ptr<Node>(new Node());
+    auto node = intrusive_ptr<Group>(new Group());
     auto geom = intrusive_ptr<Geometry>(new Geometry());
     auto mesh = makeUnitTriangle();
     geom->setName(u8"tri");
     geom->setShape(mesh);
-    node->addDrawable(geom);
+    node->addChild(geom);
     scene->addNode(node);
 
     Ray ray(Vec3d(0.25, 0.25, 1.0), Vec3d(0, 0, -1));
@@ -713,7 +717,7 @@ TEST(RayIntersectionTest, AllHitsCollectsEveryTriangleSortedByDepth)
     // through their centres pierces both, so AllHits returns both hits sorted
     // near to far while Nearest returns only the closer one.
     auto scene = intrusive_ptr<Scene>(new Scene());
-    auto node = intrusive_ptr<Node>(new Node());
+    auto node = intrusive_ptr<Group>(new Group());
     auto geom = intrusive_ptr<Geometry>(new Geometry());
     auto mesh = intrusive_ptr<vine::geometry::TriangleMesh>(new vine::geometry::TriangleMesh());
     mesh->addTriangle(vine::math::Vec3f(0.0f, 0.0f, 0.0f),
@@ -723,7 +727,7 @@ TEST(RayIntersectionTest, AllHitsCollectsEveryTriangleSortedByDepth)
                       vine::math::Vec3f(1.0f, 0.0f, -2.0f),
                       vine::math::Vec3f(0.0f, 1.0f, -2.0f));
     geom->setShape(mesh);
-    node->addDrawable(geom);
+    node->addChild(geom);
     scene->addNode(node);
 
     Ray ray(Vec3d(0.25, 0.25, 1.0), Vec3d(0, 0, -1));
@@ -754,7 +758,6 @@ TEST(RayIntersectionTest, AllHitsCollectsEveryTriangleSortedByDepth)
 TEST(MaterialTest, Defaults)
 {
     Material mat;
-    EXPECT_NEAR(mat.opacity(), 1.0f, 1e-6f);
     EXPECT_NEAR(mat.shininess(), 32.0f, 1e-6f);
     EXPECT_NEAR(mat.diffuse().r, 0.8f, 1e-6f);
 }
@@ -764,13 +767,11 @@ TEST(MaterialTest, Setters)
     Material mat;
     mat.setName(u8"red");
     mat.setDiffuse(Colorf(1.0f, 0.0f, 0.0f, 1.0f));
-    mat.setOpacity(0.5f);
     mat.setShininess(64.0f);
     mat.setTextureFile(u8"tex.png");
 
     EXPECT_EQ(mat.name(), u8"red");
     EXPECT_NEAR(mat.diffuse().r, 1.0f, 1e-6f);
-    EXPECT_NEAR(mat.opacity(), 0.5f, 1e-6f);
     EXPECT_NEAR(mat.shininess(), 64.0f, 1e-6f);
     EXPECT_EQ(mat.textureFile(), u8"tex.png");
 }
@@ -783,47 +784,48 @@ TEST(GeometryTest, MeshCounts)
     auto mesh = makeUnitTriangle();
     geom->setShape(mesh);
 
-    EXPECT_EQ(geom->triangleCount(), 1u);
     EXPECT_EQ(geom->vertexCount(), 3u);
 }
 
 TEST(GeometryTest, NoShapeYieldsZero)
 {
     auto geom = intrusive_ptr<Geometry>(new Geometry());
-    EXPECT_EQ(geom->triangleCount(), 0u);
     EXPECT_EQ(geom->vertexCount(), 0u);
-    EXPECT_EQ(geom->shape(), nullptr);
+    EXPECT_FALSE(geom->hasPositions());
+    EXPECT_FALSE(geom->hasNormals());
+    EXPECT_FALSE(geom->hasIndices());
+    EXPECT_TRUE(geom->boundingBox().isEmpty());
 }
 
 // ============ Node ============
 
-TEST(NodeTest, DrawableBinding)
+TEST(NodeTest, LeafGeometryBinding)
 {
-    Node node;
+    Group node;
     auto geom = intrusive_ptr<Geometry>(new Geometry());
-    node.addDrawable(geom);
-    EXPECT_EQ(node.drawables().size(), 1u);
-    EXPECT_EQ(node.drawables()[0].get(), geom.get());
-    node.removeDrawable(geom.get());
-    EXPECT_EQ(node.drawables().size(), 0u);
+    node.addChild(geom);
+    EXPECT_EQ(node.children().size(), 1u);
+    EXPECT_EQ(node.children()[0].get(), geom.get());
+    node.removeChild(geom.get());
+    EXPECT_EQ(node.children().size(), 0u);
 }
 
-TEST(NodeTest, MultipleDrawables)
+TEST(NodeTest, MultipleLeafGeometries)
 {
-    Node node;
+    Group node;
     auto geom1 = intrusive_ptr<Geometry>(new Geometry());
     auto geom2 = intrusive_ptr<Geometry>(new Geometry());
-    node.addDrawable(geom1);
-    node.addDrawable(geom2);
+    node.addChild(geom1);
+    node.addChild(geom2);
 
-    EXPECT_EQ(node.drawables().size(), 2u);
-    EXPECT_EQ(node.drawables()[0].get(), geom1.get());
-    EXPECT_EQ(node.drawables()[1].get(), geom2.get());
+    EXPECT_EQ(node.children().size(), 2u);
+    EXPECT_EQ(node.children()[0].get(), geom1.get());
+    EXPECT_EQ(node.children()[1].get(), geom2.get());
 }
 
 TEST(NodeTest, ChildHierarchy)
 {
-    auto parent = intrusive_ptr<Node>(new Node());
+    auto parent = intrusive_ptr<Group>(new Group());
     auto child = intrusive_ptr<Node>(new Node());
     parent->addChild(child);
 
@@ -837,16 +839,16 @@ TEST(NodeTest, ChildHierarchy)
 
 TEST(NodeTest, WorldTransformCascades)
 {
-    auto parent = intrusive_ptr<Node>(new Node());
-    auto child = intrusive_ptr<Node>(new Node());
+    auto parent = intrusive_ptr<MatrixTransform>(new MatrixTransform());
+    auto child = intrusive_ptr<MatrixTransform>(new MatrixTransform());
     parent->addChild(child);
 
     // Parent translates by (1, 0, 0), child by (2, 0, 0).
-    parent->setLocalTransform(vine::math::translate(Vec3d(1, 0, 0)));
-    child->setLocalTransform(vine::math::translate(Vec3d(2, 0, 0)));
+    parent->setMatrix(vine::math::translate(Vec3d(1, 0, 0)));
+    child->setMatrix(vine::math::translate(Vec3d(2, 0, 0)));
 
     // Child world origin = parent translation * child translation = (3, 0, 0).
-    const auto origin = child->worldTransform() * vine::math::Point3d(0, 0, 0);
+    const auto origin = child->worldMatrix() * vine::math::Point3d(0, 0, 0);
     EXPECT_NEAR(origin.x, 3.0, 1e-9);
     EXPECT_NEAR(origin.y, 0.0, 1e-9);
     EXPECT_NEAR(origin.z, 0.0, 1e-9);
@@ -854,18 +856,204 @@ TEST(NodeTest, WorldTransformCascades)
 
 TEST(NodeTest, BoundingBoxWithTransform)
 {
-    auto node = intrusive_ptr<Node>(new Node());
+    auto node = intrusive_ptr<MatrixTransform>(new MatrixTransform());
     auto geom = intrusive_ptr<Geometry>(new Geometry());
     auto mesh = makeUnitTriangle();
     geom->setShape(mesh);
-    node->addDrawable(geom);
-    node->setLocalTransform(vine::math::translate(Vec3d(10, 0, 0)));
+    node->addChild(geom);
+    node->setMatrix(vine::math::translate(Vec3d(10, 0, 0)));
 
     Aabbd box = node->boundingBox();
     // Local box [0,1]x[0,1] translated by +10 on X.
     EXPECT_NEAR(box.min().x, 10.0, 1e-9);
     EXPECT_NEAR(box.max().x, 11.0, 1e-9);
     EXPECT_NEAR(box.max().y, 1.0, 1e-9);
+}
+
+// ============ MatrixTransform / Group ============
+
+TEST(MatrixTransformTest, MatrixRoundTrip)
+{
+    MatrixTransform mt;
+    // Default matrix is identity.
+    EXPECT_TRUE(mt.matrix().isIdentity());
+
+    const Mat4d m = vine::math::translate(Vec3d(1, 2, 3));
+    mt.setMatrix(m);
+    EXPECT_NEAR(mt.matrix().element(0, 3), 1.0, 1e-9);
+    EXPECT_NEAR(mt.matrix().element(1, 3), 2.0, 1e-9);
+    EXPECT_NEAR(mt.matrix().element(2, 3), 3.0, 1e-9);
+}
+
+TEST(MatrixTransformTest, WorldMatrixAccumulatesNested)
+{
+    auto outer = intrusive_ptr<MatrixTransform>(new MatrixTransform());
+    outer->setMatrix(vine::math::translate(Vec3d(1, 0, 0)));
+    auto inner = intrusive_ptr<MatrixTransform>(new MatrixTransform());
+    inner->setMatrix(vine::math::translate(Vec3d(0, 2, 0)));
+    outer->addChild(inner);
+
+    // Outer translation then inner translation: (1, 2, 0).
+    const auto p = inner->worldMatrix() * vine::math::Point3d(0, 0, 0);
+    EXPECT_NEAR(p.x, 1.0, 1e-9);
+    EXPECT_NEAR(p.y, 2.0, 1e-9);
+    EXPECT_NEAR(p.z, 0.0, 1e-9);
+}
+
+TEST(MatrixTransformTest, PlainGroupPassesTransformThrough)
+{
+    auto root = intrusive_ptr<MatrixTransform>(new MatrixTransform());
+    root->setMatrix(vine::math::translate(Vec3d(1, 0, 0)));
+    auto group = intrusive_ptr<Group>(new Group());
+    auto leaf = intrusive_ptr<MatrixTransform>(new MatrixTransform());
+    leaf->setMatrix(vine::math::translate(Vec3d(0, 0, 3)));
+    root->addChild(group);
+    group->addChild(leaf);
+
+    // A plain Group contributes no matrix of its own.
+    const auto p = leaf->worldMatrix() * vine::math::Point3d(0, 0, 0);
+    EXPECT_NEAR(p.x, 1.0, 1e-9);
+    EXPECT_NEAR(p.y, 0.0, 1e-9);
+    EXPECT_NEAR(p.z, 3.0, 1e-9);
+}
+
+TEST(MatrixTransformTest, NestedBoundingBoxIsWorld)
+{
+    auto outer = intrusive_ptr<MatrixTransform>(new MatrixTransform());
+    outer->setMatrix(vine::math::translate(Vec3d(10, 0, 0)));
+    auto inner = intrusive_ptr<MatrixTransform>(new MatrixTransform());
+    inner->setMatrix(vine::math::translate(Vec3d(0, 5, 0)));
+    outer->addChild(inner);
+
+    auto geom = intrusive_ptr<Geometry>(new Geometry());
+    geom->setShape(makeUnitTriangle());
+    inner->addChild(geom);
+
+    // World box: unit triangle [0,1]^2 placed by both translations.
+    const Aabbd box = outer->boundingBox();
+    EXPECT_NEAR(box.min().x, 10.0, 1e-9);
+    EXPECT_NEAR(box.max().x, 11.0, 1e-9);
+    EXPECT_NEAR(box.min().y, 5.0, 1e-9);
+    EXPECT_NEAR(box.max().y, 6.0, 1e-9);
+    EXPECT_NEAR(box.min().z, 0.0, 1e-9);
+    EXPECT_NEAR(box.max().z, 0.0, 1e-9);
+}
+
+TEST(MatrixTransformTest, WorldMatrixIsOwnMatrixForSingleNode)
+{
+    // A lone MatrixTransform's worldMatrix is exactly its own matrix (no
+    // self-doubling when folding the parent chain).
+    auto node = intrusive_ptr<MatrixTransform>(new MatrixTransform());
+    node->setMatrix(vine::math::translate(Vec3d(4, 0, 0)));
+    const auto p = node->worldMatrix() * vine::math::Point3d(0, 0, 0);
+    EXPECT_NEAR(p.x, 4.0, 1e-9);
+}
+
+TEST(GroupTest, ReParentDetachesFromOldParent)
+{
+    auto first = intrusive_ptr<Group>(new Group());
+    auto second = intrusive_ptr<Group>(new Group());
+    auto child = intrusive_ptr<Node>(new Node());
+    first->addChild(child);
+    second->addChild(child);
+
+    EXPECT_EQ(first->children().size(), 0u);
+    EXPECT_EQ(second->children().size(), 1u);
+    EXPECT_EQ(second->children()[0].get(), child.get());
+    EXPECT_EQ(child->parent(), second.get());
+}
+
+TEST(SceneTest, CollectCommandsBakesNestedWorldMatrix)
+{
+    Scene scene;
+    auto root = intrusive_ptr<MatrixTransform>(new MatrixTransform());
+    root->setMatrix(vine::math::translate(Vec3d(0, 0, -5)));
+    auto holder = makeTriangleNode(Vec3d(0, 0, 0), nullptr, u8"tri");
+    root->addChild(holder);
+    scene.addNode(root);
+
+    Camera cam;
+    setupLookAtCamera(cam);
+    auto commands = scene.collectRenderCommands(&cam);
+    ASSERT_EQ(commands.size(), 1u);
+    // The command's model matrix is the folded world transform of the leaf.
+    const auto origin = commands[0].modelMatrix * vine::math::Point3d(0, 0, 0);
+    EXPECT_NEAR(origin.x, 0.0, 1e-9);
+    EXPECT_NEAR(origin.y, 0.0, 1e-9);
+    EXPECT_NEAR(origin.z, -5.0, 1e-9);
+}
+
+TEST(GeometryTest, CountsStayDataStatsUnderPointsTopology)
+{
+    // Topology lives on StateNode render state, NOT on the geometry data:
+    // the vertex count is a pure data statistic and must not change when an
+    // enclosing StateNode overrides the draw topology.
+    auto geom = intrusive_ptr<Geometry>(new Geometry());
+    geom->setShape(makeUnitTriangle());  // 3 vertices
+    EXPECT_EQ(geom->vertexCount(), 3u);
+
+    Scene scene;
+    auto state = intrusive_ptr<StateNode>(new StateNode());
+    state->setTopology(Topology::Points);
+    auto holder = makeTriangleNode(Vec3d(0, 0, -3), nullptr, u8"tri");
+    state->addChild(holder);
+    scene.addNode(state);
+
+    Camera cam;
+    setupLookAtCamera(cam);
+    auto commands = scene.collectRenderCommands(&cam);
+    ASSERT_EQ(commands.size(), 1u);
+    // The draw topology rides the resolved state; the data counts stay.
+    EXPECT_EQ(commands[0].renderState.topology, Topology::Points);
+    EXPECT_EQ(commands[0].geometry->vertexCount(), 3u);
+}
+
+TEST(ShaderProgramTest, AggregatesStages)
+{
+    ShaderProgram program;
+    program.setName(u8"custom");
+    EXPECT_EQ(program.name(), u8"custom");
+    EXPECT_EQ(program.stageCount(), 0u);
+    EXPECT_TRUE(program.stages().empty());
+
+    ShaderStage vs;
+    vs.type = ShaderStageType::Vertex;
+    vs.source = u8"#version 450\nvoid main(){ gl_Position = vec4(0.0); }\n";
+    program.addStage(vs);
+
+    ShaderStage fs;
+    fs.type = ShaderStageType::Fragment;
+    fs.source = u8"#version 450\nvoid main(){ outColor = vec4(1.0); }\n";
+    fs.entryPoint = u8"custom_main";
+    program.addStage(fs);
+
+    EXPECT_EQ(program.stageCount(), 2u);
+    ASSERT_NE(program.stage(0), nullptr);
+    EXPECT_EQ(program.stage(0)->type, ShaderStageType::Vertex);
+    EXPECT_EQ(program.stage(0)->entryPoint, u8"main");
+    EXPECT_FALSE(program.stage(0)->source.empty());
+    ASSERT_NE(program.stage(1), nullptr);
+    EXPECT_EQ(program.stage(1)->type, ShaderStageType::Fragment);
+    EXPECT_EQ(program.stage(1)->entryPoint, u8"custom_main");
+    EXPECT_EQ(program.stage(99), nullptr);
+
+    const auto& all = program.stages();
+    ASSERT_EQ(all.size(), 2u);
+    EXPECT_EQ(all[0].source, vs.source);
+}
+
+TEST(GeometryTest, ProgramSlotDefaultsNull)
+{
+    Geometry geom;
+    EXPECT_EQ(geom.program(), nullptr);
+
+    auto program = intrusive_ptr<ShaderProgram>(new ShaderProgram());
+    program->setName(u8"flat-red");
+    geom.setProgram(program);
+    EXPECT_EQ(geom.program(), program.get());
+
+    geom.setProgram(nullptr);
+    EXPECT_EQ(geom.program(), nullptr);
 }
 
 
@@ -918,30 +1106,21 @@ TEST(MeshTest, AttributesSharedOnBase)
     EXPECT_EQ(mesh->normals().size(), 3u);
 }
 
-TEST(GeometryTest, BoundingBoxUsesMeshAabbCache)
+TEST(GeometryTest, BoundingBoxComputedFromBuffers)
 {
     auto geom = intrusive_ptr<Geometry>(new Geometry());
     auto mesh = makeUnitTriangle();
 
-    // No cache yet: bounding box falls back to scanning positions.
+    // setShape fills the geometry's buffers; the box derives from them.
     geom->setShape(mesh);
-    Aabbd box = geom->boundingBox();
+    const Aabbd box = geom->boundingBox();
     EXPECT_TRUE(box.isValid());
     EXPECT_NEAR(box.min().x, 0.0, 1e-9);
+    EXPECT_NEAR(box.min().y, 0.0, 1e-9);
+    EXPECT_NEAR(box.min().z, 0.0, 1e-9);
     EXPECT_NEAR(box.max().x, 1.0, 1e-9);
     EXPECT_NEAR(box.max().y, 1.0, 1e-9);
-
-    // A computed cache is reused instead of re-scanning.
-    mesh->computeAabb();
-    box = geom->boundingBox();
-    EXPECT_TRUE(box.isValid());
-    EXPECT_NEAR(box.max().x, 1.0, 1e-6);
-
-    // A manually set cache wins over the geometry.
-    mesh->setAabb(vine::math::Aabbf(-5.0f, -5.0f, -5.0f, 5.0f, 5.0f, 5.0f));
-    box = geom->boundingBox();
-    EXPECT_NEAR(box.min().x, -5.0, 1e-6);
-    EXPECT_NEAR(box.max().z, 5.0, 1e-6);
+    EXPECT_NEAR(box.max().z, 0.0, 1e-9);
 }
 
 
@@ -1832,7 +2011,9 @@ TEST(AxisGizmoTest, BuildsThreeColouredSticks)
     ASSERT_NE(gizmo->content(), nullptr);
     ASSERT_EQ(gizmo->content()->nodes().size(), 3u);
     for (const auto& node : gizmo->content()->nodes()) {
-        ASSERT_EQ(node->drawables().size(), 1u);
+        const auto* group = dynamic_cast<const Group*>(node.get());
+        ASSERT_NE(group, nullptr);
+        ASSERT_EQ(group->children().size(), 1u);
     }
     EXPECT_NE(gizmo->pass()->camera(), nullptr);
     EXPECT_EQ(gizmo->mirrorMode(), Overlay::MirrorMode::Orientation);
@@ -2055,5 +2236,419 @@ TEST(MaterialManagerTest, RegisteredMaterialIntrospection)
     manager.clear();
     EXPECT_EQ(manager.materialCount(), 0u);
     EXPECT_FALSE(manager.hasMaterial(b.get()));
+}
+
+TEST(StateNodeTest, NewNodeHasNoState)
+{
+    StateNode state;
+    EXPECT_FALSE(state.hasState());
+    EXPECT_TRUE(state.renderState().empty());
+    EXPECT_FALSE(state.depth().has_value());
+    EXPECT_FALSE(state.cullMode().has_value());
+    EXPECT_FALSE(state.blend().has_value());
+    EXPECT_FALSE(state.polygonMode().has_value());
+    EXPECT_FALSE(state.topology().has_value());
+}
+
+TEST(StateNodeTest, TopologyIsStateAndDefaultsToTriangles)
+{
+    StateNode state;
+    EXPECT_FALSE(state.topology().has_value());
+    EXPECT_EQ(effectiveRenderState(&state).topology, Topology::Triangles);
+
+    state.setTopology(Topology::Points);
+    ASSERT_TRUE(state.topology().has_value());
+    EXPECT_EQ(*state.topology(), Topology::Points);
+    EXPECT_EQ(effectiveRenderState(&state).topology, Topology::Points);
+
+    state.clearTopology();
+    EXPECT_FALSE(state.topology().has_value());
+    EXPECT_EQ(effectiveRenderState(&state).topology, Topology::Triangles);
+}
+TEST(StateNodeTest, SettersAndClears)
+{
+    StateNode state;
+
+    const DepthState depth;
+    state.setDepth(depth);
+    EXPECT_TRUE(state.hasState());
+    ASSERT_TRUE(state.depth().has_value());
+    EXPECT_EQ(*state.depth(), depth);
+
+    state.clearDepth();
+    EXPECT_FALSE(state.depth().has_value());
+    EXPECT_FALSE(state.hasState());
+
+    state.setCullMode(CullMode::Front);
+    state.setPolygonMode(PolygonMode::Line);
+    ASSERT_TRUE(state.cullMode().has_value());
+    ASSERT_TRUE(state.polygonMode().has_value());
+    EXPECT_EQ(*state.cullMode(), CullMode::Front);
+    EXPECT_EQ(*state.polygonMode(), PolygonMode::Line);
+
+    state.clearCullMode();
+    EXPECT_FALSE(state.cullMode().has_value());
+    EXPECT_TRUE(state.polygonMode().has_value());
+
+    BlendState blend;
+    blend.enabled = true;
+    blend.src     = BlendFactor::SrcColor;
+    state.setBlend(blend);
+    ASSERT_TRUE(state.blend().has_value());
+    EXPECT_TRUE(state.blend()->enabled);
+    EXPECT_EQ(state.blend()->src, BlendFactor::SrcColor);
+
+    // clearState() resets every item at once.
+    state.clearState();
+    EXPECT_FALSE(state.hasState());
+    EXPECT_FALSE(state.blend().has_value());
+    EXPECT_FALSE(state.polygonMode().has_value());
+}
+
+TEST(StateNodeTest, ResolveAppliesDefaults)
+{
+    const ResolvedRenderState fallback = resolveRenderState(RenderState());
+    EXPECT_TRUE(fallback.depth.test);
+    EXPECT_TRUE(fallback.depth.write);
+    EXPECT_EQ(fallback.depth.compare, CompareOp::Less);
+    EXPECT_EQ(fallback.cullMode, CullMode::None);
+    EXPECT_FALSE(fallback.blend.enabled);
+    EXPECT_EQ(fallback.polygonMode, PolygonMode::Fill);
+    EXPECT_EQ(fallback.topology, Topology::Triangles);
+
+    RenderState partial;
+    partial.cullMode    = CullMode::Back;
+    partial.polygonMode = PolygonMode::Line;
+    partial.topology    = Topology::Points;
+    const ResolvedRenderState resolved = resolveRenderState(partial);
+    EXPECT_EQ(resolved.cullMode, CullMode::Back);
+    EXPECT_EQ(resolved.polygonMode, PolygonMode::Line);
+    EXPECT_EQ(resolved.topology, Topology::Points);
+    EXPECT_TRUE(resolved.depth.test);
+    EXPECT_TRUE(resolved.depth.write);
+}
+
+TEST(StateNodeTest, FoldInheritsFromAncestorStateNode)
+{
+    auto root = intrusive_ptr<StateNode>(new StateNode());
+    root->setCullMode(CullMode::Back);
+    root->setPolygonMode(PolygonMode::Line);
+
+    auto child = intrusive_ptr<Group>(new Group());
+    auto leaf  = intrusive_ptr<Node>(new Node());
+    child->addChild(leaf);
+    root->addChild(child);
+
+    const RenderState folded = collectRenderState(leaf.get());
+    ASSERT_TRUE(folded.cullMode.has_value());
+    ASSERT_TRUE(folded.polygonMode.has_value());
+    EXPECT_EQ(*folded.cullMode, CullMode::Back);
+    EXPECT_EQ(*folded.polygonMode, PolygonMode::Line);
+    EXPECT_FALSE(folded.depth.has_value());
+
+    const ResolvedRenderState effective = effectiveRenderState(leaf.get());
+    EXPECT_EQ(effective.cullMode, CullMode::Back);
+    EXPECT_EQ(effective.polygonMode, PolygonMode::Line);
+    EXPECT_TRUE(effective.depth.test);
+}
+
+TEST(StateNodeTest, FoldDeeperNodeOverridesShallower)
+{
+    auto outer = intrusive_ptr<StateNode>(new StateNode());
+    outer->setCullMode(CullMode::Back);
+
+    auto inner = intrusive_ptr<StateNode>(new StateNode());
+    inner->setCullMode(CullMode::Front);
+    inner->setBlend(BlendState());
+    outer->addChild(inner);
+
+    const ResolvedRenderState effective = effectiveRenderState(inner.get());
+    EXPECT_EQ(effective.cullMode, CullMode::Front);
+    EXPECT_FALSE(effective.blend.enabled);
+}
+
+TEST(StateNodeTest, FoldCombinesDifferentItemsAcrossLevels)
+{
+    auto outer = intrusive_ptr<StateNode>(new StateNode());
+    DepthState no_write;
+    no_write.write = false;
+    outer->setDepth(no_write);
+
+    auto inner = intrusive_ptr<StateNode>(new StateNode());
+    inner->setPolygonMode(PolygonMode::Line);
+    outer->addChild(inner);
+
+    auto leaf = intrusive_ptr<Node>(new Node());
+    inner->addChild(leaf);
+
+    const ResolvedRenderState effective = effectiveRenderState(leaf.get());
+    EXPECT_TRUE(effective.depth.test);
+    EXPECT_FALSE(effective.depth.write);
+    EXPECT_EQ(effective.polygonMode, PolygonMode::Line);
+    EXPECT_EQ(effective.cullMode, CullMode::None);
+}
+
+TEST(StateNodeTest, FoldEmptyWhenPathHasNoStateNode)
+{
+    auto root = intrusive_ptr<Group>(new Group());
+    auto leaf = intrusive_ptr<Node>(new Node());
+    root->addChild(leaf);
+
+    EXPECT_TRUE(collectRenderState(leaf.get()).empty());
+    const ResolvedRenderState effective = effectiveRenderState(leaf.get());
+    EXPECT_TRUE(effective.depth.test);
+    EXPECT_EQ(effective.cullMode, CullMode::None);
+    EXPECT_EQ(effective.polygonMode, PolygonMode::Fill);
+}
+
+TEST(StateNodeTest, ProgramSlotSetClear)
+{
+    StateNode state;
+    EXPECT_EQ(state.program(), nullptr);
+
+    auto program = intrusive_ptr<ShaderProgram>(new ShaderProgram());
+    program->setName(u8"subtree");
+    state.setProgram(program);
+    EXPECT_EQ(state.program(), program.get());
+
+    state.clearProgram();
+    EXPECT_EQ(state.program(), nullptr);
+}
+
+TEST(StateNodeTest, EffectiveProgramLeafWinsOverAncestor)
+{
+    auto ancestor = intrusive_ptr<StateNode>(new StateNode());
+    auto ancestor_program = intrusive_ptr<ShaderProgram>(new ShaderProgram());
+    ancestor_program->setName(u8"ancestor");
+    ancestor->setProgram(ancestor_program);
+
+    // No leaf program -> nearest ancestor StateNode program applies.
+    auto holder = makeTriangleNode(Vec3d(0, 0, -3), nullptr, u8"tri");
+    ancestor->addChild(holder);
+    Geometry* geom = dynamic_cast<Geometry*>(holder->children().front().get());
+    ASSERT_NE(geom, nullptr);
+    EXPECT_EQ(effectiveProgram(geom).get(), ancestor_program.get());
+
+    // A leaf program overrides the ancestor.
+    auto leaf_program = intrusive_ptr<ShaderProgram>(new ShaderProgram());
+    leaf_program->setName(u8"leaf");
+    geom->setProgram(leaf_program);
+    EXPECT_EQ(effectiveProgram(geom).get(), leaf_program.get());
+
+    // Clearing the leaf falls back to the ancestor program.
+    geom->setProgram(nullptr);
+    EXPECT_EQ(effectiveProgram(geom).get(), ancestor_program.get());
+}
+
+TEST(StateNodeTest, EffectiveProgramDefaultsNull)
+{
+    auto root = intrusive_ptr<Group>(new Group());
+    auto holder = makeTriangleNode(Vec3d(0, 0, -3), nullptr, u8"tri");
+    root->addChild(holder);
+    Geometry* geom = dynamic_cast<Geometry*>(holder->children().front().get());
+    ASSERT_NE(geom, nullptr);
+    EXPECT_EQ(effectiveProgram(geom), nullptr);
+}
+
+TEST(SceneTest, CollectCommandsCarriesEffectiveProgram)
+{
+    Scene scene;
+    auto state = intrusive_ptr<StateNode>(new StateNode());
+    auto program = intrusive_ptr<ShaderProgram>(new ShaderProgram());
+    program->setName(u8"scene-program");
+    state->setProgram(program);
+
+    auto holder = makeTriangleNode(Vec3d(0, 0, -3), nullptr, u8"geo");
+    state->addChild(holder);
+    scene.addNode(state);
+
+    Camera cam;
+    setupLookAtCamera(cam);
+    auto commands = scene.collectRenderCommands(&cam);
+    ASSERT_EQ(commands.size(), 1u);
+    EXPECT_EQ(commands[0].program.get(), program.get());
+
+    // Without any program the command carries the engine default (null).
+    Scene plain;
+    plain.addNode(makeTriangleNode(Vec3d(0, 0, -3), nullptr, u8"tri"));
+    auto plain_commands = plain.collectRenderCommands(&cam);
+    ASSERT_EQ(plain_commands.size(), 1u);
+    EXPECT_EQ(plain_commands[0].program, nullptr);
+}
+
+TEST(SceneTest, CollectCommandsCarriesStateFromAncestorStateNode)
+{
+    Scene scene;
+    auto root = intrusive_ptr<StateNode>(new StateNode());
+    root->setCullMode(CullMode::Back);
+    DepthState no_write;
+    no_write.write = false;
+    root->setDepth(no_write);
+
+    auto holder = makeTriangleNode(Vec3d(0, 0, -2), nullptr, u8"geo");
+    root->addChild(holder);
+    scene.addNode(root);
+
+    Camera cam;
+    setupLookAtCamera(cam);
+    auto commands = scene.collectRenderCommands(&cam);
+
+    ASSERT_EQ(commands.size(), 1u);
+    EXPECT_EQ(commands[0].renderState.cullMode, CullMode::Back);
+    EXPECT_TRUE(commands[0].renderState.depth.test);
+    EXPECT_FALSE(commands[0].renderState.depth.write);
+}
+
+TEST(SceneTest, CollectCommandsDeeperStateNodeOverrides)
+{
+    Scene scene;
+    auto outer = intrusive_ptr<StateNode>(new StateNode());
+    outer->setPolygonMode(PolygonMode::Line);
+
+    auto inner = intrusive_ptr<StateNode>(new StateNode());
+    inner->setPolygonMode(PolygonMode::Point);
+    outer->addChild(inner);
+
+    auto holder = makeTriangleNode(Vec3d(0, 0, -2), nullptr, u8"geo");
+    inner->addChild(holder);
+    scene.addNode(outer);
+
+    Camera cam;
+    setupLookAtCamera(cam);
+    auto commands = scene.collectRenderCommands(&cam);
+
+    ASSERT_EQ(commands.size(), 1u);
+    EXPECT_EQ(commands[0].renderState.polygonMode, PolygonMode::Point);
+}
+
+TEST(SceneTest, CollectCommandsDefaultsStateWithoutStateNode)
+{
+    Scene scene;
+    auto holder = makeTriangleNode(Vec3d(0, 0, -2), nullptr, u8"geo");
+    scene.addNode(holder);
+
+    Camera cam;
+    setupLookAtCamera(cam);
+    auto commands = scene.collectRenderCommands(&cam);
+
+    ASSERT_EQ(commands.size(), 1u);
+    EXPECT_TRUE(commands[0].renderState.depth.test);
+    EXPECT_TRUE(commands[0].renderState.depth.write);
+    EXPECT_EQ(commands[0].renderState.cullMode, CullMode::None);
+    EXPECT_EQ(commands[0].renderState.polygonMode, PolygonMode::Fill);
+}
+
+TEST(GeometryTest, RawPositionsDriveCountsAndBounds)
+{
+    Geometry geom;
+    EXPECT_FALSE(geom.hasPositions());
+    EXPECT_FALSE(geom.hasIndices());
+    EXPECT_EQ(geom.vertexCount(), 0u);
+    EXPECT_TRUE(geom.boundingBox().isEmpty());
+
+    vine::geometry::Vec3fArray points = {
+        vine::math::Vec3f(0.0f, 0.0f, 0.0f),
+        vine::math::Vec3f(2.0f, 0.0f, 0.0f),
+        vine::math::Vec3f(0.0f, 3.0f, 0.0f),
+    };
+    geom.setPositions(points);
+    EXPECT_TRUE(geom.hasPositions());
+    EXPECT_EQ(geom.positionCount(), 3u);
+    EXPECT_EQ(geom.vertexCount(), 3u);
+
+    const Aabbd box = geom.boundingBox();
+    EXPECT_TRUE(box.isValid());
+    EXPECT_NEAR(box.min().x, 0.0, 1e-9);
+    EXPECT_NEAR(box.max().x, 2.0, 1e-9);
+    EXPECT_NEAR(box.max().y, 3.0, 1e-9);
+
+    vine::geometry::UInt32Array indices = { 0u, 1u, 2u };
+    geom.setIndices(indices);
+    EXPECT_TRUE(geom.hasIndices());
+    ASSERT_NE(geom.indices(), nullptr);
+    EXPECT_EQ(geom.indices()->size(), 3u);
+    EXPECT_EQ(geom.vertexCount(), 3u);
+}
+
+TEST(GeometryTest, NormalsChannelAndRevision)
+{
+    Geometry geom;
+    EXPECT_FALSE(geom.hasNormals());
+    EXPECT_EQ(geom.revision(), 0u);
+
+    vine::geometry::Vec3fArray points = { vine::math::Vec3f(0, 0, 0), vine::math::Vec3f(1, 0, 0),
+                                          vine::math::Vec3f(0, 1, 0) };
+    geom.setPositions(points);
+    EXPECT_EQ(geom.revision(), 1u);
+
+    vine::geometry::Vec3fArray normals = { vine::math::Vec3f(0, 0, 1), vine::math::Vec3f(0, 0, 1),
+                                           vine::math::Vec3f(0, 0, 1) };
+    geom.setNormals(normals);
+    EXPECT_TRUE(geom.hasNormals());
+    EXPECT_EQ(geom.normalCount(), 3u);
+    EXPECT_EQ(geom.revision(), 2u);
+}
+
+TEST(GeometryTest, ConverterFillsBuffersFromTriangleMesh)
+{
+    auto mesh = makeUnitTriangle();
+    auto geom = geometryFromShape(*mesh);
+
+    ASSERT_NE(geom.get(), nullptr);
+    EXPECT_TRUE(geom->hasPositions());
+    EXPECT_EQ(geom->positionCount(), 3u);
+    EXPECT_EQ(geom->vertexCount(), 3u);
+    // The triangle mesh carries no normals, so the converter leaves them empty
+    // (the renderer derives normals from the positions when needed).
+    EXPECT_FALSE(geom->hasNormals());
+    EXPECT_FALSE(geom->hasIndices());
+
+    // setShape on an empty geometry is equivalent to the converter.
+    auto via_setter = intrusive_ptr<Geometry>(new Geometry());
+    via_setter->setShape(mesh);
+    EXPECT_TRUE(via_setter->hasPositions());
+    EXPECT_EQ(via_setter->vertexCount(), 3u);
+}
+
+TEST(GeometryTest, OpenAttributeBufferList)
+{
+    Geometry geom;
+    EXPECT_EQ(geom.bufferCount(), 0u);
+    EXPECT_TRUE(geom.bufferLocations().empty());
+    const std::uint64_t base = geom.revision();
+
+    // Any number of custom channels can be added at arbitrary locations.
+    AttributeBuffer colour;
+    colour.components = 4;
+    colour.data       = std::make_shared<std::vector<float>>(
+        std::vector<float>{ 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f });
+    geom.addBuffer(2, colour);
+    AttributeBuffer size;
+    size.components = 1;
+    size.data       = std::make_shared<std::vector<float>>(
+        std::vector<float>{ 1.0f, 2.0f, 3.0f });
+    geom.addBuffer(4, size);
+
+    EXPECT_EQ(geom.bufferCount(), 2u);
+    ASSERT_NE(geom.buffer(2), nullptr);
+    EXPECT_EQ(geom.buffer(2)->components, 4u);
+    ASSERT_NE(geom.buffer(2)->data, nullptr);
+    EXPECT_EQ(geom.buffer(2)->data->size(), 8u);
+    ASSERT_NE(geom.buffer(4), nullptr);
+    EXPECT_EQ(geom.buffer(4)->components, 1u);
+    EXPECT_EQ(geom.buffer(4)->data->size(), 3u);
+    EXPECT_EQ(geom.bufferLocations(), (std::vector<std::uint32_t>{ 2, 4 }));
+    EXPECT_GT(geom.revision(), base);
+
+    // Replacing a location keeps the count stable and bumps the revision.
+    const std::uint64_t after_add = geom.revision();
+    AttributeBuffer replaced = colour;
+    geom.addBuffer(2, replaced);
+    EXPECT_EQ(geom.bufferCount(), 2u);
+    EXPECT_GT(geom.revision(), after_add);
+
+    geom.removeBuffer(4);
+    EXPECT_FALSE(geom.hasBuffer(4));
+    EXPECT_EQ(geom.bufferLocations(), (std::vector<std::uint32_t>{ 2 }));
 }
 

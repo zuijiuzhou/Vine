@@ -1,21 +1,58 @@
 #pragma once
-#include "Drawable.hpp"
+#include "Node.hpp"
 #include "graphics_global.hpp"
 
 #include <vine/intrusive_ptr.hpp>
 #include <vine/raw_ptr.hpp>
+#include <vine/geometry/Array.hpp>
 #include <vine/geometry/Shape.hpp>
 #include <cstddef>
+#include <cstdint>
+#include <map>
+#include <memory>
+#include <vector>
 
 V_GRAPHICS_NS_BEGIN
 
+class Material;
+using MaterialPtr = intrusive_ptr<Material>;
+
+class ShaderProgram;
+using ShaderProgramPtr = intrusive_ptr<ShaderProgram>;
+
 /**
- * @brief Geometry drawable wrapping a vine::geometry::Shape.
+ * @brief A user-defined per-vertex attribute buffer bound to a location.
  *
- * Represents renderable geometry (mesh, BRep, primitive) by referencing a
- * Shape. Provides mesh-level queries such as vertex/triangle counts.
+ * Generic, backend-agnostic carrier for custom vertex channels (e.g.
+ * point-cloud colour/size, or any attribute a custom shader reads): packed
+ * scalar floats, `components` of them per vertex. The float data is held by
+ * shared_ptr so several Geometry objects can share one buffer without copying
+ * and backends can cache/upload GPU buffers keyed by buffer identity.
+ * Convention: location 0 holds positions; location 1 may hold normals. Use
+ * Geometry::addBuffer() to attach channels.
  */
-class V_GRAPHICS_API Geometry : public Drawable {
+struct V_GRAPHICS_API AttributeBuffer
+{
+    std::shared_ptr<std::vector<float>> data;   ///< Shared packed per-vertex floats.
+    std::uint32_t components = 0;               ///< Scalar components per vertex (1..4).
+
+    /** @brief Returns whether no float data is attached. */
+    bool empty() const { return data == nullptr || data->empty(); }
+};
+
+/**
+ * @brief Leaf scene-graph node holding vertex data to render.
+ *
+ * Geometry is a leaf Node (mirroring vsg::Geometry): it stores vertex data —
+ * an open list of attribute buffers (location 0 = positions) plus optional
+ * indices — and the material / per-leaf visibility / opacity to render with.
+ * It has NO children and NO transform of its own: attach it under a Group /
+ * StateNode and place it with an enclosing MatrixTransform, whose matrix
+ * chain (Node::worldMatrix()) positions the data in world space. Its
+ * world-space bounding box is the bound of the location-0 positions
+ * transformed by that chain.
+ */
+class V_GRAPHICS_API Geometry : public Node {
     V_OBJECT_META_DECL;
 
   public:
@@ -23,30 +60,167 @@ class V_GRAPHICS_API Geometry : public Drawable {
     ~Geometry();
 
   public:
-    /** @brief Gets the associated shape (may be null). */
-    raw_ptr<const vine::geometry::Shape> shape() const;
-
-    /** @brief Sets the associated shape.
+    /** @brief Fills the raw buffers from a triangle-mesh Shape.
      *
-     * The geometry keeps a reference to the shape.
+     * Copies the mesh's positions (and normals when present, plus indices for
+     * indexed meshes) into this geometry's vertex data. The Shape is NOT
+     * retained: Geometry stores vertex data only (equivalent to applying
+     * geometryFromShape() to an empty geometry). Pass nullptr to clear the
+     * data.
      *
-     * @param shape Shape to render, or nullptr to clear.
+     * @param shape Mesh shape to convert, or nullptr to clear.
      */
     void setShape(intrusive_ptr<vine::geometry::Shape> shape);
 
-    /** @brief Gets the triangle count (0 when not a mesh shape). */
-    std::size_t triangleCount() const;
+    /** @brief Adds or replaces the per-vertex attribute buffer at @p location.
+     *
+     * Geometry holds an open list of vertex-attribute buffers keyed by their
+     * shader location; there is no fixed slot count, so any number of custom
+     * channels can be added (only the backend's max-attribute limit applies).
+     * Convention: location 0 holds positions (three components per vertex)
+     * and drives vertex counts and the bounding box; location 1 may hold
+     * normals. Replacing or adding a buffer bumps the data revision.
+     *
+     * @param location Shader attribute location (0 = positions).
+     * @param buffer   Packed per-vertex data.
+     */
+    void addBuffer(std::uint32_t location, const AttributeBuffer& buffer);
 
-    /** @brief Gets the vertex count (0 when not a mesh shape). */
+    /** @brief Removes the attribute buffer at @p location (if present). */
+    void removeBuffer(std::uint32_t location);
+
+    /** @brief Returns whether an attribute buffer is present at @p location. */
+    bool hasBuffer(std::uint32_t location) const;
+
+    /** @brief Gets the attribute buffer at @p location, or null when unset. */
+    const AttributeBuffer* buffer(std::uint32_t location) const;
+
+    /** @brief Gets the number of distinct attribute buffers present. */
+    std::size_t bufferCount() const;
+
+    /** @brief Gets the locations of every attribute buffer (ascending). */
+    std::vector<std::uint32_t> bufferLocations() const;
+
+    /** @brief Sets the positions (location 0) from a Vec3 array.
+     *
+     * @param positions Vertex positions (three floats each).
+     */
+    void setPositions(const vine::geometry::Vec3fArray& positions);
+
+    /** @brief Returns whether positions (location 0) are present. */
+    bool hasPositions() const;
+
+    /** @brief Gets the number of positions (location 0). */
+    std::size_t positionCount() const;
+
+    /** @brief Sets the normals (location 1) from a Vec3 array.
+     *
+     * Optional: when unset the renderer derives normals from the positions.
+     *
+     * @param normals Vertex normals (three floats each), one per position.
+     */
+    void setNormals(const vine::geometry::Vec3fArray& normals);
+
+    /** @brief Returns whether normals (location 1) are present. */
+    bool hasNormals() const;
+
+    /** @brief Gets the number of normals (location 1). */
+    std::size_t normalCount() const;
+
+    /** @brief Sets the optional index buffer from a shared buffer.
+     *
+     * @param indices Shared index buffer to attach, or null to clear.
+     */
+    void setIndices(std::shared_ptr<vine::geometry::UInt32Array> indices);
+
+    /** @brief Sets the optional index buffer from a local array (copied).
+     *
+     * @param indices Index values to attach.
+     */
+    void setIndices(const vine::geometry::UInt32Array& indices);
+
+    /** @brief Returns whether an index buffer is attached. */
+    bool hasIndices() const;
+
+    /** @brief Gets the index buffer, or null when unset. */
+    const vine::geometry::UInt32Array* indices() const;
+
+    /** @brief Gets the data revision.
+     *
+     * Bumped by every data mutation, so retained render nodes can detect
+     * when the geometry data changed and rebuild.
+     *
+     * @return Monotonic revision counter (starts at 0).
+     */
+    std::uint64_t revision() const;
+
+    /** @brief Gets the vertex count.
+     *
+     * @return Number of vertices (the position buffer at location 0).
+     */
     std::size_t vertexCount() const;
 
-  protected:
-    Aabbd computeBoundingBox() const override;
+    /** @brief Gets the bound material.
+     *
+     * @return Material, or null when unset (engine default applies).
+     */
+    raw_ptr<Material> material() const;
+
+    /** @brief Sets the bound material.
+     *
+     * The geometry keeps a reference to the material.
+     *
+     * @param m Material, or nullptr to clear.
+     */
+    void setMaterial(intrusive_ptr<Material> m);
+
+    /** @brief Gets the bound custom shader program.
+     *
+     * @return Program, or null when the engine default applies.
+     */
+    raw_ptr<ShaderProgram> program() const;
+
+    /** @brief Sets the custom shader program for this leaf.
+     *
+     * The geometry keeps a reference to the program. A program replaces the
+     * engine's default shading for this geometry (per graphics-shader.md);
+     * binding null restores the default.
+     *
+     * @param program Program, or nullptr to clear.
+     */
+    void setProgram(intrusive_ptr<ShaderProgram> program);
+
+    /** @brief Computes the world-space bounding box of this leaf.
+     *
+     * The bound of the location-0 positions (local data box) transformed by
+     * the enclosing MatrixTransform chain; empty when no positions are set.
+     *
+     * @return World-space AABB of this geometry's data.
+     */
+    Aabbd boundingBox() const override;
 
   private:
-    intrusive_ptr<vine::geometry::Shape> shape_;
+    std::map<std::uint32_t, AttributeBuffer> attributes_;
+    std::shared_ptr<vine::geometry::UInt32Array> indices_;
+    std::uint64_t                            revision_ = 0;
+    intrusive_ptr<Material> material_;
+    intrusive_ptr<ShaderProgram> program_;
 };
 
 using GeometryPtr = intrusive_ptr<Geometry>;
+
+/**
+ * @brief Builds a buffer-only Geometry from a triangle-mesh Shape.
+ *
+ * Copies the shape's positions (and normals when present) into the geometry;
+ * indexed meshes also copy their index buffer. Shapes that are not triangle
+ * meshes (primitives, BRep, ...) are not convertible and yield null. This is
+ * the bridge that lets Shape live purely in the geometry module while
+ * Geometry stays vertex-data only.
+ *
+ * @param shape Mesh shape to convert.
+ * @return Filled geometry, or null for unsupported shapes.
+ */
+GeometryPtr geometryFromShape(const vine::geometry::Shape& shape);
 
 V_GRAPHICS_NS_END

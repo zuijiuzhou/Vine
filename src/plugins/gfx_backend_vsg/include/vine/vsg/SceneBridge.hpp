@@ -20,7 +20,9 @@ namespace vine::graphics
 class Geometry;
 class Scene;
 class Node;
+class ShaderProgram;
 struct RenderCommand;
+struct ResolvedRenderState;
 }
 
 V_VSG_NS_BEGIN
@@ -87,16 +89,29 @@ class V_VSG_API SceneBridge {
 
     /** @brief Builds (or rebuilds) the vsg subtree for one geometry/material.
      *
+     * The geometry's pipeline is assembled from @p state (depth, culling,
+     * polygon mode, blending factors, topology) via the RenderStateMapper; a
+     * geometry whose resolved state changed is rebuilt by the caller. When
+     * @p program is set, the pipeline is assembled from the user program
+     * instead of the built-in shader set (its GLSL is compiled at run time
+     * and bound via the official vsg contract: vsg_Vertex + the "pc" push
+     * constant carrying projection/modelView).
+     *
      * @param geometry   Geometry to build.
      * @param material   Bound material (may be null).
      * @param out_colors Receives the per-vertex color array the caller keeps
-     *                   to drive per-drawable opacity each frame.
+     *                   to drive per-drawable opacity each frame (null when a
+     *                   user program renders instead).
+     * @param state      Resolved render state the pipeline must honour.
+     * @param program    User shader program, or null for the built-in default.
      * @return Built vsg node, or null when not buildable.
      */
     ::vsg::ref_ptr<::vsg::Node> buildGeometry(
         vine::raw_ptr<const vine::graphics::Geometry> geometry,
         vine::raw_ptr<vine::graphics::Material> material,
-        ::vsg::ref_ptr<::vsg::vec4Array>& out_colors);
+        ::vsg::ref_ptr<::vsg::vec4Array>& out_colors,
+        const vine::graphics::ResolvedRenderState& state,
+        vine::raw_ptr<const vine::graphics::ShaderProgram> program);
 
     ::vsg::ref_ptr<::vsg::ShaderSet> shader_set_;
     ::vsg::ref_ptr<::vsg::SharedObjects> shared_objects_;

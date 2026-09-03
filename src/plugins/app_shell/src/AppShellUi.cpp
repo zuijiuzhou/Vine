@@ -1,6 +1,7 @@
 #include "AppShellUi.hpp"
 
 #include <cstdlib>
+#include <cmath>
 #include <utility>
 
 #include <QTimer>
@@ -9,6 +10,7 @@
 #include <vine/graphics/AxisGizmo.hpp>
 #include <vine/graphics/Camera.hpp>
 #include <vine/graphics/Geometry.hpp>
+#include <vine/graphics/MatrixTransform.hpp>
 #include <vine/graphics/Material.hpp>
 #include <vine/graphics/Node.hpp>
 #include <vine/graphics/RenderEngine.hpp>
@@ -18,6 +20,8 @@
 #include <vine/graphics/RenderTarget.hpp>
 #include <vine/graphics/Scene.hpp>
 #include <vine/graphics/ScreenPass.hpp>
+#include <vine/graphics/ShaderProgram.hpp>
+#include <vine/graphics/StateNode.hpp>
 #include <vine/graphics/Light.hpp>
 #include <vine/math/Vector3.hpp>
 #include <vine/geometry/IndexedTriangleMesh.hpp>
@@ -74,11 +78,11 @@ gui::RibbonButton* addCommandButton(gui::RibbonGroup* group, const String& text,
  * @param half    Half extents along X / Y / Z.
  * @return The created node (kept alive by the scene).
  */
-vine::intrusive_ptr<vine::graphics::Node> addBox(vine::graphics::Scene* scene,
-                                                 const vine::Colorf& diffuse,
-                                                 const vine::String& name,
-                                                 const vine::math::Vec3d& centre,
-                                                 const vine::math::Vec3d& half)
+vine::intrusive_ptr<vine::graphics::MatrixTransform> addBox(vine::graphics::Scene* scene,
+                                                            const vine::Colorf& diffuse,
+                                                            const vine::String& name,
+                                                            const vine::math::Vec3d& centre,
+                                                            const vine::math::Vec3d& half)
 {
     using vine::math::Vec3f;
 
@@ -151,40 +155,175 @@ vine::intrusive_ptr<vine::graphics::Node> addBox(vine::graphics::Scene* scene,
     material->setDiffuse(diffuse);
     geometry->setMaterial(material);
 
-    auto node = vine::intrusive_ptr<vine::graphics::Node>(new vine::graphics::Node());
+    // Place the box with a MatrixTransform: the transform node carries the
+    // position and owns the leaf geometry.
+    auto node = vine::intrusive_ptr<vine::graphics::MatrixTransform>(
+        new vine::graphics::MatrixTransform());
     node->setName(name);
-    node->setLocalTransform(vine::math::translate(centre));
-    node->addDrawable(geometry);
+    node->setMatrix(vine::math::translate(centre));
+    node->addChild(geometry);
 
     scene->addNode(node);
     return node;
 }
 
 /**
- * @brief Adds the default demo content: a ground plane with a stack of boxes.
+ * @brief Builds the default demo scene: a single-pass feature showcase.
  *
- * A large ground box plus a small stack of differently sized boxes and one
- * offset box: the layout is chosen to clearly show directional shadows on the
- * ground once the v4b shadow sampling is active.
+ * Exercises, in one window view, every recently landed graphics slice:
+ *  - ground + lit box: MatrixTransform + Material (default Phong path)
+ *  - StateNode{ PolygonMode::Line } box         -> per-subtree polygon state
+ *  - StateNode{ CullMode::Back } box            -> per-subtree culling state
+ *  - StateNode{ Topology::Points } + cyan user program point cloud
+ *  - Geometry::setProgram magenta box (runtime-compiled GLSL, official vsg
+ *    "pc" projection/modelView contract)
+ *  - nested MatrixTransform (world-matrix chain)
+ *  - StateNode blend + translucent material box
  *
- * @param scene Scene to receive the objects.
+ * @param scene Scene to receive the content.
  */
 void addDemoCubes(vine::graphics::Scene* scene)
 {
+    using vine::intrusive_ptr;
+    using vine::graphics::BlendState;
+    using vine::graphics::Geometry;
+    using vine::graphics::MatrixTransform;
+    using vine::graphics::ShaderProgram;
+    using vine::graphics::ShaderStage;
+    using vine::graphics::ShaderStageType;
+    using vine::graphics::StateNode;
     using vine::math::Vec3d;
-    // Ground: a wide, thin box slightly below the origin (top at y = 0).
+    using vine::math::Vec3f;
+
+    // Ground (wide, slightly below origin) + one plain lit box: the default
+    // material / Phong path.
     addBox(scene, vine::Colorf(0.45f, 0.47f, 0.52f, 1.0f), u8"ground",
-           Vec3d(0.0, -0.05, 0.0), Vec3d(2.6, 0.05, 2.6));
-    // A stack of differently sized boxes rising from the ground.
-    addBox(scene, vine::Colorf(0.25f, 0.75f, 0.25f, 1.0f), u8"box_base",
-           Vec3d(0.0, 0.5, 0.0), Vec3d(0.8, 0.5, 0.8));
-    addBox(scene, vine::Colorf(0.85f, 0.30f, 0.25f, 1.0f), u8"box_mid",
-           Vec3d(0.0, 1.35, 0.0), Vec3d(0.55, 0.35, 0.55));
-    addBox(scene, vine::Colorf(0.25f, 0.45f, 0.90f, 1.0f), u8"box_top",
-           Vec3d(0.0, 2.02, 0.0), Vec3d(0.32, 0.32, 0.32));
-    // An offset box that casts its own separated shadow on the ground.
-    addBox(scene, vine::Colorf(0.95f, 0.72f, 0.10f, 1.0f), u8"box_side",
-           Vec3d(1.7, 0.35, -1.4), Vec3d(0.5, 0.35, 0.5));
+           Vec3d(0.0, -0.05, 0.0), Vec3d(3.0, 0.05, 3.0));
+    addBox(scene, vine::Colorf(0.30f, 0.62f, 0.36f, 1.0f), u8"lit_box",
+           Vec3d(0.0, 0.4, 0.0), Vec3d(0.5, 0.4, 0.5));
+
+    // --- StateNode{ PolygonMode::Line }: wireframe box ----------------------
+    {
+        auto state = intrusive_ptr<StateNode>(new StateNode());
+        state->setPolygonMode(vine::graphics::PolygonMode::Line);
+        auto box = addBox(scene, vine::Colorf(1.0f, 0.68f, 0.12f, 1.0f), u8"wire_box",
+                          Vec3d(-2.3, 0.35, 0.6), Vec3d(0.35, 0.35, 0.35));
+        scene->removeNode(box.get());
+        state->addChild(box);
+        scene->addNode(state);
+    }
+
+    // --- StateNode{ CullMode::Back }: single-sided box ----------------------
+    {
+        auto state = intrusive_ptr<StateNode>(new StateNode());
+        state->setCullMode(vine::graphics::CullMode::Back);
+        auto box = addBox(scene, vine::Colorf(0.20f, 0.75f, 0.85f, 1.0f), u8"culled_box",
+                          Vec3d(-1.6, 0.4, -0.8), Vec3d(0.4, 0.4, 0.4));
+        scene->removeNode(box.get());
+        state->addChild(box);
+        scene->addNode(state);
+    }
+
+    // --- Custom magenta program on a box (Geometry::setProgram) -------------
+    {
+        auto program = intrusive_ptr<ShaderProgram>(new ShaderProgram());
+        program->setName(u8"demo_magenta");
+        ShaderStage vs;
+        vs.type = ShaderStageType::Vertex;
+        vs.source = u8"#version 450\n"
+                    u8"layout(push_constant) uniform PushConstants { mat4 projection; mat4 modelView; } pc;\n"
+                    u8"layout(location = 0) in vec3 vsg_Vertex;\n"
+                    u8"void main(){ gl_Position = pc.projection * pc.modelView * vec4(vsg_Vertex, 1.0); }\n";
+        program->addStage(vs);
+        ShaderStage fs;
+        fs.type = ShaderStageType::Fragment;
+        fs.source = u8"#version 450\n"
+                    u8"layout(location = 0) out vec4 outColor;\n"
+                    u8"void main(){ outColor = vec4(0.9, 0.1, 0.85, 1.0); }\n";
+        program->addStage(fs);
+
+        auto box = addBox(scene, vine::Colorf(1.0f, 1.0f, 1.0f, 1.0f), u8"custom_program",
+                          Vec3d(0.0, 0.85, 0.0), Vec3d(0.42, 0.45, 0.42));
+        auto* geometry = dynamic_cast<Geometry*>(box->children().front().get());
+        if (geometry != nullptr) {
+            geometry->setProgram(program);
+        }
+    }
+
+    // --- Point cloud: StateNode{ Topology::Points } + cyan program ----------
+    {
+        auto program = intrusive_ptr<ShaderProgram>(new ShaderProgram());
+        program->setName(u8"demo_cyan_points");
+        ShaderStage vs;
+        vs.type = ShaderStageType::Vertex;
+        vs.source = u8"#version 450\n"
+                    u8"layout(push_constant) uniform PushConstants { mat4 projection; mat4 modelView; } pc;\n"
+                    u8"layout(location = 0) in vec3 vsg_Vertex;\n"
+                    u8"void main(){ gl_Position = pc.projection * pc.modelView * vec4(vsg_Vertex, 1.0); }\n";
+        program->addStage(vs);
+        ShaderStage fs;
+        fs.type = ShaderStageType::Fragment;
+        fs.source = u8"#version 450\n"
+                    u8"layout(location = 0) out vec4 outColor;\n"
+                    u8"void main(){ outColor = vec4(0.1, 0.9, 0.95, 1.0); }\n";
+        program->addStage(fs);
+
+        auto cloud = intrusive_ptr<Geometry>(new Geometry());
+        cloud->setName(u8"point_cloud");
+        vine::geometry::Vec3fArray points;
+        for (int ring = 0; ring < 4; ++ring) {
+            const float r = 0.35f + 0.12f * static_cast<float>(ring);
+            const float y = -0.25f + 0.17f * static_cast<float>(ring);
+            for (int k = 0; k < 36; ++k) {
+                const float a = 6.2831853f * static_cast<float>(k) / 36.0f;
+                points.emplace_back(r * std::cos(a), y, r * std::sin(a));
+            }
+        }
+        cloud->setPositions(points);
+        cloud->setProgram(program);
+
+        auto state = intrusive_ptr<StateNode>(new StateNode());
+        state->setTopology(vine::graphics::Topology::Points);
+        auto mt = intrusive_ptr<MatrixTransform>(new MatrixTransform());
+        mt->setName(u8"point_cloud_node");
+        mt->setMatrix(vine::math::translate(Vec3d(-2.3, 0.75, -1.2)));
+        mt->addChild(cloud);
+        state->addChild(mt);
+        scene->addNode(state);
+    }
+
+    // --- Nested MatrixTransform: world-matrix chain --------------------------
+    {
+        auto inner = addBox(scene, vine::Colorf(0.95f, 0.5f, 0.1f, 1.0f), u8"nested_inner",
+                            Vec3d(0.0, 0.0, 0.0), Vec3d(0.28, 0.28, 0.28));
+        inner->setMatrix(vine::math::translate(Vec3d(0.0, 0.32, 0.0)));
+        scene->removeNode(inner.get());
+        auto outer = intrusive_ptr<MatrixTransform>(new MatrixTransform());
+        outer->setName(u8"nested_outer");
+        outer->setMatrix(vine::math::translate(Vec3d(1.5, 0.0, 0.9)));
+        outer->addChild(inner);
+        scene->addNode(outer);
+    }
+
+    // --- StateNode blend + translucent box -----------------------------------
+    {
+        auto state = intrusive_ptr<StateNode>(new StateNode());
+        BlendState blend;
+        blend.enabled = true;
+        blend.src = vine::graphics::BlendFactor::SrcAlpha;
+        blend.dst = vine::graphics::BlendFactor::OneMinusSrcAlpha;
+        state->setBlend(blend);
+
+        auto box = addBox(scene, vine::Colorf(1.0f, 0.25f, 0.25f, 1.0f), u8"translucent",
+                          Vec3d(0.9, 0.7, -1.1), Vec3d(0.55, 0.55, 0.55));
+        auto* geometry = dynamic_cast<Geometry*>(box->children().front().get());
+        if (geometry != nullptr) {
+            geometry->setOpacity(0.5f);
+        }
+        scene->removeNode(box.get());
+        state->addChild(box);
+        scene->addNode(state);
+    }
 }
 
 } // namespace

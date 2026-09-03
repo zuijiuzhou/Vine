@@ -19,24 +19,25 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 include(FetchContent)
 if(VINE_USE_FETCHCONTENT)
-    # A FetchContent-built VSG (no glslang) uses its embedded precompiled phong
-    # SPIR-V, which renders correctly (verified). No runtime shader compiler is
-    # required. If an installed VSG (e.g. from vcpkg) is already on the search
-    # path, prefer it; otherwise fetch VSG v1.1.16.
-    find_package(vsg CONFIG QUIET)
-    if(NOT vsg_FOUND)
-        FetchContent_Declare(vsg
-            GIT_REPOSITORY https://github.com/vsg-dev/VulkanSceneGraph.git
-            GIT_TAG        v1.1.16
-        )
-        set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)   # Static lib, baked into the DLL.
-        FetchContent_MakeAvailable(vsg)
-        v_group_targets_folder(${vsg_SOURCE_DIR} third_party)
-    else()
-        message(STATUS "gfx_backend_vsg: using installed vsg")
-    endif()
+    # Runtime GLSL -> SPIR-V compilation requires glslang, which vsg picks up
+    # via find_package(glslang) and compiles into its ShaderCompiler
+    # (VSG_SUPPORTS_ShaderCompiler). A prebuilt no-glslang VSG (e.g. the local
+    # /opt/opensrc/VSG install) cannot provide this, so VSG is always built
+    # from source here. The embedded precompiled phong SPIR-V keeps the
+    # default (no user Program) path rendering correctly regardless.
+    FetchContent_Declare(vsg
+        GIT_REPOSITORY https://github.com/vsg-dev/VulkanSceneGraph.git
+        GIT_TAG        v1.1.16
+    )
+    set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)   # Static lib, baked into the DLL.
+    set(VSG_SUPPORTS_ShaderCompiler ON CACHE BOOL "" FORCE)
+    FetchContent_MakeAvailable(vsg)
+    v_group_targets_folder(${vsg_SOURCE_DIR} third_party)
 else()
-    # Consume vsg from vcpkg or a local install (e.g. /opt/opensrc/VSG on Linux).
+    # Consume vsg from vcpkg or a local install (e.g. /opt/opensrc/VSG).
+    # NOTE: a local install built without glslang disables runtime shader
+    # compilation (vsg ShaderCompiler); use VINE_USE_FETCHCONTENT=ON for a
+    # glslang-enabled vsg.
     find_package(vsg CONFIG REQUIRED)
 endif()
 

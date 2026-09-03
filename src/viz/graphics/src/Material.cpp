@@ -56,16 +56,6 @@ void Material::setShininess(float shine)
     shininess_ = shine;
 }
 
-float Material::opacity() const
-{
-    return opacity_;
-}
-
-void Material::setOpacity(float alpha)
-{
-    opacity_ = alpha;
-}
-
 String Material::textureFile() const
 {
     return texture_file_;

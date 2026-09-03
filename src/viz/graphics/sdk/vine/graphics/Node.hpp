@@ -5,25 +5,30 @@
 #include <vine/Object.hpp>
 #include <vine/RefCounted.hpp>
 #include <vine/String.hpp>
+#include <vine/raw_ptr.hpp>
 #include <vine/math/Matrix4x4.hpp>
 #include <vine/math/Rect3.hpp>
-#include <vine/raw_ptr.hpp>
-#include <vector>
-
-#include "Drawable.hpp"
 
 V_GRAPHICS_NS_BEGIN
 
 using vine::math::Mat4d;
 using vine::math::Aabbd;
 
+class Group;
+
 /**
- * @brief Scene graph node carrying a transform, children, and an optional drawable.
+ * @brief Base class of every scene-graph node.
  *
- * Node is the building block of the scene hierarchy, similar to osg::Node or
- * OgreNext's SceneNode. It holds a local transform, parent/child links, and an
- * optional Drawable (the pure renderable). World transforms cascade through the
- * parent chain.
+ * Node is the OSG/vsg-style base of the scene hierarchy. Concrete kinds
+ * derive from it: Group aggregates children, MatrixTransform places a
+ * subtree with a local matrix, StateNode applies render state to a subtree,
+ * and Geometry is a leaf carrying vertex data. Node itself provides only the
+ * shared identity: the node name, a subtree-level visibility/opacity
+ * multiplier, the parent link, and world-matrix / bounding-box queries. It is
+ * NOT a container and holds no transform of its own: attach children through
+ * Group and place a subtree through MatrixTransform. The world-space
+ * boundingBox() of a subtree is computed by walking the parent chain, so any
+ * node answers in world space regardless of depth.
  */
 class V_GRAPHICS_API Node : public Object, public RefCounted<Node> {
     V_OBJECT_META_DECL;
@@ -39,81 +44,61 @@ class V_GRAPHICS_API Node : public Object, public RefCounted<Node> {
     /** @brief Sets the node name. */
     void setName(const String& name);
 
-    /** @brief Returns whether this node (and its subtree) is visible. */
+    /** @brief Returns whether this subtree is visible. */
     bool isVisible() const;
 
-    /** @brief Sets whether this node (and its subtree) is visible. */
+    /** @brief Sets whether this subtree is visible. */
     void setVisible(bool visible);
 
-    /** @brief Gets the node opacity multiplier in [0, 1], applied to the
-     * whole subtree. */
+    /** @brief Gets the subtree opacity multiplier in [0, 1]. */
     float opacity() const;
 
-    /** @brief Sets the node opacity multiplier in [0, 1], applied to the
-     * whole subtree. */
+    /** @brief Sets the subtree opacity multiplier in [0, 1]. */
     void setOpacity(float opacity);
-
-    /** @brief Gets the local transform. */
-    Mat4d localTransform() const;
-
-    /** @brief Sets the local transform.
-     *
-     * @param transform Local-space transform.
-     */
-    void setLocalTransform(const Mat4d& transform);
-
-    /** @brief Gets the world transform (parent chain applied). */
-    Mat4d worldTransform() const;
 
     /** @brief Gets the parent node (null for root nodes). */
     raw_ptr<Node> parent() const;
 
-    /** @brief Adds a child node.
+    /** @brief Computes the world-space bounding box of this subtree.
      *
-     * The node keeps a reference to the child.
+     * Every node answers in world space: leaf Geometry boxes are the bound
+     * of their vertex data transformed by the enclosing MatrixTransforms;
+     * Group/MatrixTransform boxes union their children's boxes (which are
+     * already world-space). Base Node (never used as a renderable or
+     * container) returns an empty box.
      *
-     * @param child Child to add.
+     * @return World-space AABB of this subtree.
      */
-    void addChild(intrusive_ptr<Node> child);
+    virtual Aabbd boundingBox() const;
 
-    /** @brief Removes a child node.
+    /** @brief Gets the accumulated world matrix of this node.
      *
-     * @param child Child to remove.
+     * The product, from the scene root downwards, of the local matrices of
+     * every enclosing MatrixTransform (identity for every non-transform
+     * node). For a leaf Geometry this places its local vertex data in world
+     * space; for a MatrixTransform it also includes its own matrix.
+     *
+     * @return World-space transform.
      */
-    void removeChild(raw_ptr<Node> child);
+    Mat4d worldMatrix() const;
 
-    /** @brief Gets all child nodes. */
-    std::vector<intrusive_ptr<Node>> children() const;
-
-    /** @brief Adds a drawable to this node.
+  protected:
+    /** @brief Gets this node's own local matrix contribution.
      *
-     * A node can hold multiple drawables, like osg::Geode. The node keeps a
-     * reference to the drawable.
+     * Identity for every node that is not a MatrixTransform; used internally
+     * by worldMatrix() so transforms stay exclusive to MatrixTransform.
      *
-     * @param drawable Drawable to attach.
+     * @return This node's local matrix (identity unless a MatrixTransform).
      */
-    void addDrawable(intrusive_ptr<Drawable> drawable);
-
-    /** @brief Removes a drawable from this node.
-     *
-     * @param drawable Drawable to detach.
-     */
-    void removeDrawable(raw_ptr<Drawable> drawable);
-
-    /** @brief Gets all drawables attached to this node. */
-    std::vector<DrawablePtr> drawables() const;
-
-    /** @brief Computes the world-space bounding box of this subtree. */
-    Aabbd boundingBox() const;
+    virtual Mat4d localTransformMatrix() const;
 
   private:
     String name_;
     bool visible_ = true;
     float opacity_ = 1.0f;
-    Mat4d local_;
     raw_ptr<Node> parent_ = nullptr;
-    std::vector<intrusive_ptr<Node>> children_;
-    std::vector<DrawablePtr> drawables_;
+
+    friend class Group;
 };
 
 using NodePtr = intrusive_ptr<Node>;

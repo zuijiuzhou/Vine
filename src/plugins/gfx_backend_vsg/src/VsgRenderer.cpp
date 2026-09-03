@@ -7,7 +7,8 @@
 #include <map>
 
 #include <vine/graphics/Camera.hpp>
-#include <vine/graphics/Drawable.hpp>
+#include <vine/graphics/Geometry.hpp>
+#include <vine/graphics/Group.hpp>
 #include <vine/graphics/Light.hpp>
 #include <vine/graphics/Material.hpp>
 #include <vine/graphics/Node.hpp>
@@ -60,8 +61,6 @@
 #    endif
 #    include <windows.h>
 #endif
-
-#include "VsgUtils.hpp"
 
 V_VSG_NS_BEGIN
 
@@ -249,21 +248,20 @@ std::vector<vine::graphics::RenderCommand> collectSceneCommandsNoCull(vine::grap
                 return;
             }
             const float node_opacity = opacity * node->opacity();
-            const auto  world        = node->worldTransform();
-            for (const auto& drawable : node->drawables()) {
-                if (!drawable->isVisible()) {
-                    continue;
-                }
-                vine::graphics::Material* material         = drawable->material();
-                const float               material_opacity = material != nullptr ? material->opacity() : 1.0f;
-                const float               effective        = std::clamp(node_opacity * drawable->opacity() * material_opacity, 0.0f, 1.0f);
-                auto&                     command          = out.emplace_back(
-                    drawable, vine::intrusive_ptr<vine::graphics::Material>(material), world);
-                command.opacity                            = effective;
-                command.isTransparent                      = effective < (1.0f - 1e-6f);
+            if (const auto* geometry = dynamic_cast<const vine::graphics::Geometry*>(node)) {
+                vine::graphics::Material* material = geometry->material();
+                const float effective = std::clamp(node_opacity, 0.0f, 1.0f);
+                auto& command = out.emplace_back(
+                    vine::intrusive_ptr<vine::graphics::Geometry>(const_cast<vine::graphics::Geometry*>(geometry)),
+                    vine::intrusive_ptr<vine::graphics::Material>(material), node->worldMatrix());
+                command.opacity       = effective;
+                command.isTransparent = effective < (1.0f - 1e-6f);
+                return;
             }
-            for (const auto& child : node->children()) {
-                (*this)(child.get(), node_opacity, out);
+            if (const auto* group = dynamic_cast<const vine::graphics::Group*>(node)) {
+                for (const auto& child : group->children()) {
+                    (*this)(child.get(), node_opacity, out);
+                }
             }
         }
     };

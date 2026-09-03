@@ -1,5 +1,210 @@
 # Graphics 模块核心
 
+> 2026-09-04 **已知缺陷已登记**（26 项 D1–D26，分级 🔴/🟡/🟢）：存
+> `src/plugins/gfx_backend_vsg/vine-to-vsg-data-flow.md` §13（内存审计：两侧引用
+> 计数、无环、真泄漏风险低；主要风险 = 只增不减留存 + 行为缺陷。🔴：D13 材质缓存
+> 无逐出且 `releaseMaterial` 全仓零调用点；D10 `ShaderProgram` 无 revision → 改
+> shader 不重编；D9 编译失败静默回退内建；D3 用户 loc6 顶点色被白覆盖；D1
+> components 未当 stride）。
+>
+> 2026-09-04 **Material 透明度已移除 + 内建 ShaderSet 契约已归档**：透明只属
+> scene/node(叶)/geometry 的 opacity（per-vertex alpha 通道 = vsg_Color.a@loc6），
+> **Material 纯颜色**。删除 `Material::opacity()/setOpacity()`+`opacity_`（doc 注明
+> diffuse alpha 恒 1 忽略）；`RenderCommand` ctor 不再用材质 opacity 播种（Scene
+> 收集器重算）；Scene 有效透明度 = clamp(node_opacity)（叶 Geometry 自身即 node，
+> 材质项移除）；vsg `VsgRenderer` no-cull 收集器去 `material_opacity` 项；材质默认
+> 灰 Phong 在 `VsgMaterialManager` 里 force `diffuse.a=1`。测试改用叶/节点透明度：
+> `CollectCommandsSortsTransparentBackToFrontAfterOpaque` 用 MatrixTransform
+> setOpacity(0.5)，`CollectCommandsOpacityIncludesMaterial`→改名 `…LeafAndNode`
+> (叶 0.5×祖先 0.5=0.25)；MaterialTest 删 opacity 断言。**test_graphics 113/113、
+> test_vsg 10/10、全量构建、lavapipe 回归全绿**。材质颜色类型保持 `Colorf`(vec4)
+> 不改 vec3（全 SDK 统一 + vsg PhongMaterial/UBO 本就 vec4；opaque 约定放渲染映射
+> 层 force alpha=1）。内建 ShaderSet 输入契约（attribute loc/format/define +
+> descriptor set/binding + pc 128B + "按名查找+define 变体"机制，flat/phong/pbr 共用
+> 一张表）已核对进 `.ai/design/vsg-custom-shader.md` §9（供过渡期与 P0 自写对照）。
+>
+> 2026-09-03 **lavapipe 像素级渲染验证通过（抓帧）**：`vsg_color_probe` 增 `VINE_PROBE_CAPTURE=out.ppm`
+> 抓帧（照 vsgExamples/app/vsgscreenshot 读回：blit 上一帧 swapchain → 线性 R8G8B8A8 → map）。
+> custom 模式抓帧像素**正确**：中心 (255,108,89)=sRGB(线性 1.0,0.15,0.1 珊瑚色三角形)、角落
+> (149,149,149)=sRGB(clear 0.3)——即**运行期编译的用户 program 真实光栅化**。PPM→PNG 用
+> `scripts/ppm2png.py`（纯 stdlib），图已人工确认（灰底珊瑚色三角）。注：抓帧 barrier 曾报
+> swapchain 无 TRANSFER_SRC 的 VUID（lavapipe 仍出正确像素）；抓帧目前仅在 vsg_color_probe 用。
+> 用法：`VINE_PROBE_MODE=custom VINE_PROBE_CAPTURE=out.ppm …/vsg_color_probe`。
+>
+> 2026-09-03 **SceneBridge program 接线已落地**：`buildGeometry` 增 program 参数——`cmd.program` 非空时
+> `buildProgramShaderSet()`（ShaderCompiler 运行期编译 stages→SPIR-V，手搭 ShaderSet：vsg_Vertex loc0 +
+> addPushConstantRange("pc",0,128)+继承默认管线状态），只喂位置数组、跳过 material 描述符/per-vertex
+> opacity；失败自动回退内置（坏 program 不伤场景）。`Item` 重建键含 program。验证：临时 VINE_DEMO_PROGRAM
+> 钩子（box_side 挂用户 VS/FS）lavapipe 首帧 `created=1`（独立管线）、无验证错误（钩子已移除）；
+> test_vsg 10/10、test_graphics 113/113、lavapipe 默认回归 PASS。遗留：真机像素级验证、把 program demo
+> 固化为可复现用例。
+>
+> 2026-09-03 **SceneBridge program 接线卡点已解**（vsgExamples 官方证据）：
+> - vsg 每 drawable 由 `RecordTraversal.cpp` 自动 push **push constant "pc" = { mat4 projection;
+>   mat4 modelView }（0..128B）**；自定义 ShaderSet 声明同构 GLSL 块即拿到 view/model（modelView 含
+>   场景 MatrixTransform 累计矩阵）。官方模板：`/opt/opensrc/vsgExamples/examples/utils/
+>   vsgcustomshaderset/custom_pbr.cpp`（addAttributeBinding(vsg_Vertex,loc0) + addPushConstantRange
+>   ("pc",0,128) + 可选 ViewDependentStateBinding(VIEW set1)/lightData）。
+> - `vsg_color_probe custom` 已升级为官方契约（VS 用 pc.projection*pc.modelView*vsg_Vertex），
+>   lavapipe 20 帧无错误。**SceneBridge 接线 = 直接镜像**：program!=null → ShaderCompiler 编译 stages
+>   → ShaderSet(vsg_Vertex loc0 + pc range + 复用默认管线状态) → assign 位置数组 → mapper 状态 →
+>   config.init；Item 重建键加 program。缺 v1 最小 demo/真机像素验证。
+>
+> 2026-09-03 三稿评审（graphics-scene-graph/state/shader + 旧 graphics-design.md）：补📋评审核对/
+> 过时横幅——正文=写作时设计（MatrixNode/Drawable/primitive/"Scene 只持 root"均历史表述，以顶部
+> ⚠/📋为准）；Scene 实现为多 root（有意）；program 槽 SDK 侧全落地、后端接线进行中。
+> **SceneBridge program 接线卡点（关键）**：vsg 内置 phong ShaderSet 是**序列化 blob**（无文本），
+> 且 vsg 内核/ViewDependentState 无"model/视图矩阵"标准注入名 ⇒ 无法安全镜像"自定义着色器如何拿到
+> view/model"。下一步应先 `vsg_shader_dump` 打印 phong 的 stages/attributeBindings/descriptorBindings/
+> pushConstantRanges 以逆向契约，勿盲改 SceneBridge。
+>
+> 2026-09-03 program 槽 P1 · 自定义 ShaderSet 装配探针（vsg_color_probe `VINE_PROBE_MODE=custom`）：
+> 运行期 `vsg::ShaderCompiler`(glslang) 编译用户 VS/FS GLSL→SPIR-V → **手搭 `ShaderSet`**（1 个
+> vsg_Vertex attributeBinding loc0、无 descriptor/push）→ `GraphicsPipelineConfigurator` 成管线 →
+> BindVertexBuffers+Draw，直接 clip 空间输出（z=0.5、关深度）。lavapipe+验证层 20 帧**无错误**；
+> 已纳入 `scripts/gfx_lavapipe_check.sh`（4 段含 custom）回归 PASS。这证明"装配半环"的最小契约可行。
+> 剩余：把该机制接进 `SceneBridge::buildGeometry`（遇 `cmd.program` 建 ShaderSet 并泛化数组/描述符
+> 绑定；视图矩阵需经 vsg ViewDependentState 绑定，需真机像素验证——勿盲改）；Item 重建键纳入 program。
+>
+> 2026-09-03 program 槽 P1 · glslang 运行期编译验证：`tests/test_vsg/GlslCompileTest.cpp`
+> （+2）——`vsg::ShaderCompiler::supported()==true`，SDK `ShaderProgram` 的 VS/FS GLSL 逐 stage 经
+> ShaderCompiler 成功编出 SPIR-V（module->code 非空，72ms，纯 CPU 无需 device）。test_vsg 10/10。
+> 这验证了 program 槽后端装配的"编译半环"；"装配半环"（按用户 Program 建 ShaderSet（stages/
+> attributeBindings/descriptorBindings）+ SceneBridge buildGeometry 泛化 + Item 重建键含 program +
+> lavapipe/真机像素验证）仍待做——注意 vsg 的 phong ShaderSet 是序列化 blob（shaders/phong_ShaderSet.cpp
+> 为 io.read_cast 数据），自定义需手搭 addDescriptorBinding(…, coordinateSpace) 等，视图矩阵经
+> ViewDependentState 绑定，需 GPU/像素验证，勿盲改。
+>
+> 2026-09-03 program 槽 P1 第二步（解析链 + 命令携带）落地：`StateNode` 增
+> `setProgram/clearProgram/program()`（子树级着色覆盖，独立于 render-state）；新增自由函数
+> `effectiveProgram(node)`（叶子 Geometry program 优先 → 最近祖先 StateNode program → null=默认）；
+> `Scene::collectRenderCommands` 每叶把 `cmd.program` 折好；`RenderCommand` 增 `ShaderProgramPtr
+> program`。test_graphics **113 tests 全绿**（+4），全工程构建过。遗留：vsg 后端按 cmd.program
+> 建 ShaderSet 装配（ShaderCompiler 可用）+ Item 重建键含 program。
+>
+> 2026-09-03 program 槽 P1 第一步（SDK 类型 + 挂点）落地：`ShaderProgram.hpp/.cpp` 新增
+> `ShaderStageType{Vertex/Fragment/Compute}` + `ShaderStage{type,source,entryPoint="main"}`
+> + `ShaderProgram : Object+RefCounted`（name/addStage/stageCount/stage/stages）；`Geometry` 增
+> `program()/setProgram()`（null=引擎默认，零回归）。test_graphics **109 tests 全绿**（+2），
+> 全工程构建过。遗留：StateNode 级 program + 解析链、RenderCommand 携带、vsg 后端按用户 Program
+> 建 ShaderSet 装配（ShaderCompiler 已可用）。
+>
+> 2026-09-03 **glslang 已集成**（vsg 运行期 GLSL→SPIR-V 可用）：
+> - gfx_backend_vsg 在 VINE_USE_FETCHCONTENT 分支**改源码构建 vsg**（FetchContent v1.1.16，链系统
+>   glslang-dev 16.2）→ `VSG_SUPPORTS_ShaderCompiler 1`（build/_deps/vsg-build/include/.../Version.h），
+>   ShaderCompiler.cpp 已编译；无 glslang 的本地 `/opt/opensrc/VSG` 仅 VINE_USE_FETCHCONTENT=OFF 用。
+> - 依赖注记：本 build 的 `FETCHCONTENT_FULLY_DISCONNECTED` 曾缓存 ON（网络禁用、依赖预取）——
+>   vsg 首次拉取须 `-DFETCHCONTENT_FULLY_DISCONNECTED=OFF -DFETCHCONTENT_UPDATES_DISCONNECTED=ON`；
+>   vsg 拉取后与其余依赖一样进 _deps。graphics-shader.md 顶部 ⚠ 已把"仅离线"决策更新为
+>   "运行期可用（默认）+ 离线/SPIR-V 兜底"。
+> - 验证：test_vsg 8/8、test_graphics 107/107、lavapipe 回归脚本 PASS（新 vsg）。
+>
+> 2026-09-03 program 槽 · 编译约束决策（graphics-shader.md 修订）：本 vsg **无 glslang**（运行期
+> GLSL 编译不可用、不引入运行期依赖）→ 定 **"作者 GLSL、运行 SPIR-V、离线编译"**：`ShaderProgram`
+> 作者用 GLSL 源，运行交付 SPIR-V（字节/.spv）；SDK 提供 `compileGlslToSpirv` 薄辅助（调开发机
+> `/usr/bin/glslangValidator`，缺工具报清晰错误）；后端按 `ShaderSet.stages/attributeBindings/
+> descriptorBindings/defaultGraphicsPipelineStates` 自描述装配 + GraphicsPipelineConfigurator；
+> `program()==nullptr`→内置默认零回归。下一步 P1：SDK ShaderStage/ShaderProgram/Param 类型 +
+> Geometry.setProgram + 后端装配。
+>
+> 2026-09-03 lavapipe 真机验证（Mesa 软件 Vulkan，llvmpipe CPU，Vulkan 1.4.335 + Khronos validation）：
+> ①`vsg_color_probe` raw/box/flat 各 10-20 帧——无验证错误；②Vine 主程序默认 demo 端到端（VsgRenderer+
+> SceneBridge）：每帧 sync 稳定 rootChildren=5、changed=0，无验证错误/VUID——**默认映射==现状零回归**成立；
+> ③临时给 box_side 套 StateNode(PolygonMode::Line + 自定义 blend SrcColor/OneMinusSrcColor) 后重跑：
+> 首帧 `created=1`（状态变→重建独立管线），后续稳定，**无验证错误**——非默认 RenderStateMapper 路径经
+> driver 验证通过（验证后钩子已移除，demo 复原）。**可复用回归脚本：`scripts/gfx_lavapipe_check.sh`**
+> （跑 raw/box probe + Vine 默认 demo，抓验证层错误；env 覆盖帧数/秒数，`VINE_SKIP_APP=1` 跳过 app）。
+> 运行方式：`VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.json ./bin/Vine`。遗留：像素级（winding/
+> blend 视觉效果）仍需人工真机确认。
+>
+> 2026-09-03 后端 renderState 消费（vsg）落地：`include/vine/vsg/RenderStateMapper.hpp`（纯、device-free）
+> `makeRenderStateObjects(resolved)->{DepthStencil,Rasterization,ColorBlend,InputAssembly}` +
+> `applyRenderStateObjects(config,…)`；SceneBridge::buildGeometry 按 cmd.renderState 装配、Item 增
+> render_state（状态变→重建）；tests/test_vsg/RenderStateMapperTest 6 用例全绿（直跑 8/8，全工程构建过）。
+> **两个历史决策落地**：①深度——vsg 投影是 reverse-Z(1→0)，SDK CompareOp 为"closer/farther"距离语义
+> ⇒ 边界反转映射（Less→VK GREATER…），默认=vsg GREATER=现状零回归；②Blend——per-vertex-alpha 使 alpha
+> blend 必须常开，blend.enabled 只是"是否用自定义因子"，vsg 后端无法经 StateNode 关闭 alpha blend。
+> 映射：cull→cullMode(CCW front,默认 NONE)、polygon→polygonMode、topology→InputAssembly.topology。
+> 遗留：cull winding/blend 因子真机视觉验证（无 GPU）。test_vsg 现 8/8（+6 映射）。
+>
+> 2026-09-03 场景图 R1 补强：新增 `MatrixTransformTest`（5）与 `GroupTest`（1）+ Scene 嵌套 world
+> modelMatrix + GeometryTest 拓扑分离用例，**test_graphics 107 tests 全绿**（新增 8）。
+> `vertexCount` = 纯数据统计，不随 StateNode Topology 变化（有测试钉住）；`triangleCount` 已于
+> 2026-09-04 移除（Geometry 数据面不保证是三角网格；geometry 模块 `Mesh::triangleCount()` 保留）。
+>
+> 2026-09-03 场景图 R1 核心落地（test_graphics 99 绿、全工程构建过、test_vsg 直跑 2/2 绿）：
+> **`Node` 拆成基类**（name/visible/opacity/parent()/虚 boundingBox()/worldMatrix()；无 children/
+> 无变换）；**`Group`** 承接 addChild/removeChild/children()/boundingBox=children 并集；
+> **`MatrixTransform : Group`** 为唯一变换源（matrix/setMatrix，经 protected 虚 localTransformMatrix()
+> 参与 Node::worldMatrix() 父链累积）；`StateNode : Group` 不变。**`Geometry : Node` 叶子**：
+> material 并入（name/visible/opacity 继承自 Node），boundingBox = loc0 本地盒 × worldMatrix()。
+> **`Drawable.hpp/.cpp` 已删**；`RenderCommand.drawable`→`RenderCommand.geometry`(GeometryPtr)。
+> Scene::collect/findNode、RayIntersection 三遍历器、AxisGizmo、SceneBridge、VsgRenderer no-cull
+> walker、app_shell::addBox、TestRenderLiveCommand、GraphicsTest 全部迁移；`makeTriangleNode` 现返
+> MatrixTransform(子=Geometry)。bbox 语义=**世界空间**（叶子世界盒；Group/MT=子世界盒并集）。
+> 关键易错：`Mat4d()` 默认=identity（无 ::identity()）；Mat4d×Point3d 需 include math/Transform3.hpp；
+> intrusive_ptr 析构需完整类型→RenderCommand.hpp 直接 include Geometry.hpp；加/删 .cpp 要重跑 cmake。
+> 基线无关失败：test_cppstd/test_runtime/test_system 与本重构无关；test_vsg 的 ctest SegFault 为既有
+> 退出时序问题（直跑干净）。
+> 遗留：program 槽、renderState 后端消费、MatrixTransform 测试用例补强（现靠 Scene/Node 用例覆盖）。
+>
+> 2026-09-03 场景图 R1（进行中，当前绿点）：`MatrixNode` 更名/落成 **`MatrixTransform`**（真实变换节点：
+> matrix()/setMatrix/worldMatrix（父链累积）+ boundingBox override）；`Node::boundingBox()` 已虚化。
+> 下一步（R1 核心）：`Node` 拆成基类（name/visible/opacity/parent + 虚 boundingBox，去掉 children/
+> transform/drawables）+ `Group`(children) + `MatrixTransform`(matrix) 语义到位 + `Geometry : Node`
+> 叶子上树（material 收进来）→ 删 `Drawable` 与 `Node::drawables` → `RenderCommand.drawable` 改
+> GeometryPtr → `Scene::collect`/`RayIntersection` 改树遍历。消费者/测试迁移量大，逐步保绿。
+>
+> 2026-09-03 场景图 S1（类型体系就位）：新增 `Group`（children 容器基类）与 `MatrixNode`（变换节点），
+> `StateNode` 从 `Node` 重挂到 `Group`；Node→Group→{MatrixNode,StateNode} 骨架建立（vsg/文档对齐），
+> 行为零回归（99 用例绿）。⚠ 过渡：Node 仍自带 children/transform/drawables（旧 API 保留）；后续 S2
+> 把变换收敛到 MatrixNode、Geometry 上树为叶子、顺势删 Drawable。新 .cpp 加入需重跑 cmake 配置
+> （glob 才拾取）。
+>
+> 2026-09-03 Geometry 重构为**开放属性列表**：单一 `location→AttributeBuffer`（打包 float +
+> components），`addBuffer(loc)` 为唯一写入口，数量不限（仅受后端 max-attribute）；不再有
+> positions_/normals_ 固定成员；`setPositions/setNormals` 降级为便捷（写 loc0/loc1），`positions()/
+> normals()` typed 访问器已移除 → `positionCount()/normalCount()`；约定 loc0=position（bbox/计数/
+> 拾取）。SceneBridge（物化 loc0/loc1）与 RayIntersection（GeometryMesh 物化 loc0）已适配；
+> `GeometryTest` 7/7、全仓 99 用例绿。索引仍独立一条（index buffer）。AttributeBuffer.data 与索引
+> 均为 shared_ptr（可共享/按身份缓存）。
+>
+> 2026-09-03 Geometry 通用属性缓冲已落地：`AttributeBuffer{data(floats),components}` + `setBuffer(loc)`
+> /clearBuffer/hasBuffer/buffer/bufferLocations（loc≥2 自定义通道，0/1 保留给类型化 positions/normals）；
+> 供点云色/尺寸等自定义 shader 通道的数据模型，CPU 可测（GeometryTest 7/7）。渲染消费仍后置。
+>
+> 2026-09-03 拓扑归位修正：`Geometry` 移除 PrimitiveType（曾误放），改为 **渲染状态项 `Topology`**
+> （默认 Triangles；StateNode set/clear；与 PolygonMode 分清：点云=Topology::Points，线框=
+> PolygonMode::Line）——同一数据可换状态变三角/点/线框，不换几何（vsg/Vulkan 拓扑属管线）。
+>
+> 2026-09-03 Geometry 纯数据化完成：移除 `shape_`/`shape()`——Geometry 只存 buffers
+> （positions/normals/indices + revision）；`setShape(Shape)` 降级为便捷"填入"（不保留 Shape）；
+> 新增转换器 `geometryFromShape()`；SceneBridge（缓存键改 revision、建几何读 buffers）与
+> RayIntersection（meshOfGeometry）已切 buffers；bbox/计数全从 buffers。⚠ 语义变化：不再借用
+> Shape 的 Aabb 缓存（测试改名 BoundingBoxComputedFromBuffers）。未做：通用 setBuffer(loc)/Buffer
+> 容器（留点云/Geometry 叶子切片）。注：test_vsg 的 ctest 在进程退出期 SegFault（用例全 PASS 后、
+> 直跑正常）——疑为插件卸载既有问题，与本改动无关，待另查。
+> 2026-09-03 Geometry 数据面（additive）已落地：raw `positions`(loc0)/`indices`；无 Shape 时
+> vertexCount/bbox 回退 positions；Shape 主路不变。⚠ 与 graphics-scene-graph.md 草图偏差：暂用
+> 类型化 `setPositions`（loc0），未引入通用 `setBuffer(loc)`/Buffer 容器——留到 Geometry 变叶子/点云
+> 切片再定。renderer 仍只消费 Shape 路（raw 数据面待后端切片）。
+>
+> 2026-09-03 State 切片已落地：`StateNode` + 状态项（Depth/Cull/Blend/PolygonMode/**Topology**）
+> + 折叠函数（collect/resolve/effectiveRenderState）；`RenderCommand.renderState` 已由 collect 折叠
+> 填入（Scene 集成 3 用例全绿）。未接后端变体键（下一步）。
+>
+> 2026-09-03 场景图重构设计（评审稿）：`graphics-scene-graph.md`（Node→Group/MatrixNode/StateNode，
+> Geometry 叶子 Node，去 Drawable/Shape，loc0=position）、`graphics-state.md`（StateNode 子树状态/
+> 继承）、`graphics-shader.md`（用户写 GLSL 薄接口，取代 vine-shader.md §11）。分阶段落地。
+>
+> 2026-09-03 方向确认（SDK 第一准则）：**用户必须能写 GLSL**；SDK 着色契约先于后端，vsg（乃至自写
+> Vulkan）只是可替换实现；内置 ShaderPreset 与用户 Program 同一契约；多 pass 意义 = pass 级 Program +
+> 命名产出槽。契约草案（声明式 VineFrame/VineDraw 块、属性 location 表、pass 槽）见
+> `.ai/design/vine-shader.md` §11（push 矩阵机制标注待契约化修订）。
+>
+> 2026-09-03 shader 设计稿：自写 VS/FS + UBO ABI（push 矩阵 + set0 帧/光 + set1 材质；世界空间光照；
+> FlatShaded=unlit flag；离线 SPIR-V 内嵌，无 glslang）。设计见 `.ai/design/vine-shader.md`（待 P0 落地）。
+>
 > 2026-09-03 更新：渲染后端(vsg)走向"自定义着色器路线"——语义层(材质/光照/阴影/着色)
 > 全部归 graphics，vsg 仅保留工程层(窗口/交换链/命令/管线构建/录制)。设计见
 > `.ai/design/vsg-custom-shader.md`。同时补齐 vsg 资源生命周期闭环：

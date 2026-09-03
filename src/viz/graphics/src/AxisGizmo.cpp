@@ -3,6 +3,7 @@
 #include <vine/Colorf.hpp>
 #include <vine/graphics/Camera.hpp>
 #include <vine/graphics/Geometry.hpp>
+#include <vine/graphics/Group.hpp>
 #include <vine/graphics/Material.hpp>
 #include <vine/graphics/Node.hpp>
 #include <vine/graphics/RenderPass.hpp>
@@ -189,9 +190,9 @@ void AxisGizmo::rebuild()
         material->setSpecular(Colorf(0.0f, 0.0f, 0.0f, 1.0f));
         geometry->setMaterial(material);
 
-        auto node = intrusive_ptr<Node>(new Node());
-        node->addDrawable(geometry);
-        scene->addNode(node);
+        auto group = intrusive_ptr<Group>(new Group());
+        group->addChild(geometry);
+        scene->addNode(group);
     }
     setContent(scene);
 }

@@ -1,9 +1,11 @@
 #include <vine/graphics/Scene.hpp>
 
 #include <vine/graphics/Camera.hpp>
-#include <vine/graphics/Drawable.hpp>
+#include <vine/graphics/Geometry.hpp>
+#include <vine/graphics/Group.hpp>
 #include <vine/graphics/Material.hpp>
 #include <vine/graphics/RenderCommand.hpp>
+#include <vine/graphics/StateNode.hpp>
 #include <vine/math/Transform3.hpp>
 
 #include <algorithm>
@@ -104,10 +106,12 @@ NodePtr findNodeRecursive(const Node* node, const String& name)
     if (node->name() == name) {
         return NodePtr(const_cast<Node*>(node));
     }
-    for (const auto& child : node->children()) {
-        NodePtr found = findNodeRecursive(child.get(), name);
-        if (found != nullptr) {
-            return found;
+    if (const auto* group = dynamic_cast<const Group*>(node)) {
+        for (const auto& child : group->children()) {
+            NodePtr found = findNodeRecursive(child.get(), name);
+            if (found != nullptr) {
+                return found;
+            }
         }
     }
     return NodePtr();
@@ -116,7 +120,10 @@ NodePtr findNodeRecursive(const Node* node, const String& name)
 /**
  * @brief Recursively collects render commands from a node subtree.
  *
- * Nodes fully outside the frustum (and their subtrees) are culled.
+ * Container nodes (Group and its subclasses) are descended into; a leaf
+ * Geometry emits one render command baked with its world matrix (the product
+ * of enclosing MatrixTransforms). Nodes fully outside the frustum (and their
+ * subtrees) are culled.
  *
  * @param node    Root node to traverse.
  * @param frustum View frustum for culling.
@@ -131,25 +138,30 @@ void collectNodeCommands(const Node* node, const Frustum& frustum, float opacity
     if (frustum.isOutside(node->boundingBox())) {
         return;
     }
-    // Opacity multiplies down the hierarchy: scene x ancestors x node. The
-    // final effective opacity for a drawable also includes the drawable and
-    // its bound material.
+    // Opacity multiplies down the hierarchy: scene x ancestors x node. A leaf
+    // Geometry is itself a node, so its own opacity folds here; a material
+    // never contributes transparency.
     const float node_opacity = opacity * node->opacity();
-    for (const auto& drawable : node->drawables()) {
-        if (!drawable->isVisible()) {
-            continue;
-        }
-        Material* material = drawable->material();
-        const float material_opacity = material != nullptr ? material->opacity() : 1.0f;
-        const float effective = std::clamp(
-            node_opacity * drawable->opacity() * material_opacity, 0.0f, 1.0f);
-        auto& cmd = out.emplace_back(drawable, intrusive_ptr<Material>(material),
-                                     node->worldTransform());
+
+    if (const auto* geometry = dynamic_cast<const Geometry*>(node)) {
+        Material* material = geometry->material();
+        const float effective = std::clamp(node_opacity, 0.0f, 1.0f);
+        auto& cmd = out.emplace_back(
+            intrusive_ptr<Geometry>(const_cast<Geometry*>(geometry)),
+            intrusive_ptr<Material>(material), node->worldMatrix());
         cmd.opacity = effective;
         cmd.isTransparent = effective < 1.0f - 1e-6f;
+        // Render state folds along the node path: every StateNode from the
+        // scene root to this geometry contributes, deeper nodes overriding.
+        cmd.renderState = effectiveRenderState(node);
+        // Shading program resolves leaf-first then ancestor StateNodes.
+        cmd.program = effectiveProgram(node);
+        return;
     }
-    for (const auto& child : node->children()) {
-        collectNodeCommands(child.get(), frustum, node_opacity, out);
+    if (const auto* group = dynamic_cast<const Group*>(node)) {
+        for (const auto& child : group->children()) {
+            collectNodeCommands(child.get(), frustum, node_opacity, out);
+        }
     }
 }
 

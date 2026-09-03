@@ -162,3 +162,75 @@ enum class ShaderPreset { StandardPhong, FlatShaded, Pbr, ShadowedPhong };
 - P0 自写 `buildVineShaderSet(ShaderPreset, ...)` 时，StandardPhong 须先复刻当前 phong 输出
   （§6 P0 A/B 对照）；届时 FlatShaded/Pbr/ShadowedPhong 各自产出自写 stages/bindings，
   过渡映射（8.2）退役。
+
+## 9. vsg 内建 ShaderSet 输入约定（参考档案）
+
+> 2026-09-04 核对（vsg 1.1.16，`build/_deps/vsg-src`）：`vsg_shader_dump` 反序列化
+> flat/phong/pbr 三套 blob + `src/vsg/utils/GraphicsPipelineConfigurator.cpp` 源码 +
+> blob 内嵌 GLSL 明文（`#version 450`…）。结论：**flat/phong/pbr 共用同一张契约表**，
+> 仅光照算法与启用的贴图不同——这就是"内建 shader 的输入都一样"的原因。
+> 用途：过渡期（仍映射内建 set）与 P0 自写 ShaderSet 的对照基准。
+
+### 9.1 顶点属性（attributeBindings，三 preset 一致）
+
+| 名字 | loc | format(枚举值) | GLSL | define（激活条件） |
+|---|---|---|---|---|
+| `vsg_Vertex` | 0 | 106 `R32G32B32_SFLOAT` | `vec3` | 恒开 |
+| `vsg_Normal` | 1 | 106 | `vec3` | 恒开 |
+| `vsg_TexCoord0..3` | 2..5 | 103 `R32G32_SFLOAT` | `vec2` | `VSG_TEXTURECOORD_{0..3}` |
+| `vsg_Color` | 6 | 109 `R32G32B32A32_SFLOAT` | `vec4` | 恒开 |
+| `vsg_Translation_scaleDistance` | 7 | 109 | `vec4` | `VSG_BILLBOARD` |
+| `vsg_Translation` | 7 | 106 | `vec3` | `VSG_INSTANCE_TRANSLATION` |
+| `vsg_Rotation` | 8 | 109 | `vec4`(四元数) | `VSG_INSTANCE_ROTATION` |
+| `vsg_Scale` | 9 | 106 | `vec3` | `VSG_INSTANCE_SCALE` |
+| `vsg_JointIndices` | 10 | 108 `R32G32B32A32_UINT` | `uvec4` | `VSG_SKINNING` |
+| `vsg_JointWeights` | 11 | 109 | `vec4` | `VSG_SKINNING` |
+
+- loc 7 上 `Translation_scaleDistance` 与 `Translation` 互斥（billboard vs instance）。
+- **format 写死**：位置 vec3、颜色 vec4、uv vec2——喂错类型会拿错 location/stride。
+- `vsg_Vertex/Normal/Color` 无 define → 变体恒含（phong VS 明文：
+  `layout(location=0) in vec3 vsg_Vertex; layout(location=1) in vec3 vsg_Normal;`）。
+- **per-vertex 透明度通道 = `vsg_Color` 的 alpha（loc 6 vec4）**——我们 SceneBridge
+  每帧重写 `color.a = cmd.opacity` 走的正是这个恒开槽位。
+
+### 9.2 描述符（descriptorBindings，phong 为例）
+
+**set0 = 视图/每 view 全局**（RecordTraversal 经 ViewDependentState 自动填）：
+- `lightData` b0 uniform `vec4Array`（场景 vsg Light 节点转出）、`viewportData` b1、
+  shadowMaps/sampler b2..4。
+
+**set1 = 每 drawable 材质/纹理**：
+- 贴图（define-gated）：`diffuseMap` b0(`VSG_DIFFUSE_MAP`)、`detailMap` b1、
+  `normalMap` b2、`aoMap` b3、`emissiveMap` b4、`displacementMap` b7(+`Scale` b8)
+- **`material` b10 uniform `PhongMaterialValue`**（flat 同，pbr 为 `PbrMaterialValue`）
+- `texCoordIndices` b11、`jointMatrices` b12(`VSG_SKINNING`)
+
+Shader 侧：`#define VIEW_DESCRIPTOR_SET 0` / `MATERIAL_DESCRIPTOR_SET 1` +
+`#pragma import_defines(VSG_TEXTURECOORD_0, VSG_DISPLACEMENT_MAP, VSG_SKINNING, …)`
+导入为宏，`#ifdef` 包裹可选块。
+
+`PhongMaterialValue` 布局（include/vsg/state/material.h）：`vec4 ambient/diffuse/
+specular/emissive` + `float shininess/alphaMask/alphaMaskCutoff`——extra 字段我们
+不用（已强置 `diffuse.a=1`）。
+
+### 9.3 Push constant
+
+```
+pc: 全 stage, offset 0, size 128  →  layout(push_constant) uniform PushConstants
+    { mat4 projection; mat4 modelView; } pc;
+```
+RecordTraversal 每个 drawable 绘制前自动填 → 自定义 program 路径的
+`addPushConstantRange("pc","",VERTEX,0,128)` 正是复刻它。
+
+### 9.4 对接机制：按名字查找 + define 变体（非硬编码 location）
+
+`GraphicsPipelineConfigurator.cpp`：
+- `assignArray(arrays,"vsg_Color",rate,data)` → `shaderSet->getAttributeBinding(name)`
+  取 location/format；非空 `define` 塞进 shaderHints->defines。
+- `assignDescriptor("material",value)` → 按名字查 set/binding，建描述符。
+- ShaderSet 按 define 组合把 GLSL 编译成对应**变体**（`variants`）——没喂的
+  define-gated 输入不进变体（省带宽/寄存器）。
+
+### 9.5 与 Vine 的关系
+- 默认路径只用了这张表的一小条：`vsg_Vertex`+`vsg_Normal`+`vsg_Color`(白)+
+  `material`(b10)。§4 的 `vine_*` 自写 set 是"不用内建"时对这张表的等价重写。

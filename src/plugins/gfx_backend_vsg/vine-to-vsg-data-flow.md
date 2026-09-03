@@ -1,0 +1,429 @@
+# Vine 数据 → vsg 数据的映射流程
+
+> 模块：`src/plugins/gfx_backend_vsg`（vsg 后端）
+> 2026-09-04 依据本机 vsg 1.1.16 源码 / `vsg_shader_dump` 反序列化 / 后端代码核对。
+> 关联：`.ai/design/vsg-custom-shader.md`（自定义着色 ABI + §9 内建契约档案）、
+> `.ai/memory/graphics.md`。
+>
+> 一句话：**Vine 侧存"开放 location 属性缓冲 + 材质"，后端把它物化成 vsg 的
+> CPU Data 数组，按名字喂进 GraphicsPipelineConfigurator，挂 Bind*/Draw* 命令，
+> 最后由 viewer->compile() 上传 GPU 并建管线**。中间两层各有一张"对应表"。
+
+## 0. 全景图
+
+```mermaid
+flowchart LR
+    subgraph Vine[Vine SDK]
+        G[Geometry<br/>map&lt;loc, AttributeBuffer&gt;<br/>loc0=position loc1=normal<br/>+ optional indices]
+        M[Material<br/>Colorf 纯色(无透明度)]
+        N[Node/Scene<br/>opacity]
+        SC[Scene::collectRenderCommands<br/>→ RenderCommand{geometry, material,<br/>program, modelMatrix, opacity,<br/>resolvedRenderState}]
+    end
+
+    subgraph VSG[gfx_backend_vsg]
+        SB[SceneBridge::syncRenderCommands<br/>按 Geometry* + revision 缓存/重建]
+        BG[buildGeometry<br/>物化成 vec3Array / uintArray / vec4Array]
+        CN[GraphicsPipelineConfigurator<br/>assignArray / assignDescriptor]
+        SS[ShaderSet 契约表<br/>name→location/format/set/binding]
+        DR[StateGroup<br/>BindVertexBuffers + BindIndexBuffer<br/>+ DrawIndexed + MatrixTransform]
+        CP[viewer->compile<br/>Data→VkBuffer 上传 + 建管线/DS]
+    end
+
+    subgraph GPU[GPU / 每帧]
+        RT[RecordTraversal<br/>填 pc + per-view 描述符]
+    end
+
+    G --> SC
+    M --> SC
+    N --> SC
+    SC --> SB
+    SB --> BG
+    BG --> CN
+    CN --> SS
+    SS --> DR
+    DR --> CP
+    CP --> RT
+```
+
+## 1. Vine 侧数据模型
+
+### 1.1 Geometry：开放的 location 属性缓冲
+
+`src/viz/graphics/sdk/vine/graphics/Geometry.hpp`
+
+```cpp
+struct AttributeBuffer {
+    std::shared_ptr<std::vector<float>> data;   // 打包的逐顶点 float
+    std::uint32_t components;                   // 每顶点标量数 1..4
+};
+// Geometry 内部：std::map<uint32_t, AttributeBuffer> attributes_;
+//           + 可选 std::shared_ptr<UInt32Array> indices_
+```
+
+- **纯按 location 号存储，没有"名字"**；"0 = position、1 = normal"是注释约定，
+  靠便捷 API 固化：`setPositions→loc0`、`setNormals→loc1`、`setShape→loc0+loc1(+indices)`。
+- 数据用 `shared_ptr` 持有，可多几何共享；后端可按键做上传缓存。
+- 每次 `addBuffer/removeBuffer/setPositions/setNormals/setIndices` 都 bump `revision()`。
+
+### 1.2 Material：纯颜色（无透明度）
+
+- 材质颜色类型保留 `Colorf`（RGBA vec4），但**透明度不归材质**：透明只属
+  scene/node/geometry 的 opacity，走 per-vertex alpha。
+- 后端映射时强制 `diffuse.a = 1.0`（`VsgMaterialManager` / `SceneBridge` 每帧刷新）。
+
+### 1.3 Scene 收集 → RenderCommand
+
+- `Scene::collectRenderCommands` 折叠出**有效透明度**：`scene × 祖先 × 叶 geometry`
+  的 opacity（材质项已移除），并按透明度排序；叶 Geometry 自身是 Node，
+  其 opacity 在收集时就已折入。
+- 每个可画几何产出 `RenderCommand{geometry, material, program, modelMatrix,
+  opacity, isTransparent, resolvedRenderState}` —— 后端只消费命令流，不再直接看场景树。
+
+## 2. SceneBridge：物化成 vsg CPU 数组
+
+`SceneBridge::syncRenderCommands` 以 `Geometry*` 为键做保留缓存；只有
+`geometry->revision() / material / resolvedRenderState / program` 变了才重建。
+重建调 `buildGeometry(...)`：
+
+1. **读 loc0** → 校验非空且 `components>=3`，否则整个几何不画（返回空）；
+   按 **stride=3** 展开成 `Vec3fArray positions` → 拷成 `vsg::vec3Array vertices`。
+2. **读 loc1（可选）** → 法线；缺失时后端用位置推导
+   （indexed → `makeIndexedNormals` 平滑法线；非 indexed → `makeNormals` 面法线）。
+3. **索引**：`hasIndices()` → 拷成 `vsg::uintArray`；否则生成顺序索引 0..n-1。
+4. **按名字喂给 configurator**：
+
+```cpp
+config->assignArray(arrays, "vsg_Vertex", VERTEX, vertices);
+config->assignArray(arrays, "vsg_Normal", VERTEX, normals);
+config->assignArray(arrays, "vsg_Color",  VERTEX, colors);   // 默认路径白色 vec4
+config->assignDescriptor("material", material_value);          // 默认路径
+```
+
+- **默认路径**（无 program）：`vsg_Vertex + vsg_Normal + vsg_Color` + `material` 描述符
+  （内建 phong/flat）。
+- **program 路径**（用户 `ShaderProgram`）：只喂 `vsg_Vertex` + 自建 ShaderSet
+  （`pc` push constant），跳过法线/颜色/材质——着色完全归用户 GLSL。
+
+### 2.1 每帧的廉价更新（不重建几何/管线）
+
+- **世界摆放不进顶点**：`cmd.modelMatrix` 每帧写 `MatrixTransform::matrix`（矩阵没动就跳过）。
+- **透明度 = `vsg_Color` 的 alpha（loc6）**：保留白色 `colors` 数组，仅当
+  `cmd.opacity` 变化时整组 `color.a = opacity` 覆写（稳态帧无 O(V) 开销）。
+- 消失的几何不立即删：脱离 root 保留复用，超过 600 帧未出现才逐出。
+
+## 3. GPU 上传 / 管线编译
+
+`syncRenderCommands` 把新建/重建子树收进 `created` 列表 → 渲染器随后：
+
+```cpp
+if (!created.empty())
+    d->viewer->compile();   // vsg：Data→VkBuffer 上传、建 pipeline / descriptor set
+```
+
+- 稳态帧：缓存命中 → 子树原样复用，不重建、不重编
+  （诊断日志 `main sync: created=%zu rootChildren=%zu changed=%d`）。
+- 绘制命令形态（挂在 StateGroup 下）：
+
+```cpp
+vsg::BindVertexBuffers(baseAttributeBinding, arrays)   // 一次绑定所有顶点属性
++ vsg::BindIndexBuffer(indices)
++ vsg::DrawIndexed(indexCount, 1, 0, 0, 0)
+```
+
+## 4. vsg 内建 ShaderSet 契约（数据最终落到哪）
+
+flat/phong/pbr 共用同一张表（详见 `.ai/design/vsg-custom-shader.md` §9）。
+
+### 4.1 顶点属性（attributeBindings）
+
+| 名字 | loc | format | GLSL | define |
+|---|---|---|---|---|
+| `vsg_Vertex` | 0 | R32G32B32_SFLOAT | vec3 | 恒开 |
+| `vsg_Normal` | 1 | R32G32B32_SFLOAT | vec3 | 恒开 |
+| `vsg_TexCoord0..3` | 2..5 | R32G32_SFLOAT | vec2 | VSG_TEXTURECOORD_n |
+| `vsg_Color` | 6 | R32G32B32A32_SFLOAT | vec4 | 恒开 |
+| `vsg_Translation_scaleDistance` | 7 | … | vec4 | VSG_BILLBOARD |
+| `vsg_Translation` | 7 | … | vec3 | VSG_INSTANCE_TRANSLATION |
+| `vsg_Rotation` | 8 | … | vec4 | VSG_INSTANCE_ROTATION |
+| `vsg_Scale` | 9 | … | vec3 | VSG_INSTANCE_SCALE |
+| `vsg_JointIndices/Weights` | 10/11 | … | uvec4/vec4 | VSG_SKINNING |
+
+### 4.2 描述符 + push constant
+
+- set0（每 view 自动填）：`lightData` b0、`viewportData` b1、shadow b2..4
+- set1（每 drawable）：贴图（define-gated）+ **`material` b10 uniform `PhongMaterialValue`** + …
+- `pc`：全 stage、offset 0、size 128 = `{ mat4 projection; mat4 modelView; }`
+  （RecordTraversal 每 drawable 自动填；program 路径的 `addPushConstantRange("pc",…,0,128)` 即复刻它）
+
+### 4.3 机制：按名字查找 + define 变体
+
+`GraphicsPipelineConfigurator::assignArray/assignDescriptor` 拿名字查 ShaderSet 的
+`attributeBindings/descriptorBindings`，取 location/format/set/binding；非空 define
+加进 shaderHints → ShaderSet 按 define 组合编译出对应**变体**。喂数据方零硬编码 location。
+
+## 5. 默认三角形？画线怎么表达
+
+- **默认 = 三角形**：SDK 侧 `ResolvedRenderState` 默认 `topology=Triangles`、
+  `polygonMode=Fill`；vsg 侧 `InputAssemblyState` 默认 `TRIANGLE_LIST`。
+  `Geometry` 顶点数据**本身不带拓扑**——由管线 `InputAssemblyState` 决定装配方式。
+- **画"真线"（线段数据）** = `Topology::Lines` → `mapTopology→VK_PRIMITIVE_TOPOLOGY_LINE_LIST`
+  （顶点每 2 个点一条线）。
+- **画"线框"（还是三角形数据）** = `PolygonMode::Line` →
+  `mapPolygonMode→VK_POLYGON_MODE_LINE`（demo `wire_box` 即此，仍可 phong 光照）。
+- **点云** = `Topology::Points` → `POINT_LIST`（demo 里配自定义 program）。
+- 线宽 `RasterizationState.lineWidth` 默认 1.0；>1 需 `wideLines` 设备特性（后端未开）。
+- 线/点这类"无面"数据没有法线/光照语义 → 一般走 **program 路径**（自定义 GLSL）。
+
+## 6. 对应规则与约束（含坑）
+
+| 项 | 规则/约束 | 性质 |
+|---|---|---|
+| loc0 | 必须存在、非空、`components>=3`，否则不画 | **硬要求** |
+| loc0 排布 | 后端按 stride=3 读；`positionCount/boundingBox` 都按 `size()/3` | 隐式（见坑①） |
+| loc1 | 可选法线；`components>=3` 才用；否则走位置推导 | 可选 |
+| 其它 loc | 当前不消费（无约束但也无效果），等自定义通道接线 | 自由但无效 |
+| 各 buffer 顶点数 | 假定与 loc0 一致，不校验 | 隐式 |
+| 索引 | `hasIndices()` 决定 indexed（平滑法线）/ 非 indexed（面法线） | 二选一 |
+| 重建 | `Geometry*` + `revision()` + material + program 变化才重建 | 自动 |
+
+**坑①**：`AttributeBuffer.components` 没被当 stride 用。后端读 loc0/loc1 一律
+`i += 3`，`components` 只当 ">=3" 门槛。若 `addBuffer(0, {vec4 数据, components=4})`
+会交错读错（v0.xyz 后接 v0.w+v1.xy…）。要支持非 3 分量通道，读取端需按
+`components` 跳步（数据模型已承诺、消费端未兑现）。
+
+**坑②**：`components<3` 的 loc1（如把 uv 错放到 loc1）会被静默忽略并走法线推导，
+不报错——表现为"你的数据被无视"。
+
+## 7. 第 4 个/自定义顶点通道：现状与待接线
+
+- **内建默认 shader 只认固定名字/location**。想加第 4 通道：
+  - 放 loc2..5（uv）：内建可读，但需激活变体 + 绑纹理；后端目前不喂 uv/纹理。
+  - 放 loc6（顶点色）：内建会消费，但 `SceneBridge` 现在**无视用户 loc6**（永远写白+opacity）。
+  - 放其它位置：内建未声明 → 一律不支持。
+- **正确路径 = 自定义 program + 两步接线（尚未做）**：
+  1. `buildProgramShaderSet()` 里按用户 GLSL 的 `layout(location=N)` 加
+     `addAttributeBinding(name, loc, format)`，否则 configurator 查不到、无顶点输入；
+  2. `buildGeometry` 遍历 `geometry->bufferLocations()`，把 loc0 之外的自定义通道
+     逐条 `assignArray` 喂进去（现在只读 loc0/loc1）。
+- `AttributeBuffer` 的设计初衷正是"后端无关的自定义逐顶点通道"（点云色/尺寸/任意属性）。
+
+## 8. 关键结论备忘
+
+1. 对应 = **location 号映射 + 后端硬编码 loc0/loc1 语义** + vsg 侧按名字查 ShaderSet 表。
+2. 顶点永远**模型空间原始数据**；世界变换走 `MatrixTransform::matrix`（每帧、懒写）。
+3. 透明度不重建几何：走 `vsg_Color` per-vertex alpha，只在变化时覆写。
+4. 材质是共享纯色：`Material*` 键缓存 PhongMaterialValue + `shared_objects_` 共享管线/DS。
+5. 默认渲染"三角形"由管线默认拓扑决定，与数据无关；线/线框是 Topology vs PolygonMode 两个正交概念。
+
+## 9. 对象生命周期与所有权
+
+### 9.1 Vine 侧：全 RefCounted
+
+- `Scene / Node / Geometry / Material / ShaderProgram / Light` 都是 `Object`（RefCounted），
+  用 `intrusive_ptr` 持有。**场景树是权威持有者**：`Scene` 持根节点，`Group/StateNode`
+  持子节点，`Geometry::setMaterial/setProgram` 持 `MaterialPtr/ShaderProgramPtr`。
+
+### 9.2 命令流：帧级值对象，不延长生命
+
+- `Scene::collectRenderCommands` **每帧生成** `std::vector<RenderCommand>`（值类型，
+  内部持 `intrusive_ptr<Geometry/Material>` 与 `ShaderProgramPtr`）；帧末命令 vector
+  析构即释放这些临时引用。后端消费的是这份**已快照的命令流**，不再回看场景树。
+
+### 9.3 后端缓存：裸指针当 key，不引用 Vine 对象
+
+| 缓存 | 键 | 值 | 谁持有 |
+|---|---|---|---|
+| `SceneBridge::cache_` | `const Geometry*`（裸指针） | `unique_ptr<Item>`（vsg 子树，vsg `ref_ptr` 自持） | bridge |
+| `VsgMaterialManager::cache` | `Material*`（裸指针） | `vsg::ref_ptr<PhongMaterialValue>` | manager |
+| `shared_objects_` | — | `vsg::SharedObjects`（跨几何共享 pipeline/DS） | bridge |
+
+- **生命周期契约**：缓存键（`Geometry*`/`Material*`）的存活由**场景树 / 调用方保证**。
+  后端不持有 Vine 对象的强引用，只在缓存键存活期间使用。
+- 从场景删除的几何：命令流不再引用 → `absent_frames` 递增 → **600 帧后逐出**（释放
+  vsg 子树）。逐出窗口内若调用方已把 `Geometry` 全释放，理论上 key 会悬垂
+  （应用实际让场景树持有节点，见 §12 局限）。
+
+### 9.4 材料管理器必须先于 bridge 存活
+
+- `SceneBridge` 持 `raw_ptr<VsgMaterialManager>`，接口约定 **manager 必须活得比 bridge 久**。
+- `VsgRenderer` 用**成员** `d->materialManager` 注入主/离屏/overlay 三套 bridge；
+  bridge 未注入时用自身成员 `default_manager_` 兜底。
+
+## 10. 资源清理
+
+### 10.1 清理的统一顺序（多处共用）
+
+> ① **先从录制图摘下**（command/render graph 的 children 中 erase，保证不再被记录）
+> → ② **`deviceWaitIdle()`**（等 in-flight 命令缓冲不再引用旧 Vk 对象）
+> → ③ **丢 vsg 子树 / `clearCache()`**（释放 GPU 资源）→ ④ **erase 槽/映射**。
+
+### 10.2 各清理点
+
+| 场景 | 做了什么 | 代码位置 |
+|---|---|---|
+| 几何逐出 | `absent_frames > 600` → erase，释放该几何的 vsg 子树 | `syncRenderCommands` |
+| Material 增删改 | `getOrCreate / updateMaterial / releaseMaterial / clear` | `VsgMaterialManager` |
+| 离屏 resize | 摘 graph → `deviceWaitIdle` → `clearCache` + 置空 image/view/RP/framebuffer → 按新尺寸重建 | `renderOffscreenTarget` |
+| 移除 RenderTarget | 摘 offscreen graph + 摘 PiP view → `deviceWaitIdle` → `clearCache` + erase | `releaseRenderTarget` |
+| 移除 overlay | 摘 overlay view → `deviceWaitIdle` → erase 槽 | `releaseOverlay` |
+| shutdown（析构/重初始化前） | 见 10.3 | `shutdown` |
+
+### 10.3 shutdown 顺序（关键：撞 `VSG_MAX_DEVICES==1`）
+
+```text
+deviceWaitIdle
+  → viewer->removeWindow(window) + viewer->close() + viewer=null   // 先丢命令图
+  → window->releaseWindow()  // 不 Destroy 宿主(Qt) 窗口，仅摘内部句柄
+  → 置空 render_graph / main_view / main_light_group / vsg_scene / vsg_camera
+  → sceneBridge.clearCache() + materialManager.clear()
+  → initialized=false
+```
+
+- **原因（代码注释）**：已编译的 pipeline / descriptor set 持旧 `vsg::Device` 引用；
+  表面重建再 `Window::create()` 会分配第二个 Device，撞 `VSG_MAX_DEVICES == 1` 抛异常。
+  因此**重初始化前必须把上面全部释放干净**。
+
+## 11. 每帧数据流（时序）
+
+```mermaid
+sequenceDiagram
+    participant E as RenderEngine
+    participant S as Scene
+    participant R as VsgRenderer
+    participant B as SceneBridge(s)
+    participant V as vsg::Viewer
+
+    loop 每帧
+        E->>E: frame() 开始
+        E->>R: (advanceToNextFrame/handleEvents)
+        rect rgb(240,248,255)
+        note over E,R: 逐 pass 驱动
+        E->>S: 收集内容光(该 pass 场景)
+        E->>S: collectRenderCommands(剔除/透明排序)
+        S-->>E: vector<RenderCommand>(帧级快照)
+        E->>R: render(commands, camera)
+        alt active_target(离屏)
+            R->>B: 离屏 bridge.syncRenderCommands(root, created)
+            B-->>R: created(新/重建子树)
+            R->>V: created? compile()
+        else main pass
+            R->>B: sceneBridge.syncRenderCommands(root, created)
+            B-->>R: created
+            R->>V: created? compile()   // 稳态: created=0 → 零编译
+        else overlay pass
+            R->>B: overlayBridge.syncRenderCommands(…)
+        end
+        R-->>E: needs_submit=true (提交延迟)
+        end
+        E->>R: swapBuffers()
+        R->>V: recordAndSubmit() + present()   // 一帧只提交一次
+    end
+```
+
+- 稳态帧成本：`syncRenderCommands` 内每个几何做**廉价脏检查**（revision / material /
+  render_state / program / matrix 是否变、opacity 是否变），命中缓存则只更新
+  `MatrixTransform::matrix` 或 `colors[].a`，**不重建、不重编**。
+- 引擎无 pass 时也有便捷 `frame()`（begin→end→render({},camera)→swapBuffers）。
+
+## 12. 支持 / 不支持矩阵
+
+### 12.1 支持（已端到端 / 已测试）
+
+| 面 | 能力 |
+|---|---|
+| 图元 | 三角形（默认 `TRIANGLE_LIST`）、`Topology::Points`（点云 demo）、`Topology::Lines`→`LINE_LIST`（映射 + 测试断言）、索引/非索引、法线推导（平滑/面） |
+| 状态 | 深度 test/write/compare（reverse-Z 反转）、`CullMode` None/Front/Back、`PolygonMode` Fill/Line/Point、混合**恒开** + `StateNode` 选因子、每几何独立拓扑 |
+| 材质 | diffuse/specular/ambient/shininess → `PhongMaterialValue`；默认灰；`Material*` 共享缓存；每帧就地刷新（编辑即时生效） |
+| 透明 | scene×node×叶 geometry opacity → `vsg_Color` per-vertex alpha（不重建） |
+| 程序 | `Geometry::setProgram` / `StateNode::setProgram`：glslang 运行期编译 + 自建 ShaderSet(`pc`)；失败回退内建 |
+| 光照 | Scene 级 `Ambient/Directional` → 每 view 光组；默认 headlight；运行时换灯 |
+| 场景 | `MatrixTransform` 嵌套 + worldMatrix、Node visible/opacity、Vine 侧剔除（另有 no-cull 变体） |
+| 多 pass | 离屏 color±depth / depth-only（shadow RT 基础）、PiP screen pass、overlay、动态 sub-viewport |
+| 复用 | `shared_objects_` 共享 pipeline/DS、逐几何保留缓存、逐帧懒更新 |
+
+### 12.2 不支持 / 待办（现状）
+
+| 面 | 限制 |
+|---|---|
+| 纹理/uv | `Material::texture_file_`、`diffuseMap`、`vsg_TexCoord0..3` 均**未接线** |
+| 用户自定义通道 | loc≥2 的数据后端不消费；program 路径也不喂（需 §7 两步接线） |
+| 顶点色 | 用户 loc6 会被 `SceneBridge` 白色覆盖（只认自己生成的 colors + opacity） |
+| 线/点 | 无 `LINE_STRIP`；`lineWidth>1` 需 `wideLines` 特性（未开）；无法调线宽/点大小 |
+| 阴影 | 深度 RT 通道已有；**shadowed Phong 采样（v4b-2）未完成** |
+| preset | `Pbr / ShadowedPhong` 预留无实现（仅 StandardPhong/FlatShaded 映射内建） |
+| instancing | vsg loc7-11（billboard/instance/skinning）槽未向 Vine 暴露 |
+| 固定项 | `frontFace` 固定 CCW、MRT/自定义 blend op/独立 mask 未做 |
+| 生命周期局限 | 缓存以裸指针为键，依赖场景树保活；几何删除后最多滞留 600 帧才释放 |
+
+## 13. 已知缺陷清单（2026-09-04 登记）
+
+> 内存结论：所有权两侧均引用计数、**无环**（`Node::parent_` 是非拥有 `raw_ptr`；
+> ShaderProgram/Material 只被单向持有；命令流帧级释放；vsg 编译产物随节点释放），
+> **真泄漏风险低**。主要风险 = **只增不减的留存** + 若干**行为缺陷**。
+> 状态：已登记，未修。按类别编号便于后续逐条销号。
+
+### 13.1 顶点数据层
+
+| ID | 缺陷 | 位置 | 严重度 |
+|---|---|---|---|
+| D1 | `components` 未当 stride：loc0/loc1 读取写死 `i+=3`，vec4/非 3 分量通道会交错读错 | `SceneBridge::buildGeometry`、`Geometry` localBounds/positionCount | 🔴 数据错位不报错 |
+| D2 | loc1 `components<3` 被静默忽略（如 uv 错放 loc1）→ 数据被无视、走法线推导 | `buildGeometry` | 🟡 |
+| D3 | 用户 loc6 顶点色被 SceneBridge 白色+opacity 覆盖 → 顶点色无效 | `buildGeometry`(默认路径) | 🔴 用户可感知 |
+| D4 | 各 buffer 顶点数不校验（假定全等 loc0），不一致时错位/越界读 | `buildGeometry` | 🟡 |
+
+### 13.2 渲染管线 / 状态层
+
+| ID | 缺陷 | 位置 | 严重度 |
+|---|---|---|---|
+| D5 | 混合恒开：`blend.enabled=false` 不关混合（仅回默认因子）；不透明 draw 也带 blend | `RenderStateMapper::makeRenderStateObjects` | 🟢 设计使然 |
+| D6 | `frontFace` 固定 CCW + cull 默认 None："两种绕序兼容"只在 cull=None 成立；开 cull 后绕序错即消隐 | `RenderStateMapper` | 🟡 |
+| D7 | 非三角形拓扑 + 内建默认 shader 语义错位：线/点仍推法线走 phong；退化数据可能出 NaN/垃圾法线 | `buildGeometry` | 🟡 |
+| D8 | program 路径不注入 per-vertex opacity（`out_colors=null`）→ program 下 `setOpacity` 无效（pc 亦无 opacity） | `buildGeometry`(program 分支) | 🟡 |
+
+### 13.3 program / shader 层
+
+| ID | 缺陷 | 位置 | 严重度 |
+|---|---|---|---|
+| D9 | program 编译失败**静默回退内建**，无用户可见诊断（坏 shader 表现为"还是默认灰"） | `buildProgramShaderSet` | 🔴 |
+| D10 | `ShaderProgram` **无 revision/变更通知**，重建键是指针不是内容 → 同一对象改 GLSL 不重编译/不重试（改 shader 没反应） | `ShaderProgram.hpp` + `SceneBridge::Item` | 🔴 |
+| D11 | 内建 phong 是序列化 blob；`ShaderStage` 反序列化后不留 source → 默认 GLSL 不可改/难诊断 | vsg blob | 🟢 |
+| D12 | 运行期 glslang 仅在 fetch-vsg 路径可用；`VINE_USE_FETCHCONTENT=OFF`（旧 /opt/opensrc/VSG 无 ShaderCompiler）→ program 功能整体失效且静默回退 | 构建 | 🟡 |
+
+### 13.4 生命周期 / GPU 资源层
+
+| ID | 缺陷 | 位置 | 严重度 |
+|---|---|---|---|
+| D13 | `VsgMaterialManager::cache` **无逐出**：`releaseMaterial/updateMaterial` 接口存在但**全仓零调用点** → 每个出现过的 `Material*` 的 PhongMaterialValue 留到 shutdown（最像内存泄漏的留存） | `VsgMaterialManager` | 🔴 |
+| D14 | 裸指针缓存键 + 600 帧滞留窗：Geometry/Material 删除后、逐出前有悬垂窗口（安全依赖场景树保活） | `SceneBridge::cache_` | 🟡 |
+| D15 | `SceneBridge::cache_` 删除几何 600 帧后才释放（延迟释放） | `syncRenderCommands` | 🟢 |
+| D16 | `shared_objects_` 从不修剪：随"历史见过的不同管线/状态变体数"增长 | `SceneBridge` | 🟢 |
+| D17 | shutdown 顺序错 → 撞 `VSG_MAX_DEVICES==1`；`releaseWindow()` 漏调会 Destroy Qt 宿主窗口 | `VsgRenderer::shutdown` | 🟡 |
+| D18 | resize / release / 离屏 resize 走 `deviceWaitIdle` 全停（简单但会整帧卡顿） | `VsgRenderer` | 🟢 |
+| D19 | 每帧 O(materials) 就地改写 + `updateMaterial` 双路径并存 | `syncRenderCommands` 尾部 | 🟢 |
+
+### 13.5 构建 / 环境 / 验证层
+
+| ID | 缺陷 | 位置 | 严重度 |
+|---|---|---|---|
+| D20 | 验证仅在 lavapipe + `debugLayer=false`：真机驱动差异（宽线/深度格式/严格 VUID）未覆盖；抓帧有 swapchain 无 `TRANSFER_SRC` VUID 警告 | 验证 | 🟡 |
+| D21 | 离屏 multipass 未在最新 showcase 下复验；`VINE_VSG_OWN_WINDOW` 独立窗口 vs Qt 子窗口 compositing 主路径仍"待定" | `VsgRenderer` | 🟡 |
+| D22 | 运行期新增几何触发**全图 compile()**（非增量；启动预编译已规避，运行期历史不可靠） | `VsgRenderer::render` | 🟡 |
+| D23 | 无关基线噪声：`test_vsg` ctest SegFault（进程退出预存问题，直跑 10/10）、`test_cppstd/runtime/system` 失败；清 `_deps` 重建需联网（FETCHCONTENT） | 测试/构建 | 🟢 |
+
+### 13.6 历史 / 库层小坑（扩展时注意）
+
+| ID | 缺陷 | 位置 | 严重度 |
+|---|---|---|---|
+| D24 | `intrusive_ptr` 成员析构需**完整类型**：头文件放成员就得 include 对应头 | 头文件纪律 | 🟢 |
+| D25 | `Mat4d()` 默认即单位阵（无 `::identity()`）；`Mat4d×Point3d` 需 include `Transform3.hpp` | SDK 使用 | 🟢 |
+| D26 | 阴影：深度 RT 有、shadowed Phong 采样（v4b-2）未完成；Pbr/ShadowedPhong preset 仅预留 | 路线 | 🟢 |
+
+### 13.7 优先处置建议（🔴）
+
+1. **D10**：给 `ShaderProgram` 加 revision/变更通知，纳入 `Item` 重建键 → "改 shader 不生效"。
+2. **D9**：program 编译失败向前端/日志报错，去掉纯静默回退。
+3. **D3**：`SceneBridge` 尊重用户 loc6 顶点色（色 × opacity 合成）。
+4. **D13**：引擎在材质解绑/销毁时调 `releaseMaterial()`（或加容量上限逐出）。
+5. **D1**：读端按 `components` 跳步，兑现数据模型承诺。
+
+

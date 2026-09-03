@@ -1,22 +1,18 @@
 #include <vine/graphics/RenderCommand.hpp>
 
-#include <vine/graphics/Drawable.hpp>
+#include <vine/graphics/Geometry.hpp>
 #include <vine/graphics/Material.hpp>
 
 V_GRAPHICS_NS_BEGIN
 
-RenderCommand::RenderCommand(intrusive_ptr<Drawable> d, intrusive_ptr<Material> m,
+RenderCommand::RenderCommand(intrusive_ptr<Geometry> g, intrusive_ptr<Material> m,
                              const Mat4d& model)
-  : drawable(std::move(d))
+  : geometry(std::move(g))
   , material(std::move(m))
   , modelMatrix(model)
 {
-    if (material != nullptr) {
-        opacity = material->opacity();
-        if (opacity < 1.0f) {
-            isTransparent = true;
-        }
-    }
+    // Opacity/transparency are folded by the scene collector from leaf and
+    // subtree opacity only; a material never contributes transparency.
 }
 
 V_GRAPHICS_NS_END

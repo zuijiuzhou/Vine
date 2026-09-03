@@ -11,6 +11,7 @@
 #include <vine/appfw/gui/RenderControl.hpp>
 #include <vine/graphics/Geometry.hpp>
 #include <vine/graphics/Material.hpp>
+#include <vine/graphics/MatrixTransform.hpp>
 #include <vine/graphics/Node.hpp>
 #include <vine/graphics/RenderEngine.hpp>
 #include <vine/graphics/Scene.hpp>
@@ -35,10 +36,10 @@ using vine::math::Vec3f;
  * @param at      World-space position.
  * @return The created node (kept alive by the scene).
  */
-intrusive_ptr<vine::graphics::Node> addDemoTriangle(vine::graphics::Scene* scene,
-                                                    const vine::Colorf& diffuse,
-                                                    const vine::String& name,
-                                                    const Vec3d& at)
+intrusive_ptr<vine::graphics::MatrixTransform> addDemoTriangle(vine::graphics::Scene* scene,
+                                                              const vine::Colorf& diffuse,
+                                                              const vine::String& name,
+                                                              const Vec3d& at)
 {
     auto mesh = intrusive_ptr<vine::geometry::TriangleMesh>(new vine::geometry::TriangleMesh());
     mesh->addTriangle(Vec3f(-1.0f, -1.0f, 0.0f), Vec3f(1.0f, -1.0f, 0.0f), Vec3f(0.0f, 1.0f, 0.0f));
@@ -51,10 +52,11 @@ intrusive_ptr<vine::graphics::Node> addDemoTriangle(vine::graphics::Scene* scene
     material->setDiffuse(diffuse);
     geometry->setMaterial(material);
 
-    auto node = intrusive_ptr<vine::graphics::Node>(new vine::graphics::Node());
+    auto node = intrusive_ptr<vine::graphics::MatrixTransform>(
+        new vine::graphics::MatrixTransform());
     node->setName(name);
-    node->setLocalTransform(vine::math::translate(at));
-    node->addDrawable(geometry);
+    node->setMatrix(vine::math::translate(at));
+    node->addChild(geometry);
 
     scene->addNode(node);
     return node;
@@ -85,10 +87,11 @@ vine::async::Task<CommandResult> TestRenderLiveCommand::execute(CommandExecution
     auto mover = addDemoTriangle(scene, vine::Colorf(0.2f, 0.4f, 0.9f, 1.0f), u8"live_mover",
                                  Vec3d(3.0, 0.0, -6.0));
 
-    auto* base_draw  = base->drawables().front().get();
-    auto* mover_draw = mover->drawables().front().get();
-    auto* base_mat   = base_draw->material();
-    (void)mover_draw;
+    // Each demo triangle lives under its own MatrixTransform as one leaf
+    // Geometry child; grab the leaf for the visibility blink below.
+    auto* mover_geom = dynamic_cast<vine::graphics::Geometry*>(mover->children().front().get());
+    auto* base_mat = dynamic_cast<vine::graphics::Geometry*>(base->children().front().get())
+                         ->material();
 
     s_timer = new QTimer(QCoreApplication::instance());
     int tick = 0;
@@ -97,14 +100,14 @@ vine::async::Task<CommandResult> TestRenderLiveCommand::execute(CommandExecution
         const double t = tick * 0.05;
 
         // Node transform updates live (matrix path).
-        mover->setLocalTransform(
+        mover->setMatrix(
             vine::math::translate(Vec3d(3.0 * std::cos(t), 1.2 * std::sin(t), -6.0)));
 
         // Node-level opacity oscillates (per-vertex alpha path).
         mover->setOpacity(0.2f + 0.8f * static_cast<float>(0.5 + 0.5 * std::sin(t)));
 
-        // Drawable-level visibility blinks (child attach/detach path).
-        mover->drawables().front()->setVisible((tick / 24) % 2 == 0);
+        // Geometry-level visibility blinks (child attach/detach path).
+        mover_geom->setVisible((tick / 24) % 2 == 0);
 
         // Material diffuse cycles through hues (shared Phong uniform path).
         const float c = static_cast<float>(t);

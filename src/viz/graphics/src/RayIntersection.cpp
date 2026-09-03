@@ -1,6 +1,7 @@
 #include <vine/graphics/RayIntersection.hpp>
 
 #include <vine/graphics/Geometry.hpp>
+#include <vine/graphics/Group.hpp>
 #include <vine/graphics/Node.hpp>
 #include <vine/graphics/Scene.hpp>
 #include <vine/geometry/IndexedTriangleMesh.hpp>
@@ -176,31 +177,44 @@ Vec3d toWorld(const Mat4d& m, double x, double y, double z)
 }
 
 /**
- * @brief A handle to the vertex data of a renderable mesh.
+ * @brief Owned vertex/index data resolved from a buffer-only Geometry.
  *
- * Shared by TriangleMesh (consecutive triples, no index array) and
- * IndexedTriangleMesh (shared vertices referenced by an index array).
+ * Positions are materialised from the packed location-0 attribute into a
+ * typed array the picker can walk; indices (when present) alias the
+ * geometry's index buffer. Lifetime spans the caller's picking call only.
  */
-struct MeshRef {
-    const vine::geometry::Vec3fArray* positions = nullptr;
+struct GeometryMesh {
+    vine::geometry::Vec3fArray positions;
     const vine::geometry::UInt32Array* indices = nullptr;
+
+    /** @brief Returns whether position data is available. */
+    bool valid() const { return !positions.empty(); }
 };
 
 /**
- * @brief Resolves the vertex/index arrays of a supported mesh shape.
+ * @brief Resolves the vertex/index arrays of a buffer-only Geometry.
  *
- * @param shape Geometry shape.
- * @return MeshRef with positions null for unsupported shapes.
+ * @param geometry Geometry to read.
+ * @return GeometryMesh with no positions for an empty geometry.
  */
-MeshRef meshOf(const vine::geometry::Shape* shape)
+GeometryMesh meshOfGeometry(const Geometry* geometry)
 {
-    if (const auto* tm = dynamic_cast<const vine::geometry::TriangleMesh*>(shape)) {
-        return { &tm->positions(), nullptr };
+    GeometryMesh mesh;
+    if (geometry != nullptr) {
+        if (const auto* position_attr = geometry->buffer(0);
+            position_attr != nullptr && !position_attr->empty() &&
+            position_attr->components >= 3u) {
+            const auto& data = *position_attr->data;
+            mesh.positions.reserve(data.size() / 3u);
+            for (std::size_t i = 0; i + 2 < data.size(); i += 3) {
+                mesh.positions.emplace_back(data[i], data[i + 1], data[i + 2]);
+            }
+        }
+        if (geometry->hasIndices()) {
+            mesh.indices = geometry->indices();
+        }
     }
-    if (const auto* im = dynamic_cast<const vine::geometry::IndexedTriangleMesh*>(shape)) {
-        return { &im->positions(), &im->indices() };
-    }
-    return {};
+    return mesh;
 }
 
 /**
@@ -314,24 +328,28 @@ void intersectNode(const Ray& ray, const Node* node, RayIntersectionResult& best
     if (node == nullptr || !node->isVisible()) {
         return;
     }
-    const Mat4d world = node->worldTransform();
-    for (const auto& drawable : node->drawables()) {
-        if (Geometry* geom = dynamic_cast<Geometry*>(drawable.get())) {
-            const MeshRef mesh = meshOf(geom->shape());
-            if (mesh.positions == nullptr) {
-                continue;
-            }
-            traverseMesh(*mesh.positions, mesh.indices, ray, world,
-                         [&](const RayIntersectionResult& hit) {
-                             if (hit.distance < best.distance) {
-                                 best = hit;
-                                 best.geometry = geom;
-                             }
-                         });
+    if (const auto* geometry = dynamic_cast<const Geometry*>(node)) {
+        // Leaf geometry: test against its data placed by the ancestor
+        // MatrixTransform chain.
+        const GeometryMesh mesh = meshOfGeometry(geometry);
+        if (!mesh.valid()) {
+            return;
         }
+        const Mat4d world = node->worldMatrix();
+        Geometry* geom = const_cast<Geometry*>(geometry);
+        traverseMesh(mesh.positions, mesh.indices, ray, world,
+                     [&](const RayIntersectionResult& hit) {
+                         if (hit.distance < best.distance) {
+                             best = hit;
+                             best.geometry = geom;
+                         }
+                     });
+        return;
     }
-    for (const auto& child : node->children()) {
-        intersectNode(ray, child.get(), best);
+    if (const auto* group = dynamic_cast<const Group*>(node)) {
+        for (const auto& child : group->children()) {
+            intersectNode(ray, child.get(), best);
+        }
     }
 }
 
@@ -348,17 +366,19 @@ void collectNodeNearest(const Ray& ray, const Node* node,
     if (node == nullptr || !node->isVisible()) {
         return;
     }
-    const Mat4d world = node->worldTransform();
-    for (const auto& drawable : node->drawables()) {
-        if (Geometry* geom = dynamic_cast<Geometry*>(drawable.get())) {
-            RayIntersectionResult r = RayIntersection::intersect(ray, geom, world);
-            if (r.hit) {
-                out.push_back(std::move(r));
-            }
+    if (const auto* geometry = dynamic_cast<const Geometry*>(node)) {
+        const Mat4d world = node->worldMatrix();
+        RayIntersectionResult r = RayIntersection::intersect(
+            ray, const_cast<Geometry*>(geometry), world);
+        if (r.hit) {
+            out.push_back(std::move(r));
         }
+        return;
     }
-    for (const auto& child : node->children()) {
-        collectNodeNearest(ray, child.get(), out);
+    if (const auto* group = dynamic_cast<const Group*>(node)) {
+        for (const auto& child : group->children()) {
+            collectNodeNearest(ray, child.get(), out);
+        }
     }
 }
 
@@ -375,23 +395,25 @@ void collectNodeHits(const Ray& ray, const Node* node,
     if (node == nullptr || !node->isVisible()) {
         return;
     }
-    const Mat4d world = node->worldTransform();
-    for (const auto& drawable : node->drawables()) {
-        if (Geometry* geom = dynamic_cast<Geometry*>(drawable.get())) {
-            const MeshRef mesh = meshOf(geom->shape());
-            if (mesh.positions == nullptr) {
-                continue;
-            }
-            traverseMesh(*mesh.positions, mesh.indices, ray, world,
-                         [&](const RayIntersectionResult& hit) {
-                             RayIntersectionResult copy = hit;
-                             copy.geometry = geom;
-                             out.push_back(std::move(copy));
-                         });
+    if (const auto* geometry = dynamic_cast<const Geometry*>(node)) {
+        const GeometryMesh mesh = meshOfGeometry(geometry);
+        if (!mesh.valid()) {
+            return;
         }
+        const Mat4d world = node->worldMatrix();
+        Geometry* geom = const_cast<Geometry*>(geometry);
+        traverseMesh(mesh.positions, mesh.indices, ray, world,
+                     [&](const RayIntersectionResult& hit) {
+                         RayIntersectionResult copy = hit;
+                         copy.geometry = geom;
+                         out.push_back(std::move(copy));
+                     });
+        return;
     }
-    for (const auto& child : node->children()) {
-        collectNodeHits(ray, child.get(), out);
+    if (const auto* group = dynamic_cast<const Group*>(node)) {
+        for (const auto& child : group->children()) {
+            collectNodeHits(ray, child.get(), out);
+        }
     }
 }
 
@@ -404,11 +426,11 @@ RayIntersectionResult RayIntersection::intersect(const Ray& ray, raw_ptr<Geometr
     if (geometry == nullptr) {
         return result;
     }
-    const MeshRef mesh = meshOf(geometry->shape());
-    if (mesh.positions == nullptr) {
+    const GeometryMesh mesh = meshOfGeometry(geometry);
+    if (!mesh.valid()) {
         return result;
     }
-    traverseMesh(*mesh.positions, mesh.indices, ray, world,
+    traverseMesh(mesh.positions, mesh.indices, ray, world,
                  [&](const RayIntersectionResult& hit) {
                      if (hit.distance < result.distance) {
                          result = hit;
@@ -435,11 +457,11 @@ std::vector<RayIntersectionResult> RayIntersection::intersect(const Ray& ray,
         }
         return results;
     }
-    const MeshRef mesh = meshOf(geometry->shape());
-    if (mesh.positions == nullptr) {
+    const GeometryMesh mesh = meshOfGeometry(geometry);
+    if (!mesh.valid()) {
         return results;
     }
-    traverseMesh(*mesh.positions, mesh.indices, ray, world,
+    traverseMesh(mesh.positions, mesh.indices, ray, world,
                  [&](const RayIntersectionResult& hit) {
                      RayIntersectionResult copy = hit;
                      copy.geometry = geometry;

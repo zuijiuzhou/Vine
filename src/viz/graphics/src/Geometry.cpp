@@ -1,106 +1,263 @@
 #include <vine/graphics/Geometry.hpp>
 
+#include <vine/graphics/Material.hpp>
+#include <vine/graphics/ShaderProgram.hpp>
 #include <vine/geometry/IndexedTriangleMesh.hpp>
-#include <vine/geometry/TriangleMesh.hpp>
+#include <vine/geometry/Mesh.hpp>
 #include <vine/math/Point3.hpp>
+#include <vine/math/Transform3.hpp>
 #include <vine/math/Vector3.hpp>
 
 V_GRAPHICS_NS_BEGIN
 
 using vine::math::Vec3d;
 
-V_OBJECT_META_IMPL(Geometry, Drawable);
+V_OBJECT_META_IMPL(Geometry, Node);
 
 Geometry::Geometry() = default;
 
 Geometry::~Geometry() = default;
 
-raw_ptr<const vine::geometry::Shape> Geometry::shape() const
+namespace
 {
-    return shape_.get();
+/**
+ * @brief Transforms a local-space AABB by a matrix into a world-space AABB.
+ *
+ * @param local Box in local space.
+ * @param world World transform of the geometry.
+ * @return World-space AABB (empty when the local box is empty).
+ */
+Aabbd transformBox(const Aabbd& local, const Mat4d& world)
+{
+    Aabbd result = Aabbd::empty();
+    if (!local.isValid()) {
+        return result;
+    }
+    const auto mn = local.min();
+    const auto mx = local.max();
+    const vine::math::Point3d corners[8] = {
+        mn,
+        vine::math::Point3d(mx.x, mn.y, mn.z),
+        vine::math::Point3d(mn.x, mx.y, mn.z),
+        vine::math::Point3d(mx.x, mx.y, mn.z),
+        vine::math::Point3d(mn.x, mn.y, mx.z),
+        vine::math::Point3d(mx.x, mn.y, mx.z),
+        vine::math::Point3d(mn.x, mx.y, mx.z),
+        mx,
+    };
+    for (const auto& c : corners) {
+        const auto p = world * c;
+        result.expandBy(Vec3d(p.x, p.y, p.z));
+    }
+    return result;
 }
+
+/**
+ * @brief Packs a Vec3 array into a three-component float attribute buffer.
+ *
+ * @param src Typed vertex array.
+ * @return Packed attribute buffer (components = 3).
+ */
+AttributeBuffer packVec3(const vine::geometry::Vec3fArray& src)
+{
+    AttributeBuffer out;
+    out.components = 3;
+    out.data       = std::make_shared<std::vector<float>>();
+    out.data->reserve(src.size() * 3u);
+    for (const auto& v : src) {
+        out.data->push_back(v.x);
+        out.data->push_back(v.y);
+        out.data->push_back(v.z);
+    }
+    return out;
+}
+}  // namespace
 
 void Geometry::setShape(intrusive_ptr<vine::geometry::Shape> shape)
 {
-    shape_ = std::move(shape);
+    // Geometry stores vertex data only: copy the mesh into the open attribute
+    // list and drop the Shape reference.
+    attributes_.clear();
+    indices_.reset();
+    if (shape != nullptr) {
+        if (const GeometryPtr filled = geometryFromShape(*shape)) {
+            attributes_ = filled->attributes_;
+            indices_    = filled->indices_;
+        }
+    }
+    ++revision_;
 }
 
-std::size_t Geometry::triangleCount() const
+void Geometry::addBuffer(std::uint32_t location, const AttributeBuffer& buffer)
 {
-    const auto* shape = shape_.get();
-    if (shape == nullptr) {
-        return 0;
+    attributes_[location] = buffer;
+    ++revision_;
+}
+
+void Geometry::removeBuffer(std::uint32_t location)
+{
+    if (attributes_.erase(location) != 0) {
+        ++revision_;
     }
-    switch (shape->shapeType()) {
-        case vine::geometry::ShapeType::TriangleMesh: {
-            const auto* mesh = dynamic_cast<const vine::geometry::TriangleMesh*>(shape);
-            return mesh ? mesh->triangleCount() : 0;
-        }
-        case vine::geometry::ShapeType::IndexedTriangleMesh: {
-            const auto* mesh =
-                dynamic_cast<const vine::geometry::IndexedTriangleMesh*>(shape);
-            return mesh ? mesh->triangleCount() : 0;
-        }
-        default:
-            return 0;
+}
+
+bool Geometry::hasBuffer(std::uint32_t location) const
+{
+    return attributes_.find(location) != attributes_.end();
+}
+
+const AttributeBuffer* Geometry::buffer(std::uint32_t location) const
+{
+    const auto it = attributes_.find(location);
+    return it != attributes_.end() ? &it->second : nullptr;
+}
+
+std::size_t Geometry::bufferCount() const
+{
+    return attributes_.size();
+}
+
+std::vector<std::uint32_t> Geometry::bufferLocations() const
+{
+    std::vector<std::uint32_t> locations;
+    locations.reserve(attributes_.size());
+    for (const auto& entry : attributes_) {
+        locations.push_back(entry.first);
     }
+    return locations;
+}
+
+void Geometry::setPositions(const vine::geometry::Vec3fArray& positions)
+{
+    addBuffer(0, packVec3(positions));
+}
+
+bool Geometry::hasPositions() const
+{
+    return hasBuffer(0);
+}
+
+std::size_t Geometry::positionCount() const
+{
+    const AttributeBuffer* positions = buffer(0);
+    return (positions != nullptr && !positions->empty()) ? (positions->data->size() / 3u) : 0u;
+}
+
+void Geometry::setNormals(const vine::geometry::Vec3fArray& normals)
+{
+    addBuffer(1, packVec3(normals));
+}
+
+bool Geometry::hasNormals() const
+{
+    return hasBuffer(1);
+}
+
+std::size_t Geometry::normalCount() const
+{
+    const AttributeBuffer* normals = buffer(1);
+    return (normals != nullptr && !normals->empty()) ? (normals->data->size() / 3u) : 0u;
+}
+
+void Geometry::setIndices(std::shared_ptr<vine::geometry::UInt32Array> indices)
+{
+    indices_ = std::move(indices);
+    ++revision_;
+}
+
+void Geometry::setIndices(const vine::geometry::UInt32Array& indices)
+{
+    setIndices(std::make_shared<vine::geometry::UInt32Array>(indices));
+}
+
+bool Geometry::hasIndices() const
+{
+    return indices_ != nullptr && !indices_->empty();
+}
+
+const vine::geometry::UInt32Array* Geometry::indices() const
+{
+    return indices_.get();
+}
+
+std::uint64_t Geometry::revision() const
+{
+    return revision_;
 }
 
 std::size_t Geometry::vertexCount() const
 {
-    const auto* shape = shape_.get();
-    if (shape == nullptr) {
-        return 0;
-    }
-    switch (shape->shapeType()) {
-        case vine::geometry::ShapeType::TriangleMesh: {
-            const auto* mesh = dynamic_cast<const vine::geometry::TriangleMesh*>(shape);
-            return mesh ? mesh->vertexCount() : 0;
-        }
-        case vine::geometry::ShapeType::IndexedTriangleMesh: {
-            const auto* mesh =
-                dynamic_cast<const vine::geometry::IndexedTriangleMesh*>(shape);
-            return mesh ? mesh->vertexCount() : 0;
-        }
-        default:
-            return 0;
-    }
+    return positionCount();
 }
 
-Aabbd Geometry::computeBoundingBox() const
+namespace
 {
-    const auto* shape = shape_.get();
-    if (shape == nullptr) {
+/**
+ * @brief Computes the local-space AABB of the location-0 position buffer.
+ *
+ * @param geometry Geometry to bound.
+ * @return Local-space AABB (empty when no valid positions are present).
+ */
+Aabbd localBounds(const Geometry* geometry)
+{
+    const AttributeBuffer* positions = geometry->buffer(0);
+    if (positions == nullptr || positions->empty() || positions->components < 3) {
         return Aabbd::empty();
     }
-    switch (shape->shapeType()) {
-        case vine::geometry::ShapeType::TriangleMesh:
-        case vine::geometry::ShapeType::IndexedTriangleMesh: {
-            const auto* mesh = dynamic_cast<const vine::geometry::Mesh*>(shape);
-            if (mesh == nullptr) {
-                return Aabbd::empty();
-            }
-            // Prefer the mesh's cached AABB (set via computeAabb()/setAabb()).
-            const auto& aabb = mesh->aabb();
-            if (aabb.isValid()) {
-                const auto mn = aabb.min();
-                const auto mx = aabb.max();
-                return Aabbd(mn.x, mn.y, mn.z, mx.x, mx.y, mx.z);
-            }
-            // No cache yet: scan the stored positions once.
-            const auto& positions = mesh->positions();
-            if (positions.empty()) {
-                return Aabbd::empty();
-            }
-            Aabbd box = Aabbd::empty();
-            for (const auto& v : positions) {
-                box.expandBy(Vec3d(v.x, v.y, v.z));
-            }
-            return box;
-        }
-        default:
-            return Aabbd::empty();
+    Aabbd box = Aabbd::empty();
+    const auto& data = *positions->data;
+    for (std::size_t i = 0; i + 2 < data.size(); i += 3) {
+        box.expandBy(Vec3d(data[i], data[i + 1], data[i + 2]));
     }
+    return box;
+}
+}  // namespace
+
+raw_ptr<Material> Geometry::material() const
+{
+    return material_.get();
+}
+
+void Geometry::setMaterial(intrusive_ptr<Material> m)
+{
+    material_ = std::move(m);
+}
+
+raw_ptr<ShaderProgram> Geometry::program() const
+{
+    return program_.get();
+}
+
+void Geometry::setProgram(intrusive_ptr<ShaderProgram> program)
+{
+    program_ = std::move(program);
+}
+
+Aabbd Geometry::boundingBox() const
+{
+    // The local data box (location 0 positions) placed in world space by the
+    // enclosing MatrixTransform chain.
+    return transformBox(localBounds(this), worldMatrix());
+}
+
+GeometryPtr geometryFromShape(const vine::geometry::Shape& shape)
+{
+    const auto* mesh = dynamic_cast<const vine::geometry::Mesh*>(&shape);
+    if (mesh == nullptr) {
+        return GeometryPtr();
+    }
+    auto geometry         = GeometryPtr(new Geometry());
+    const auto& positions = mesh->positions();
+    geometry->setPositions(positions);
+    const auto& normals = mesh->normals();
+    if (normals.size() == positions.size()) {
+        geometry->setNormals(normals);
+    }
+    if (const auto* indexed =
+            dynamic_cast<const vine::geometry::IndexedTriangleMesh*>(&shape)) {
+        geometry->setIndices(indexed->indices());
+    }
+    return geometry;
 }
 
 V_GRAPHICS_NS_END

@@ -10,10 +10,13 @@
 V_GRAPHICS_NS_BEGIN
 
 /**
- * @brief Material class defining rendering properties.
+ * @brief Material class defining surface appearance.
  *
- * Describes the visual appearance of a drawable: diffuse/specular/ambient
- * colors, shininess, opacity, and an optional texture.
+ * Describes the visual appearance of a geometry: diffuse/specular/ambient
+ * colors, shininess and an optional texture. A material is always opaque:
+ * transparency is a property of the leaf (Geometry::setOpacity) or of a
+ * subtree (Node::setOpacity), never of the material itself (diffuse alpha is
+ * ignored).
  */
 class V_GRAPHICS_API Material : public Object, public RefCounted<Material> {
     V_OBJECT_META_DECL;
@@ -64,15 +67,6 @@ class V_GRAPHICS_API Material : public Object, public RefCounted<Material> {
      */
     void setShininess(float shine);
 
-    /** @brief Gets the opacity in [0, 1] (1 = fully opaque). */
-    float opacity() const;
-
-    /** @brief Sets the opacity.
-     *
-     * @param alpha Opacity in [0, 1].
-     */
-    void setOpacity(float alpha);
-
     /** @brief Gets the texture file path (may be empty). */
     String textureFile() const;
 
@@ -88,7 +82,6 @@ class V_GRAPHICS_API Material : public Object, public RefCounted<Material> {
     Colorf specular_{ 1.0f, 1.0f, 1.0f, 0.5f };
     Colorf ambient_{ 0.2f, 0.2f, 0.2f, 1.0f };
     float shininess_ = 32.0f;
-    float opacity_ = 1.0f;
     String texture_file_;
 };
 

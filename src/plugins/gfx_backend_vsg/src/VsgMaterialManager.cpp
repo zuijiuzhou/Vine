@@ -35,8 +35,9 @@ namespace
         const auto ambient = material->ambient();
         m.ambient = ::vsg::vec4(ambient.r, ambient.g, ambient.b, ambient.a);
         m.shininess = material->shininess();
-        // Opacity rides on the diffuse alpha; the renderer enables blending.
-        m.diffuse.a = material->opacity();
+        // Transparency is carried by the per-vertex alpha (Geometry/Node
+        // opacity), never by the shared material: diffuse stays opaque.
+        m.diffuse.a = 1.0f;
     }
     return phong;
 }

@@ -1,0 +1,41 @@
+#include <vine/graphics/ShaderProgram.hpp>
+
+V_GRAPHICS_NS_BEGIN
+
+V_OBJECT_META_IMPL(ShaderProgram, vine::Object);
+
+ShaderProgram::ShaderProgram() = default;
+
+ShaderProgram::~ShaderProgram() = default;
+
+String ShaderProgram::name() const
+{
+    return name_;
+}
+
+void ShaderProgram::setName(const String& name)
+{
+    name_ = name;
+}
+
+void ShaderProgram::addStage(const ShaderStage& stage)
+{
+    stages_.push_back(stage);
+}
+
+std::size_t ShaderProgram::stageCount() const
+{
+    return stages_.size();
+}
+
+const ShaderStage* ShaderProgram::stage(std::size_t index) const
+{
+    return index < stages_.size() ? &stages_[index] : nullptr;
+}
+
+const std::vector<ShaderStage>& ShaderProgram::stages() const
+{
+    return stages_;
+}
+
+V_GRAPHICS_NS_END
