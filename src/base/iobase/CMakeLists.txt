@@ -20,7 +20,11 @@ if(VINE_USE_FETCHCONTENT)
     # libzip's find_package(ZLIB) must resolve to the zlib built above. FindZLIB
     # skips its search when ZLIB_LIBRARY is preset and keeps an existing ZLIB::ZLIB
     # target, so point both at zlibstatic.
-    set(ZLIB_INCLUDE_DIR "${zlib_SOURCE_DIR}" CACHE PATH "" FORCE)
+    # zlib.h lives in the source dir but its generated zconf.h lives in the build
+    # dir; consumers such as assimp do INCLUDE_DIRECTORIES(${ZLIB_INCLUDE_DIR}),
+    # so both directories must be on the include path or `#include "zconf.h"`
+    # fails to compile.
+    set(ZLIB_INCLUDE_DIR "${zlib_BINARY_DIR};${zlib_SOURCE_DIR}" CACHE PATH "" FORCE)
     set(ZLIB_LIBRARY zlibstatic CACHE FILEPATH "" FORCE)
     # Mark ZLIB as found to prevent find_package(ZLIB) from searching for system zlib
     set(ZLIB_FOUND TRUE CACHE BOOL "" FORCE)
