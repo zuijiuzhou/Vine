@@ -7,11 +7,9 @@
 #include <vsg/utils/ShaderSet.h>
 #include <vsg/utils/SharedObjects.h>
 
-#include <map>
 #include <memory>
 #include <unordered_map>
 #include <vector>
-
 #include <vine/raw_ptr.hpp>
 #include <vine/vsg/VsgMaterialManager.hpp>
 

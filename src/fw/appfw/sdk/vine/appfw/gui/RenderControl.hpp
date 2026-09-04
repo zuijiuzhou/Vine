@@ -72,8 +72,8 @@ class V_APPFW_API RenderControl : public Control {
     /** @brief Gets the render surface device pixel ratio.
      *
      * Qt reports widget sizes in logical pixels; a render backend draws into
-     * the native surface in device pixels, so overlay positioning on high-DPI
-     * displays must scale by this factor.
+     * the native surface in device pixels, so HUD / sub-viewport positioning
+     * (e.g. the axis gizmo) on high-DPI displays must scale by this factor.
      *
      * @return Device pixel ratio (1.0 when the surface is not available).
      */

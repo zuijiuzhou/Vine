@@ -10,7 +10,7 @@
 #include <vine/graphics/Material.hpp>
 #include <vine/graphics/MaterialManager.hpp>
 #include <vine/graphics/AxisGizmo.hpp>
-#include <vine/graphics/Overlay.hpp>
+#include <vine/graphics/CameraMirror.hpp>
 #include <vine/graphics/Ray.hpp>
 #include <vine/graphics/RenderBackend.hpp>
 #include <vine/graphics/RenderBackendRegistry.hpp>
@@ -1150,6 +1150,34 @@ TEST(RenderTargetTest, OffscreenDescription)
     EXPECT_FALSE(rt.valid());
 }
 
+TEST(RenderTargetTest, MultipleColorAttachments)
+{
+    RenderTarget rt;
+    EXPECT_EQ(rt.colorCount(), 0);
+    EXPECT_FALSE(rt.hasColor());
+    // Out-of-range format access falls back to the default RGBA8.
+    EXPECT_EQ(rt.colorFormat(0), RenderTarget::ColorFormat::RGBA8);
+
+    // A G-buffer / MRT target: several colour attachments, one per texture.
+    rt.setSize(640, 360);
+    rt.attachColor(RenderTarget::ColorFormat::RGBA8);   // att 0: albedo
+    rt.attachColor(RenderTarget::ColorFormat::RGBA16F); // att 1: normal
+    rt.attachColor(RenderTarget::ColorFormat::RGBA32F); // att 2: view position
+    rt.attachDepth(RenderTarget::DepthFormat::D24);
+
+    EXPECT_TRUE(rt.hasColor());
+    EXPECT_EQ(rt.colorCount(), 3);
+    EXPECT_EQ(rt.colorFormat(), RenderTarget::ColorFormat::RGBA8); // attachment 0 unchanged
+    EXPECT_EQ(rt.colorFormat(0), RenderTarget::ColorFormat::RGBA8);
+    EXPECT_EQ(rt.colorFormat(1), RenderTarget::ColorFormat::RGBA16F);
+    EXPECT_EQ(rt.colorFormat(2), RenderTarget::ColorFormat::RGBA32F);
+    // Out-of-range index keeps the safe default.
+    EXPECT_EQ(rt.colorFormat(3), RenderTarget::ColorFormat::RGBA8);
+    EXPECT_EQ(rt.colorFormat(-1), RenderTarget::ColorFormat::RGBA8);
+    EXPECT_TRUE(rt.hasDepth());
+    EXPECT_TRUE(rt.valid());
+}
+
 // ============ RenderEngine ============
 
 /**
@@ -1166,8 +1194,11 @@ class MockBackend : public RenderBackend {
     int viewport_sets = 0;
     const Camera* last_camera = nullptr;
     int last_viewport[4] = { 0, 0, 0, 0 };
+    // Programs of the commands last passed to render() (per command).
+    std::vector<const ShaderProgram*> last_programs;
     int screen_draws = 0;
     RenderTarget* last_screen_source = nullptr;
+    int last_screen_attachment = 0;
     int light_sets = 0;
     std::size_t last_light_count = 0;
     const Light* last_light = nullptr;
@@ -1183,7 +1214,6 @@ class MockBackend : public RenderBackend {
     void shutdown() override { ok = false; }
     void beginFrame() override { ++begin_calls; }
     void endFrame() override { ++end_calls; }
-    void executePass(const RenderPass*, const std::vector<RenderCommand>&) override {}
     void setRenderTarget(RenderTarget* target) override
     {
         target_history.push_back(target);
@@ -1195,15 +1225,32 @@ class MockBackend : public RenderBackend {
         last_light_count = lights.size();
         last_light = lights.empty() ? nullptr : lights.front();
     }
-    void drawScreenTexture(RenderTarget* source) override
+    void drawScreenTexture(RenderTarget* source, int attachment) override
     {
         ++screen_draws;
         last_screen_source = source;
+        last_screen_attachment = attachment;
     }
-    void render(const std::vector<RenderCommand>&, const Camera* camera) override
+    int program_draws = 0;
+    RenderTarget* last_program_source = nullptr;
+    const ShaderProgram* last_program = nullptr;
+    const Camera* last_program_camera = nullptr;
+    void drawScreenProgram(RenderTarget* source, const ShaderProgram* program, const Camera* camera) override
+    {
+        ++program_draws;
+        last_program_source = source;
+        last_program = program;
+        last_program_camera = camera;
+    }
+    void render(const std::vector<RenderCommand>& commands, const Camera* camera) override
     {
         ++render_calls;
         last_camera = camera;
+        last_programs.clear();
+        last_programs.reserve(commands.size());
+        for (const auto& command : commands) {
+            last_programs.push_back(command.program.get());
+        }
     }
     void setViewport(int x, int y, int width, int height) override
     {
@@ -1216,15 +1263,17 @@ class MockBackend : public RenderBackend {
     void clear(const Color&, bool) override { ++clear_calls; }
     void swapBuffers() override { ++swap_calls; }
 
-    // Closed-loop release recording (removeOverlay/removePass -> backend).
-    int overlay_releases = 0;
+    // Closed-loop release recording (removePass/clearPasses -> backend).
+    int layer_releases = 0;
     int target_releases = 0;
-    const Camera* last_released_overlay = nullptr;
+    const Camera* last_released_layer = nullptr;
+    int last_released_slot = 0;
     RenderTarget* last_released_target = nullptr;
-    void releaseOverlay(vine::raw_ptr<const Camera> overlay_camera) override
+    void releaseWindowLayer(vine::raw_ptr<const Camera> camera, int slot) override
     {
-        ++overlay_releases;
-        last_released_overlay = overlay_camera;
+        ++layer_releases;
+        last_released_layer = camera;
+        last_released_slot = slot;
     }
     void releaseRenderTarget(RenderTarget* target) override
     {
@@ -1251,79 +1300,86 @@ TEST(RenderEngineTest, RemovePassReleasesBackendRenderTarget)
     EXPECT_EQ(backend->last_released_target, target.get());
 }
 
-TEST(RenderEngineTest, RemoveOverlayReleasesBackendOverlay)
+TEST(RenderEngineTest, RemovePassReleasesBackendWindowLayerAndTarget)
 {
-    // Closed loop: dropping an overlay must tell the backend to stop drawing
-    // it (overlay view/slot) AND free any off-screen target its pass owns.
+    // Closed loop: dropping a pass must tell the backend to stop drawing its
+    // window layer (keyed by the pass camera) AND free any off-screen target
+    // the pass owns.
     auto backend = intrusive_ptr<MockBackend>(new MockBackend());
     auto engine  = intrusive_ptr<RenderEngine>(new RenderEngine());
     engine->setBackend(backend);
 
+    auto camera  = intrusive_ptr<Camera>(new Camera());
     auto target  = intrusive_ptr<RenderTarget>(new RenderTarget());
-    auto overlay = intrusive_ptr<Overlay>(new Overlay());
-    overlay->pass()->setRenderTarget(target);
-    engine->addOverlay(overlay);
+    auto pass    = intrusive_ptr<RenderPass>(new RenderPass());
+    pass->setCamera(camera.get());
+    pass->setRenderTarget(target);
+    engine->addPass(pass, 1);
 
-    engine->removeOverlay(overlay.get());
-    EXPECT_EQ(backend->overlay_releases, 1);
-    EXPECT_EQ(backend->last_released_overlay, overlay->pass()->camera());
+    engine->removePass(pass.get());
+    EXPECT_EQ(backend->layer_releases, 1);
+    EXPECT_EQ(backend->last_released_layer, camera.get());
     EXPECT_EQ(backend->target_releases, 1);
     EXPECT_EQ(backend->last_released_target, target.get());
 }
 
-TEST(RenderEngineTest, RemoveOverlayKeepsSharedEnginePassAlive)
+TEST(RenderEngineTest, ClearPassesReleasesEveryRegisteredPass)
 {
-    // A pass shared between an overlay and an engine extra pass must NOT be
-    // torn down when only the overlay is removed - only removePass() releases
-    // its target.
+    // Clearing the pipeline releases the backend resources of each removed
+    // pass exactly once (a pass is registered at most once, so no dedupe is
+    // needed).
     auto backend = intrusive_ptr<MockBackend>(new MockBackend());
     auto engine  = intrusive_ptr<RenderEngine>(new RenderEngine());
     engine->setBackend(backend);
 
+    auto cam_a   = intrusive_ptr<Camera>(new Camera());
+    auto pass_a  = intrusive_ptr<RenderPass>(new RenderPass());
+    pass_a->setCamera(cam_a.get());
+    engine->addPass(pass_a, 0);
+
+    auto cam_b   = intrusive_ptr<Camera>(new Camera());
     auto target  = intrusive_ptr<RenderTarget>(new RenderTarget());
-    auto shared  = intrusive_ptr<RenderPass>(new RenderPass());
-    shared->setRenderTarget(target);
-    auto overlay = intrusive_ptr<Overlay>(new Overlay());
-    overlay->setPass(shared);
-    engine->addPass(shared, 1);  // the engine also draws this pass
-    engine->addOverlay(overlay);
+    auto pass_b  = intrusive_ptr<RenderPass>(new RenderPass());
+    pass_b->setCamera(cam_b.get());
+    pass_b->setRenderTarget(target);
+    engine->addPass(pass_b, 5);
 
-    engine->removeOverlay(overlay.get());
-    EXPECT_EQ(backend->overlay_releases, 0);  // pass still drawn by the engine
-    EXPECT_EQ(backend->target_releases, 0);
-
-    engine->removePass(shared.get());
+    EXPECT_EQ(engine->passCount(), 2u);
+    engine->clearPasses();
+    EXPECT_EQ(engine->passCount(), 0u);
+    EXPECT_EQ(backend->layer_releases, 2);
     EXPECT_EQ(backend->target_releases, 1);
     EXPECT_EQ(backend->last_released_target, target.get());
 }
 
-TEST(RenderEngineTest, RemovePassKeepsOverlayUsingItAlive)
+TEST(RenderEngineTest, HasWindowPassReflectsMasterCameraPresentation)
 {
-    // A pass shared between an engine extra pass and an overlay must NOT be
-    // torn down when only the engine-side use is removed - the overlay still
-    // draws it, and removeOverlay() releases it once the overlay goes away.
-    auto backend = intrusive_ptr<MockBackend>(new MockBackend());
-    auto engine  = intrusive_ptr<RenderEngine>(new RenderEngine());
-    engine->setBackend(backend);
+    // hasWindowPass() tells a convenience layer whether the master camera is
+    // already presented to the window, so it only auto-provisions a window
+    // pass when none exists (helper / HUD passes draw through their own
+    // cameras and must not suppress it).
+    auto engine = intrusive_ptr<RenderEngine>(new RenderEngine());
+    auto master = intrusive_ptr<Camera>(new Camera());
+    engine->setMasterCamera(master);
+    EXPECT_FALSE(engine->hasWindowPass());
 
-    auto target  = intrusive_ptr<RenderTarget>(new RenderTarget());
-    auto shared  = intrusive_ptr<RenderPass>(new RenderPass());
-    shared->setRenderTarget(target);
-    auto overlay = intrusive_ptr<Overlay>(new Overlay());
-    overlay->setPass(shared);
-    engine->addPass(shared, 1);
-    engine->addOverlay(overlay);
+    // A HUD pass drawing through its own camera is not a window pass.
+    auto hud_cam = intrusive_ptr<Camera>(new Camera());
+    auto hud     = intrusive_ptr<RenderPass>(new RenderPass());
+    hud->setCamera(hud_cam.get());
+    engine->addPass(hud, 10);
+    EXPECT_FALSE(engine->hasWindowPass());
 
-    engine->removePass(shared.get());
-    EXPECT_EQ(backend->target_releases, 0);   // overlay still uses the pass
-    EXPECT_EQ(backend->overlay_releases, 0);
+    // A pass presenting the master camera to the backbuffer is.
+    auto window = intrusive_ptr<RenderPass>(new RenderPass());
+    window->setCamera(master.get());
+    engine->addPass(window, 0);
+    EXPECT_TRUE(engine->hasWindowPass());
 
-    engine->removeOverlay(overlay.get());     // last user gone -> release
-    EXPECT_EQ(backend->overlay_releases, 1);
-    EXPECT_EQ(backend->target_releases, 1);
-    EXPECT_EQ(backend->last_released_target, target.get());
+    // A disabled window pass is not counted (it draws nothing).
+    window->setEnabled(false);
+    EXPECT_FALSE(engine->hasWindowPass());
 }
-
 TEST(RenderEngineTest, AddSamePassTwiceKeepsSingleSlot)
 {
     // Registering the same extra pass twice must not run it twice per frame.
@@ -1332,20 +1388,6 @@ TEST(RenderEngineTest, AddSamePassTwiceKeepsSingleSlot)
     engine->addPass(pass, 1);
     engine->addPass(pass, 2);  // duplicate add is ignored
     EXPECT_EQ(engine->passCount(), 1u);
-}
-
-TEST(RenderEngineTest, AddSameOverlayTwiceKeepsSingleEntry)
-{
-    // Registering the same overlay twice must not draw it twice / release it
-    // twice.
-    auto backend = intrusive_ptr<MockBackend>(new MockBackend());
-    auto engine  = intrusive_ptr<RenderEngine>(new RenderEngine());
-    engine->setBackend(backend);
-    auto overlay = intrusive_ptr<Overlay>(new Overlay());
-    engine->addOverlay(overlay);
-    engine->addOverlay(overlay);  // duplicate add is ignored
-    engine->clearOverlays();
-    EXPECT_EQ(backend->overlay_releases, 1);
 }
 
 TEST(RenderEngineTest, InitializeCallsBackend)
@@ -1651,6 +1693,112 @@ TEST(RenderEngineTest, ShutdownReleasesBackend)
     EXPECT_FALSE(backend->ok);
 }
 
+TEST(RenderEngineTest, ScreenPassSamplesSelectedMrtAttachment)
+{
+    auto backend = intrusive_ptr<MockBackend>(new MockBackend());
+    auto engine  = intrusive_ptr<RenderEngine>(new RenderEngine());
+    engine->setBackend(backend);
+    engine->initialize();
+    engine->setScene(intrusive_ptr<Scene>(new Scene()));
+    engine->setMasterCamera(intrusive_ptr<Camera>(new Camera()));
+
+    // Producer: an MRT (multi-attachment) target published as one name.
+    auto rt = intrusive_ptr<RenderTarget>(new RenderTarget());
+    rt->setSize(640, 360);
+    rt->attachColor(RenderTarget::ColorFormat::RGBA8);   // att 0: albedo
+    rt->attachColor(RenderTarget::ColorFormat::RGBA16F); // att 1: normal
+    rt->attachDepth(RenderTarget::DepthFormat::D24);
+    EXPECT_EQ(rt->colorCount(), 2);
+
+    auto producer = intrusive_ptr<RenderPass>(new RenderPass());
+    producer->setCamera(engine->masterCamera());
+    producer->setRenderTarget(rt);
+    producer->setOutputName(u8"GBuffer");
+    engine->addPass(producer, -2);
+
+    // Two consumers sampling different colour attachments of the same target.
+    auto albedo = intrusive_ptr<ScreenPass>(new ScreenPass());
+    albedo->addInputName(u8"GBuffer");
+    albedo->setSourceAttachment(0);
+    engine->addPass(albedo, 100);
+
+    auto normal = intrusive_ptr<ScreenPass>(new ScreenPass());
+    normal->addInputName(u8"GBuffer");
+    normal->setSourceAttachment(1);
+    engine->addPass(normal, 101);
+
+    // Negative selection clamps to attachment 0.
+    normal->setSourceAttachment(-3);
+    EXPECT_EQ(normal->sourceAttachment(), 0);
+    normal->setSourceAttachment(1);
+    EXPECT_EQ(normal->sourceAttachment(), 1);
+
+    const int before = backend->screen_draws;
+    engine->frame();
+
+    // Each ScreenPass asked the backend to sample the published target at the
+    // attachment it selected (the MRT target is resolved, not a copy).
+    EXPECT_EQ(albedo->sourceTarget(), rt.get());
+    EXPECT_EQ(normal->sourceTarget(), rt.get());
+    // Two screen draws happened this frame (deltas avoid warm-up coupling);
+    // the later pass sampled colour attachment 1.
+    EXPECT_EQ(backend->screen_draws, before + 2);
+    EXPECT_EQ(backend->last_screen_source, rt.get());
+    EXPECT_EQ(backend->last_screen_attachment, 1); // last draw sampled att 1
+}
+
+TEST(RenderEngineTest, ScreenPassProgramSamplesMrtForDeferredLighting)
+{
+    auto backend = intrusive_ptr<MockBackend>(new MockBackend());
+    auto engine  = intrusive_ptr<RenderEngine>(new RenderEngine());
+    engine->setBackend(backend);
+    engine->initialize();
+    engine->setScene(intrusive_ptr<Scene>(new Scene()));
+    engine->setMasterCamera(intrusive_ptr<Camera>(new Camera()));
+
+    // Producer: an MRT G-buffer target published as one name.
+    auto rt = intrusive_ptr<RenderTarget>(new RenderTarget());
+    rt->setSize(640, 360);
+    rt->attachColor(RenderTarget::ColorFormat::RGBA8);
+    rt->attachColor(RenderTarget::ColorFormat::RGBA16F);
+    rt->attachColor(RenderTarget::ColorFormat::RGBA16F);
+    rt->attachDepth(RenderTarget::DepthFormat::D24);
+    EXPECT_EQ(rt->colorCount(), 3);
+    auto producer = intrusive_ptr<RenderPass>(new RenderPass());
+    producer->setCamera(engine->masterCamera());
+    producer->setRenderTarget(rt);
+    producer->setOutputName(u8"GBuffer");
+    engine->addPass(producer, -3);
+
+    // Lighting consumer: a ScreenPass carrying a fragment program samples the
+    // whole MRT source (all attachments) through the backend.
+    auto program = intrusive_ptr<ShaderProgram>(new ShaderProgram());
+    ShaderStage fs;
+    fs.type = ShaderStageType::Fragment;
+    fs.source = u8"#version 450\n"
+                u8"layout(location = 0) in vec2 v_uv;\n"
+                u8"layout(location = 0) out vec4 out_color;\n"
+                u8"void main() { out_color = vec4(v_uv, 0.0, 1.0); }\n";
+    program->addStage(fs);
+
+    auto light = intrusive_ptr<ScreenPass>(new ScreenPass());
+    light->addInputName(u8"GBuffer");
+    light->setCamera(engine->masterCamera());
+    light->setProgram(program);
+    EXPECT_EQ(light->program(), program.get());
+    engine->addPass(light, 100);
+
+    const int before = backend->program_draws;
+    engine->frame();
+
+    // The fullscreen program pass asked the backend to draw through the
+    // lighting program, sampling the MRT source under the pass camera.
+    EXPECT_EQ(backend->program_draws, before + 1);
+    EXPECT_EQ(backend->last_program_source, rt.get());
+    EXPECT_EQ(backend->last_program, program.get());
+    EXPECT_EQ(backend->last_program_camera, engine->masterCamera());
+}
+
 // ============ Light ============
 
 TEST(LightTest, AmbientFactoryDefaults)
@@ -1860,44 +2008,17 @@ TEST(RenderPipelineBuilderTest, OffscreenToScreenBuildsExpectedPipeline)
     EXPECT_TRUE(engine->resolve(u8"SceneColor")->hasColor());
 }
 
-// ============ Overlay ============
+// ============ HUD passes (top / overlay content) ============
 
-namespace
-{
-
-/**
- * @brief Overlay that records the order in which update() is called.
- */
-class SeqOverlay : public Overlay {
-  public:
-    explicit SeqOverlay(int* next)
-      : next_(next)
-    {
-    }
-
-    int seq = -1;
-
-    void update(double dt) override
-    {
-        (void)dt;
-        seq = (*next_)++;
-    }
-
-  private:
-    int* next_;
-};
-
-}  // namespace
-
-TEST(OverlayTest, EngineDrawsVisibleOverlaysSortedByZOrder)
+TEST(HudPassTest, EngineDrawsPassesInOrderAndSkipsDisabled)
 {
     auto backend = intrusive_ptr<MockBackend>(new MockBackend());
     auto engine  = intrusive_ptr<RenderEngine>(new RenderEngine());
     engine->setBackend(backend);
     engine->initialize();
 
-    // A window pass (default content scene + master camera) below the
-    // overlays, as a real viewer would register; overlays draw on top.
+    // A window pass (default content scene + master camera) below the HUD
+    // passes, as a real viewer would register; HUD passes draw on top.
     engine->setScene(intrusive_ptr<Scene>(new Scene()));
     auto master_cam = intrusive_ptr<Camera>(new Camera());
     engine->setMasterCamera(master_cam);
@@ -1905,49 +2026,42 @@ TEST(OverlayTest, EngineDrawsVisibleOverlaysSortedByZOrder)
     window->setCamera(master_cam.get());
     engine->addPass(window, 0);
 
-    auto overlay_cam = intrusive_ptr<Camera>(new Camera());
-    overlay_cam->setViewMatrixAsLookAt(Vec3d(0, 0, 5), Vec3d(0, 0, 0), Vec3d(0, 1, 0));
+    auto cam = intrusive_ptr<Camera>(new Camera());
+    cam->setViewMatrixAsLookAt(Vec3d(0, 0, 5), Vec3d(0, 0, 0), Vec3d(0, 1, 0));
     auto scene = intrusive_ptr<Scene>(new Scene());
 
-    int next = 0;
-    auto z10 = intrusive_ptr<SeqOverlay>(new SeqOverlay(&next));
-    z10->setContent(scene);
-    z10->pass()->setCamera(overlay_cam.get());
-    z10->setZOrder(10);
+    // Two enabled HUD passes at ascending orders plus a disabled one; every
+    // HUD pass draws over the previous content (clearing disabled).
+    auto low = intrusive_ptr<RenderPass>(new RenderPass());
+    low->setCamera(cam.get());
+    low->setClearEnabled(false);
+    engine->addPass(low, scene, 5);
 
-    auto z5 = intrusive_ptr<SeqOverlay>(new SeqOverlay(&next));
-    z5->setContent(scene);
-    z5->pass()->setCamera(overlay_cam.get());
-    z5->setZOrder(5);
+    auto high = intrusive_ptr<RenderPass>(new RenderPass());
+    high->setCamera(cam.get());
+    high->setClearEnabled(false);
+    engine->addPass(high, scene, 10);
 
-    auto hidden = intrusive_ptr<SeqOverlay>(new SeqOverlay(&next));
-    hidden->setContent(scene);
-    hidden->pass()->setCamera(overlay_cam.get());
-    hidden->setZOrder(0);
-    hidden->setVisible(false);
-
-    engine->addOverlay(z10);
-    engine->addOverlay(hidden);
-    engine->addOverlay(z5);
+    auto hidden = intrusive_ptr<RenderPass>(new RenderPass());
+    hidden->setCamera(cam.get());
+    hidden->setClearEnabled(false);
+    hidden->setEnabled(false);
+    engine->addPass(hidden, scene, 7);
 
     const int before = backend->render_calls;
     engine->frame();
-    // Window pass + the two visible overlays.
+    // Window pass + the two enabled HUD passes (the disabled one is skipped).
     EXPECT_EQ(backend->render_calls - before, 3);
-    // update() ran in ascending zOrder; the hidden overlay was skipped.
-    EXPECT_EQ(z5->seq, 0);
-    EXPECT_EQ(z10->seq, 1);
-    EXPECT_EQ(hidden->seq, -1);
 }
 
-TEST(OverlayTest, PassViewportAndClearPolicy)
+TEST(HudPassTest, SubViewportAndClearPolicy)
 {
     auto backend = intrusive_ptr<MockBackend>(new MockBackend());
     auto engine  = intrusive_ptr<RenderEngine>(new RenderEngine());
     engine->setBackend(backend);
     engine->initialize();
 
-    // A clearing window pass below the overlay (as a real viewer registers).
+    // A clearing window pass below the HUD pass (as a real viewer registers).
     engine->setScene(intrusive_ptr<Scene>(new Scene()));
     auto master_cam = intrusive_ptr<Camera>(new Camera());
     engine->setMasterCamera(master_cam);
@@ -1955,32 +2069,32 @@ TEST(OverlayTest, PassViewportAndClearPolicy)
     window->setCamera(master_cam.get());
     engine->addPass(window, 0);
 
-    auto overlay_cam = intrusive_ptr<Camera>(new Camera());
-    overlay_cam->setViewMatrixAsLookAt(Vec3d(0, 0, 5), Vec3d(0, 0, 0), Vec3d(0, 1, 0));
+    auto cam = intrusive_ptr<Camera>(new Camera());
+    cam->setViewMatrixAsLookAt(Vec3d(0, 0, 5), Vec3d(0, 0, 0), Vec3d(0, 1, 0));
     auto scene = intrusive_ptr<Scene>(new Scene());
 
-    auto overlay = intrusive_ptr<Overlay>(new Overlay());
-    overlay->setContent(scene);
-    overlay->pass()->setCamera(overlay_cam.get());
-    // An overlay never clears the surface it draws over.
-    EXPECT_FALSE(overlay->pass()->clearEnabled());
-    overlay->pass()->setViewport(4, 5, 96, 96);
-    engine->addOverlay(overlay);
+    auto hud = intrusive_ptr<RenderPass>(new RenderPass());
+    hud->setCamera(cam.get());
+    // A top pass never clears the surface it draws over.
+    hud->setClearEnabled(false);
+    EXPECT_FALSE(hud->clearEnabled());
+    hud->setViewport(4, 5, 96, 96);
+    engine->addPass(hud, scene, 10);
 
     const int before = backend->clear_calls;
     engine->frame();
-    // The overlay sub-viewport was forwarded to the backend.
+    // The HUD sub-viewport was forwarded to the backend.
     EXPECT_EQ(backend->viewport_sets, 1);
     EXPECT_EQ(backend->last_viewport[0], 4);
     EXPECT_EQ(backend->last_viewport[1], 5);
     EXPECT_EQ(backend->last_viewport[2], 96);
     EXPECT_EQ(backend->last_viewport[3], 96);
-    // Only the window pass cleared (overlay clear is disabled), so exactly
-    // one clear happens for this frame.
+    // Only the window pass cleared (HUD clear is disabled), so exactly one
+    // clear happens for this frame.
     EXPECT_EQ(backend->clear_calls - before, 1);
 }
 
-TEST(OverlayTest, OrientationMirrorFacesSourceKeepingFraming)
+TEST(CameraMirrorTest, OrientationKeepsFraming)
 {
     auto src = intrusive_ptr<Camera>(new Camera());
     src->setViewMatrixAsLookAt(Vec3d(3, 4, 5), Vec3d(0, 0, 0), Vec3d(0, 1, 0));
@@ -1988,19 +2102,30 @@ TEST(OverlayTest, OrientationMirrorFacesSourceKeepingFraming)
     auto cam = intrusive_ptr<Camera>(new Camera());
     cam->setViewMatrixAsLookAt(Vec3d(0, 0, 4), Vec3d(0, 0, 0), Vec3d(0, 1, 0));
 
-    auto overlay = intrusive_ptr<Overlay>(new Overlay());
-    overlay->pass()->setCamera(cam.get());
-    overlay->setSourceCamera(src.get());
-    overlay->setMirrorMode(Overlay::MirrorMode::Orientation);
-    overlay->update(0.0);
+    applyCameraMirror(cam.get(), src.get(), MirrorMode::Orientation);
 
     const Vec3d sf = (src->target() - src->eye()).normalized();
     const Vec3d of = (cam->target() - cam->eye()).normalized();
     EXPECT_NEAR(of.x, sf.x, 1e-6);
     EXPECT_NEAR(of.y, sf.y, 1e-6);
     EXPECT_NEAR(of.z, sf.z, 1e-6);
-    // The overlay kept its own framing distance.
+    // The target kept its own framing distance.
     EXPECT_NEAR((cam->target() - cam->eye()).length(), 4.0, 1e-6);
+}
+
+TEST(CameraMirrorTest, FullViewAdoptsSourcePose)
+{
+    auto src = intrusive_ptr<Camera>(new Camera());
+    src->setViewMatrixAsLookAt(Vec3d(1, 2, 3), Vec3d(-1, 0, 0), Vec3d(0, 0, 1));
+
+    auto cam = intrusive_ptr<Camera>(new Camera());
+    cam->setViewMatrixAsLookAt(Vec3d(0, 0, 9), Vec3d(0, 0, 0), Vec3d(0, 1, 0));
+
+    applyCameraMirror(cam.get(), src.get(), MirrorMode::FullView);
+    EXPECT_NEAR(cam->eye().x, src->eye().x, 1e-9);
+    EXPECT_NEAR(cam->eye().y, src->eye().y, 1e-9);
+    EXPECT_NEAR(cam->target().x, src->target().x, 1e-9);
+    EXPECT_NEAR(cam->target().y, src->target().y, 1e-9);
 }
 
 // ============ AxisGizmo ============
@@ -2015,10 +2140,9 @@ TEST(AxisGizmoTest, BuildsThreeColouredSticks)
         ASSERT_NE(group, nullptr);
         ASSERT_EQ(group->children().size(), 1u);
     }
-    EXPECT_NE(gizmo->pass()->camera(), nullptr);
-    EXPECT_EQ(gizmo->mirrorMode(), Overlay::MirrorMode::Orientation);
-    // Overlays never clear the surface they draw over.
-    EXPECT_FALSE(gizmo->pass()->clearEnabled());
+    EXPECT_NE(gizmo->camera(), nullptr);
+    // A HUD pass never clears the surface it draws over.
+    EXPECT_FALSE(gizmo->clearEnabled());
 }
 
 TEST(AxisGizmoTest, ViewportPlacedBottomLeft)
@@ -2027,7 +2151,7 @@ TEST(AxisGizmoTest, ViewportPlacedBottomLeft)
     gizmo->onSurfaceResized(800, 600);
 
     int x = 0, y = 0, w = 0, h = 0;
-    gizmo->pass()->getViewport(x, y, w, h);
+    gizmo->getViewport(x, y, w, h);
     EXPECT_EQ(w, 96);
     EXPECT_EQ(h, 96);
     EXPECT_EQ(x, 16);
@@ -2040,14 +2164,56 @@ TEST(AxisGizmoTest, OrientationMirrorTracksSource)
     auto src = intrusive_ptr<Camera>(new Camera());
     src->setViewMatrixAsLookAt(Vec3d(2, 3, 6), Vec3d(0, 0, 0), Vec3d(0, 1, 0));
     gizmo->setSourceCamera(src.get());
-    gizmo->update(0.0);
+    // The mirror is applied at draw time (execute()); no backend is needed to
+    // observe the framing camera update.
+    gizmo->execute(nullptr, nullptr);
 
-    Camera* cam = gizmo->pass()->camera();
+    Camera* cam = gizmo->camera();
     const Vec3d sf = (src->target() - src->eye()).normalized();
     const Vec3d cf = (cam->target() - cam->eye()).normalized();
     EXPECT_NEAR(cf.x, sf.x, 1e-6);
     EXPECT_NEAR(cf.y, sf.y, 1e-6);
     EXPECT_NEAR(cf.z, sf.z, 1e-6);
+}
+
+// ============ RenderPass program override ============
+
+TEST(RenderPassTest, ProgramOverrideReplacesEffectiveProgram)
+{
+    // A single visible triangle with no per-geometry program.
+    auto mesh = makeUnitTriangle();
+    auto geometry = intrusive_ptr<Geometry>(new Geometry());
+    geometry->setShape(mesh);
+    geometry->setMaterial(intrusive_ptr<Material>(new Material()));
+    auto group = intrusive_ptr<Group>(new Group());
+    group->addChild(geometry);
+    auto scene = intrusive_ptr<Scene>(new Scene());
+    scene->addNode(group);
+
+    auto camera = intrusive_ptr<Camera>(new Camera());
+    camera->setViewMatrixAsLookAt(Vec3d(0, 0, 5), Vec3d(0, 0, 0), Vec3d(0, 1, 0));
+    camera->setProjectionMatrixAsPerspective(45.0, 1.0, 0.1, 100.0);
+
+    auto backend = intrusive_ptr<MockBackend>(new MockBackend());
+
+    // Without an override each command keeps its effective (per-geometry)
+    // program; here it is null (no program set).
+    auto pass = intrusive_ptr<RenderPass>(new RenderPass());
+    pass->setCamera(camera.get());
+    pass->execute(scene.get(), backend.get());
+    ASSERT_EQ(backend->last_programs.size(), 1u);
+    EXPECT_EQ(backend->last_programs[0], nullptr);
+
+    // A pass-level override forces every command onto one program, so the
+    // same content scene can be re-rendered with a different shader.
+    auto override_program = intrusive_ptr<ShaderProgram>(new ShaderProgram());
+    auto overridden       = intrusive_ptr<RenderPass>(new RenderPass());
+    overridden->setCamera(camera.get());
+    overridden->setProgramOverride(override_program);
+    EXPECT_EQ(overridden->programOverride(), override_program.get());
+    overridden->execute(scene.get(), backend.get());
+    ASSERT_EQ(backend->last_programs.size(), 1u);
+    EXPECT_EQ(backend->last_programs[0], override_program.get());
 }
 
 // ============ RenderBackendRegistry ============
@@ -2074,7 +2240,7 @@ class MockBackendFactory : public RenderBackendFactory {
                                   RenderApi::Vulkan | RenderApi::OpenGL3 };
     }
 
-    vine::intrusive_ptr<RenderBackend> create(Scene*, Camera*) override
+    vine::intrusive_ptr<RenderBackend> create() override
     {
         return vine::intrusive_ptr<RenderBackend>(new MockBackend());
     }
@@ -2093,11 +2259,11 @@ TEST(RenderBackendRegistryTest, RegisterAndCreateByName)
     registry.registerFactory(&factory);
     EXPECT_TRUE(registry.has(u8"mock"));
 
-    auto backend = registry.create(u8"mock", nullptr, nullptr);
+    auto backend = registry.create(u8"mock");
     ASSERT_NE(backend, nullptr);
 
     // Unknown names return null.
-    EXPECT_EQ(registry.create(u8"nope", nullptr, nullptr), nullptr);
+    EXPECT_EQ(registry.create(u8"nope"), nullptr);
     EXPECT_FALSE(registry.has(u8"nope"));
 }
 

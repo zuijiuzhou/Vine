@@ -2,7 +2,6 @@
 
 #include <vine/graphics/Camera.hpp>
 #include <vine/graphics/CameraManipulator.hpp>
-#include <vine/graphics/Overlay.hpp>
 #include <vine/graphics/RenderBackend.hpp>
 #include <vine/graphics/RenderPass.hpp>
 #include <vine/graphics/RenderTarget.hpp>
@@ -54,23 +53,24 @@ bool RenderEngine::initialize()
     backend_->setShaderPreset(shader_preset_);
     initialized_ = backend_->initialize();
     if (initialized_) {
-        // Pre-frame warm-up: execute every visible overlay pass once so the
-        // backend builds and compiles overlay content before the first frame
-        // is submitted. Compiling content that is added mid-frame (i.e. when
-        // an overlay slot is first encountered inside frame()) has proven
-        // unreliable in the vsg backend; the main content is pre-compiled
-        // during backend initialize, and overlays need the same treatment.
-        // Re-execution in later frames is a no-op for already-built content.
-        for (const auto& overlay : overlays_) {
-            if (overlay == nullptr || !overlay->visible()) {
+        // Pre-frame warm-up: execute every enabled, non-clearing pass once so
+        // the backend builds and compiles its content before the first frame
+        // is submitted. Such passes (top / HUD content that draws over the
+        // main view, e.g. the axis gizmo) carry their own scene and window
+        // layer; compiling content first encountered mid-frame (i.e. inside
+        // frame()) has proven unreliable in the vsg backend, and the main
+        // content is pre-compiled during backend initialize. Re-execution in
+        // later frames is a no-op for already-built content. Each pass is
+        // announced with its explicit order so the backend can stack its
+        // retained content slots by that order even though the warm-up runs
+        // non-clearing passes ahead of the clearing ones.
+        for (const auto& slot : slots_) {
+            RenderPass* pass   = slot.pass.get();
+            Scene*      content = (slot.content != nullptr) ? slot.content.get() : scene_.get();
+            if (pass == nullptr || content == nullptr || !pass->enabled() || pass->clearEnabled()) {
                 continue;
             }
-            RenderPass* pass = overlay->pass();
-            Scene* content = overlay->content();
-            if (pass == nullptr || content == nullptr) {
-                continue;
-            }
-            overlay->update(0.0);
+            backend_->setPassOrder(slot.order);
             pass->execute(content, backend_.get());
         }
     }
@@ -98,41 +98,26 @@ void RenderEngine::frame(double dt)
     // output and stale entries from removed producers disappear automatically.
     outputs_.clear();
 
-    // Scene-pass pipeline in ascending order: negative orders run first
-    // (shadow / depth / g-buffer pre-pass), the window-present pass (master
-    // camera, null render target) conventionally sits at order 0, and
-    // positive orders run after (post-processing / compositing). The pipeline
-    // is exactly what the caller registered - the engine auto-registers
-    // nothing. Each pass resolves its declared inputs just before it runs and
-    // publishes its named output right after.
-    for (const auto& slot : passes_) {
-        // Effective content: the pass's explicit binding, else the default
-        // content scene (scene_). A pass whose effective content is null
-        // decides for itself: the base RenderPass draws nothing, while
-        // content-agnostic passes (e.g. ScreenPass) still run and use their
-        // resolved inputs.
-        const raw_ptr<Scene> content = (slot.content != nullptr) ? slot.content.get() : scene_.get();
-        resolvePassInputs(slot.pass.get());
-        drawScenePass(slot.pass.get(), content);
-        publishPassOutput(slot.pass.get());
-    }
-
-    // Draw registered overlays in ascending zOrder on top of the main scene.
-    std::stable_sort(overlays_.begin(), overlays_.end(),
-                     [](const intrusive_ptr<Overlay>& a, const intrusive_ptr<Overlay>& b) {
-                         return a->zOrder() < b->zOrder();
-                     });
-    for (const auto& overlay : overlays_) {
-        if (overlay == nullptr || !overlay->visible()) {
+    // Ordered pipeline in ascending order: negative orders run first (shadow
+    // / depth / g-buffer pre-pass), the window-present pass (master camera,
+    // null render target) conventionally sits at order 0, and positive orders
+    // run after (post-processing / compositing, then top / HUD passes). The
+    // pipeline is exactly what the caller registered - the engine auto-
+    // registers nothing. Each pass resolves its declared inputs just before
+    // it runs and publishes its named output right after; disabled passes are
+    // skipped. The pass's explicit order is announced to the backend before
+    // it runs so the backend can stack its retained content slots by that
+    // order (equal orders keep registration order).
+    for (const auto& slot : slots_) {
+        RenderPass* pass = slot.pass.get();
+        if (pass == nullptr || !pass->enabled()) {
             continue;
         }
-        RenderPass* pass = overlay->pass();
-        Scene* content = overlay->content();
-        if (pass == nullptr || content == nullptr) {
-            continue;
-        }
-        overlay->update(dt);
-        pass->execute(content, backend_.get());
+        raw_ptr<Scene> content = (slot.content != nullptr) ? slot.content.get() : scene_.get();
+        backend_->setPassOrder(slot.order);
+        resolvePassInputs(pass);
+        drawScenePass(pass, content);
+        publishPassOutput(pass);
     }
 
     backend_->endFrame();
@@ -144,99 +129,16 @@ const FrameContext& RenderEngine::frameContext() const
     return frame_ctx_;
 }
 
-void RenderEngine::addOverlay(intrusive_ptr<Overlay> overlay)
+bool RenderEngine::hasWindowPass() const
 {
-    if (overlay == nullptr) {
-        return;
-    }
-    // Registering the same overlay instance twice is ignored: it must only be
-    // drawn once per frame.
-    for (const auto& existing : overlays_) {
-        if (existing == overlay) {
-            return;
-        }
-    }
-    overlays_.push_back(std::move(overlay));
-}
-
-bool RenderEngine::isEnginePass(raw_ptr<RenderPass> pass) const
-{
-    if (pass == nullptr) {
-        return false;
-    }
-    for (const auto& slot : passes_) {
-        if (slot.pass.get() == pass) {
+    for (const auto& slot : slots_) {
+        RenderPass* pass = slot.pass.get();
+        if (pass != nullptr && pass->enabled() && pass->camera() == master_camera_.get()
+            && pass->renderTarget() == nullptr) {
             return true;
         }
     }
     return false;
-}
-
-bool RenderEngine::passUsedByOverlay(raw_ptr<RenderPass> pass, raw_ptr<Overlay> except) const
-{
-    if (pass == nullptr) {
-        return false;
-    }
-    for (const auto& overlay : overlays_) {
-        if (overlay == nullptr || overlay.get() == except) {
-            continue;
-        }
-        if (overlay->pass() == pass) {
-            return true;
-        }
-    }
-    return false;
-}
-
-bool RenderEngine::passStillUsedElsewhere(raw_ptr<RenderPass> pass, raw_ptr<Overlay> except) const
-{
-    return isEnginePass(pass) || passUsedByOverlay(pass, except);
-}
-
-void RenderEngine::removeOverlay(raw_ptr<Overlay> overlay)
-{
-    // An overlay draws through its pass, whose camera identifies the overlay's
-    // backend view slot (VsgRenderer keys non-main views by pass->camera()).
-    // Release that view and the pass's render target ONLY when nothing else
-    // still draws the same pass after this overlay goes away; otherwise the
-    // surviving user would keep drawing a torn-down view / target.
-    if (backend_ != nullptr && overlay != nullptr) {
-        RenderPass* pass = overlay->pass();
-        if (pass != nullptr && !passStillUsedElsewhere(pass, overlay)) {
-            backend_->releaseOverlay(pass->camera());
-            backend_->releaseRenderTarget(pass->renderTarget());
-        }
-    }
-    overlays_.erase(std::remove_if(overlays_.begin(), overlays_.end(),
-                                   [overlay](const intrusive_ptr<Overlay>& p) {
-                                       return p.get() == overlay;
-                                   }),
-                    overlays_.end());
-}
-
-void RenderEngine::clearOverlays()
-{
-    // Snapshot + dedupe the overlay passes: after the clear only the engine's
-    // own scene-pass pipeline can still draw them, so release every unique
-    // pass the engine does not keep (isEnginePass).
-    std::vector<raw_ptr<RenderPass>> passes;
-    for (const auto& overlay : overlays_) {
-        if (overlay != nullptr && overlay->pass() != nullptr) {
-            passes.push_back(overlay->pass());
-        }
-    }
-    std::sort(passes.begin(), passes.end());
-    passes.erase(std::unique(passes.begin(), passes.end()), passes.end());
-
-    if (backend_ != nullptr) {
-        for (raw_ptr<RenderPass> pass : passes) {
-            if (!isEnginePass(pass)) {
-                backend_->releaseOverlay(pass->camera());
-                backend_->releaseRenderTarget(pass->renderTarget());
-            }
-        }
-    }
-    overlays_.clear();
 }
 
 void RenderEngine::addPass(intrusive_ptr<RenderPass> pass, int order)
@@ -252,70 +154,83 @@ void RenderEngine::addPass(intrusive_ptr<RenderPass> pass, intrusive_ptr<Scene> 
     // Registering the same pass instance twice is ignored: it would otherwise
     // run twice per frame. To rebind content use bindPassContent(); to change
     // the order remove the pass and re-add it.
-    for (const auto& slot : passes_) {
-        if (slot.pass.get() == pass.get()) {
+    for (const auto& existing : slots_) {
+        if (existing.pass.get() == pass.get()) {
             return;
         }
     }
-    // Keep the pipeline ascending by order; equal orders preserve insertion
+    // Keep the slots ascending by order; equal orders preserve insertion
     // order (stable), so ties are resolved by the addPass() call sequence.
-    const auto it = std::find_if(passes_.begin(), passes_.end(),
-                                 [order](const PassSlot& slot) { return slot.order > order; });
-    passes_.insert(it, PassSlot{ std::move(pass), std::move(content), order });
+    const auto it = std::find_if(slots_.begin(), slots_.end(),
+                                 [order](const Slot& slot) { return slot.order > order; });
+    slots_.insert(it, Slot{ std::move(pass), std::move(content), order });
 }
 
 void RenderEngine::removePass(raw_ptr<RenderPass> pass)
 {
-    // Remove the pass from the ordered pass list first: only afterwards is it
-    // known whether anything else still draws it.
-    passes_.erase(std::remove_if(passes_.begin(), passes_.end(),
-                                 [pass](const PassSlot& slot) {
-                                     return slot.pass.get() == pass;
-                                 }),
-                  passes_.end());
+    const auto old_size = slots_.size();
+    // Capture the removed pass's order — the content-slot key of the window
+    // content it drew through — before the slot is dropped.
+    int order = 0;
+    for (const auto& slot : slots_) {
+        if (slot.pass.get() == pass) {
+            order = slot.order;
+            break;
+        }
+    }
+    slots_.erase(std::remove_if(slots_.begin(), slots_.end(),
+                                [pass](const Slot& slot) { return slot.pass.get() == pass; }),
+                 slots_.end());
 
-    // The pass has left the engine pass pipeline; only an overlay can still
-    // draw it. Release its backend resources (view keyed by the pass's camera
-    // + any off-screen target) only when no overlay uses it - an overlay-owned
-    // pass is released when that overlay is removed.
-    if (backend_ != nullptr && pass != nullptr && !passUsedByOverlay(pass, nullptr)) {
-        backend_->releaseOverlay(pass->camera());
-        backend_->releaseRenderTarget(pass->renderTarget());
+    // A pass is registered at most once, so any removal drops its only user:
+    // release the backend window content slot it kept keyed by (pass camera,
+    // pass order) and any off-screen target the pass owns.
+    if (backend_ != nullptr && pass != nullptr && slots_.size() != old_size) {
+        if (raw_ptr<Camera> camera = pass->camera(); camera != nullptr) {
+            backend_->releaseWindowLayer(camera, order);
+        }
+        if (raw_ptr<RenderTarget> target = pass->renderTarget(); target != nullptr) {
+            backend_->releaseRenderTarget(target);
+        }
     }
 }
 
 void RenderEngine::clearPasses()
 {
-    // Snapshot + dedupe the registered passes: after the clear only overlays
-    // can still draw them, so release every unique pass no overlay uses.
-    std::vector<raw_ptr<RenderPass>> passes;
-    for (const auto& slot : passes_) {
+    // Snapshot every registered (pass, order) pair — the order is the
+    // content-slot key of the window content each pass drew — drop all slots,
+    // then release the backend resources each removed pass owned.
+    std::vector<std::pair<raw_ptr<RenderPass>, int>> removed;
+    removed.reserve(slots_.size());
+    for (const auto& slot : slots_) {
         if (slot.pass != nullptr) {
-            passes.push_back(slot.pass.get());
+            removed.emplace_back(slot.pass.get(), slot.order);
         }
     }
-    std::sort(passes.begin(), passes.end());
-    passes.erase(std::unique(passes.begin(), passes.end()), passes.end());
+
+    slots_.clear();
 
     if (backend_ != nullptr) {
-        for (raw_ptr<RenderPass> pass : passes) {
-            if (!passUsedByOverlay(pass, nullptr)) {
-                backend_->releaseOverlay(pass->camera());
-                backend_->releaseRenderTarget(pass->renderTarget());
+        for (const auto& entry : removed) {
+            RenderPass* pass = entry.first;
+            if (raw_ptr<Camera> camera = (pass != nullptr) ? pass->camera() : nullptr; camera != nullptr) {
+                backend_->releaseWindowLayer(camera, entry.second);
+            }
+            if (raw_ptr<RenderTarget> target = (pass != nullptr) ? pass->renderTarget() : nullptr; target != nullptr) {
+                backend_->releaseRenderTarget(target);
             }
         }
     }
-    passes_.clear();
 }
 
 std::size_t RenderEngine::passCount() const
 {
-    return passes_.size();
+    return slots_.size();
 }
 
 void RenderEngine::bindPassContent(raw_ptr<RenderPass> pass, intrusive_ptr<Scene> content)
 {
-    for (auto& slot : passes_) {
+    for (auto& slot : slots_) {
         if (slot.pass.get() == pass) {
             slot.content = std::move(content);
             return;
@@ -325,7 +240,7 @@ void RenderEngine::bindPassContent(raw_ptr<RenderPass> pass, intrusive_ptr<Scene
 
 raw_ptr<Scene> RenderEngine::contentOf(raw_ptr<RenderPass> pass) const
 {
-    for (const auto& slot : passes_) {
+    for (const auto& slot : slots_) {
         if (slot.pass.get() == pass) {
             return (slot.content != nullptr) ? slot.content.get() : scene_.get();
         }
@@ -502,9 +417,11 @@ void RenderEngine::pushEvent(const vine::window::ResizeEvent& event)
     if (initialized_ && backend_ != nullptr) {
         backend_->resize(event.width, event.height);
     }
-    for (const auto& overlay : overlays_) {
-        if (overlay != nullptr) {
-            overlay->onSurfaceResized(event.width, event.height);
+    // Let every registered pass re-lay out anything positioned relative to the
+    // surface (e.g. an axis gizmo in a corner re-anchors its sub-viewport).
+    for (const auto& slot : slots_) {
+        if (slot.pass != nullptr) {
+            slot.pass->onSurfaceResized(event.width, event.height);
         }
     }
 }

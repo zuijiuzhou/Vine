@@ -117,7 +117,7 @@ config->assignDescriptor("material", material_value);          // 默认路径
 
 ```cpp
 if (!created.empty())
-    d->viewer->compile();   // vsg：Data→VkBuffer 上传、建 pipeline / descriptor set
+    impl->viewer->compile();   // vsg：Data→VkBuffer 上传、建 pipeline / descriptor set
 ```
 
 - 稳态帧：缓存命中 → 子树原样复用，不重建、不重编
@@ -246,8 +246,8 @@ flat/phong/pbr 共用同一张表（详见 `.ai/design/vsg-custom-shader.md` §9
 ### 9.4 材料管理器必须先于 bridge 存活
 
 - `SceneBridge` 持 `raw_ptr<VsgMaterialManager>`，接口约定 **manager 必须活得比 bridge 久**。
-- `VsgRenderer` 用**成员** `d->materialManager` 注入主/离屏/overlay 三套 bridge；
-  bridge 未注入时用自身成员 `default_manager_` 兜底。
+- `VsgRenderer`（Impl 成员 `materialManager`）把它注入**每个 window 层 / 离屏 target 的 bridge**
+  ——主/顶部/离屏共享同一材质缓存，不再各建一套；bridge 未注入时用自身成员 `default_manager_` 兜底。
 
 ## 10. 资源清理
 
@@ -265,17 +265,19 @@ flat/phong/pbr 共用同一张表（详见 `.ai/design/vsg-custom-shader.md` §9
 | Material 增删改 | `getOrCreate / updateMaterial / releaseMaterial / clear` | `VsgMaterialManager` |
 | 离屏 resize | 摘 graph → `deviceWaitIdle` → `clearCache` + 置空 image/view/RP/framebuffer → 按新尺寸重建 | `renderOffscreenTarget` |
 | 移除 RenderTarget | 摘 offscreen graph + 摘 PiP view → `deviceWaitIdle` → `clearCache` + erase | `releaseRenderTarget` |
-| 移除 overlay | 摘 overlay view → `deviceWaitIdle` → erase 槽 | `releaseOverlay` |
+| 移除窗口层 | 摘该层 View → `deviceWaitIdle` → erase 槽 | `releaseWindowLayer` |
 | shutdown（析构/重初始化前） | 见 10.3 | `shutdown` |
 
 ### 10.3 shutdown 顺序（关键：撞 `VSG_MAX_DEVICES==1`）
 
 ```text
 deviceWaitIdle
-  → viewer->removeWindow(window) + viewer->close() + viewer=null   // 先丢命令图
-  → window->releaseWindow()  // 不 Destroy 宿主(Qt) 窗口，仅摘内部句柄
-  → 置空 render_graph / main_view / main_light_group / vsg_scene / vsg_camera
-  → sceneBridge.clearCache() + materialManager.clear()
+  → viewer 收尾（close/removeWindow）+ window->releaseWindow()  // 不 Destroy 宿主(Qt) 窗口
+  → render_graph 置空
+  → 逐 window_layers：释放 view/root/light_group/vsg_camera + 该层 bridge.clearCache()
+  → window_layers.clear()
+  → 置空 vsg_camera / vsg_scene / depth_on_shader_set / depth_off_shader_set
+  → materialManager.clear()
   → initialized=false
 ```
 
@@ -306,12 +308,10 @@ sequenceDiagram
             R->>B: 离屏 bridge.syncRenderCommands(root, created)
             B-->>R: created(新/重建子树)
             R->>V: created? compile()
-        else main pass
-            R->>B: sceneBridge.syncRenderCommands(root, created)
+        else window 层（主/顶部，键=相机）
+            R->>B: window_layers[camera].bridge.syncRenderCommands(root, created)
             B-->>R: created
             R->>V: created? compile()   // 稳态: created=0 → 零编译
-        else overlay pass
-            R->>B: overlayBridge.syncRenderCommands(…)
         end
         R-->>E: needs_submit=true (提交延迟)
         end

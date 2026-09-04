@@ -37,10 +37,9 @@ vine::graphics::RenderBackendInfo VsgRenderBackendFactory::info() const
     };
 }
 
-vine::intrusive_ptr<vine::graphics::RenderBackend> VsgRenderBackendFactory::create(
-    vine::raw_ptr<vine::graphics::Scene> scene, vine::raw_ptr<vine::graphics::Camera> camera)
+vine::intrusive_ptr<vine::graphics::RenderBackend> VsgRenderBackendFactory::create()
 {
-    return vine::intrusive_ptr<vine::graphics::RenderBackend>(new VsgRenderer(scene, camera));
+    return vine::intrusive_ptr<vine::graphics::RenderBackend>(new VsgRenderer());
 }
 
 V_VSG_NS_END

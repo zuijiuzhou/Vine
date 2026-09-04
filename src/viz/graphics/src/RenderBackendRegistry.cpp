@@ -2,7 +2,6 @@
 
 #include <vine/graphics/RenderBackend.hpp>
 
-#include <algorithm>
 #include <map>
 #include <mutex>
 
@@ -70,16 +69,14 @@ void RenderBackendRegistry::registerFactory(raw_ptr<RenderBackendFactory> factor
     d->factories[factory->name()] = factory;
 }
 
-vine::intrusive_ptr<RenderBackend> RenderBackendRegistry::create(const String& name,
-                                                                 raw_ptr<Scene> scene,
-                                                                 raw_ptr<Camera> camera) const
+vine::intrusive_ptr<RenderBackend> RenderBackendRegistry::create(const String& name) const
 {
     std::lock_guard<std::mutex> lock(d->mutex);
     const auto it = d->factories.find(name);
     if (it == d->factories.end()) {
         return {};
     }
-    return it->second->create(scene, camera);
+    return it->second->create();
 }
 
 std::vector<String> RenderBackendRegistry::names() const

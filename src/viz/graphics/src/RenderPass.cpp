@@ -5,6 +5,7 @@
 #include <vine/graphics/RenderCommand.hpp>
 #include <vine/graphics/RenderTarget.hpp>
 #include <vine/graphics/Scene.hpp>
+#include <vine/graphics/ShaderProgram.hpp>
 
 V_GRAPHICS_NS_BEGIN
 
@@ -74,6 +75,16 @@ void RenderPass::setClearEnabled(bool enabled)
     clear_enabled_ = enabled;
 }
 
+bool RenderPass::enabled() const
+{
+    return enabled_;
+}
+
+void RenderPass::setEnabled(bool enabled)
+{
+    enabled_ = enabled;
+}
+
 void RenderPass::setViewport(int x, int y, int width, int height)
 {
     viewport_x_ = x;
@@ -128,6 +139,16 @@ void RenderPass::clearInputNames()
     input_names_.clear();
 }
 
+raw_ptr<ShaderProgram> RenderPass::programOverride() const
+{
+    return program_override_.get();
+}
+
+void RenderPass::setProgramOverride(intrusive_ptr<ShaderProgram> program)
+{
+    program_override_ = std::move(program);
+}
+
 void RenderPass::execute(raw_ptr<Scene> scene, raw_ptr<RenderBackend> backend)
 {
     if (backend == nullptr || scene == nullptr) {
@@ -140,7 +161,15 @@ void RenderPass::execute(raw_ptr<Scene> scene, raw_ptr<RenderBackend> backend)
     if (clear_enabled_) {
         backend->clear(clear_color_, clear_depth_);
     }
-    const auto commands = scene->collectRenderCommands(camera_);
+    std::vector<RenderCommand> commands = scene->collectRenderCommands(camera_);
+    // Pass-level global program override: replace every command's effective
+    // (per-geometry / StateNode) program so the whole content renders with one
+    // program (see setProgramOverride).
+    if (program_override_ != nullptr) {
+        for (auto& command : commands) {
+            command.program = program_override_;
+        }
+    }
     if (camera_ != nullptr) {
         // The pass lights whatever content scene it renders: forward the
         // scene's lights so the backend can match this pass's view lighting.

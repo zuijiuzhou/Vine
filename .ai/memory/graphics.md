@@ -235,6 +235,28 @@
 > FlatShaded→flat ShaderSet（二者 "material" 描述符都是 PhongMaterialValue，SceneBridge 材质路径
 > 通用，已验证）；Pbr/ShadowedPhong **预留**（Pbr 需 PbrMaterialValue，shadow 排最后）→ 暂回落
 > Phong。builder 不掺和（preset 是着色轴，非 pass 拓扑轴）。GraphicsTest 84 全绿（+1 转发测试）。
+>
+> 2026-09-04 **Overlay 类删除 + 单列表统一**：`Overlay`（sdk + addOverlay/removeOverlay/clearOverlays）
+> 整体删除；`RenderEngine` 只留统一 `slots_` 有序 pass 列表，`Slot{pass,content,order}`。顶部/HUD 层 =
+> 高 order 普通 pass；内容经 addPass 绑定；显隐=RenderPass::setEnabled；子视口重排=新
+> RenderPass::onSurfaceResized（引擎 resize 对每个 pass 调）；相机跟随=新独立 `CameraMirror.hpp`
+> （`MirrorMode` + `applyCameraMirror(dst,src,mode)`）。`AxisGizmo` 改 `: public RenderPass` 自包含
+> HUD pass（owned camera_/content_，execute 先镜像再画自己内容）。`RenderBackend::releaseOverlay`
+> →`releaseWindowLayer(Camera*)`；`RenderEngine` 新增 `hasWindowPass()`（RenderControl 自动主 pass
+> 条件由 passCount()==0 改为 !hasWindowPass()，只加 HUD pass 不再挤掉主视图）。后端 Checkpoint1 已把
+> 主/叠加视图统一为 `window_layers`(Camera* 键)；释放主层时清空别名 vsg_camera/vsg_scene。
+> 测试：GraphicsTest 113 全绿（HudPassTest/CameraMirrorTest/AxisGizmoTest 新语义）；test_vsg 10 绿。
+> 设计稿见 .ai/design/graphics-overlay.md。
+>
+> 2026-09-04 C6（vsg 后端 Target 统一 + 去绑定，见 .ai/design/vsg-target-unification.md）：
+> C6.1 三桶(window_layers/offscreen/screen_slots)→单表 `targets[RenderTarget*]`（nullptr=窗口，行为等价）；
+> C6.2 `create()` 无参（不再绑 Vine Scene/Camera），主层惰性创建，主/顶(HUD) 由 `clear()` 标记判定
+> （清屏→depth-on 主层；否则 depth-off+ambient 顶部层），窗口 RenderGraph init 空建、层随 render 加入；
+> C6.3a `RenderPass::setProgramOverride`（逐 pass 整帧换 program）；C6.3b 窗口层键 (camera, content slot)
+> `WindowKey` + `RenderPass::contentSlot`/`setContentSlot` + `releaseWindowLayer(camera, slot)`，
+> 同相机非零槽=各自保留层顺序叠画（复用窗口图多 View），槽0 行为不变。
+> 单测：GraphicsTest 114 全绿；test_vsg 10 绿；全量构建 0。App 冒烟（C6.2b/C6.3b）用户已确认正常。
+> 遗留：逐槽 depth 策略(≤/write-off)、slot>0 运行期 demo、gfx_backend_vsg.md §7/11/12 旧文改写、C6.4 离屏多槽。
 
 **模块职责**：场景图管理、可视对象、相机视图、渲染抽象层
 

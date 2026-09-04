@@ -24,11 +24,11 @@ class Camera;
  */
 enum class RenderApi : std::uint32_t {
     None     = 0,
-    Vulkan   = 1 << 0,  ///< Vulkan.
-    OpenGL2  = 1 << 1,  ///< OpenGL 2.x (fixed-function pipeline).
-    OpenGL3  = 1 << 2,  ///< OpenGL 3.x+ (core profile).
-    OpenGLES = 1 << 3,  ///< OpenGL ES (mobile/embedded).
-    Direct3D = 1 << 4,  ///< Direct3D 11/12.
+    Vulkan   = 1 << 0,  // Vulkan.
+    OpenGL2  = 1 << 1,  // OpenGL 2.x (fixed-function pipeline).
+    OpenGL3  = 1 << 2,  // OpenGL 3.x+ (core profile).
+    OpenGLES = 1 << 3,  // OpenGL ES (mobile/embedded).
+    Direct3D = 1 << 4,  // Direct3D 11/12.
 };
 
 V_ENABLE_ENUM_FLAGS(RenderApi)
@@ -83,11 +83,13 @@ class V_GRAPHICS_API RenderBackendFactory {
 
     /** @brief Creates a backend instance.
      *
-     * @param scene  Scene the backend is bound to (must outlive the backend).
-     * @param camera Camera used by the backend (must outlive the backend).
+     * The engine owns the pipeline and drives content per pass, so a backend
+     * is not bound to a Vine scene or camera: window layers are created
+     * lazily from the per-pass render() calls the engine drives.
+     *
      * @return Newly created backend; the caller owns the returned reference.
      */
-    virtual vine::intrusive_ptr<RenderBackend> create(raw_ptr<Scene> scene, raw_ptr<Camera> camera) = 0;
+    virtual vine::intrusive_ptr<RenderBackend> create() = 0;
 };
 
 /**
@@ -102,8 +104,8 @@ class V_GRAPHICS_API RenderBackendRegistry {
   public:
     /** @brief Read-only snapshot of a registered backend factory. */
     struct Entry {
-        RenderBackendInfo info;        ///< Backend metadata (name, description, ...).
-        raw_ptr<RenderBackendFactory> factory;  ///< Registered factory (not owned by the registry).
+        RenderBackendInfo info;        // Backend metadata (name, description, ...).
+        raw_ptr<RenderBackendFactory> factory;  // Registered factory (not owned by the registry).
     };
 
     /** @brief Gets the process-wide registry singleton. */
@@ -119,14 +121,11 @@ class V_GRAPHICS_API RenderBackendRegistry {
 
     /** @brief Creates a backend by name.
      *
-     * @param name   Backend name, e.g. "vsg".
-     * @param scene  Scene bound to the backend.
-     * @param camera Camera used by the backend.
+     * @param name Backend name, e.g. "vsg".
      * @return New backend, or null when no factory with that name is
      *         registered.
      */
-    vine::intrusive_ptr<RenderBackend> create(const String& name, raw_ptr<Scene> scene,
-                                              raw_ptr<Camera> camera) const;
+    vine::intrusive_ptr<RenderBackend> create(const String& name) const;
 
     /** @brief Gets the names of all registered backends. */
     std::vector<String> names() const;

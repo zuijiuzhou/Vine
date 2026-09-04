@@ -36,7 +36,13 @@ class V_GRAPHICS_API RenderTarget : public Object, public RefCounted<RenderTarge
     RenderTarget();
 
   public:
-    /** @brief Attaches a color buffer.
+    /** @brief Appends a color attachment (attachment index = current count).
+     *
+     * A render target may carry several color attachments (MRT / G-buffer):
+     * each is an independent texture written by fragment output location @p i
+     * and later sampleable on its own (see colorFormat(int) / colorCount()).
+     * Single-attachment callers are unaffected: attaching once keeps the
+     * historical one-color behaviour.
      *
      * @param format Color buffer format.
      */
@@ -67,8 +73,24 @@ class V_GRAPHICS_API RenderTarget : public Object, public RefCounted<RenderTarge
     /** @brief Returns whether a depth attachment is configured. */
     bool hasDepth() const;
 
-    /** @brief Gets the configured color attachment format. */
+    /** @brief Gets the number of configured color attachments.
+     *
+     * @return Color attachment count (0 when none).
+     */
+    int colorCount() const;
+
+    /** @brief Gets the format of the first color attachment.
+     *
+     * @return Color attachment 0 format.
+     */
     ColorFormat colorFormat() const;
+
+    /** @brief Gets the format of a specific color attachment.
+     *
+     * @param index Color attachment index in [0, colorCount()).
+     * @return The attachment's format.
+     */
+    ColorFormat colorFormat(int index) const;
 
     /** @brief Gets the configured depth attachment format. */
     DepthFormat depthFormat() const;
@@ -97,9 +119,9 @@ class V_GRAPHICS_API RenderTarget : public Object, public RefCounted<RenderTarge
     std::vector<float> readDepthBuffer() const;
 
   private:
-    ColorFormat color_format_ = ColorFormat::RGBA8;
+    // One entry per configured color attachment, in attachment order.
+    std::vector<ColorFormat> color_formats_;
     DepthFormat depth_format_ = DepthFormat::D24;
-    bool has_color_ = false;
     bool has_depth_ = false;
     int width_ = 1;
     int height_ = 1;

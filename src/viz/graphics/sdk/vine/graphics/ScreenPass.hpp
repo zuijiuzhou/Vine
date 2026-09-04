@@ -10,6 +10,7 @@
 V_GRAPHICS_NS_BEGIN
 
 class RenderTarget;
+class ShaderProgram;
 
 /**
  * @brief A full-screen (screen-space) pass that samples a published texture.
@@ -43,6 +44,43 @@ class V_GRAPHICS_API ScreenPass : public RenderPass {
     /** @brief Gets the resolved source target this pass samples. */
     raw_ptr<RenderTarget> sourceTarget() const;
 
+    /** @brief Gets the colour attachment of the source this pass samples.
+     *
+     * @return Colour attachment index in [0, source->colorCount()).
+     */
+    int sourceAttachment() const;
+
+    /** @brief Sets which colour attachment of the resolved source to sample.
+     *
+     * A multi-attachment source (MRT / G-buffer target) publishes several
+     * sampleable textures under one name; this selects which one the screen
+     * pass draws (e.g. 1 = the normal buffer). The default 0 samples the
+     * first colour attachment.
+     *
+     * @param attachment Colour attachment index to sample.
+     */
+    void setSourceAttachment(int attachment);
+
+    /** @brief Gets the pass's fullscreen fragment program (null when unset). */
+    raw_ptr<ShaderProgram> program() const;
+
+    /** @brief Sets a fragment program that replaces the plain screen-copy.
+     *
+     * When set, executing the pass draws a full-screen triangle through this
+     * program's fragment stage (the backend supplies the fullscreen vertex
+     * shader), with every colour attachment of the resolved source bound as a
+     * sampled texture (binding 0..N-1). This turns a ScreenPass into a
+     * screen-space lighting / post-process pass — e.g. deferred lighting that
+     * reads a G-buffer's albedo / normal / position attachments in one draw.
+     * The program's fragment shader receives the content scene's lights (see
+     * setCamera / the pass camera) as push-constant parameters. Clearing stays
+     * disabled: the pass draws opaque over the sub-viewport it owns.
+     *
+     * @param program Fragment-stage program, or null to sample as a plain
+     *                copy (sourceAttachment()).
+     */
+    void setProgram(intrusive_ptr<ShaderProgram> program);
+
     /** @brief Receives the engine-resolved input textures.
      *
      * Stores the first resolved non-null target (matching the single input
@@ -55,10 +93,14 @@ class V_GRAPHICS_API ScreenPass : public RenderPass {
     /** @brief Executes the screen pass.
      *
      * Binds the output target / sub-viewport / clear state like a regular
-     * pass, then asks the backend to draw a full-screen triangle sampling the
-     * source texture. The scene is ignored.
+     * pass. With no program it asks the backend to draw a full-screen
+     * triangle sampling the source colour attachment; with a program (see
+     * setProgram) it forwards the content scene's lights and asks the backend
+     * to draw through that fragment program sampling every source colour
+     * attachment.
      *
-     * @param scene   Ignored (a screen pass has no scene content).
+     * @param scene   Content scene (only its lights matter for a program pass;
+     *                ignored otherwise).
      * @param backend Backend to render with.
      */
     void execute(raw_ptr<Scene> scene, raw_ptr<RenderBackend> backend) override;
@@ -66,6 +108,10 @@ class V_GRAPHICS_API ScreenPass : public RenderPass {
   private:
     /// Source texture sampled by this pass (borrowed; the engine registry keeps it alive).
     raw_ptr<RenderTarget> source_ = nullptr;
+    /// Colour attachment of the source sampled (defaults to the first one).
+    int source_attachment_ = 0;
+    /// Fragment program for the fullscreen (lighting / post-process) path.
+    intrusive_ptr<ShaderProgram> program_;
 };
 
 using ScreenPassPtr = intrusive_ptr<ScreenPass>;

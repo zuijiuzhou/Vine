@@ -565,16 +565,16 @@ class V_GRAPHICS_API RenderTarget : public Object, public RefCounted<RenderTarge
 
   public:
     enum class ColorFormat {
-        RGBA8,    ///< 8-bit unsigned normalized RGBA.
-        RGBA16F,  ///< 16-bit float RGBA.
-        RGBA32F,  ///< 32-bit float RGBA.
+        RGBA8,    // 8-bit unsigned normalized RGBA.
+        RGBA16F,  // 16-bit float RGBA.
+        RGBA32F,  // 32-bit float RGBA.
     };
 
     enum class DepthFormat {
-        D16,   ///< 16-bit depth.
-        D24,   ///< 24-bit depth.
-        D32,   ///< 32-bit unsigned depth.
-        D32F,  ///< 32-bit float depth.
+        D16,   // 16-bit depth.
+        D24,   // 24-bit depth.
+        D32,   // 32-bit unsigned depth.
+        D32F,  // 32-bit float depth.
     };
 
   public:
@@ -672,7 +672,10 @@ pre passes (order < 0)  →  main pass (order 0)  →  post passes (order > 0)  
   典型用途：`order<0` 的 shadow map / depth / g-buffer 预通道；`order>0` 的后处理 / 合成通道。
 - **顺序必须显式且确定**：渲染正确性依赖先后（阴影贴图必须先于被照亮几何体、后处理必须
   在着色之后、UI 覆盖最后）。引擎按 int `order` 升序、稳定排序，正是为此提供确定序。
-- Overlay（HUD，自带内容 + 2D 覆盖语义）始终在所有场景通道之后绘制，与 3D 场景分层。
+- 顶部 / HUD pass = 普通高 `order` 注册 pass（**无独立 Overlay 类**，2026-09 已删）：内容经
+  addPass 内容绑定、相机经独立 `applyCameraMirror` 跟随、子视口/清屏/显隐都在 RenderPass 上
+  （setViewport/setClearEnabled/setEnabled/onSurfaceResized）；绘制在 order 末尾 → 与 3D 场景
+  分层。详见 `graphics-overlay.md`。
 - ⚠ 2026-09-03 **Design B 变更**：上述“主通道锚点”模型已重构——`RenderEngine` 不再有
   main pass / `setMainPass` / `mainPass`，空启动，pipeline 完全显式（统一 `passes_` 按 order
   执行 + overlays 最后）；引擎只保留可选的 `scene()`(默认内容) 与 `masterCamera()`(交互主相机，
@@ -687,7 +690,7 @@ pre passes (order < 0)  →  main pass (order 0)  →  post passes (order > 0)  
 - 使用 `intrusive_ptr<T>` 管理所有权
 - 借用/所有权分界：getter 返回与“不 retain”的借用入参用 `vine::raw_ptr<T>`；
   会 retain（存入 owning 字段/容器）的 setter/add 入参用 `intrusive_ptr<T>`
-  （by value + `std::move`），与 `setBackend`/`addOverlay` 及 robotics
+  （by value + `std::move`），与 `setBackend`/`addPass` 及 robotics
   `Visual::setMaterial(const intrusive_ptr<...>&)` 一致
 - 公开 API 接受原始指针（调用者管理生命周期）或返回 `intrusive_ptr`
 

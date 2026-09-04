@@ -28,13 +28,9 @@ class V_VSG_API VsgRenderBackendFactory : public vine::graphics::RenderBackendFa
 
     /** @brief Creates a VsgRenderer.
      *
-     * @param scene  Scene bound to the backend.
-     * @param camera Camera used by the backend.
      * @return New VsgRenderer; the caller owns it.
      */
-    vine::intrusive_ptr<vine::graphics::RenderBackend> create(
-        vine::raw_ptr<vine::graphics::Scene> scene,
-        vine::raw_ptr<vine::graphics::Camera> camera) override;
+    vine::intrusive_ptr<vine::graphics::RenderBackend> create() override;
 };
 
 V_VSG_NS_END

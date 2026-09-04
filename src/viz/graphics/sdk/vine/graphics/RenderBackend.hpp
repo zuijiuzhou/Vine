@@ -17,6 +17,7 @@ class Light;
 class MaterialManager;
 class RenderTarget;
 class RenderPass;
+class ShaderProgram;
 struct RenderCommand;
 
 /**
@@ -48,13 +49,6 @@ class V_GRAPHICS_API RenderBackend : public Object, public RefCounted<RenderBack
     /** @brief Ends a frame. */
     virtual void endFrame() = 0;
 
-    /** @brief Executes a single render pass.
-     *
-     * @param pass     The render pass to execute.
-     * @param commands Render commands collected for the pass.
-     */
-    virtual void executePass(const RenderPass* pass, const std::vector<RenderCommand>& commands) = 0;
-
     /** @brief Sets the active render target.
      *
      * Pass nullptr to render into the default (window) framebuffer. When the
@@ -82,44 +76,114 @@ class V_GRAPHICS_API RenderBackend : public Object, public RefCounted<RenderBack
         return false;
     }
 
-    /** @brief Draws a full-screen textured pass sampling a target's colour.
+    /** @brief Draws a full-screen textured pass sampling a target's colour
+     * attachment.
      *
-     * Samples the colour attachment of @p source (a target written earlier in
-     * the same frame, e.g. an off-screen render-to-texture pass) through a
-     * full-screen textured triangle drawn into the CURRENT target — the one
-     * set by the most recent setRenderTarget() (nullptr = the default
-     * framebuffer) — respecting any sub-viewport configured via setViewport().
-     * This is the low-level primitive behind a screen/composite pass; the
-     * target to sample stays a logical RenderTarget and the backend resolves
-     * it to its own GPU texture. The default no-op lets backends without
-     * texture-input support ignore the call.
+     * Samples the colour attachment @p attachment of @p source (a target
+     * written earlier in the same frame, e.g. an off-screen render-to-texture
+     * pass) through a full-screen textured triangle drawn into the CURRENT
+     * target — the one set by the most recent setRenderTarget() (nullptr = the
+     * default framebuffer) — respecting any sub-viewport configured via
+     * setViewport(). This is the low-level primitive behind a screen/composite
+     * pass; the target to sample stays a logical RenderTarget and the backend
+     * resolves it to its own GPU texture. A multi-attachment target (MRT /
+     * G-buffer) exposes each colour attachment as an independent sampleable
+     * texture, so a consumer selects which one to read by index. The default
+     * no-op lets backends without texture-input support ignore the call.
+     *
+     * @param source     Target whose colour texture to sample, or nullptr.
+     * @param attachment Colour attachment index in [0, source->colorCount()).
+     */
+    virtual void drawScreenTexture(vine::graphics::RenderTarget* source, int attachment)
+    {
+        (void)source;
+        (void)attachment;
+    }
+
+    /** @brief Draws a full-screen textured pass sampling a target's first
+     * colour attachment.
+     *
+     * Convenience for the common single-texture case: samples colour
+     * attachment 0 of @p source (see drawScreenTexture(RenderTarget*, int)).
      *
      * @param source Target whose colour texture to sample, or nullptr.
      */
     virtual void drawScreenTexture(vine::graphics::RenderTarget* source)
     {
-        (void)source;
+        drawScreenTexture(source, 0);
     }
 
-    /** @brief Releases backend resources for a removed overlay.
+    /** @brief Draws a full-screen pass through a user fragment program,
+     * sampling every colour attachment of an MRT source.
      *
-     * Called by the engine just before an overlay is dropped so the backend
-     * can stop drawing it and free its GPU objects (view / pipelines / view
-     * slots). An overlay draws through its pass, so the overlay's camera here
-     * is the pass camera (pass->camera()); the backend retains the overlay's
-     * sub-view keyed by that camera, and this call removes that key. Overlays
-     * carry no Vine-side GPU state, so the backend is the only owner of these
-     * resources. The engine only calls this after confirming the pass is no
-     * longer used elsewhere (main pass / extra pass / another overlay). The
-     * default no-op lets backends that keep no per-overlay GPU state ignore
-     * the call.
+     * Draws a full-screen triangle (the backend supplies the vertex stage)
+     * whose fragment shader is @p program's fragment stage, written into the
+     * CURRENT target (see setRenderTarget, nullptr = the default framebuffer)
+     * within the sub-viewport set by setViewport(). Each colour attachment of
+     * @p source is bound as a sampled texture at descriptor binding 0..N-1, so
+     * a G-buffer producer's textures (albedo / normal / position) reach the
+     * pass in one draw. Lights set by the most recent setLights() and the
+     * pass camera are forwarded as per-frame push-constant parameters (the
+     * lights pre-transformed to the camera's view space). The default no-op
+     * lets backends without texture-input support ignore the call.
      *
-     * @param overlay_camera The overlay's pass camera (the key the backend
-     *                       used to retain the overlay's view), or nullptr.
+     * @param source  MRT target whose colour attachments are sampled.
+     * @param program User program supplying the fragment stage (vertex stage,
+     *                if any, is ignored — the backend provides the fullscreen
+     *                vertex shader).
+     * @param camera  Camera whose view transforms the pushed lights; also the
+     *                key for the retained fullscreen slot.
      */
-    virtual void releaseOverlay(raw_ptr<const Camera> overlay_camera)
+    virtual void drawScreenProgram(vine::graphics::RenderTarget*  source,
+                                   vine::raw_ptr<const vine::graphics::ShaderProgram> program,
+                                   vine::raw_ptr<const vine::graphics::Camera> camera)
     {
-        (void)overlay_camera;
+        (void)source;
+        (void)program;
+        (void)camera;
+    }
+
+    /** @brief Notifies the backend of the order of the pass about to render.
+     *
+     * The engine calls this right before each registered pass executes, with
+     * the order the caller passed to addPass() — the explicit pipeline order
+     * that already drives pass execution. A backend that keeps multiple
+     * retained content slots under one target keys each slot by (pass camera,
+     * this order): the order is both the slot's identity (so passes sharing a
+     * camera stack as separate content slots when they use distinct orders)
+     * and the stacking key (ascending), so the stacking always equals the
+     * user-set pipeline order regardless of when each slot was first created
+     * (e.g. a pre-frame warm-up pass may create a higher-order slot before a
+     * lower-order one has run). It is consumed by the following render() call.
+     * The default no-op lets backends without per-slot ordering ignore it.
+     *
+     * @param order The current pass's explicit pipeline order.
+     */
+    virtual void setPassOrder(int order)
+    {
+        (void)order;
+    }
+
+    /** @brief Releases backend GPU state for a removed pass' window content.
+     *
+     * Called by the engine just before a removed pass's resources are
+     * dropped, so the backend can stop drawing that pass and free its GPU
+     * objects (view / pipelines / scene-bridge cache). The backend retains
+     * each window content slot keyed by (pass camera, pass order) — the slot
+     * the pass drew through — and this call removes that key. Passes carry no
+     * Vine-side GPU state, so the backend is the only owner of these
+     * resources. The default no-op lets backends that keep no per-camera GPU
+     * state ignore the call.
+     *
+     * @param camera The removed pass's camera (the content-slot key), or
+     *               nullptr.
+     * @param order  The removed pass's explicit pipeline order (the
+     *               content-slot key within that camera).
+     */
+    virtual void releaseWindowLayer(raw_ptr<const Camera> camera, int order = 0)
+    {
+        (void)camera;
+        (void)order;
     }
 
     /** @brief Releases backend GPU resources for a removed render target.

@@ -260,8 +260,9 @@ endFrame(); swapBuffers()
 | depth-only（shadow 预备） | 仅 depth 附件的 RenderGraph + 光源相机 |
 | 采样输入（v3） | RT 的 `vsg::ImageView` 作为后续 pass 的 ImageDescriptor |
 | 提交 | `vsg::Viewer::recordAndSubmit` 提交“本帧所有 pass 的 RenderGraph 集合” |
-| 现状差距 | `VsgRenderer` 是“单主图 + overlay_slots(Camera* 特判) + SceneBridge 保留图” —— `SceneBridge`
-  底座可复用，但要改为“一个 pass/目标一个保留根”，去掉 overlay 特判，走通用每 pass 提交 |
+| 现状差距 | ~~“单主图 + overlay_slots(Camera* 特判)”~~ 已于 2026-09 统一为 `window_layers`（Camera* 键，
+  每层自带 View/SceneBridge/light_group/on_top）；SceneBridge 底座可复用，离屏/pass 每帧提交演进仍在
+  §10.5 排期 |
 
 ### 10.5 演进顺序与验收
 

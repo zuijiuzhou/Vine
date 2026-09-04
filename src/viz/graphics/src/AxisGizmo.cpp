@@ -6,7 +6,7 @@
 #include <vine/graphics/Group.hpp>
 #include <vine/graphics/Material.hpp>
 #include <vine/graphics/Node.hpp>
-#include <vine/graphics/RenderPass.hpp>
+#include <vine/graphics/RenderBackend.hpp>
 #include <vine/graphics/Scene.hpp>
 #include <vine/geometry/IndexedTriangleMesh.hpp>
 
@@ -15,7 +15,7 @@
 
 V_GRAPHICS_NS_BEGIN
 
-V_OBJECT_META_IMPL(AxisGizmo, Overlay);
+V_OBJECT_META_IMPL(AxisGizmo, RenderPass);
 
 namespace
 {
@@ -79,7 +79,7 @@ AxisGizmo::AxisGizmo()
     // Framing camera: square perspective that fits the unit sticks at the
     // mirror distance. The view is overwritten every frame by Orientation
     // mirroring; only the framing distance and projection are kept. Owned by
-    // this gizmo so the pass's raw pointer never dangles.
+    // this gizmo so the pass' raw camera pointer never dangles.
     camera_ = intrusive_ptr<Camera>(new Camera());
     // Framing distance chosen so the unit sticks fill most of the square
     // sub-viewport (half-height = 3.3 * tan(22.5) ~ 1.37 world units maps a
@@ -87,8 +87,10 @@ AxisGizmo::AxisGizmo()
     camera_->setViewMatrixAsLookAt(vine::math::Vec3d(0.0, 0.0, 3.3), vine::math::Vec3d(0.0, 0.0, 0.0),
                                    vine::math::Vec3d(0.0, 1.0, 0.0));
     camera_->setProjectionMatrixAsPerspective(45.0, 1.0, 0.05, 20.0);
-    pass()->setCamera(camera_.get());
-    setMirrorMode(Overlay::MirrorMode::Orientation);
+    setCamera(camera_.get());
+
+    // A HUD pass draws over the main content each frame: never clear.
+    setClearEnabled(false);
     rebuild();
 }
 
@@ -126,6 +128,21 @@ void AxisGizmo::setPixelRatio(double ratio)
     }
 }
 
+void AxisGizmo::setSourceCamera(raw_ptr<Camera> camera)
+{
+    source_camera_ = camera;
+}
+
+raw_ptr<Camera> AxisGizmo::sourceCamera() const
+{
+    return source_camera_;
+}
+
+raw_ptr<Scene> AxisGizmo::content() const
+{
+    return content_.get();
+}
+
 void AxisGizmo::onSurfaceResized(int width, int height)
 {
     surface_w_ = width;
@@ -142,7 +159,18 @@ void AxisGizmo::onSurfaceResized(int width, int height)
     }
     // Bottom-left corner in top-left-origin device coordinates.
     const int side = size_px_ > dev_h - 2 * margin_px_ ? dev_h - 2 * margin_px_ : size_px_;
-    pass()->setViewport(margin_px_, dev_h - margin_px_ - side, side, side);
+    setViewport(margin_px_, dev_h - margin_px_ - side, side, side);
+}
+
+void AxisGizmo::execute(raw_ptr<Scene> /*scene*/, raw_ptr<RenderBackend> backend)
+{
+    applyMirror();
+    RenderPass::execute(content_.get(), backend);
+}
+
+void AxisGizmo::applyMirror()
+{
+    applyCameraMirror(camera_.get(), source_camera_, MirrorMode::Orientation);
 }
 
 void AxisGizmo::rebuild()
@@ -180,7 +208,7 @@ void AxisGizmo::rebuild()
 
         auto material = intrusive_ptr<Material>(new Material());
         material->setDiffuse(stick.color);
-        // Flat unshaded sticks: with the overlay lit by a pure ambient light,
+        // Flat unshaded sticks: with the gizmo lit by a pure ambient light,
         // phong's ambientColor = diffuse * ambient * ambient.a, so a WHITE
         // ambient material makes ambientColor == diffuse == the stick colour
         // regardless of viewing direction (a directional headlight made the
@@ -194,7 +222,7 @@ void AxisGizmo::rebuild()
         group->addChild(geometry);
         scene->addNode(group);
     }
-    setContent(scene);
+    content_ = std::move(scene);
 }
 
 V_GRAPHICS_NS_END

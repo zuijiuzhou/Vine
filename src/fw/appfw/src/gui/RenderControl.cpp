@@ -412,11 +412,12 @@ bool RenderControl::init()
     // Design B: the engine auto-registers no pipeline. RenderControl is the
     // plain-viewer convenience layer, so it provisions the minimal default
     // viewer - a window pass drawing the (default) content scene through the
-    // master camera to the backbuffer - only when the app has registered no
-    // scene pass of its own. Apps assembling an explicit pipeline via
-    // addPass()/RenderPipelineBuilder have a non-zero passCount here and keep
-    // full control.
-    if (d->engine->scene() != nullptr && d->engine->masterCamera() != nullptr && d->engine->passCount() == 0) {
+    // master camera to the backbuffer - only when no registered pass already
+    // presents the master camera to the window. Apps assembling an explicit
+    // pipeline via addPass()/RenderPipelineBuilder that presents the master
+    // view keep full control; apps that only add helper / HUD passes (which
+    // draw through their own cameras) still get the default window pass.
+    if (d->engine->scene() != nullptr && d->engine->masterCamera() != nullptr && !d->engine->hasWindowPass()) {
         auto window_pass = vine::intrusive_ptr<vine::graphics::RenderPass>(new vine::graphics::RenderPass());
         window_pass->setCamera(d->engine->masterCamera());
         d->engine->addPass(window_pass, 0);
@@ -452,7 +453,7 @@ void RenderControl::wireEvents()
         const auto entries = vine::graphics::RenderBackendRegistry::instance().entries();
         if (!entries.empty()) {
             d->engine->setBackend(
-                entries.front().factory->create(d->engine->scene(), d->engine->masterCamera()));
+                entries.front().factory->create());
         }
     }
 

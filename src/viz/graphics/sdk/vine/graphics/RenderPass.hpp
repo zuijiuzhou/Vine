@@ -6,7 +6,6 @@
 #include <vine/RefCounted.hpp>
 #include <vine/raw_ptr.hpp>
 #include <vine/Color.hpp>
-#include <string>
 #include <vector>
 
 V_GRAPHICS_NS_BEGIN
@@ -15,6 +14,9 @@ class Camera;
 class RenderTarget;
 class RenderBackend;
 class Scene;
+class ShaderProgram;
+
+using ShaderProgramPtr = intrusive_ptr<ShaderProgram>;
 
 /**
  * @brief A render pass describing one complete rendering stage.
@@ -70,7 +72,7 @@ class V_GRAPHICS_API RenderPass : public Object, public RefCounted<RenderPass> {
 
     /** @brief Returns whether the colour/depth buffer is cleared before this pass.
      *
-     * The main pass clears by default; overlay passes usually disable it so
+     * The main pass clears by default; top / HUD passes usually disable it so
      * they draw over the previous frame's content.
      */
     bool clearEnabled() const;
@@ -80,6 +82,19 @@ class V_GRAPHICS_API RenderPass : public Object, public RefCounted<RenderPass> {
      * @param enabled True to clear the buffers (the default).
      */
     void setClearEnabled(bool enabled);
+
+    /** @brief Returns whether this pass is drawn by the engine this frame. */
+    bool enabled() const;
+
+    /** @brief Sets whether this pass is drawn by the engine.
+     *
+     * The engine skips disabled passes, which lets a registered pass (e.g. a
+     * HUD overlay) be toggled on and off without removing it. The default is
+     * true.
+     *
+     * @param enabled True to draw the pass (the default).
+     */
+    void setEnabled(bool enabled);
 
     /** @brief Restricts this pass to a sub-rectangle of the render target.
      *
@@ -109,6 +124,22 @@ class V_GRAPHICS_API RenderPass : public Object, public RefCounted<RenderPass> {
 
     /** @brief Clears any configured sub-viewport (pass renders to the full surface). */
     void clearViewport();
+
+    /** @brief Notifies the pass that the rendering surface was resized.
+     *
+     * Called by the engine for every registered pass when the surface size
+     * changes, so a pass with a sub-viewport positioned relative to the
+     * surface (e.g. an axis gizmo in a corner) can re-lay it out. The base
+     * pass ignores the notice.
+     *
+     * @param width  New surface width in device pixels.
+     * @param height New surface height in device pixels.
+     */
+    virtual void onSurfaceResized(int width, int height)
+    {
+        (void)width;
+        (void)height;
+    }
 
     /** @brief Sets the name this pass publishes its output under.
      *
@@ -163,6 +194,26 @@ class V_GRAPHICS_API RenderPass : public Object, public RefCounted<RenderPass> {
         (void)inputs;
     }
 
+    /** @brief Gets the pass-level program override (null when unset). */
+    raw_ptr<ShaderProgram> programOverride() const;
+
+    /** @brief Forces every command this pass renders to use one program.
+     *
+     * By default each geometry renders with its own effective program (leaf /
+     * StateNode resolution). Setting an override replaces the program of every
+     * collected command, so the same content scene can be re-rendered with a
+     * different shader (e.g. a wireframe or alternate-shading pass over the
+     * same scene). Pair it with an off-screen render target or a distinct
+     * order so the two variants do not collapse into the same retained
+     * content slot (the backend keys a camera's content slots by the pass
+     * order).
+     * The pass keeps a reference.
+     *
+     * @param program Program applied to all content, or null for per-geometry
+     *                programs (the default).
+     */
+    void setProgramOverride(intrusive_ptr<ShaderProgram> program);
+
     /** @brief Executes this render pass.
      *
      * @param scene   Scene containing drawables.
@@ -174,11 +225,13 @@ class V_GRAPHICS_API RenderPass : public Object, public RefCounted<RenderPass> {
     String name_;
     String output_name_;
     std::vector<String> input_names_;
+    ShaderProgramPtr program_override_;   // null = per-geometry programs
     intrusive_ptr<RenderTarget> render_target_;
     raw_ptr<Camera> camera_ = nullptr;
     Color clear_color_{ 51, 51, 51, 255 };
     bool clear_depth_ = true;
     bool clear_enabled_ = true;
+    bool enabled_ = true;
     bool has_viewport_ = false;
     int viewport_x_ = 0;
     int viewport_y_ = 0;

@@ -5,8 +5,6 @@
 #include <vine/appfw/PluginManager.hpp>
 #include <vine/graphics/RenderBackend.hpp>
 #include <vine/graphics/RenderBackendRegistry.hpp>
-#include <vine/graphics/Camera.hpp>
-#include <vine/graphics/Scene.hpp>
 
 #include <memory>
 
@@ -70,13 +68,10 @@ TEST_F(VsgBackendPluginTest, CreateBackendByName)
 
     auto& registry = vine::graphics::RenderBackendRegistry::instance();
 
-    auto scene = vine::intrusive_ptr<vine::graphics::Scene>(new vine::graphics::Scene());
-    auto camera = vine::intrusive_ptr<vine::graphics::Camera>(new vine::graphics::Camera());
-
     // The plugin path must produce a VsgRenderer instance. initialize() is
     // intentionally not called here: it creates a real Vulkan window/device,
     // which is unsuitable for a headless unit test (would block waiting for a
     // GPU surface). Backend init/rendering is exercised by the real app.
-    auto backend = registry.create(u8"vsg", scene.get(), camera.get());
+    auto backend = registry.create(u8"vsg");
     ASSERT_NE(backend, nullptr);
 }

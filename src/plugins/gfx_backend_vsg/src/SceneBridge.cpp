@@ -209,6 +209,19 @@ VkShaderStageFlagBits stageFlag(vine::graphics::ShaderStageType type)
     auto shader_set = ::vsg::ShaderSet::create(stages);
     shader_set->addAttributeBinding("vsg_Vertex", "", 0, VK_FORMAT_R32G32B32_SFLOAT,
                                     ::vsg::vec3Array::create(1));
+    // Normal / colour follow the canonical locations (1 / 2) so a user
+    // program can shade with per-vertex normals / colours; the SceneBridge
+    // program path feeds these arrays and the material descriptor below.
+    shader_set->addAttributeBinding("vsg_Normal", "", 1, VK_FORMAT_R32G32B32_SFLOAT,
+                                    ::vsg::vec3Array::create(1));
+    shader_set->addAttributeBinding("vsg_Color", "", 2, VK_FORMAT_R32G32B32A32_SFLOAT,
+                                    ::vsg::vec4Array::create(1));
+    // Material: the same vsg::PhongMaterialValue uniform the default path
+    // binds (SceneBridge assigns the cached value), so a program can read the
+    // Vine material's diffuse/specular etc. Unused when the program does not
+    // read it; harmless in that case.
+    shader_set->addDescriptorBinding("material", "", 0, 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1,
+                                     VK_SHADER_STAGE_FRAGMENT_BIT, ::vsg::PhongMaterialValue::create());
     shader_set->addPushConstantRange("pc", "", VK_SHADER_STAGE_VERTEX_BIT, 0, 128);
     shader_set->defaultGraphicsPipelineStates = base_states;
     return shader_set;
@@ -505,8 +518,19 @@ bool SceneBridge::syncRenderCommands(
         auto material_value = material_manager->getOrCreate(material);
         config->assignDescriptor("material", material_value);
     } else {
-        // A user program draws with its own colors; the per-vertex-alpha
-        // opacity path (default materials) does not apply here.
+        // User program path: feed the same per-vertex attributes and the
+        // material the default path uses, so a program can shade with
+        // per-vertex normals / read the Vine material (e.g. a G-buffer pass
+        // writing several attachments in one traversal). The per-vertex-alpha
+        // opacity path stays off (out_colors null — the pass-level program
+        // override owns opacity), but the white colour array is still bound
+        // for programs that read vsg_Color.
+        auto colors = makeWhiteColors(vertices->size());
+        config->assignArray(arrays, "vsg_Normal", VK_VERTEX_INPUT_RATE_VERTEX, normals);
+        config->assignArray(arrays, "vsg_Color", VK_VERTEX_INPUT_RATE_VERTEX, colors);
+        auto material_manager = material_manager_ != nullptr ? material_manager_ : &default_manager_;
+        auto material_value = material_manager->getOrCreate(material);
+        config->assignDescriptor("material", material_value);
         out_colors = nullptr;
     }
 

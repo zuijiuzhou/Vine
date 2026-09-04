@@ -10,11 +10,11 @@
 namespace vine::graphics
 {
 
-class Scene;
 class Camera;
 class Light;
 class RenderPass;
 class RenderTarget;
+class ShaderProgram;
 struct RenderCommand;
 
 } // namespace vine::graphics
@@ -32,12 +32,13 @@ V_VSG_NS_BEGIN
  */
 class V_VSG_API VsgRenderer : public vine::graphics::RenderBackend {
   public:
-    /** @brief Constructs a renderer bound to a Vine scene and camera.
+    /** @brief Constructs a renderer.
      *
-     * @param scene  Vine scene to render (must outlive the renderer).
-     * @param camera Vine camera used for the view.
+     * The engine owns the pipeline and drives content per pass, so the
+     * renderer binds neither a Vine scene nor a camera: content slots are
+     * created lazily from the per-pass render() calls the engine drives.
      */
-    VsgRenderer(vine::raw_ptr<vine::graphics::Scene> scene, vine::raw_ptr<vine::graphics::Camera> camera);
+    VsgRenderer();
     ~VsgRenderer() override;
 
     // ---- RenderBackend interface ----
@@ -57,13 +58,6 @@ class V_VSG_API VsgRenderer : public vine::graphics::RenderBackend {
     /** @brief Ends a frame (viewer update). */
     void endFrame() override;
 
-    /** @brief Executes a render pass.
-     *
-     * @param pass     The pass to execute (clear state applied).
-     * @param commands Render commands collected for the pass.
-     */
-    void executePass(vine::raw_ptr<const vine::graphics::RenderPass> pass, const std::vector<vine::graphics::RenderCommand>& commands) override;
-
     /** @brief Sets the render target.
      *
      * Off-screen targets are not yet supported; only the default framebuffer
@@ -79,23 +73,59 @@ class V_VSG_API VsgRenderer : public vine::graphics::RenderBackend {
      */
     bool supportsRenderTargets() override;
 
-    /** @brief Draws a full-screen textured pass sampling a target's colour.
+    /** @brief Draws a full-screen textured pass sampling a target's colour
+     * attachment.
      *
-     * Samples the colour attachment of @p source (an off-screen target this
-     * backend rendered earlier in the same frame) through a full-screen
-     * textured triangle drawn into the CURRENT target (the one set by
-     * setRenderTarget(), nullptr = the window) within the sub-viewport set
-     * by setViewport() (picture-in-picture). EXPERIMENTAL.
+     * Samples colour attachment @p attachment of @p source (an off-screen
+     * target this backend rendered earlier in the same frame) through a
+     * full-screen textured triangle drawn into the CURRENT target (the one
+     * set by setRenderTarget(), nullptr = the window) within the sub-viewport
+     * set by setViewport() (picture-in-picture). A multi-attachment target
+     * (MRT / G-buffer) exposes each colour attachment as an independent
+     * sampleable texture. EXPERIMENTAL.
      *
-     * @param source Off-screen target whose colour texture to sample.
+     * @param source     Off-screen target whose colour texture to sample.
+     * @param attachment Colour attachment index to sample (0 = first).
      */
-    void drawScreenTexture(vine::graphics::RenderTarget* source) override;
+    void drawScreenTexture(vine::graphics::RenderTarget* source, int attachment) override;
 
-    /** @brief Stops drawing and frees GPU state for a removed overlay.
+    /** @brief Draws a full-screen pass through a user fragment program,
+     * sampling every colour attachment of an MRT source (deferred lighting).
      *
-     * @param overlay_camera Overlay camera retained by this backend, or null.
+     * See RenderBackend::drawScreenProgram for the contract. The backend
+     * compiles the program's fragment stage, binds each source colour
+     * attachment as a sampled texture (binding 0..N-1) and pushes view-space
+     * light parameters each frame.
+     *
+     * @param source  MRT target whose colour attachments are sampled.
+     * @param program User program supplying the fragment stage.
+     * @param camera  Camera whose view transforms the pushed lights.
      */
-    void releaseOverlay(raw_ptr<const vine::graphics::Camera> overlay_camera) override;
+    void drawScreenProgram(vine::graphics::RenderTarget*                       source,
+                           vine::raw_ptr<const vine::graphics::ShaderProgram> program,
+                           vine::raw_ptr<const vine::graphics::Camera>        camera) override;
+
+    /** @brief Stops drawing and frees GPU state for a removed pass' window
+     * content slot.
+     *
+     * @param camera The removed pass's camera (the content-slot key), or null.
+     * @param order  The removed pass's explicit pipeline order (the
+     *               content-slot key within that camera).
+     */
+    void releaseWindowLayer(raw_ptr<const vine::graphics::Camera> camera, int order) override;
+
+    /** @brief Notifies the renderer of the order of the pass about to render.
+     *
+     * The engine announces each pass's explicit pipeline order (addPass())
+     * right before it executes; the value is consumed by the following
+     * render() and used both as the KEY of this target's retained content slot
+     * (with the pass camera) and as its stacking order (ascending), so
+     * stacking always follows the user-set order even when slots are first
+     * created out of order (pre-frame warm-up).
+     *
+     * @param order The current pass's explicit pipeline order.
+     */
+    void setPassOrder(int order) override;
 
     /** @brief Frees GPU state (offscreen graph + PiP slot) for a removed target.
      *
@@ -156,10 +186,10 @@ class V_VSG_API VsgRenderer : public vine::graphics::RenderBackend {
 
     /** @brief Restricts the next render() to a sub-viewport of the surface.
      *
-     * Called by RenderPass::execute() before an overlay pass that owns a
-     * sub-viewport (e.g. an axis gizmo). The rectangle is consumed by the
-     * following render() call, which draws into its own RenderGraph. A pass
-     * without a sub-viewport renders the full surface.
+     * Called by RenderPass::execute() before a pass that owns a sub-viewport
+     * (e.g. an axis gizmo in a screen corner). The rectangle is consumed by
+     * the following render() call, which draws into its own RenderGraph. A
+     * pass without a sub-viewport renders the full surface.
      *
      * @param x      Viewport origin x in device pixels.
      * @param y      Viewport origin y in device pixels (top-left origin).
@@ -199,37 +229,84 @@ class V_VSG_API VsgRenderer : public vine::graphics::RenderBackend {
     /** @brief Gets the underlying vsg viewer. */
     ::vsg::ref_ptr<::vsg::Viewer> viewer() const;
 
-    /** @brief Gets the translated vsg camera. */
-    ::vsg::ref_ptr<::vsg::Camera> vsgCamera() const;
-
-    /** @brief Gets the translated vsg scene graph. */
-    ::vsg::ref_ptr<::vsg::Node> vsgScene() const;
-
   private:
-    /** @brief Renders an overlay pass into its own sub-viewport RenderGraph. */
-    void
-    renderOverlayPass(const std::vector<vine::graphics::RenderCommand>& commands, vine::raw_ptr<const vine::graphics::Camera> camera, int vp_x, int vp_y, int vp_w, int vp_h);
-
-    /** @brief Renders the command stream into an off-screen RenderTarget.
+    /** @brief Builds (or rebuilds) an off-screen target's GPU attachments and
+     * empty render graph, sized to the target.
      *
-     * Creates (on first use) an off-screen render graph for the target and
-     * records the scene into it. EXPERIMENTAL: needs on-device validation.
+     * Called from render() when an off-screen target is first rendered or was
+     * resized. The graph is created without Views; content-slot Views are
+     * appended by setupContentSlot() as passes render into the target (C6.4:
+     * the same multi-slot mechanism the window target uses, so one RT can
+     * bake several content groups with different programs / depth policy). A
+     * rebuild first releases the previous graph and every content slot
+     * compiled against it. EXPERIMENTAL: needs on-device validation.
      *
-     * @param target   Off-screen target to render into.
-     * @param commands Render commands for this pass.
-     * @param camera   Camera used for view/projection.
-     * @param lights   Content scene lights (empty keeps the view default).
+     * @param target Off-screen target to (re)build.
      */
-    void renderOffscreenTarget(vine::graphics::RenderTarget* target,
-                               const std::vector<vine::graphics::RenderCommand>& commands,
-                               vine::raw_ptr<const vine::graphics::Camera> camera,
-                               const std::vector<const vine::graphics::Light*>& lights);
+    void buildOffscreenTarget(vine::graphics::RenderTarget* target);
+
+    /** @brief Builds (on first use) the retained vsg view for a content slot.
+     *
+     * A content slot is a View of a TARGET's render graph — the window target
+     * (@p target == nullptr) and every off-screen target share this one
+     * mechanism. Slots are keyed by (camera, explicit pass order): each
+     * (camera, @p order) pair is its own retained View, and the views are
+     * stacked in ascending @p order — the order the caller gave addPass() —
+     * so several passes sharing one camera stack exactly as the user-ordered
+     * pipeline runs, regardless of creation order. A slot created with
+     * @p on_top == false is the main content (full target, depth testing on);
+     * @p on_top slots are extra depth-off + ambient views (HUD / overlays) —
+     * a style, not an ordering rule.
+     *
+     * @param target Output target key the slot lives under (nullptr = window).
+     * @param camera Vine camera identifying the slot.
+     * @param order  The pass's explicit pipeline order (slot key + stacking).
+     * @param on_top True for an on-top (depth-off, HUD) slot.
+     */
+    void setupContentSlot(vine::graphics::RenderTarget* target, vine::graphics::Camera* camera, int order, bool on_top);
+
+    /** @brief Renders one content slot (a View of a target's render graph).
+     *
+     * The slot is created on first use, keyed by (camera, explicit pass
+     * order): each (camera, @p order) pair is its own retained View appended
+     * to the target's render graph — the window target (nullptr key) or an
+     * off-screen target — stacked in ascending @p order (the pass's explicit
+     * pipeline order). A slot with @p on_top == false (a pass that cleared
+     * just before rendering) is the main content: full target, depth testing
+     * on, content lights. An @p on_top slot is an extra HUD slot (depth-off +
+     * ambient).
+     *
+     * @param target   Output target key the slot lives under (nullptr = the
+     *                 window).
+     * @param commands Render commands for this slot.
+     * @param camera   Camera identifying the slot.
+     * @param lights   Content lights for the slot (empty keeps the slot's
+     *                 default light: headlight for the window's main slot,
+     *                 ambient otherwise).
+     * @param on_top   True when this is an on-top (depth-off, HUD) slot.
+     * @param order    The pass's explicit pipeline order (slot key + stacking).
+     * @param vp_x     Viewport origin x in device pixels.
+     * @param vp_y     Viewport origin y in device pixels.
+     * @param vp_w     Viewport width (0 = full target).
+     * @param vp_h     Viewport height (0 = full target).
+     */
+    void renderContentSlot(vine::graphics::RenderTarget*                     target,
+                           const std::vector<vine::graphics::RenderCommand>& commands,
+                           vine::raw_ptr<const vine::graphics::Camera>       camera,
+                           const std::vector<const vine::graphics::Light*>&  lights,
+                           bool                                              on_top,
+                           int                                               order,
+                           int                                               vp_x,
+                           int                                               vp_y,
+                           int                                               vp_w,
+                           int                                               vp_h);
 
     /** @brief Records and presents the frame (once, when swapBuffers is called). */
     void submitFrame();
 
-    struct Data;
-    Data* const d;
+  private:
+    struct Impl;
+    std::unique_ptr<Impl> impl;
 };
 
 V_VSG_NS_END

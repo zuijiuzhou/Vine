@@ -8,8 +8,7 @@ RenderTarget::RenderTarget() = default;
 
 void RenderTarget::attachColor(ColorFormat format)
 {
-    color_format_ = format;
-    has_color_ = true;
+    color_formats_.push_back(format);
 }
 
 void RenderTarget::attachDepth(DepthFormat format)
@@ -36,7 +35,7 @@ void RenderTarget::setSize(int w, int h)
 
 bool RenderTarget::hasColor() const
 {
-    return has_color_;
+    return !color_formats_.empty();
 }
 
 bool RenderTarget::hasDepth() const
@@ -46,7 +45,20 @@ bool RenderTarget::hasDepth() const
 
 RenderTarget::ColorFormat RenderTarget::colorFormat() const
 {
-    return color_format_;
+    return color_formats_.empty() ? ColorFormat::RGBA8 : color_formats_.front();
+}
+
+int RenderTarget::colorCount() const
+{
+    return static_cast<int>(color_formats_.size());
+}
+
+RenderTarget::ColorFormat RenderTarget::colorFormat(int index) const
+{
+    if (index < 0 || index >= static_cast<int>(color_formats_.size())) {
+        return ColorFormat::RGBA8;
+    }
+    return color_formats_[static_cast<std::size_t>(index)];
 }
 
 RenderTarget::DepthFormat RenderTarget::depthFormat() const
@@ -56,7 +68,7 @@ RenderTarget::DepthFormat RenderTarget::depthFormat() const
 
 bool RenderTarget::valid() const
 {
-    return (has_color_ || has_depth_) && width_ > 0 && height_ > 0;
+    return (!color_formats_.empty() || has_depth_) && width_ > 0 && height_ > 0;
 }
 
 std::vector<std::uint8_t> RenderTarget::readColorBuffer() const
