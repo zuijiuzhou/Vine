@@ -221,6 +221,6 @@ using GeometryPtr = intrusive_ptr<Geometry>;
  * @param shape Mesh shape to convert.
  * @return Filled geometry, or null for unsupported shapes.
  */
-GeometryPtr geometryFromShape(const vine::geometry::Shape& shape);
+V_GRAPHICS_API GeometryPtr geometryFromShape(const vine::geometry::Shape& shape);
 
 V_GRAPHICS_NS_END

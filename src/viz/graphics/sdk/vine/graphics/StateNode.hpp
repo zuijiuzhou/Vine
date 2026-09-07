@@ -310,7 +310,7 @@ using StateNodePtr = intrusive_ptr<StateNode>;
  * @param node Leaf or intermediate node to fold state for.
  * @return The folded optional state block.
  */
-RenderState collectRenderState(raw_ptr<const Node> node);
+V_GRAPHICS_API RenderState collectRenderState(raw_ptr<const Node> node);
 
 /**
  * @brief Applies default values to a folded optional state block.
@@ -319,7 +319,7 @@ RenderState collectRenderState(raw_ptr<const Node> node);
  * @return Concrete state with defaults applied, usable as a pipeline-variant
  *         key component.
  */
-ResolvedRenderState resolveRenderState(const RenderState& state);
+V_GRAPHICS_API ResolvedRenderState resolveRenderState(const RenderState& state);
 
 /**
  * @brief Computes the effective render state for a node in one step.
@@ -329,7 +329,7 @@ ResolvedRenderState resolveRenderState(const RenderState& state);
  * @param node Leaf or intermediate node to resolve state for.
  * @return The node's effective (resolved) render state.
  */
-ResolvedRenderState effectiveRenderState(raw_ptr<const Node> node);
+V_GRAPHICS_API ResolvedRenderState effectiveRenderState(raw_ptr<const Node> node);
 
 /**
  * @brief Resolves the effective shader program for a leaf geometry.
@@ -340,6 +340,6 @@ ResolvedRenderState effectiveRenderState(raw_ptr<const Node> node);
  * @param node Leaf (Geometry) or intermediate node to resolve for.
  * @return Effective program, or null for the engine default.
  */
-ShaderProgramPtr effectiveProgram(raw_ptr<const Node> node);
+V_GRAPHICS_API ShaderProgramPtr effectiveProgram(raw_ptr<const Node> node);
 
 V_GRAPHICS_NS_END
