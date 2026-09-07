@@ -24,4 +24,13 @@ void CameraManipulator::setMode(Mode m)
     mode_ = m;
 }
 
+bool CameraManipulator::fitToScreen()
+{
+    return false;
+}
+
+void CameraManipulator::home()
+{
+}
+
 V_GRAPHICS_NS_END

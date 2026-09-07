@@ -16,12 +16,9 @@
 #include <QWidget>
 #include <QWindow>
 
-#include <vine/graphics/Camera.hpp>
-#include <vine/graphics/OrbitCameraManipulator.hpp>
 #include <vine/graphics/RenderBackendRegistry.hpp>
 #include <vine/graphics/RenderEngine.hpp>
-#include <vine/graphics/RenderPass.hpp>
-#include <vine/graphics/Scene.hpp>
+#include <vine/graphics/SceneView.hpp>
 
 #include <vine/window/InputEvent.hpp>
 #include <vine/window/KeyCode.hpp>
@@ -308,9 +305,9 @@ class SurfaceHostFilter : public QObject {
 
 struct RenderControl::Impl {
     vine::intrusive_ptr<vine::graphics::RenderEngine> engine;
+    vine::intrusive_ptr<vine::graphics::SceneView> view;
     QWindow* surface = nullptr;
     QObject* surface_filter = nullptr;
-    vine::intrusive_ptr<vine::graphics::OrbitCameraManipulator> manipulator;
     bool wired = false;
     bool initialized = false;
     bool init_ok = false;
@@ -342,18 +339,15 @@ RenderControl::RenderControl()
     d->surface = surface;
     d->engine  = vine::intrusive_ptr<vine::graphics::RenderEngine>(
         new vine::graphics::RenderEngine());
-    // Design B: RenderEngine starts empty (no scene / master camera, no
-    // passes). As the plain-viewer convenience layer, RenderControl provisions
-    // a default content scene + master camera that app code fills (content)
-    // and the backend factory binds; the window pass is registered in init().
-    if (d->engine->scene() == nullptr) {
-        d->engine->setScene(
-            vine::intrusive_ptr<vine::graphics::Scene>(new vine::graphics::Scene()));
-    }
-    if (d->engine->masterCamera() == nullptr) {
-        d->engine->setMasterCamera(
-            vine::intrusive_ptr<vine::graphics::Camera>(new vine::graphics::Camera()));
-    }
+    // Design B: RenderEngine starts empty (no passes) and is a pure
+    // scheduler - it holds no camera and no content scene. The interactive
+    // primary view - its camera, content scene and orbit manipulator - lives
+    // in a SceneView that borrows the engine and binds its content to the
+    // window pass it registers (SceneView::ensureWindowPass, called in
+    // init()).
+    d->view  = vine::intrusive_ptr<vine::graphics::SceneView>(
+        new vine::graphics::SceneView());
+    d->view->setEngine(d->engine.get());
 }
 
 RenderControl::~RenderControl()
@@ -365,6 +359,11 @@ RenderControl::~RenderControl()
 vine::graphics::RenderEngine* RenderControl::engine() const
 {
     return d->engine.get();
+}
+
+vine::graphics::SceneView* RenderControl::view() const
+{
+    return d->view.get();
 }
 
 void* RenderControl::nativeHandle() const
@@ -409,19 +408,16 @@ bool RenderControl::init()
     // back to creating a separate window.
     wireEvents();
 
-    // Design B: the engine auto-registers no pipeline. RenderControl is the
-    // plain-viewer convenience layer, so it provisions the minimal default
-    // viewer - a window pass drawing the (default) content scene through the
-    // master camera to the backbuffer - only when no registered pass already
-    // presents the master camera to the window. Apps assembling an explicit
-    // pipeline via addPass()/RenderPipelineBuilder that presents the master
-    // view keep full control; apps that only add helper / HUD passes (which
-    // draw through their own cameras) still get the default window pass.
-    if (d->engine->scene() != nullptr && d->engine->masterCamera() != nullptr && !d->engine->hasWindowPass()) {
-        auto window_pass = vine::intrusive_ptr<vine::graphics::RenderPass>(new vine::graphics::RenderPass());
-        window_pass->setCamera(d->engine->masterCamera());
-        d->engine->addPass(window_pass, 0);
-    }
+    // Design B: the engine auto-registers no pipeline and is camera-agnostic.
+    // The SceneView owns the primary view (camera + content scene +
+    // manipulator); it registers the minimal default viewer - an order-0
+    // window pass drawing its content through its camera to the backbuffer -
+    // unless an application pass already presents that camera to the window
+    // (e.g. a deferred-lighting main pass carrying the view's camera). Apps
+    // assembling an explicit pipeline via addPass()/RenderPipelineBuilder keep
+    // full control; apps that only add helper / HUD passes (which draw
+    // through their own cameras) still get the default window pass.
+    d->view->ensureWindowPass();
 
     if (nativeHandle() != nullptr) {
         initializeBackend();
@@ -457,17 +453,9 @@ void RenderControl::wireEvents()
         }
     }
 
-    // Attach a default orbit manipulator bound to the master camera and scene:
-    // left-drag rotates about the picked point (scene centre when nothing is
-    // hit), middle/right-drag pans and the wheel zooms to the cursor anchor.
-    // The engine forwards window input events to the manipulator. Without a
-    // master camera the manipulator would have nothing to drive, so it is
-    // only attached when one exists.
-    if (d->manipulator == nullptr && d->engine->masterCamera() != nullptr) {
-        d->manipulator = new vine::graphics::OrbitCameraManipulator(
-            d->engine->masterCamera(), d->engine->scene());
-        d->engine->setCameraManipulator(d->manipulator);
-    }
+    // A default orbit manipulator (bound to the view's camera and scene) is
+    // provided lazily by the SceneView on first input / fit; the view forwards
+    // window input events to it, so nothing is wired here.
 
     // The host widget is the Control's own QWidget; the surface QWindow is
     // nested inside it. One filter observes both (resize on the host also
@@ -475,12 +463,13 @@ void RenderControl::wireEvents()
     auto* filter = new SurfaceHostFilter(d->surface, impl<QWidget>());
     d->surface_filter = filter;
 
-    // Qt-translated input is pushed to the engine (the camera manipulator), then
-    // a frame is rendered so the view follows the interaction live. The Vulkan
-    // surface is render-on-demand: vsg only draws when renderFrame() runs, so
-    // without a refresh here orbit/pan/zoom would update the camera but never
-    // repaint. Pure hover moves are skipped (no button held => the manipulator
-    // does not change the view); press/release and scroll/key always refresh.
+    // Qt-translated input is pushed to the view (whose manipulator drives the
+    // camera), then a frame is rendered so the view follows the interaction
+    // live. The Vulkan surface is render-on-demand: vsg only draws when
+    // renderFrame() runs, so without a refresh here orbit/pan/zoom would
+    // update the camera but never repaint. Pure hover moves are skipped (no
+    // button held => the manipulator does not change the view); press/release
+    // and scroll/key always refresh.
     filter->on_mouse = [this](const vine::window::MouseEvent& e) {
         // A right press starts a pan drag; a release close to the press (no
         // movement) is a plain right-click and opens the context menu.
@@ -499,7 +488,7 @@ void RenderControl::wireEvents()
                 }
             }
         }
-        d->engine->pushEvent(e);
+        d->view->pushEvent(e);
         if (e.button != vine::window::MouseButton::None) {
             d->mouse_down = e.pressed;
         }
@@ -508,11 +497,11 @@ void RenderControl::wireEvents()
         }
     };
     filter->on_scroll = [this](const vine::window::ScrollEvent& e) {
-        d->engine->pushEvent(e);
+        d->view->pushEvent(e);
         renderFrame();
     };
     filter->on_key = [this](const vine::window::KeyEvent& e) {
-        d->engine->pushEvent(e);
+        d->view->pushEvent(e);
         renderFrame();
     };
 
@@ -579,9 +568,10 @@ void RenderControl::handleSurfaceUpdate()
     }
 
     // Normal resize of the attached surface: rebuild the swapchain at the
-    // final native size, present, then request settle frames so the resized
-    // view is actually displayed.
-    d->engine->pushEvent(vine::window::ResizeEvent{ w, sh });
+    // final native size, refresh the view's camera projection aspect, present,
+    // then request settle frames so the resized view is actually displayed.
+    d->engine->resize(w, sh);
+    d->view->onSurfaceResized(w, sh);
     renderFrame();
     requestSettleFrames();
 }
@@ -641,11 +631,11 @@ void RenderControl::initializeBackend()
     if (d->init_ok) {
         d->initialized = true;
         d->initialized_handle = h;
-        // The camera projection aspect defaults to 1.0 (no manipulator is
-        // attached); deliver the current surface size so the first frame is
-        // rendered undistorted and the backend viewport tracks the surface.
-        d->engine->pushEvent(
-            vine::window::ResizeEvent{ surfaceWidth(), surfaceHeight() });
+        // Deliver the current surface size so the view's camera projection
+        // aspect is set on the first frame (undistorted) and the backend
+        // viewport tracks the surface.
+        d->engine->resize(surfaceWidth(), surfaceHeight());
+        d->view->onSurfaceResized(surfaceWidth(), surfaceHeight());
         renderFrame();
         // The first attach can land mid-layout (e.g. the deferred init from
         // app_shell runs at 100ms, before the dock layout has settled), so the
@@ -661,9 +651,9 @@ void RenderControl::initializeBackend()
 
 void RenderControl::fitToScreen()
 {
-    if (d->manipulator != nullptr) {
-        if (!d->manipulator->fitToScreen()) {
-            d->manipulator->home();
+    if (d->view != nullptr) {
+        if (!d->view->fitToScreen()) {
+            d->view->home();
         }
     }
     renderFrame();
@@ -671,7 +661,7 @@ void RenderControl::fitToScreen()
 
 void RenderControl::showContextMenu()
 {
-    if (d->manipulator == nullptr) {
+    if (d->view == nullptr) {
         return;
     }
     QMenu menu(impl<QWidget>());

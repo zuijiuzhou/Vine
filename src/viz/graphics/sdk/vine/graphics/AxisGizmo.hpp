@@ -21,14 +21,16 @@ class Scene;
  * source camera's orientation (MirrorMode::Orientation) on every execute()
  * while keeping its own framing distance. Register it like any other pass,
  * with an order above the main view's (RenderEngine::addPass); the engine
- * draws it on top of lower-order passes and notifies it of surface resizes
- * (RenderPass::onSurfaceResized) so it can re-anchor its sub-viewport.
+ * draws it on top of lower-order passes. Surface layout is creator-managed:
+ * the code that owns the gizmo reports the surface size on every resize by
+ * calling onSurfaceResized(w, h) (e.g. via a SceneView layout step).
  *
  * Example:
  * \code
  * auto gizmo = intrusive_ptr<AxisGizmo>(new AxisGizmo());
- * gizmo->setSourceCamera(engine->masterCamera());
- * engine->addPass(gizmo, 10);   // draws on top of the order-0 window pass
+ * gizmo->setSourceCamera(view->camera());   // the view's primary camera
+ * view->addSurfaceLayout([gizmo](int w, int h) { gizmo->onSurfaceResized(w, h); });
+ * engine->addPass(gizmo, 10);               // draws on top of the order-0 window pass
  * \endcode
  */
 class V_GRAPHICS_API AxisGizmo : public RenderPass {
@@ -37,10 +39,9 @@ class V_GRAPHICS_API AxisGizmo : public RenderPass {
   public:
     /** @brief Constructs a gizmo with three unit axis sticks.
      *
-     * The pass never clears (it draws over the previous content), and its
-     * sub-viewport is (re)positioned to the bottom-left corner by
-     * onSurfaceResized(); until the first resize it defaults to a 96px box at
-     * the origin corner.
+     * The pass never clears (it draws over the previous content). Its
+     * sub-viewport defaults to a 96px box at the origin corner until its
+     * owner reports a surface size (see onSurfaceResized).
      */
     AxisGizmo();
 
@@ -78,8 +79,9 @@ class V_GRAPHICS_API AxisGizmo : public RenderPass {
 
     /** @brief Sets the camera the gizmo mirrors (non-owning).
      *
-     * Usually the engine's master camera. The gizmo follows @p camera's
-     * orientation each time it executes; pass nullptr to stop following.
+     * Usually the camera of the SceneView presenting the main content (e.g.
+     * view->camera()). The gizmo follows @p camera's orientation each time it
+     * executes; pass nullptr to stop following.
      *
      * @param camera Source camera, or null to disable mirroring.
      */
@@ -91,8 +93,18 @@ class V_GRAPHICS_API AxisGizmo : public RenderPass {
     /** @brief Gets the content scene drawn by the gizmo. */
     raw_ptr<Scene> content() const;
 
-    /** @brief Positions the gizmo viewport in the bottom-left corner. */
-    void onSurfaceResized(int width, int height) override;
+    /** @brief Re-anchors the gizmo viewport to the bottom-left corner for a
+     * new surface size.
+     *
+     * Called by the gizmo's owner whenever the surface changes (e.g. from a
+     * SceneView layout step, see SceneView::addSurfaceLayout). The size is
+     * in the same space as the other layout sizes (device pixels, top-left
+     * origin); the configured devicePixelRatio is applied when converting.
+     *
+     * @param width  Surface width in pixels.
+     * @param height Surface height in pixels.
+     */
+    void onSurfaceResized(int width, int height);
 
     /** @brief Draws the gizmo.
      *

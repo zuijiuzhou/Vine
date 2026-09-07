@@ -85,6 +85,11 @@ if(VINE_USE_FETCHCONTENT)
         GIT_TAG        v1.1.16
     )
     set(VSG_SUPPORTS_ShaderCompiler ON CACHE BOOL "" FORCE)
+    # vsg caps simultaneous vsg::Device instances at VSG_MAX_DEVICES (default
+    # 1). Qt surface recreation makes the backend tear down and recreate its
+    # vsg::Window/Device, so raise the cap to let a fresh device coexist with
+    # a dying one instead of tripping vsg's Device.cpp exception.
+    set(VSG_MAX_DEVICES 4 CACHE STRING "" FORCE)
     FetchContent_MakeAvailable(vsg)
     v_group_targets_folder(${vsg_SOURCE_DIR} third_party)
 

@@ -12,10 +12,15 @@ class Scene;
  * @brief Orbit-style camera manipulator with pivot picking and projection
  * agnostic controls.
  *
- * Implements the classic orbit / pan / zoom camera controls with a pickable
- * anchor point:
+ * Implements a pivot-anchored orbit / pan / zoom camera with a pickable anchor
+ * point:
  *
- * - Left-drag orbits (yaw / pitch) around the anchor.
+ * - Left-drag rotates the whole camera rig rigidly about the press anchor (the
+ *   grabbed model point, or the scene centre on empty space), so that point
+ *   stays pinned under the cursor while the model turns about it. The camera
+ *   up is carried rigidly by the rotation, which gives the view the roll
+ *   freedom it needs to sweep over the top to a true top-down / bottom-up view
+ *   and beyond, without gimbal shake or a sudden 180 deg flip.
  * - Middle/right-drag pans.
  * - The wheel dollies along the view: it dives along the ray to the anchor
  *   (the point under the cursor stays pinned to it) and, once the camera
@@ -23,10 +28,16 @@ class Scene;
  *   scene instead of stopping at a fixed point.
  *
  * On every button press / scroll the manipulator ray-picks the scene under the
- * cursor. When a model is hit, the hit point becomes the anchor (rotation
- * centre); when nothing is hit the anchor falls back to the scene bounding-box
- * centre, or to the world origin when there is no scene. In FirstPerson mode
- * WASD / arrow keys drive movement instead.
+ * cursor. When a model is hit, the hit point becomes the anchor (the rotate
+ * pivot and the pan / zoom depth reference); when nothing is hit the anchor
+ * falls back to the scene bounding-box centre, or to the world origin when
+ * there is no scene. In FirstPerson mode WASD / arrow keys drive movement
+ * instead.
+ *
+ * A rotate press never applies the pivot (no jump). Away from a drag, pan /
+ * zoom and the keyboard orbit are expressed as a level spherical orbit
+ * (yaw / pitch / roll about the camera target) so programmatic motion stays
+ * stable and level.
  *
  * Both projection types are supported through a single distance parameter: the
  * camera keeps an eye-to-centre distance, which drives the perspective dolly
@@ -112,21 +123,6 @@ class V_GRAPHICS_API OrbitCameraManipulator : public CameraManipulator {
      */
     void moveUp(double distance);
 
-    /** @brief Rotates the camera yaw/pitch in first-person mode.
-     *
-     * @param deltaYaw   Yaw change in radians.
-     * @param deltaPitch Pitch change in radians.
-     */
-    void rotate(double deltaYaw, double deltaPitch);
-
-    /** @brief Rolls the view around the forward axis.
-     *
-     * Only has an effect while fixedHead is disabled.
-     *
-     * @param deltaHead Roll angle change in radians.
-     */
-    void rotateHead(double deltaHead);
-
     /** @brief Frames the whole scene into the view.
      *
      * Positions the orbit centre at the scene bounding-box centre and picks an
@@ -135,25 +131,12 @@ class V_GRAPHICS_API OrbitCameraManipulator : public CameraManipulator {
      *
      * @return true when a scene with valid bounds was fitted.
      */
-    bool fitToScreen();
+    bool fitToScreen() override;
 
     /** @brief Restores the view captured when the manipulator was constructed. */
-    void home();
+    void home() override;
 
     // ---- Properties ----
-
-    /** @brief Sets whether rolling about the forward axis is locked.
-     *
-     * When true (the default) the camera up vector is always the reference up,
-     * so orbiting never rolls the view. When false, rotateHead() allows a roll
-     * about the view axis.
-     *
-     * @param fixed True to lock the head (no roll).
-     */
-    void setFixedHead(bool fixed);
-
-    /** @brief Returns whether rolling about the forward axis is locked. */
-    bool isFixedHead() const;
 
     /** @brief Sets whether wheel zoom keeps the cursor anchor fixed on screen.
      *
@@ -247,10 +230,19 @@ class V_GRAPHICS_API OrbitCameraManipulator : public CameraManipulator {
     /** @brief Re-aims the view at a point without moving the eye. */
     void aimCenterAt(const Vec3d& point);
 
-    /** @brief Rotates the camera rig about the active pivot for a drag delta. */
+    /** @brief Rotates the whole camera rig about the press anchor.
+     *
+     * Yaws about the world-up axis through the pivot, then pitches about the
+     * resulting screen-right axis, carrying the camera up rigidly so the view
+     * may roll and sweep over the top (true 90 deg elevation and beyond). The
+     * rigid rotation keeps the pivot's screen position exactly fixed.
+     *
+     * @param screenDx Horizontal screen delta in pixels.
+     * @param screenDy Vertical screen delta in pixels.
+     */
     void pivotRotate(double screenDx, double screenDy);
 
-    /** @brief Derives centre/distance/yaw/pitch from the camera state. */
+    /** @brief Derives centre/distance/yaw/pitch/roll from the camera state. */
     void syncFromCamera();
 
     /** @brief Keeps the camera eye outside the scene bounds (orthographic). */
@@ -262,9 +254,7 @@ class V_GRAPHICS_API OrbitCameraManipulator : public CameraManipulator {
     /** @brief Updates the orthographic projection from distance and aspect. */
     void updateOrthoProjection();
 
-    /** @brief Reference (non-rolled) up direction. */
-    Vec3d referenceUp() const;
-
+  private:
     // ---- State ----
 
     raw_ptr<Scene> scene_ = nullptr;
@@ -273,23 +263,20 @@ class V_GRAPHICS_API OrbitCameraManipulator : public CameraManipulator {
     double distance_ = 10.0;
     double yaw_ = 0.0;
     double pitch_ = 0.0;
-    double head_ = 0.0;
+    double roll_ = 0.0;  // signed camera roll about its forward axis (-pi, pi].
 
     // Snapshot for home().
     Vec3d home_center_{ 0.0, 0.0, 0.0 };
     double home_distance_ = 10.0;
     double home_yaw_ = 0.0;
     double home_pitch_ = 0.0;
-    double home_head_ = 0.0;
+    double home_roll_ = 0.0;
 
-    Vec3d reference_up_{ 0.0, 1.0, 0.0 };
-
-    bool fixed_head_ = true;
     bool zoom_to_cursor_ = true;
     double min_distance_ = 0.0;  // 0 => derive from the near plane.
 
-    // Current interaction anchor (pick point, scene centre or origin). It also
-    // acts as the rotate pivot during a left-drag (see pivotRotate()).
+    // Current interaction anchor (pick point, scene centre or origin): the
+    // rotate pivot and the pan/zoom depth reference / zoom-to-cursor anchor.
     Vec3d anchor_{ 0.0, 0.0, 0.0 };
     bool anchor_on_ray_ = false;  // anchor was a geometry hit on the cursor ray.
 

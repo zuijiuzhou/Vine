@@ -211,6 +211,10 @@ using MaterialPtr = intrusive_ptr<Material>;
 
 场景图容器，管理所有根级 `Node` 的树形关系。
 
+> ⚠ **已过时（2026-09-07）**：以下代码为早期**多 root** 版本（`addNode/removeNode/nodes`）。
+> `Scene` 已收敛为**单根**——`setRoot(intrusive_ptr<Node>)/root()`，内容经根 `Group` 组合；
+> 以 `graphics-scene-graph.md` 顶部落地记录为准。
+
 ```cpp
 class V_GRAPHICS_API Scene : public Object, public RefCounted<Scene> {
     V_OBJECT_META_DECL;
@@ -882,7 +886,7 @@ geom->setMaterial(material);
 node->setLocalTransform(transform);
 node->addDrawable(geom);
 
-// 添加到场景
+// 添加到场景（早期多 root 旧例；当前 Scene 为单根：先 setRoot(根 Group) 再 root->addChild）
 scene->addNode(node);
 
 // 创建相机

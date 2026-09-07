@@ -23,6 +23,7 @@
 #include <vine/graphics/RenderPipelineBuilder.hpp>
 #include <vine/graphics/RayIntersection.hpp>
 #include <vine/graphics/Scene.hpp>
+#include <vine/graphics/SceneView.hpp>
 #include <vine/geometry/TriangleMesh.hpp>
 #include <vine/Colorf.hpp>
 #include <vine/math/Transform3.hpp>
@@ -81,34 +82,59 @@ intrusive_ptr<MatrixTransform> makeTriangleNode(const Vec3d& position, intrusive
     return node;
 }
 
+/**
+ * @brief Sets an identity Group as the scene's single root.
+ *
+ * A scene renders exactly one root subtree; tests that need several
+ * world-space top-level objects compose them as children of this root.
+ *
+ * @param scene Scene receiving the root.
+ * @return The root Group (tests attach content to it).
+ */
+intrusive_ptr<Group> setIdentityRoot(Scene& scene)
+{
+    auto root = intrusive_ptr<Group>(new Group());
+    scene.setRoot(root);
+    return root;
+}
+
 }  // namespace
 
 // ============ Scene ============
 
-TEST(SceneTest, AddRemoveFind)
+TEST(SceneTest, RootSetClearAndFind)
 {
     Scene scene;
     scene.setName(u8"test-scene");
     EXPECT_EQ(scene.name(), u8"test-scene");
+    EXPECT_EQ(scene.root(), nullptr);
 
+    auto root = intrusive_ptr<Group>(new Group());
     auto node = intrusive_ptr<Node>(new Node());
     node->setName(u8"node1");
-    scene.addNode(node);
+    root->addChild(node);
+    scene.setRoot(root);
 
-    EXPECT_EQ(scene.nodes().size(), 1u);
+    EXPECT_EQ(scene.root().get(), root.get());
     auto found = scene.findNode(u8"node1");
     EXPECT_EQ(found.get(), node.get());
     EXPECT_EQ(scene.findNode(u8"nope"), nullptr);
 
-    scene.removeNode(node.get());
-    EXPECT_EQ(scene.nodes().size(), 0u);
+    scene.clear();
+    EXPECT_EQ(scene.root(), nullptr);
+    EXPECT_EQ(scene.findNode(u8"node1"), nullptr);
 }
 
-TEST(SceneTest, NullAddIsIgnored)
+TEST(SceneTest, RootlessSceneIsEmpty)
 {
     Scene scene;
-    scene.addNode(nullptr);
-    EXPECT_EQ(scene.nodes().size(), 0u);
+    EXPECT_EQ(scene.root(), nullptr);
+    EXPECT_EQ(scene.findNode(u8"anything"), nullptr);
+    EXPECT_TRUE(scene.boundingBox().isEmpty());
+
+    // Setting a null root leaves the scene empty.
+    scene.setRoot(nullptr);
+    EXPECT_EQ(scene.root(), nullptr);
 }
 
 TEST(SceneTest, BoundingBoxAggregates)
@@ -119,7 +145,7 @@ TEST(SceneTest, BoundingBoxAggregates)
     auto mesh = makeUnitTriangle();
     geom->setShape(mesh);
     node->addChild(geom);
-    scene.addNode(node);
+    scene.setRoot(node);
 
     Aabbd box = scene.boundingBox();
     EXPECT_TRUE(box.isValid());
@@ -137,7 +163,7 @@ TEST(SceneTest, InvisibleNodeExcludedFromBoundingBox)
     geom->setShape(mesh);
     node->addChild(geom);
     node->setVisible(false);
-    scene.addNode(node);
+    scene.setRoot(node);
 
     Aabbd box = scene.boundingBox();
     EXPECT_TRUE(box.isEmpty());
@@ -162,8 +188,9 @@ TEST(SceneTest, CollectCommandsSortsOpaqueFrontToBack)
     // Nearer triangle (z=-2) and farther triangle (z=-5).
     auto near_node = makeTriangleNode(Vec3d(0, 0, -2), nullptr, u8"near");
     auto far_node = makeTriangleNode(Vec3d(0, 0, -5), nullptr, u8"far");
-    scene.addNode(far_node);
-    scene.addNode(near_node);
+    auto root = setIdentityRoot(scene);
+    root->addChild(far_node);
+    root->addChild(near_node);
 
     Camera cam;
     setupLookAtCamera(cam);
@@ -185,9 +212,10 @@ TEST(SceneTest, CollectCommandsSortsTransparentBackToFrontAfterOpaque)
     auto trans_near = makeTriangleNode(Vec3d(0, 0, -2), nullptr, u8"trans-near");
     trans_far->setOpacity(0.5f);
     trans_near->setOpacity(0.5f);
-    scene.addNode(trans_near);
-    scene.addNode(opaque_far);
-    scene.addNode(trans_far);
+    auto root = setIdentityRoot(scene);
+    root->addChild(trans_near);
+    root->addChild(opaque_far);
+    root->addChild(trans_far);
 
     Camera cam;
     setupLookAtCamera(cam);
@@ -210,8 +238,9 @@ TEST(SceneTest, CollectCommandsCullsOutOfView)
     // A node far outside the frustum (behind the camera) must be culled.
     auto visible = makeTriangleNode(Vec3d(0, 0, -3), nullptr, u8"visible");
     auto behind = makeTriangleNode(Vec3d(0, 0, 100), nullptr, u8"behind");
-    scene.addNode(behind);
-    scene.addNode(visible);
+    auto root = setIdentityRoot(scene);
+    root->addChild(behind);
+    root->addChild(visible);
 
     Camera cam;
     setupLookAtCamera(cam);
@@ -227,8 +256,9 @@ TEST(SceneTest, CollectCommandsCullsOffToTheSide)
     // Far off to the side, outside the horizontal FOV.
     auto visible = makeTriangleNode(Vec3d(0, 0, -3), nullptr, u8"visible");
     auto side = makeTriangleNode(Vec3d(50, 0, -3), nullptr, u8"side");
-    scene.addNode(side);
-    scene.addNode(visible);
+    auto root = setIdentityRoot(scene);
+    root->addChild(side);
+    root->addChild(visible);
 
     Camera cam;
     setupLookAtCamera(cam);
@@ -242,7 +272,7 @@ TEST(SceneTest, CollectCommandsNullCameraYieldsEmpty)
 {
     Scene scene;
     auto node = makeTriangleNode(Vec3d(0, 0, -3), nullptr);
-    scene.addNode(node);
+    scene.setRoot(node);
 
     auto commands = scene.collectRenderCommands(nullptr);
     EXPECT_TRUE(commands.empty());
@@ -251,7 +281,7 @@ TEST(SceneTest, CollectCommandsNullCameraYieldsEmpty)
 TEST(SceneTest, CollectCommandsHidesWholeScene)
 {
     Scene scene;
-    scene.addNode(makeTriangleNode(Vec3d(0, 0, -3), nullptr, u8"tri"));
+    scene.setRoot(makeTriangleNode(Vec3d(0, 0, -3), nullptr, u8"tri"));
     scene.setVisible(false);
 
     Camera cam;
@@ -266,8 +296,9 @@ TEST(SceneTest, CollectCommandsHidesNode)
     auto hidden = makeTriangleNode(Vec3d(0, 0, -3), nullptr, u8"hidden");
     auto shown = makeTriangleNode(Vec3d(0, 0, -5), nullptr, u8"shown");
     hidden->setVisible(false);
-    scene.addNode(hidden);
-    scene.addNode(shown);
+    auto root = setIdentityRoot(scene);
+    root->addChild(hidden);
+    root->addChild(shown);
 
     Camera cam;
     setupLookAtCamera(cam);
@@ -290,7 +321,7 @@ TEST(SceneTest, CollectCommandsHidesDrawable)
     node->addChild(g1);
     node->addChild(g2);
     node->setMatrix(vine::math::translate(Vec3d(0, 0, -3)));
-    scene.addNode(node);
+    scene.setRoot(node);
 
     Camera cam;
     setupLookAtCamera(cam);
@@ -303,7 +334,7 @@ TEST(SceneTest, CollectCommandsEffectiveOpacity)
 {
     Scene scene;
     auto node = makeTriangleNode(Vec3d(0, 0, -3), nullptr, u8"tri");
-    scene.addNode(node);
+    scene.setRoot(node);
     scene.setOpacity(0.5f);
     node->setOpacity(0.5f);
     dynamic_cast<Geometry*>(node->children().front().get())->setOpacity(0.5f);
@@ -324,7 +355,7 @@ TEST(SceneTest, CollectCommandsOpacityLeafAndNode)
     auto node = makeTriangleNode(Vec3d(0, 0, -3), nullptr, u8"tri");
     node->setOpacity(0.5f);
     dynamic_cast<Geometry*>(node->children().front().get())->setOpacity(0.5f);
-    scene.addNode(node);
+    scene.setRoot(node);
 
     Camera cam;
     setupLookAtCamera(cam);
@@ -342,7 +373,7 @@ TEST(SceneTest, CollectCommandsOpacityMultipliesAlongHierarchy)
     parent->addChild(child);
     parent->setOpacity(0.5f);
     child->setOpacity(0.5f);
-    scene.addNode(parent);
+    scene.setRoot(parent);
 
     Camera cam;
     setupLookAtCamera(cam);
@@ -429,7 +460,7 @@ TEST(CameraManipulatorTest, ZoomChangesRadius)
 TEST(CameraManipulatorTest, PressOnGeometryKeepsCentre)
 {
     Scene scene;
-    scene.addNode(makeTriangleNode(Vec3d(0, 0, 0), nullptr, u8"tri"));
+    scene.setRoot(makeTriangleNode(Vec3d(0, 0, 0), nullptr, u8"tri"));
 
     auto cam = intrusive_ptr<Camera>(new Camera());
     // Aim at a point BEHIND the triangle plane, so the centre-pixel ray hits
@@ -467,7 +498,7 @@ TEST(CameraManipulatorTest, PressOnGeometryKeepsCentre)
 TEST(CameraManipulatorTest, PressOnEmptyKeepsCentre)
 {
     Scene scene;
-    scene.addNode(makeTriangleNode(Vec3d(2, 0, -3), nullptr, u8"tri"));
+    scene.setRoot(makeTriangleNode(Vec3d(2, 0, -3), nullptr, u8"tri"));
 
     auto cam = intrusive_ptr<Camera>(new Camera());
     // Look at the origin; the triangle sits off to the right, so the centre
@@ -498,10 +529,13 @@ TEST(CameraManipulatorTest, PressOnEmptyKeepsCentre)
     EXPECT_NEAR(cam->eye().z, eye.z, 1e-6);
 }
 
-TEST(CameraManipulatorTest, RotateOnEmptySpaceKeepsModelCentrePinned)
+TEST(CameraManipulatorTest, RotateDragPivotsAboutAnchorPinnedUnderCursor)
 {
     Scene scene;
-    scene.addNode(makeTriangleNode(Vec3d(2, 0, -3), nullptr, u8"tri"));
+    scene.setRoot(makeTriangleNode(Vec3d(2, 0, -3), nullptr, u8"tri"));
+    const vine::math::Point3d box_c = scene.boundingBox().center();
+    // The rotate pivot for a press on empty space is the scene centre.
+    const Vec3d anchor(box_c.x, box_c.y, box_c.z);
 
     auto cam = intrusive_ptr<Camera>(new Camera());
     // Look at the origin; the triangle sits off to the right, so the centre
@@ -515,9 +549,6 @@ TEST(CameraManipulatorTest, RotateOnEmptySpaceKeepsModelCentrePinned)
 
     Vec3d hit;
     EXPECT_FALSE(manip.pickAt(400.0, 300.0, hit));
-
-    // Scene (model) centre: the rotate pivot used for an empty-space press.
-    const Vec3d centre(2.5, 0.5, -3.0);
 
     // Project a world point to viewport pixels using the camera.
     const auto project = [&](const Vec3d& p) {
@@ -544,8 +575,8 @@ TEST(CameraManipulatorTest, RotateOnEmptySpaceKeepsModelCentrePinned)
     press.pressed = true;
     manip.onMousePress(press);
 
-    const auto before = project(centre);
-    const double dist0 = (cam->eye() - centre).length();
+    const auto before = project(anchor);
+    const double dist0 = (cam->eye() - cam->target()).length();
 
     // A long, same-direction rotate drag on the empty area.
     const std::pair<double, double> steps[] = {
@@ -560,20 +591,81 @@ TEST(CameraManipulatorTest, RotateOnEmptySpaceKeepsModelCentrePinned)
         manip.onMouseMove(move);
     }
 
-    // The model centre must stay pinned to its original screen pixel, so the
-    // model turns in place instead of swinging out of view.
-    const auto after = project(centre);
+    // The rigid pivot rotation keeps the anchor (scene centre) pinned at its
+    // original screen position and the eye-to-target radius constant, so the
+    // scene turns rigidly about the grabbed point - no drift, no size change.
+    const auto after = project(anchor);
     EXPECT_NEAR(after.first, before.first, 2.0);
     EXPECT_NEAR(after.second, before.second, 2.0);
-    // The eye-to-model distance must not drift, so the model neither shrinks
-    // nor enlarges no matter how long the drag continues.
-    EXPECT_NEAR((cam->eye() - centre).length(), dist0, 1e-6);
+    EXPECT_NEAR((cam->eye() - cam->target()).length(), dist0, 1e-6);
+}
+
+TEST(CameraManipulatorTest, PivotDragReachesTopAndRollsOverWithoutFlip)
+{
+    auto cam = intrusive_ptr<Camera>(new Camera());
+    // Start looking at the origin from above at a ~63 deg elevation; no scene
+    // is bound, so the anchor (and pivot) is the origin on the view axis.
+    cam->setViewMatrixAsLookAt(Vec3d(0.0, 3.0, 1.0), Vec3d(0.0, 0.0, 0.0), Vec3d(0, 1, 0));
+    cam->setProjectionMatrixAsPerspective(60.0, 1.0, 0.1, 1000.0);
+
+    OrbitCameraManipulator manip(cam.get());
+    manip.onResize(vine::window::ResizeEvent{ 800, 600 });
+
+    vine::window::MouseEvent press;
+    press.button = vine::window::MouseButton::Left;
+    press.x = 400.0;
+    press.y = 300.0;
+    press.pressed = true;
+    manip.onMousePress(press);
+
+    const Vec3d world_up(0.0, 1.0, 0.0);
+
+    vine::window::MouseEvent move;
+    move.pressed = true;
+    move.x = 400.0;
+
+    // A long downward drag sweeps over the top. The rigid pivot drag carries
+    // the up with it, so the view reaches the true top (fwd.y = -1) and is
+    // free to keep going past the pole onto the far side; throughout, the up
+    // must stay continuous (never a sudden 180 deg flip).
+    double min_fwd_up = 1.0;
+    Vec3d prev_up = cam->up();
+    for (int i = 0; i < 300; ++i) {
+        move.y = 300.0 + (i + 1);
+        manip.onMouseMove(move);
+        const Vec3d f = (cam->target() - cam->eye()).normalized();
+        if (f.dot(world_up) < min_fwd_up) {
+            min_fwd_up = f.dot(world_up);
+        }
+        const Vec3d u = cam->up();
+        EXPECT_GT(u.dot(prev_up), -0.5);  // up never flips 180 deg
+        prev_up = u;
+    }
+
+    // A true top-down view (looking straight down at the anchor) was reached.
+    EXPECT_LE(min_fwd_up, -0.9999);
+    // ... and the drag kept going past the pole to the far side: the defining
+    // freedom of the roll-capable pivot (a level turntable would hold at the
+    // pole instead).
+    const Vec3d fwd_end = (cam->target() - cam->eye()).normalized();
+    EXPECT_GT(fwd_end.dot(world_up), -0.5);
+
+    // Reversing the drag rolls back over the pole towards the horizon.
+    for (int i = 0; i < 400; ++i) {
+        move.y -= 1.0;
+        manip.onMouseMove(move);
+        const Vec3d u = cam->up();
+        EXPECT_GT(u.dot(prev_up), -0.5);
+        prev_up = u;
+    }
+    const Vec3d fwd = (cam->target() - cam->eye()).normalized();
+    EXPECT_GT(fwd.dot(world_up), -0.5);  // no longer looking straight down
 }
 
 TEST(CameraManipulatorTest, SetCenterFromScreenRecentersOnPick)
 {
     Scene scene;
-    scene.addNode(makeTriangleNode(Vec3d(0, 0, 0), nullptr, u8"tri"));
+    scene.setRoot(makeTriangleNode(Vec3d(0, 0, 0), nullptr, u8"tri"));
 
     auto cam = intrusive_ptr<Camera>(new Camera());
     // Camera target is behind the triangle; explicit re-centring should move
@@ -609,7 +701,7 @@ TEST(CameraManipulatorTest, ZoomClampsAtMinimumDistance)
 TEST(CameraManipulatorTest, FitToScreenFramesScene)
 {
     Scene scene;
-    scene.addNode(makeTriangleNode(Vec3d(0, 0, -3), nullptr, u8"tri"));
+    scene.setRoot(makeTriangleNode(Vec3d(0, 0, -3), nullptr, u8"tri"));
     const Aabbd box = scene.boundingBox();
 
     auto cam = intrusive_ptr<Camera>(new Camera());
@@ -703,7 +795,7 @@ TEST(RayIntersectionTest, SceneQuery)
     geom->setName(u8"tri");
     geom->setShape(mesh);
     node->addChild(geom);
-    scene->addNode(node);
+    scene->setRoot(node);
 
     Ray ray(Vec3d(0.25, 0.25, 1.0), Vec3d(0, 0, -1));
     RayIntersectionResult result = RayIntersection::intersectScene(ray, scene.get());
@@ -728,7 +820,7 @@ TEST(RayIntersectionTest, AllHitsCollectsEveryTriangleSortedByDepth)
                       vine::math::Vec3f(0.0f, 1.0f, -2.0f));
     geom->setShape(mesh);
     node->addChild(geom);
-    scene->addNode(node);
+    scene->setRoot(node);
 
     Ray ray(Vec3d(0.25, 0.25, 1.0), Vec3d(0, 0, -1));
 
@@ -970,7 +1062,7 @@ TEST(SceneTest, CollectCommandsBakesNestedWorldMatrix)
     root->setMatrix(vine::math::translate(Vec3d(0, 0, -5)));
     auto holder = makeTriangleNode(Vec3d(0, 0, 0), nullptr, u8"tri");
     root->addChild(holder);
-    scene.addNode(root);
+    scene.setRoot(root);
 
     Camera cam;
     setupLookAtCamera(cam);
@@ -997,7 +1089,7 @@ TEST(GeometryTest, CountsStayDataStatsUnderPointsTopology)
     state->setTopology(Topology::Points);
     auto holder = makeTriangleNode(Vec3d(0, 0, -3), nullptr, u8"tri");
     state->addChild(holder);
-    scene.addNode(state);
+    scene.setRoot(state);
 
     Camera cam;
     setupLookAtCamera(cam);
@@ -1352,33 +1444,33 @@ TEST(RenderEngineTest, ClearPassesReleasesEveryRegisteredPass)
     EXPECT_EQ(backend->last_released_target, target.get());
 }
 
-TEST(RenderEngineTest, HasWindowPassReflectsMasterCameraPresentation)
+TEST(RenderEngineTest, HasWindowPassReflectsCameraPresentation)
 {
-    // hasWindowPass() tells a convenience layer whether the master camera is
-    // already presented to the window, so it only auto-provisions a window
+    // hasWindowPass(camera) tells a view whether its camera is already
+    // presented to the window, so a view only registers its default window
     // pass when none exists (helper / HUD passes draw through their own
     // cameras and must not suppress it).
-    auto engine = intrusive_ptr<RenderEngine>(new RenderEngine());
-    auto master = intrusive_ptr<Camera>(new Camera());
-    engine->setMasterCamera(master);
-    EXPECT_FALSE(engine->hasWindowPass());
+    auto engine  = intrusive_ptr<RenderEngine>(new RenderEngine());
+    auto view_cam = intrusive_ptr<Camera>(new Camera());
+    EXPECT_FALSE(engine->hasWindowPass(view_cam.get()));
 
-    // A HUD pass drawing through its own camera is not a window pass.
+    // A HUD pass drawing through its own camera is not a window pass for the
+    // view camera.
     auto hud_cam = intrusive_ptr<Camera>(new Camera());
     auto hud     = intrusive_ptr<RenderPass>(new RenderPass());
     hud->setCamera(hud_cam.get());
     engine->addPass(hud, 10);
-    EXPECT_FALSE(engine->hasWindowPass());
+    EXPECT_FALSE(engine->hasWindowPass(view_cam.get()));
 
-    // A pass presenting the master camera to the backbuffer is.
+    // A pass presenting the view camera to the backbuffer is.
     auto window = intrusive_ptr<RenderPass>(new RenderPass());
-    window->setCamera(master.get());
+    window->setCamera(view_cam.get());
     engine->addPass(window, 0);
-    EXPECT_TRUE(engine->hasWindowPass());
+    EXPECT_TRUE(engine->hasWindowPass(view_cam.get()));
 
     // A disabled window pass is not counted (it draws nothing).
     window->setEnabled(false);
-    EXPECT_FALSE(engine->hasWindowPass());
+    EXPECT_FALSE(engine->hasWindowPass(view_cam.get()));
 }
 TEST(RenderEngineTest, AddSamePassTwiceKeepsSingleSlot)
 {
@@ -1408,14 +1500,14 @@ TEST(RenderEngineTest, FrameRunsPipeline)
     engine->setBackend(backend);
     engine->initialize();
 
-    // An explicit pipeline: default content scene + master camera + a window
-    // pass (order 0, null render target) drawing the scene to the backbuffer.
-    engine->setScene(intrusive_ptr<Scene>(new Scene()));
+    // An explicit pipeline: a window pass (order 0, null render target)
+    // carrying a camera and an explicit content scene, drawing to the
+    // backbuffer.
+    auto content = intrusive_ptr<Scene>(new Scene());
     auto cam = intrusive_ptr<Camera>(new Camera());
-    engine->setMasterCamera(cam);
     auto pass = intrusive_ptr<RenderPass>(new RenderPass());
     pass->setCamera(cam.get());
-    engine->addPass(pass, 0);
+    engine->addPass(pass, content, 0);
 
     engine->frame();
 
@@ -1439,32 +1531,111 @@ TEST(RenderEngineTest, FrameBeforeInitializeIsNoOp)
 
 TEST(RenderEngineTest, EngineStartsEmpty)
 {
-    // Design B: the engine imposes no pipeline - no scene, no master camera,
-    // no registered pass until the caller configures them explicitly.
+    // Design C: the engine imposes no pipeline - no content scene, no camera,
+    // no registered pass until the caller binds everything explicitly.
     auto backend = intrusive_ptr<MockBackend>(new MockBackend());
     auto engine  = intrusive_ptr<RenderEngine>(new RenderEngine());
     engine->setBackend(backend);
 
-    EXPECT_EQ(engine->scene(), nullptr);
-    EXPECT_EQ(engine->masterCamera(), nullptr);
     EXPECT_EQ(engine->passCount(), 0u);
 }
 
-TEST(RenderEngineTest, SetSceneAndMasterCamera)
+TEST(SceneViewTest, OwnsCameraAndContentScene)
 {
-    auto backend = intrusive_ptr<MockBackend>(new MockBackend());
-    auto engine  = intrusive_ptr<RenderEngine>(new RenderEngine());
-    engine->setBackend(backend);
+    // A SceneView owns a camera and a content scene; the engine it borrows
+    // stays a pure scheduler (no content, no camera).
+    auto engine = intrusive_ptr<RenderEngine>(new RenderEngine());
+    auto view   = intrusive_ptr<SceneView>(new SceneView());
 
-    auto scene  = intrusive_ptr<Scene>(new Scene());
-    auto camera = intrusive_ptr<Camera>(new Camera());
-    camera->setName(u8"cam");
+    ASSERT_NE(view->camera(), nullptr);
+    ASSERT_NE(view->scene().get(), nullptr);
 
-    engine->setScene(scene);
-    engine->setMasterCamera(camera);
+    view->setEngine(engine.get());
+    EXPECT_EQ(view->engine(), engine.get());
+    EXPECT_EQ(engine->passCount(), 0u);  // no pass auto-registered yet
+}
 
-    EXPECT_EQ(engine->scene(), scene.get());
-    EXPECT_EQ(engine->masterCamera(), camera.get());
+TEST(SceneViewTest, SurfaceLayoutStepsRunOnResize)
+{
+    // Creator-managed layout: a registered callback receives the surface size
+    // on every resize and updates whatever that code owns (targets /
+    // viewports). The view only dispatches; it does not decide layout.
+    SceneView view;
+    bool called = false;
+    int  got_w  = 0;
+    int  got_h  = 0;
+    view.addSurfaceLayout([&](int w, int h) {
+        called = true;
+        got_w  = w;
+        got_h  = h;
+    });
+
+    view.onSurfaceResized(1600, 900);
+    EXPECT_TRUE(called);
+    EXPECT_EQ(got_w, 1600);
+    EXPECT_EQ(got_h, 900);
+
+    // A second resize re-runs the step with the new size.
+    view.onSurfaceResized(1280, 720);
+    EXPECT_EQ(got_w, 1280);
+    EXPECT_EQ(got_h, 720);
+
+    // Clearing drops the registered steps.
+    called = false;
+    view.clearSurfaceLayouts();
+    view.onSurfaceResized(640, 480);
+    EXPECT_FALSE(called);
+}
+
+TEST(SceneViewTest, EnsureWindowPassRegistersOrder0WhenCameraNotPresented)
+{
+    auto engine = intrusive_ptr<RenderEngine>(new RenderEngine());
+    auto view   = intrusive_ptr<SceneView>(new SceneView());
+    view->setEngine(engine.get());
+
+    EXPECT_FALSE(engine->hasWindowPass(view->camera()));
+    view->ensureWindowPass();
+    EXPECT_EQ(engine->passCount(), 1u);
+    EXPECT_TRUE(engine->hasWindowPass(view->camera()));
+
+    // Registering again is a no-op while the window pass is present.
+    view->ensureWindowPass();
+    EXPECT_EQ(engine->passCount(), 1u);
+}
+
+TEST(SceneViewTest, EnsureWindowPassSkipsWhenCameraAlreadyPresented)
+{
+    // An application main pass carrying the view's camera (e.g. a deferred
+    // lighting pass to the window) suppresses the default window pass.
+    auto engine = intrusive_ptr<RenderEngine>(new RenderEngine());
+    auto view   = intrusive_ptr<SceneView>(new SceneView());
+    view->setEngine(engine.get());
+
+    auto main = intrusive_ptr<RenderPass>(new RenderPass());
+    main->setCamera(view->camera());
+    engine->addPass(main, 0);
+
+    view->ensureWindowPass();
+    EXPECT_EQ(engine->passCount(), 1u);
+    EXPECT_TRUE(engine->hasWindowPass(view->camera()));
+}
+
+TEST(SceneViewTest, DefaultManipulatorBindsViewCameraAndScene)
+{
+    auto view = intrusive_ptr<SceneView>(new SceneView());
+
+    // The default orbit manipulator is created lazily on first access and is
+    // bound to the view's camera.
+    CameraManipulator* manip = view->manipulator();
+    ASSERT_NE(manip, nullptr);
+    EXPECT_EQ(manip->camera(), view->camera());
+    EXPECT_EQ(view->manipulator(), manip);  // cached
+
+    // A custom manipulator replaces the default.
+    auto cam     = intrusive_ptr<Camera>(new Camera());
+    auto custom  = intrusive_ptr<CameraManipulator>(new OrbitCameraManipulator(cam.get()));
+    view->setManipulator(custom);
+    EXPECT_EQ(view->manipulator(), custom.get());
 }
 
 TEST(RenderEngineTest, ShaderPresetForwardedToBackend)
@@ -1492,9 +1663,9 @@ TEST(RenderEngineTest, RegisteredPassesRunInAscendingOrder)
     engine->setBackend(backend);
     engine->initialize();
 
-    // Passes are explicit: a default content scene plus three registered
-    // scene passes (pre order<0, window pass order 0, post order>0).
-    engine->setScene(intrusive_ptr<Scene>(new Scene()));
+    // Passes are explicit: one content scene bound to three registered scene
+    // passes (pre order<0, window pass order 0, post order>0).
+    auto content = intrusive_ptr<Scene>(new Scene());
     auto window_cam = intrusive_ptr<Camera>(new Camera());
     window_cam->setName(u8"window");
     auto pre_cam = intrusive_ptr<Camera>(new Camera());
@@ -1509,9 +1680,9 @@ TEST(RenderEngineTest, RegisteredPassesRunInAscendingOrder)
     auto post = intrusive_ptr<RenderPass>(new RenderPass());
     post->setCamera(post_cam.get());
 
-    engine->addPass(main, 0);   // window-present pass.
-    engine->addPass(pre, -5);   // shadow-map style pass before the window pass.
-    engine->addPass(post, 5);   // post-processing pass after the window pass.
+    engine->addPass(main, content, 0);   // window-present pass.
+    engine->addPass(pre, content, -5);   // shadow-map style pass before the window pass.
+    engine->addPass(post, content, 5);   // post-processing pass after the window pass.
     EXPECT_EQ(engine->passCount(), 3u);
 
     const int before = backend->render_calls;
@@ -1533,8 +1704,10 @@ TEST(RenderEngineTest, RegisteredPassesRunInAscendingOrder)
     EXPECT_EQ(engine->passCount(), 0u);
 }
 
-TEST(RenderEngineTest, PassContentAssociationManagedByEngine)
+TEST(RenderEngineTest, PassContentBindingManagedByEngine)
 {
+    // Content is bound per pass; the engine has no default content, so an
+    // unbound pass has none and draws nothing.
     auto backend = intrusive_ptr<MockBackend>(new MockBackend());
     auto engine  = intrusive_ptr<RenderEngine>(new RenderEngine());
     engine->setBackend(backend);
@@ -1545,35 +1718,34 @@ TEST(RenderEngineTest, PassContentAssociationManagedByEngine)
     auto cam    = intrusive_ptr<Camera>(new Camera());
     cam->setName(u8"pass-view");
 
-    // Explicit content: pass A draws sceneA.
+    // Explicit content: pass A draws sceneA; pass B has no content.
     auto passA = intrusive_ptr<RenderPass>(new RenderPass());
     passA->setCamera(cam.get());
     engine->addPass(passA, sceneA, 5);
-    // No binding: pass B falls back to the engine scene.
     auto passB = intrusive_ptr<RenderPass>(new RenderPass());
     passB->setCamera(cam.get());
     engine->addPass(passB, -5);
 
     EXPECT_EQ(engine->passCount(), 2u);
     EXPECT_EQ(engine->contentOf(passA.get()), sceneA.get());
-    EXPECT_EQ(engine->contentOf(passB.get()), engine->scene());
-    // Unknown passes have no effective content.
+    EXPECT_EQ(engine->contentOf(passB.get()), nullptr);
+    // Unknown passes have no content.
     EXPECT_EQ(engine->contentOf(nullptr), nullptr);
 
     // Runtime rebind of the registered pass.
     engine->bindPassContent(passA.get(), sceneB);
     EXPECT_EQ(engine->contentOf(passA.get()), sceneB.get());
 
-    // Changing the engine scene updates unbound passes automatically, while
-    // the explicitly bound pass keeps its own content.
+    // Bind the previously content-less pass.
     auto sceneC = intrusive_ptr<Scene>(new Scene());
-    engine->setScene(sceneC);
+    engine->bindPassContent(passB.get(), sceneC);
     EXPECT_EQ(engine->contentOf(passB.get()), sceneC.get());
     EXPECT_EQ(engine->contentOf(passA.get()), sceneB.get());
 
-    // Clearing the binding falls back to the engine scene.
-    engine->bindPassContent(passA.get(), nullptr);
-    EXPECT_EQ(engine->contentOf(passA.get()), sceneC.get());
+    // Clearing a binding leaves the pass content-less (draws nothing).
+    engine->bindPassContent(passB.get(), nullptr);
+    EXPECT_EQ(engine->contentOf(passB.get()), nullptr);
+    EXPECT_EQ(engine->contentOf(passA.get()), sceneB.get());
 }
 
 TEST(RenderPassTest, NamedOutputAndInputSlots)
@@ -1600,6 +1772,59 @@ TEST(RenderPassTest, NamedOutputAndInputSlots)
 
     pass.clearInputNames();
     EXPECT_TRUE(pass.inputNames().empty());
+}
+
+TEST(RenderPassTest, ViewportObjectDefaultsAndRoundTrip)
+{
+    // A pass holds a Viewport object; unset = full surface (default).
+    auto pass = intrusive_ptr<RenderPass>(new RenderPass());
+    EXPECT_FALSE(pass->hasViewport());
+
+    pass->setViewport(Viewport{ 4, 5, 96, 96 });
+    ASSERT_TRUE(pass->hasViewport());
+    const Viewport vp = pass->viewport();
+    EXPECT_EQ(vp.x, 4);
+    EXPECT_EQ(vp.y, 5);
+    EXPECT_EQ(vp.width, 96);
+    EXPECT_EQ(vp.height, 96);
+    EXPECT_TRUE(vp.valid());
+
+    pass->clearViewport();
+    EXPECT_FALSE(pass->hasViewport());
+}
+
+TEST(RenderEngineTest, ResizeDoesNotManagePassLayout)
+{
+    // The engine only rebuilds its own swapchain on a surface resize; it does
+    // not touch target sizes or pass viewports - their creators maintain them
+    // (e.g. via SceneView layout steps).
+    auto backend = intrusive_ptr<MockBackend>(new MockBackend());
+    auto engine  = intrusive_ptr<RenderEngine>(new RenderEngine());
+    engine->setBackend(backend);
+    engine->initialize();
+
+    auto target = intrusive_ptr<RenderTarget>(new RenderTarget());
+    target->attachColor(RenderTarget::ColorFormat::RGBA8);
+    target->setSize(320, 180);
+    auto cam  = intrusive_ptr<Camera>(new Camera());
+    auto pass = intrusive_ptr<RenderPass>(new RenderPass());
+    pass->setCamera(cam.get());
+    pass->setRenderTarget(target);
+    pass->setViewport(10, 20, 100, 50);
+    engine->addPass(pass, 5);
+
+    engine->resize(1600, 900);
+
+    // The pass's viewport and the target size are untouched by the engine.
+    EXPECT_EQ(target->width(), 320);
+    EXPECT_EQ(target->height(), 180);
+    int x = 0, y = 0, w = 0, h = 0;
+    ASSERT_TRUE(pass->hasViewport());
+    pass->getViewport(x, y, w, h);
+    EXPECT_EQ(x, 10);
+    EXPECT_EQ(y, 20);
+    EXPECT_EQ(w, 100);
+    EXPECT_EQ(h, 50);
 }
 
 TEST(RenderEngineTest, NamedOutputRegistryPublishResolve)
@@ -1631,11 +1856,10 @@ TEST(RenderEngineTest, OffscreenPassPublishesThenScreenPassSamples)
     engine->setBackend(backend);
     engine->initialize();
 
-    // An explicit pipeline: default content scene + master camera for the
-    // producer pass (the off-screen pass is unbound, so it renders the
-    // default content scene into its own target).
-    engine->setScene(intrusive_ptr<Scene>(new Scene()));
-    engine->setMasterCamera(intrusive_ptr<Camera>(new Camera()));
+    // An explicit producer pass: it renders into the off-screen target it
+    // publishes as "SceneColor" (its content is null here; publishing only
+    // needs the non-null target).
+    auto cam = intrusive_ptr<Camera>(new Camera());
 
     // Producer: an off-screen pass rendering into a target it publishes as
     // "SceneColor" before the window pass.
@@ -1645,7 +1869,7 @@ TEST(RenderEngineTest, OffscreenPassPublishesThenScreenPassSamples)
     rt->attachDepth(RenderTarget::DepthFormat::D24);
 
     auto off = intrusive_ptr<RenderPass>(new RenderPass());
-    off->setCamera(engine->masterCamera());
+    off->setCamera(cam.get());
     off->setRenderTarget(rt);
     off->setOutputName(u8"SceneColor");
     engine->addPass(off, -2);
@@ -1699,8 +1923,7 @@ TEST(RenderEngineTest, ScreenPassSamplesSelectedMrtAttachment)
     auto engine  = intrusive_ptr<RenderEngine>(new RenderEngine());
     engine->setBackend(backend);
     engine->initialize();
-    engine->setScene(intrusive_ptr<Scene>(new Scene()));
-    engine->setMasterCamera(intrusive_ptr<Camera>(new Camera()));
+    auto cam = intrusive_ptr<Camera>(new Camera());
 
     // Producer: an MRT (multi-attachment) target published as one name.
     auto rt = intrusive_ptr<RenderTarget>(new RenderTarget());
@@ -1711,7 +1934,7 @@ TEST(RenderEngineTest, ScreenPassSamplesSelectedMrtAttachment)
     EXPECT_EQ(rt->colorCount(), 2);
 
     auto producer = intrusive_ptr<RenderPass>(new RenderPass());
-    producer->setCamera(engine->masterCamera());
+    producer->setCamera(cam.get());
     producer->setRenderTarget(rt);
     producer->setOutputName(u8"GBuffer");
     engine->addPass(producer, -2);
@@ -1753,8 +1976,7 @@ TEST(RenderEngineTest, ScreenPassProgramSamplesMrtForDeferredLighting)
     auto engine  = intrusive_ptr<RenderEngine>(new RenderEngine());
     engine->setBackend(backend);
     engine->initialize();
-    engine->setScene(intrusive_ptr<Scene>(new Scene()));
-    engine->setMasterCamera(intrusive_ptr<Camera>(new Camera()));
+    auto cam = intrusive_ptr<Camera>(new Camera());
 
     // Producer: an MRT G-buffer target published as one name.
     auto rt = intrusive_ptr<RenderTarget>(new RenderTarget());
@@ -1765,7 +1987,7 @@ TEST(RenderEngineTest, ScreenPassProgramSamplesMrtForDeferredLighting)
     rt->attachDepth(RenderTarget::DepthFormat::D24);
     EXPECT_EQ(rt->colorCount(), 3);
     auto producer = intrusive_ptr<RenderPass>(new RenderPass());
-    producer->setCamera(engine->masterCamera());
+    producer->setCamera(cam.get());
     producer->setRenderTarget(rt);
     producer->setOutputName(u8"GBuffer");
     engine->addPass(producer, -3);
@@ -1783,7 +2005,7 @@ TEST(RenderEngineTest, ScreenPassProgramSamplesMrtForDeferredLighting)
 
     auto light = intrusive_ptr<ScreenPass>(new ScreenPass());
     light->addInputName(u8"GBuffer");
-    light->setCamera(engine->masterCamera());
+    light->setCamera(cam.get());
     light->setProgram(program);
     EXPECT_EQ(light->program(), program.get());
     engine->addPass(light, 100);
@@ -1796,7 +2018,7 @@ TEST(RenderEngineTest, ScreenPassProgramSamplesMrtForDeferredLighting)
     EXPECT_EQ(backend->program_draws, before + 1);
     EXPECT_EQ(backend->last_program_source, rt.get());
     EXPECT_EQ(backend->last_program, program.get());
-    EXPECT_EQ(backend->last_program_camera, engine->masterCamera());
+    EXPECT_EQ(backend->last_program_camera, cam.get());
 }
 
 // ============ Light ============
@@ -1938,14 +2160,13 @@ TEST(RenderEngineTest, ShadowPassIsJustARegisteredScenePass)
     engine->setBackend(backend);
     engine->initialize();
 
-    engine->setScene(intrusive_ptr<Scene>(new Scene()));
-    engine->scene()->addNode(makeTriangleNode(Vec3d(0.0, 0.0, 0.0), nullptr));
+    auto content = intrusive_ptr<Scene>(new Scene());
+    content->setRoot(makeTriangleNode(Vec3d(0.0, 0.0, 0.0), nullptr));
 
     auto cam = intrusive_ptr<Camera>(new Camera());
-    engine->setMasterCamera(cam);
     auto main = intrusive_ptr<RenderPass>(new RenderPass());
     main->setCamera(cam.get());
-    engine->addPass(main, 0);   // window pass (null target).
+    engine->addPass(main, content, 0);   // window pass (null target).
 
     // Explicit depth-only shadow pass: a light-view camera + depth-only
     // target, running before the window pass (order < 0). No engine magic.
@@ -1960,7 +2181,7 @@ TEST(RenderEngineTest, ShadowPassIsJustARegisteredScenePass)
     shadow->setCamera(light_cam.get());
     shadow->setRenderTarget(depth);
     shadow->setShouldClearDepth(true);
-    engine->addPass(shadow, -5);
+    engine->addPass(shadow, content, -5);
 
     EXPECT_EQ(engine->passCount(), 2u);
 
@@ -1983,13 +2204,14 @@ TEST(RenderPipelineBuilderTest, OffscreenToScreenBuildsExpectedPipeline)
     engine->setBackend(backend);
     engine->initialize();
 
-    // The off-screen recipe falls back to the engine master camera for its
-    // scene pass; give the engine a default content scene so the off-screen
-    // pass (unbound content) has something to render.
-    engine->setScene(intrusive_ptr<Scene>(new Scene()));
-    engine->setMasterCamera(intrusive_ptr<Camera>(new Camera()));
+    // The off-screen recipe needs an explicit view camera and explicit content
+    // for its scene pass.
+    auto content = intrusive_ptr<Scene>(new Scene());
+    auto cam = intrusive_ptr<Camera>(new Camera());
 
     RenderPipelineBuilder builder(engine.get());
+    builder.setCamera(cam.get());
+    builder.setContent(content);
     auto* screen = builder.addOffscreenToScreen(
         u8"SceneColor", 640, 360,
         RenderTarget::ColorFormat::RGBA8,
@@ -2008,6 +2230,159 @@ TEST(RenderPipelineBuilderTest, OffscreenToScreenBuildsExpectedPipeline)
     EXPECT_TRUE(engine->resolve(u8"SceneColor")->hasColor());
 }
 
+TEST(RenderPipelineBuilderTest, ForwardPresetBuildsWindowPass)
+{
+    auto engine  = intrusive_ptr<RenderEngine>(new RenderEngine());
+    auto content = intrusive_ptr<Scene>(new Scene());
+    auto cam     = intrusive_ptr<Camera>(new Camera());
+
+    RenderPipelineBuilder builder(engine.get());
+    builder.setCamera(cam.get());
+    builder.setContent(content);
+    auto pipeline = builder.build(PipelinePreset::Forward);
+
+    ASSERT_NE(pipeline, nullptr);
+    ASSERT_NE(pipeline->windowPass(), nullptr);
+    EXPECT_EQ(engine->passCount(), 1u);
+    // The single order-0 window pass presents the view camera and draws the
+    // bound content, exactly like the SceneView default viewer.
+    EXPECT_TRUE(engine->hasWindowPass(cam.get()));
+    EXPECT_EQ(engine->contentOf(pipeline->windowPass()), content.get());
+    EXPECT_EQ(pipeline->offscreenTarget(), nullptr);
+}
+
+TEST(RenderPipelineBuilderTest, DeferredPresetBuildsGbufferAndLightingPasses)
+{
+    auto engine     = intrusive_ptr<RenderEngine>(new RenderEngine());
+    auto content    = intrusive_ptr<Scene>(new Scene());
+    auto cam        = intrusive_ptr<Camera>(new Camera());
+    auto gbuf_prog  = intrusive_ptr<ShaderProgram>(new ShaderProgram());
+    auto light_prog = intrusive_ptr<ShaderProgram>(new ShaderProgram());
+
+    PipelineOptions opts;
+    opts.offscreen_width   = 640;
+    opts.offscreen_height  = 360;
+    opts.gbuffer_program   = gbuf_prog;
+    opts.lighting_program  = light_prog;
+
+    RenderPipelineBuilder builder(engine.get());
+    builder.setCamera(cam.get());
+    builder.setContent(content);
+    auto pipeline = builder.build(PipelinePreset::Deferred, opts);
+
+    ASSERT_NE(pipeline, nullptr);
+    // G-buffer (order < 0) + fullscreen lighting window pass (order 0).
+    EXPECT_EQ(engine->passCount(), 2u);
+    // The lighting pass presents the view camera, so RenderControl / SceneView
+    // must not add a second forward window pass.
+    EXPECT_TRUE(engine->hasWindowPass(cam.get()));
+
+    RenderPass* window = pipeline->windowPass();
+    ASSERT_NE(window, nullptr);
+    EXPECT_EQ(window->camera(), cam.get());
+    EXPECT_EQ(window->renderTarget(), nullptr);
+
+    RenderTarget* gbuffer = pipeline->offscreenTarget();
+    ASSERT_NE(gbuffer, nullptr);
+    EXPECT_EQ(gbuffer->width(), 640);
+    EXPECT_EQ(gbuffer->height(), 360);
+    EXPECT_TRUE(gbuffer->hasColor());
+    EXPECT_TRUE(gbuffer->hasDepth());
+
+    // Creator-maintained sizing: the handle resizes the G-buffer target.
+    pipeline->resize(1280, 720);
+    EXPECT_EQ(gbuffer->width(), 1280);
+    EXPECT_EQ(gbuffer->height(), 720);
+}
+
+TEST(RenderPipelineBuilderTest, DeferredPresetFallsBackToBuiltinPrograms)
+{
+    auto engine  = intrusive_ptr<RenderEngine>(new RenderEngine());
+    auto content = intrusive_ptr<Scene>(new Scene());
+    auto cam     = intrusive_ptr<Camera>(new Camera());
+
+    // No programs supplied: the builder supplies its built-in temporary
+    // G-buffer geometry + deferred-lighting programs.
+    PipelineOptions opts;
+    opts.offscreen_width  = 640;
+    opts.offscreen_height = 360;
+
+    RenderPipelineBuilder builder(engine.get());
+    builder.setCamera(cam.get());
+    builder.setContent(content);
+    auto pipeline = builder.build(PipelinePreset::Deferred, opts);
+
+    ASSERT_NE(pipeline, nullptr);
+    EXPECT_EQ(engine->passCount(), 2u);
+    EXPECT_TRUE(engine->hasWindowPass(cam.get()));
+    // The lighting window pass received the built-in default fragment program.
+    auto* light = dynamic_cast<ScreenPass*>(pipeline->windowPass());
+    ASSERT_NE(light, nullptr);
+    EXPECT_NE(light->program(), nullptr);
+}
+
+TEST(RenderPipelineBuilderTest, DeferredPresetRefusesWithoutContent)
+{
+    auto engine = intrusive_ptr<RenderEngine>(new RenderEngine());
+    auto cam    = intrusive_ptr<Camera>(new Camera());
+
+    // A Deferred main pass needs a content scene to fill its G-buffer.
+    RenderPipelineBuilder builder(engine.get());
+    builder.setCamera(cam.get());
+    auto pipeline = builder.build(PipelinePreset::Deferred);
+
+    EXPECT_EQ(pipeline, nullptr);
+    EXPECT_EQ(engine->passCount(), 0u);
+}
+
+TEST(RenderPipelineBuilderTest, DefaultGbufferTargetIsCanonicalLayout)
+{
+    auto gbuffer = RenderPipelineBuilder::defaultGbufferTarget(320, 180);
+    ASSERT_NE(gbuffer, nullptr);
+    EXPECT_EQ(gbuffer->width(), 320);
+    EXPECT_EQ(gbuffer->height(), 180);
+    EXPECT_EQ(gbuffer->colorCount(), 4);  // albedo / normal+shininess / spec / pos
+    EXPECT_TRUE(gbuffer->hasDepth());
+
+    // Non-positive sizes fall back to the default resolution.
+    auto fallback = RenderPipelineBuilder::defaultGbufferTarget(0, 0);
+    ASSERT_NE(fallback, nullptr);
+    EXPECT_EQ(fallback->width(), 640);
+    EXPECT_EQ(fallback->height(), 360);
+}
+
+TEST(RenderPipelineBuilderTest, GizmoOverlayConfiguredOnPreset)
+{
+    auto backend = intrusive_ptr<MockBackend>(new MockBackend());
+    auto engine  = intrusive_ptr<RenderEngine>(new RenderEngine());
+    engine->setBackend(backend);
+    engine->initialize();
+
+    auto content = intrusive_ptr<Scene>(new Scene());
+    auto cam     = intrusive_ptr<Camera>(new Camera());
+
+    PipelineOptions opts;
+    opts.gizmo.source_camera = cam.get();
+    opts.gizmo.pixel_ratio   = 2.0;
+    opts.gizmo.box_size      = 128;
+
+    RenderPipelineBuilder builder(engine.get());
+    builder.setCamera(cam.get());
+    builder.setContent(content);
+    auto pipeline = builder.build(PipelinePreset::Forward, opts);
+
+    ASSERT_NE(pipeline, nullptr);
+    ASSERT_NE(pipeline->gizmo(), nullptr);
+    // Window pass + the gizmo HUD pass.
+    EXPECT_EQ(engine->passCount(), 2u);
+    EXPECT_TRUE(engine->hasWindowPass(cam.get()));
+
+    // resize() re-anchors the gizmo even without an off-screen target; a
+    // frame draws both the window and the gizmo without crashing.
+    pipeline->resize(1600, 900);
+    engine->frame();
+}
+
 // ============ HUD passes (top / overlay content) ============
 
 TEST(HudPassTest, EngineDrawsPassesInOrderAndSkipsDisabled)
@@ -2017,14 +2392,13 @@ TEST(HudPassTest, EngineDrawsPassesInOrderAndSkipsDisabled)
     engine->setBackend(backend);
     engine->initialize();
 
-    // A window pass (default content scene + master camera) below the HUD
-    // passes, as a real viewer would register; HUD passes draw on top.
-    engine->setScene(intrusive_ptr<Scene>(new Scene()));
+    // A clearing window pass (explicit content scene) below the HUD passes, as
+    // a real viewer would register; HUD passes draw on top.
+    auto win_content = intrusive_ptr<Scene>(new Scene());
     auto master_cam = intrusive_ptr<Camera>(new Camera());
-    engine->setMasterCamera(master_cam);
     auto window = intrusive_ptr<RenderPass>(new RenderPass());
     window->setCamera(master_cam.get());
-    engine->addPass(window, 0);
+    engine->addPass(window, win_content, 0);
 
     auto cam = intrusive_ptr<Camera>(new Camera());
     cam->setViewMatrixAsLookAt(Vec3d(0, 0, 5), Vec3d(0, 0, 0), Vec3d(0, 1, 0));
@@ -2062,12 +2436,11 @@ TEST(HudPassTest, SubViewportAndClearPolicy)
     engine->initialize();
 
     // A clearing window pass below the HUD pass (as a real viewer registers).
-    engine->setScene(intrusive_ptr<Scene>(new Scene()));
+    auto win_content = intrusive_ptr<Scene>(new Scene());
     auto master_cam = intrusive_ptr<Camera>(new Camera());
-    engine->setMasterCamera(master_cam);
     auto window = intrusive_ptr<RenderPass>(new RenderPass());
     window->setCamera(master_cam.get());
-    engine->addPass(window, 0);
+    engine->addPass(window, win_content, 0);
 
     auto cam = intrusive_ptr<Camera>(new Camera());
     cam->setViewMatrixAsLookAt(Vec3d(0, 0, 5), Vec3d(0, 0, 0), Vec3d(0, 1, 0));
@@ -2134,8 +2507,10 @@ TEST(AxisGizmoTest, BuildsThreeColouredSticks)
 {
     auto gizmo = intrusive_ptr<AxisGizmo>(new AxisGizmo());
     ASSERT_NE(gizmo->content(), nullptr);
-    ASSERT_EQ(gizmo->content()->nodes().size(), 3u);
-    for (const auto& node : gizmo->content()->nodes()) {
+    const auto* content = dynamic_cast<const Group*>(gizmo->content()->root().get());
+    ASSERT_NE(content, nullptr);
+    ASSERT_EQ(content->children().size(), 3u);
+    for (const auto& node : content->children()) {
         const auto* group = dynamic_cast<const Group*>(node.get());
         ASSERT_NE(group, nullptr);
         ASSERT_EQ(group->children().size(), 1u);
@@ -2188,7 +2563,7 @@ TEST(RenderPassTest, ProgramOverrideReplacesEffectiveProgram)
     auto group = intrusive_ptr<Group>(new Group());
     group->addChild(geometry);
     auto scene = intrusive_ptr<Scene>(new Scene());
-    scene->addNode(group);
+    scene->setRoot(group);
 
     auto camera = intrusive_ptr<Camera>(new Camera());
     camera->setViewMatrixAsLookAt(Vec3d(0, 0, 5), Vec3d(0, 0, 0), Vec3d(0, 1, 0));
@@ -2626,7 +3001,7 @@ TEST(SceneTest, CollectCommandsCarriesEffectiveProgram)
 
     auto holder = makeTriangleNode(Vec3d(0, 0, -3), nullptr, u8"geo");
     state->addChild(holder);
-    scene.addNode(state);
+    scene.setRoot(state);
 
     Camera cam;
     setupLookAtCamera(cam);
@@ -2636,7 +3011,7 @@ TEST(SceneTest, CollectCommandsCarriesEffectiveProgram)
 
     // Without any program the command carries the engine default (null).
     Scene plain;
-    plain.addNode(makeTriangleNode(Vec3d(0, 0, -3), nullptr, u8"tri"));
+    plain.setRoot(makeTriangleNode(Vec3d(0, 0, -3), nullptr, u8"tri"));
     auto plain_commands = plain.collectRenderCommands(&cam);
     ASSERT_EQ(plain_commands.size(), 1u);
     EXPECT_EQ(plain_commands[0].program, nullptr);
@@ -2653,7 +3028,7 @@ TEST(SceneTest, CollectCommandsCarriesStateFromAncestorStateNode)
 
     auto holder = makeTriangleNode(Vec3d(0, 0, -2), nullptr, u8"geo");
     root->addChild(holder);
-    scene.addNode(root);
+    scene.setRoot(root);
 
     Camera cam;
     setupLookAtCamera(cam);
@@ -2677,7 +3052,7 @@ TEST(SceneTest, CollectCommandsDeeperStateNodeOverrides)
 
     auto holder = makeTriangleNode(Vec3d(0, 0, -2), nullptr, u8"geo");
     inner->addChild(holder);
-    scene.addNode(outer);
+    scene.setRoot(outer);
 
     Camera cam;
     setupLookAtCamera(cam);
@@ -2691,7 +3066,7 @@ TEST(SceneTest, CollectCommandsDefaultsStateWithoutStateNode)
 {
     Scene scene;
     auto holder = makeTriangleNode(Vec3d(0, 0, -2), nullptr, u8"geo");
-    scene.addNode(holder);
+    scene.setRoot(holder);
 
     Camera cam;
     setupLookAtCamera(cam);

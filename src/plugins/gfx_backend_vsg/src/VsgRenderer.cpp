@@ -659,11 +659,22 @@ void setGroupLights(::vsg::Group* group, const std::vector<const vine::graphics:
 
 } // namespace
 
-struct VsgRenderer::Impl {
+/** @brief Renderer state that outlives any window session.
+ *
+ * These objects are created once with the renderer and stay valid for its
+ * lifetime (MaterialManager contract). Each window session — everything that
+ * references a vsg::Window / vsg::Device — lives in @ref Impl and is replaced
+ * wholesale on shutdown()/initialize(), so a session-scoped resource can never
+ * be forgotten in a manual teardown list.
+ */
+struct VsgRenderer::Persistent {
     CameraBridge                        cameraBridge;
     VsgMaterialManager                  materialManager;
     vine::graphics::ShaderPreset        shader_preset{ vine::graphics::ShaderPreset::StandardPhong };
     void*                               bound_handle = nullptr;
+};
+
+struct VsgRenderer::Impl {
     ::vsg::ref_ptr<::vsg::Window>       window;
     ::vsg::ref_ptr<::vsg::Viewer>       viewer;
     ::vsg::ref_ptr<::vsg::CommandGraph> command_graph;
@@ -816,7 +827,8 @@ struct VsgRenderer::Impl {
 };
 
 VsgRenderer::VsgRenderer()
-  : impl(new Impl())
+  : impl(new Impl()),
+    persistent(new Persistent())
 {
 }
 
@@ -831,7 +843,15 @@ bool VsgRenderer::initialize()
     // RenderTarget* — the same identity the graphics engine uses for the
     // on-screen target. The window entry is created below when its shared
     // swapchain render graph is assigned.
-    // try {
+    // Defensive: tear down any still-live previous session (a caller that
+    // skipped shutdown()) so this re-init starts from a clean session.
+    // shutdown() nulls bound_handle, so restore the just-bound handle.
+    if (impl->window != nullptr) {
+        void* bound = persistent->bound_handle;
+        shutdown();
+        persistent->bound_handle = bound;
+    }
+    try {
     // Window. When a host native window is bound, attach to its surface (e.g.
     // a Qt QWindow) instead of creating a separate window.
     auto traits         = ::vsg::WindowTraits::create();
@@ -843,7 +863,7 @@ bool VsgRenderer::initialize()
     // surface as messages.
     traits->debugLayer = std::getenv("VINE_VSG_DEBUG_LAYER") != nullptr;
 
-    void* host_handle = impl->bound_handle;
+    void* host_handle = persistent->bound_handle;
     if (forceOwnWindow()) {
         // Temporary test path: create vsg's own window, ignoring the Qt-hosted
         // surface handle, to verify rendering independent of Qt compositing.
@@ -883,8 +903,8 @@ bool VsgRenderer::initialize()
     // depth-off set disables it so the slot's content always draws on top of
     // earlier content (HUD). Off-screen targets bake their own per-size sets
     // lazily.
-    impl->depth_on_shader_set  = buildShaderSet(impl->shader_preset, impl->window->extent2D(), true);
-    impl->depth_off_shader_set = buildShaderSet(impl->shader_preset, impl->window->extent2D(), false);
+    impl->depth_on_shader_set  = buildShaderSet(persistent->shader_preset, impl->window->extent2D(), true);
+    impl->depth_off_shader_set = buildShaderSet(persistent->shader_preset, impl->window->extent2D(), false);
 
     // The primary window layer is created lazily on the first window render
     // (the first pass that clears and draws the scene into the backbuffer).
@@ -920,13 +940,13 @@ bool VsgRenderer::initialize()
 
     impl->initialized = true;
     return true;
-    // }
-    // catch (const std::exception& e) {
-    //     std::fprintf(stderr, "[VsgRenderer] initialize exception: %s\n", e.what());
-    // }
-    // catch (...) {
-    //     std::fprintf(stderr, "[VsgRenderer] initialize unknown exception\n");
-    // }
+    }
+    catch (const std::exception& e) {
+        std::fprintf(stderr, "[VsgRenderer] initialize exception: %s\n", e.what());
+    }
+    catch (...) {
+        std::fprintf(stderr, "[VsgRenderer] initialize unknown exception\n");
+    }
     shutdown();
     return false;
 }
@@ -941,50 +961,27 @@ void VsgRenderer::shutdown()
             impl->viewer->removeWindow(impl->window);
         }
         impl->viewer->close();
-        impl->viewer = nullptr;
     }
     if (impl->window != nullptr) {
         // Release the native handle the platform window wraps. When the
-        // reference is dropped below, the Win32_Window destructor would call
+        // reference is dropped, the Win32_Window destructor would call
         // ::DestroyWindow() (and ::UnregisterClass()) on the HOST's window —
         // here a Qt-owned HWND that Qt is itself tearing down. releaseWindow()
         // nulls the internal HWND so the destructor leaves Qt's window alone.
         impl->window->releaseWindow();
-        impl->window = nullptr;
     }
-    // Drop the retained graphs / scenes and the per-geometry / material
-    // caches. Compiled pipelines and descriptor sets hold a reference to the
-    // old vsg::Device; if they survive a surface-recreate re-init, the next
-    // Window::create() allocates a second Device and trips vsg's
-    // VSG_MAX_DEVICES limit (== 1 in this build) with an uncaught exception
-    // (Device.cpp:63). Everything below must be released before a re-init can
-    // create a fresh device.
-    // Release every target's retained content slots (views, per-slot bridge
-    // caches, lights) and PiP slots. Cleaned before a surface-recreate re-init
-    // so no compiled pipeline keeps a reference to the old vsg::Device (see
-    // the VSG_MAX_DEVICES note above).
-    for (auto& target : impl->targets) {
-        for (auto& slot_entry : target.second.content_slots) {
-            slot_entry.second.view        = {};
-            slot_entry.second.root        = {};
-            slot_entry.second.light_group = {};
-            slot_entry.second.vsg_camera  = {};
-            slot_entry.second.bridge.clearCache();
-        }
-        target.second.content_slots.clear();
-        target.second.screen_slots.clear();
-    }
-    // Drop the whole unified output-target table: this also releases every
-    // off-screen target's attachments / render graph and the window entry's
-    // PiP screen slots. Safe here because the viewer and window were already
-    // torn down above, so no compiled pipeline keeps a reference to the old
-    // vsg::Device.
-    impl->targets.clear();
-    impl->depth_on_shader_set  = nullptr;
-    impl->depth_off_shader_set = nullptr;
-    impl->materialManager.clear();
-    impl->bound_handle = nullptr;
-    impl->initialized  = false;
+    // Whole-session teardown: replacing the (session) Impl drops the window,
+    // viewer, command graph, per-target render graphs, content slots and every
+    // compiled pipeline that references the old vsg::Device — in one step, so
+    // a newly retained vsg member cannot be forgotten here. The next
+    // initialize() starts from a fresh Impl and allocates device ID 0, so a
+    // surface-recreate re-init never trips vsg's VSG_MAX_DEVICES limit.
+    impl = std::make_unique<Impl>();
+    // The material manager outlives sessions (MaterialManager contract), so it
+    // is cleared explicitly to drop references its cache holds to the dead
+    // device; bound_handle points at a surface that is going away.
+    persistent->materialManager.clear();
+    persistent->bound_handle = nullptr;
 }
 
 void VsgRenderer::beginFrame()
@@ -1817,7 +1814,7 @@ void VsgRenderer::setupContentSlot(vine::graphics::RenderTarget* target, vine::g
     }
     content.order      = order;
     content.on_top     = on_top;
-    content.vsg_camera = impl->cameraBridge.create(cam);
+    content.vsg_camera = persistent->cameraBridge.create(cam);
     if (content.vsg_camera == nullptr) {
         t.content_slots.erase(Impl::ContentKey{ cam, order });
         return;
@@ -1837,14 +1834,14 @@ void VsgRenderer::setupContentSlot(vine::graphics::RenderTarget* target, vine::g
         // size (created lazily).
         auto& set_ref = on_top ? t.depth_off_shader_set : t.depth_on_shader_set;
         if (set_ref == nullptr) {
-            set_ref = buildShaderSet(impl->shader_preset,
+            set_ref = buildShaderSet(persistent->shader_preset,
                                      VkExtent2D{ static_cast<uint32_t>(t.width), static_cast<uint32_t>(t.height) },
                                      !on_top,
                                      target->colorCount());
         }
         content.bridge.setShaderSet(set_ref);
     }
-    content.bridge.setMaterialManager(&impl->materialManager);
+    content.bridge.setMaterialManager(&persistent->materialManager);
     content.bridge.clearCache();
 
     // Seed the slot's default light before the first compile. On-top (HUD)
@@ -1986,7 +1983,7 @@ void VsgRenderer::renderContentSlot(vine::graphics::RenderTarget*               
         content.vsg_camera->viewportState = ::vsg::ViewportState::create(VkExtent2D{ static_cast<uint32_t>(surf_w), static_cast<uint32_t>(surf_h) });
     }
 
-    impl->cameraBridge.apply(cam, content.vsg_camera);
+    persistent->cameraBridge.apply(cam, content.vsg_camera);
 
     // Content lights: replace the slot's default light each frame; on-top
     // (HUD) slots keep their seeded ambient light.
@@ -2080,17 +2077,17 @@ void VsgRenderer::swapBuffers()
 
 vine::raw_ptr<vine::graphics::MaterialManager> VsgRenderer::materialManager()
 {
-    return &impl->materialManager;
+    return &persistent->materialManager;
 }
 
 void VsgRenderer::setShaderPreset(vine::graphics::ShaderPreset preset)
 {
-    impl->shader_preset = preset;
+    persistent->shader_preset = preset;
 }
 
 void VsgRenderer::setWindowHandle(void* native_handle)
 {
-    impl->bound_handle = native_handle;
+    persistent->bound_handle = native_handle;
 }
 
 void VsgRenderer::resize(int width, int height)
@@ -2121,7 +2118,7 @@ void VsgRenderer::resize(int width, int height)
 
 void* VsgRenderer::nativeHandle() const
 {
-    return impl->bound_handle;
+    return persistent->bound_handle;
 }
 
 void VsgRenderer::frame()

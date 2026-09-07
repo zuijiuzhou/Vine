@@ -7,6 +7,7 @@
 namespace vine::graphics
 {
 class RenderEngine;
+class SceneView;
 }
 
 V_APPFWGUI_NS_BEGIN
@@ -22,10 +23,12 @@ V_APPFWGUI_NS_BEGIN
  * needs.
  *
  * RenderControl owns the surface and the wiring: it creates the RenderEngine
- * internally and defaults to the first registered render backend on init()
- * (an explicit backend can be attached via engine()->setBackend() first);
- * Qt events on the surface and its host widget are translated and pushed to
- * the engine (engine()->pushEvent()) for the camera manipulator.
+ * and a SceneView (the interactive primary view holding the camera, content
+ * scene and orbit manipulator) internally and defaults to the first
+ * registered render backend on init() (an explicit backend can be attached
+ * via engine()->setBackend() first); Qt events on the surface and its host
+ * widget are translated and pushed to the view (view()->pushEvent()) for its
+ * camera manipulator.
  */
 class V_APPFW_API RenderControl : public Control {
     V_OBJECT_META_DECL;
@@ -43,6 +46,18 @@ class V_APPFW_API RenderControl : public Control {
      * @return The engine, or nullptr when creation failed.
      */
     vine::graphics::RenderEngine* engine() const;
+
+    /** @brief Gets the interactive primary view created by this control.
+     *
+     * The view owns this control's camera, content scene and orbit
+     * manipulator, and registers the window pass that presents them (see
+     * SceneView). Application code fills the content scene via
+     * view()->scene() and reads the camera via view()->camera() when it
+     * assembles an explicit pipeline.
+     *
+     * @return The view (never null while the control is alive).
+     */
+    vine::graphics::SceneView* view() const;
 
     /** @brief Wires the native surface into the engine and initializes it.
      *

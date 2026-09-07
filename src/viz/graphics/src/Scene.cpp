@@ -201,45 +201,27 @@ void Scene::setOpacity(float opacity)
     opacity_ = opacity;
 }
 
-void Scene::addNode(intrusive_ptr<Node> node)
+NodePtr Scene::root() const
 {
-    if (node == nullptr) {
-        return;
-    }
-    nodes_.emplace_back(std::move(node));
+    return root_;
 }
 
-void Scene::removeNode(raw_ptr<Node> node)
+void Scene::setRoot(intrusive_ptr<Node> root)
 {
-    if (node == nullptr) {
-        return;
-    }
-    auto it = std::find_if(nodes_.begin(), nodes_.end(),
-                           [node](const NodePtr& ptr) { return ptr.get() == node; });
-    if (it != nodes_.end()) {
-        nodes_.erase(it);
-    }
-}
-
-std::vector<NodePtr> Scene::nodes() const
-{
-    return nodes_;
+    root_ = std::move(root);
 }
 
 NodePtr Scene::findNode(const String& name) const
 {
-    for (const auto& node : nodes_) {
-        NodePtr found = findNodeRecursive(node.get(), name);
-        if (found != nullptr) {
-            return found;
-        }
+    if (root_ != nullptr) {
+        return findNodeRecursive(root_.get(), name);
     }
     return NodePtr();
 }
 
 void Scene::clear()
 {
-    nodes_.clear();
+    root_.reset();
 }
 
 void Scene::addLight(intrusive_ptr<Light> light)
@@ -279,33 +261,21 @@ bool Scene::hasLights() const
 
 Aabbd Scene::boundingBox() const
 {
-    Aabbd box = Aabbd::empty();
-    if (!visible_) {
-        return box;
+    if (!visible_ || root_ == nullptr || !root_->isVisible()) {
+        return Aabbd::empty();
     }
-    for (const auto& node : nodes_) {
-        if (!node->isVisible()) {
-            continue;
-        }
-        const Aabbd node_box = node->boundingBox();
-        if (node_box.isValid()) {
-            box.expandBy(node_box);
-        }
-    }
-    return box;
+    return root_->boundingBox();
 }
 
 std::vector<RenderCommand> Scene::collectRenderCommands(raw_ptr<const Camera> camera) const
 {
     std::vector<RenderCommand> commands;
-    if (camera == nullptr || !visible_) {
+    if (camera == nullptr || !visible_ || root_ == nullptr) {
         return commands;
     }
     const Mat4d view_proj = camera->projectionMatrix() * camera->viewMatrix();
     const Frustum frustum = Frustum::fromViewProjection(view_proj);
-    for (const auto& node : nodes_) {
-        collectNodeCommands(node.get(), frustum, opacity_, commands);
-    }
+    collectNodeCommands(root_.get(), frustum, opacity_, commands);
     // Sort: opaque front-to-back (near first), transparent back-to-front
     // (far first) after the opaque batch. Transparent objects need painter's
     // order for correct alpha blending.

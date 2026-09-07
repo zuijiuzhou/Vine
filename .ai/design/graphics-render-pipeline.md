@@ -2,6 +2,15 @@
 
 > 状态：已对齐代码（2026-09-03），v1 已落地
 >
+> ⚠ 2026-09-07 **Design C 变更**（下述 v1/Design B 描述部分过时）：RenderEngine **删除 masterCamera
+> 与相机/导航职责，并删除默认内容 scene()/setScene()**，成为纯 pass 调度器（零内容零相机）——相机、
+> 内容 Scene、manipulator、尺寸/aspect 全部移到新增的 **`SceneView`**（graphics，组合借用 engine，
+> `scene()` 返回 owning `intrusive_ptr<Scene>`）。内容一律 per-pass 显式绑定
+> （`addPass(pass, content, order)` / `bindPassContent`）。`hasWindowPass()` 改
+> `hasWindowPass(raw_ptr<Camera>)`；“窗口 pass” = 携带某 view camera 且 RT==null 的注册 pass。
+> RenderControl 持有 engine + SceneView；输入/尺寸推给 view；AppShell/Builder 用
+> view->camera()/scene() 显式绑定内容。详见 .ai/memory/graphics.md 顶部 Design C 条目。
+>
 > ⚠ 2026-09-03 **Design B 变更**（下述 v1 描述的部分已过时）：RenderEngine 已**删除主通道**
 > （`main_pass_`/`setMainPass`/`mainPass` 均移除），改为**空启动 + 显式注册**：引擎不再自动建
 > scene/camera/pass；`scene()` 是可选的“默认内容”（未绑 content 的 pass 回落它，可 null），

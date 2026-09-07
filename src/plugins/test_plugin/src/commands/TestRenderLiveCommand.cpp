@@ -10,11 +10,13 @@
 #include <vine/appfw/gui/MainWindow.hpp>
 #include <vine/appfw/gui/RenderControl.hpp>
 #include <vine/graphics/Geometry.hpp>
+#include <vine/graphics/Group.hpp>
 #include <vine/graphics/Material.hpp>
 #include <vine/graphics/MatrixTransform.hpp>
 #include <vine/graphics/Node.hpp>
 #include <vine/graphics/RenderEngine.hpp>
 #include <vine/graphics/Scene.hpp>
+#include <vine/graphics/SceneView.hpp>
 #include <vine/geometry/TriangleMesh.hpp>
 #include <vine/math/Transform3.hpp>
 
@@ -29,6 +31,9 @@ using vine::math::Vec3f;
 
 /**
  * @brief Adds a unit triangle at a world-space position to the scene.
+ *
+ * Attaches the triangle under the scene's root group, creating an identity
+ * root Group on the scene when none is set yet.
  *
  * @param scene   Target scene.
  * @param diffuse Diffuse colour of the triangle.
@@ -58,7 +63,13 @@ intrusive_ptr<vine::graphics::MatrixTransform> addDemoTriangle(vine::graphics::S
     node->setMatrix(vine::math::translate(at));
     node->addChild(geometry);
 
-    scene->addNode(node);
+    vine::graphics::Group* root = dynamic_cast<vine::graphics::Group*>(scene->root().get());
+    if (root == nullptr) {
+        auto group = intrusive_ptr<vine::graphics::Group>(new vine::graphics::Group());
+        scene->setRoot(group);
+        root = group.get();
+    }
+    root->addChild(node);
     return node;
 }
 
@@ -81,10 +92,11 @@ vine::async::Task<CommandResult> TestRenderLiveCommand::execute(CommandExecution
         co_return CommandResult(CommandStatus::Success, String(u8"演示已在运行"));
     }
 
-    auto* scene = rc->engine()->scene();
-    auto base  = addDemoTriangle(scene, vine::Colorf(0.8f, 0.2f, 0.2f, 1.0f), u8"live_base",
+    // Keep an owning reference so the content outlives the passes binding it.
+    auto scene = rc->view()->scene();
+    auto base  = addDemoTriangle(scene.get(), vine::Colorf(0.8f, 0.2f, 0.2f, 1.0f), u8"live_base",
                                  Vec3d(0.0, 0.0, -4.0));
-    auto mover = addDemoTriangle(scene, vine::Colorf(0.2f, 0.4f, 0.9f, 1.0f), u8"live_mover",
+    auto mover = addDemoTriangle(scene.get(), vine::Colorf(0.2f, 0.4f, 0.9f, 1.0f), u8"live_mover",
                                  Vec3d(3.0, 0.0, -6.0));
 
     // Each demo triangle lives under its own MatrixTransform as one leaf

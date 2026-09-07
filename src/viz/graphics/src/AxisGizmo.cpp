@@ -191,6 +191,8 @@ void AxisGizmo::rebuild()
     };
 
     auto scene = intrusive_ptr<Scene>(new Scene());
+    // Single root: one identity Group owns the three axis sticks.
+    auto root = intrusive_ptr<Group>(new Group());
     for (const auto& stick : sticks) {
         vine::geometry::Vec3fArray positions;
         vine::geometry::Vec3fArray normals;
@@ -220,8 +222,9 @@ void AxisGizmo::rebuild()
 
         auto group = intrusive_ptr<Group>(new Group());
         group->addChild(geometry);
-        scene->addNode(group);
+        root->addChild(group);
     }
+    scene->setRoot(root);
     content_ = std::move(scene);
 }
 

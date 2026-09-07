@@ -476,8 +476,8 @@ RayIntersectionResult RayIntersection::intersectScene(const Ray& ray, raw_ptr<Sc
     if (scene == nullptr) {
         return best;
     }
-    for (const auto& node : scene->nodes()) {
-        intersectNode(ray, node.get(), best);
+    if (const auto root = scene->root(); root != nullptr) {
+        intersectNode(ray, root.get(), best);
     }
     return best;
 }
@@ -490,11 +490,11 @@ std::vector<RayIntersectionResult> RayIntersection::intersectSceneAll(const Ray&
     if (scene == nullptr) {
         return results;
     }
-    for (const auto& node : scene->nodes()) {
+    if (const auto root = scene->root(); root != nullptr) {
         if (mode == Mode::Nearest) {
-            collectNodeNearest(ray, node.get(), results);
+            collectNodeNearest(ray, root.get(), results);
         } else {
-            collectNodeHits(ray, node.get(), results);
+            collectNodeHits(ray, root.get(), results);
         }
     }
     std::sort(results.begin(), results.end(),

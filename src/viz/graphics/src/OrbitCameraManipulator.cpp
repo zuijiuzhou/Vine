@@ -20,12 +20,70 @@ namespace
 constexpr double kDegToRad = vine::math::DEG_TO_RAD;
 constexpr double kTiny = 1e-6;
 
-/** @brief Rotates a vector around a unit axis (Rodrigues' formula). */
+// Elevation policy for the spherical (programmatic / keyboard / pan-zoom)
+// path: pitch is clamped to a full +/-90 deg (a true top-down / bottom-up
+// view) and the no-roll up (viewUp) keeps the horizon level and free of
+// 180-degree flips. The rotate DRAG is not spherical: it pivots rigidly about
+// the press anchor and carries the camera up with it, so it is free to roll
+// and to sweep past the poles.
+constexpr double kMaxElevationRad = vine::math::PI_HALF;
+
+// The world-up axis of the spherical model (eyeDirection / viewUp) and of the
+// pivot yaw. Vine scenes are Y-up.
+const Vec3d kWorldUp{ 0.0, 1.0, 0.0 };
+
+/** @brief Rotates a vector around a unit axis (Rodrigues' formula).
+ *
+ * @param v     Vector to rotate.
+ * @param axis  Unit rotation axis.
+ * @param angle Rotation angle in radians.
+ * @return The rotated vector.
+ */
 Vec3d rotateAround(const Vec3d& v, const Vec3d& axis, double angle)
 {
     const double c = std::cos(angle);
     const double s = std::sin(angle);
     return v * c + axis.cross(v) * s + axis * (axis.dot(v) * (1.0 - c));
+}
+
+/** @brief Unit direction from the orbit centre towards the eye (yaw/pitch). */
+Vec3d eyeDirection(double yaw, double pitch)
+{
+    const double cp = std::cos(pitch);
+    const double sp = std::sin(pitch);
+    return Vec3d{ cp * std::sin(yaw), sp, cp * std::cos(yaw) };
+}
+
+/** @brief Unit camera up for lookAt(), matching eyeDirection() and extended
+ * continuously to the poles.
+ *
+ * Away from the poles this is the no-roll up (the projection of the world-up
+ * onto the plane perpendicular to the view). As |pitch| approaches 90 deg the
+ * projection shrinks to zero, so its continuous limit - a horizontal vector
+ * that follows the azimuth - is used instead. This keeps the up well defined
+ * and free of 180-degree flips over a full 90 deg orbit.
+ *
+ * @param yaw   Azimuth in radians.
+ * @param pitch Signed elevation in radians, within +/-PI_HALF.
+ * @return Unit up vector perpendicular to eyeDirection(yaw, pitch).
+ */
+Vec3d viewUp(double yaw, double pitch)
+{
+    const double sp = std::sin(pitch);
+    const double cp = std::cos(pitch);
+    return Vec3d{ -sp * std::sin(yaw), cp, -sp * std::cos(yaw) };
+}
+
+/** @brief Extracts the yaw/pitch matching eyeDirection() from a unit vector.
+ *
+ * @param dir   Unit direction from the orbit centre towards the eye.
+ * @param yaw   Receives the yaw.
+ * @param pitch Receives the pitch.
+ */
+void sphericalFromDirection(const Vec3d& dir, double& yaw, double& pitch)
+{
+    pitch = std::asin(std::clamp(dir.y, -1.0, 1.0));
+    yaw = std::atan2(dir.x, dir.z);
 }
 
 }  // namespace
@@ -34,15 +92,12 @@ OrbitCameraManipulator::OrbitCameraManipulator(raw_ptr<Camera> camera, raw_ptr<S
   : CameraManipulator(camera)
   , scene_(scene)
 {
-    if (camera != nullptr) {
-        reference_up_ = camera->up();
-    }
     syncFromCamera();
     home_center_ = center_;
     home_distance_ = distance_;
     home_yaw_ = yaw_;
     home_pitch_ = pitch_;
-    home_head_ = head_;
+    home_roll_ = roll_;
 }
 
 OrbitCameraManipulator::~OrbitCameraManipulator() = default;
@@ -51,8 +106,7 @@ void OrbitCameraManipulator::orbit(double deltaYaw, double deltaPitch)
 {
     yaw_ += deltaYaw;
     pitch_ += deltaPitch;
-    const double limit = vine::math::PI_HALF - 1e-3;
-    pitch_ = std::clamp(pitch_, -limit, limit);
+    pitch_ = std::clamp(pitch_, -kMaxElevationRad, kMaxElevationRad);
     apply();
 }
 
@@ -184,17 +238,6 @@ void OrbitCameraManipulator::moveUp(double distance)
     syncFromCamera();
 }
 
-void OrbitCameraManipulator::rotate(double deltaYaw, double deltaPitch)
-{
-    orbit(deltaYaw, deltaPitch);
-}
-
-void OrbitCameraManipulator::rotateHead(double deltaHead)
-{
-    head_ += deltaHead;
-    apply();
-}
-
 bool OrbitCameraManipulator::fitToScreen()
 {
     Camera* cam = camera_;
@@ -231,6 +274,8 @@ bool OrbitCameraManipulator::fitToScreen()
         distance_ = std::max(radius * margin / std::max(sin_half, 1e-6), radius * 1.05);
     }
     distance_ = clampDistance(distance_);
+    // Frame the model level: drop any accumulated roll.
+    roll_ = 0.0;
     apply();
     return true;
 }
@@ -241,22 +286,8 @@ void OrbitCameraManipulator::home()
     distance_ = home_distance_;
     yaw_ = home_yaw_;
     pitch_ = home_pitch_;
-    head_ = home_head_;
+    roll_ = home_roll_;
     apply();
-}
-
-void OrbitCameraManipulator::setFixedHead(bool fixed)
-{
-    fixed_head_ = fixed;
-    if (fixed) {
-        head_ = 0.0;
-    }
-    apply();
-}
-
-bool OrbitCameraManipulator::isFixedHead() const
-{
-    return fixed_head_;
 }
 
 void OrbitCameraManipulator::setZoomToCursor(bool enabled)
@@ -320,24 +351,22 @@ void OrbitCameraManipulator::apply()
     if (cam == nullptr) {
         return;
     }
-    pitch_ = std::clamp(pitch_, -(vine::math::PI_HALF - 1e-3), vine::math::PI_HALF - 1e-3);
+    pitch_ = std::clamp(pitch_, -kMaxElevationRad, kMaxElevationRad);
     if (cam->projectionType() == Camera::ProjectionType::Orthographic) {
         clampEyeOutsideBounds();
     }
     distance_ = clampDistance(distance_);
 
-    const double cp = std::cos(pitch_);
-    const double sp = std::sin(pitch_);
-    const double cy = std::cos(yaw_);
-    const double sy = std::sin(yaw_);
     // Unit direction from the orbit centre towards the eye.
-    const Vec3d dir{ cp * sy, sp, cp * cy };
+    const Vec3d dir = eyeDirection(yaw_, pitch_);
     const Vec3d eye = center_ + dir * distance_;
-    const Vec3d forward = (center_ - eye).normalized();
 
-    Vec3d up = reference_up_;
-    if (!fixed_head_ && std::abs(head_) > 1e-9 && forward.length() >= kTiny) {
-        up = rotateAround(up, forward, head_);
+    // Level no-roll up, then any accumulated roll about the view axis (a
+    // pivot drag may leave the camera rolled; pan / zoom / home keep it).
+    Vec3d up = viewUp(yaw_, pitch_);
+    if (std::abs(roll_) > 1e-9) {
+        const Vec3d view_fwd = (center_ - eye).normalized();
+        up = rotateAround(up, view_fwd, roll_);
     }
     cam->setViewMatrixAsLookAt(eye, center_, up);
 
@@ -366,13 +395,12 @@ void OrbitCameraManipulator::onMousePress(const vine::window::MouseEvent& event)
     }
 
     // Resolve the interaction anchor: the picked model point under the cursor,
-    // falling back to the scene bounding-box centre or the world origin.
+    // falling back to the scene bounding-box centre or the world origin. It is
+    // the rotate pivot (the whole rig turns about it during a rotate drag, so
+    // the grabbed point stays under the cursor) and the pan / zoom depth
+    // reference. It is not applied on press, so a press never moves the
+    // camera (no jump).
     anchor_ = resolveAnchor(event.x, event.y, anchor_on_ray_);
-
-    // The resolved anchor doubles as the rotate pivot: pressing on a model
-    // pins that surface point under the cursor, pressing on empty space pins
-    // the scene centre. It is not applied on press (no jump); onMouseMove
-    // rotates the whole camera rig about it during the drag.
 }
 
 void OrbitCameraManipulator::onMouseMove(const vine::window::MouseEvent& event)
@@ -386,17 +414,14 @@ void OrbitCameraManipulator::onMouseMove(const vine::window::MouseEvent& event)
     switch (drag_) {
         case CameraManipulator::DragAction::Rotate:
             if (mode_ == Mode::FirstPerson) {
-                rotate(dx * drag_sensitivity_, -dy * drag_sensitivity_);
+                orbit(dx * drag_sensitivity_, -dy * drag_sensitivity_);
             } else {
-                // Orbit feels like grabbing the model: dragging right turns the
-                // model's front to the right and dragging down tilts its top
-                // towards the viewer (the camera orbits the opposite way).
-                //
-                // The whole rig rotates rigidly about the press pivot (the
-                // grabbed model point, or the scene centre on empty space). A
-                // rigid rotation keeps the pivot's screen position exactly
-                // fixed, so the model turns about it with constant size - no
-                // drift, no fly-out, even when the model sits near an edge.
+                // Rotate the whole rig rigidly about the press anchor (the
+                // grabbed model point, or the scene centre on empty space), so
+                // that point stays pinned under the cursor. The up is carried
+                // with the rig, which lets the view roll over the top to a
+                // true 90 deg elevation (and beyond) without gimbal shake or a
+                // sudden 180 deg flip.
                 pivotRotate(dx, dy);
             }
             break;
@@ -494,16 +519,16 @@ void OrbitCameraManipulator::onKeyDown(const vine::window::KeyEvent& event)
             moveUp(-move_step_);
             break;
         case vine::window::KeyCode::Left:
-            rotate(-rotate_step_, 0.0);
+            orbit(-rotate_step_, 0.0);
             break;
         case vine::window::KeyCode::Right:
-            rotate(rotate_step_, 0.0);
+            orbit(rotate_step_, 0.0);
             break;
         case vine::window::KeyCode::Up:
-            rotate(0.0, -rotate_step_);
+            orbit(0.0, -rotate_step_);
             break;
         case vine::window::KeyCode::Down:
-            rotate(0.0, rotate_step_);
+            orbit(0.0, rotate_step_);
             break;
         default:
             break;
@@ -552,67 +577,6 @@ void OrbitCameraManipulator::makeScreenRay(double screenX, double screenY,
     direction = ray.direction;
 }
 
-void OrbitCameraManipulator::pivotRotate(double screenDx, double screenDy)
-{
-    Camera* cam = camera_;
-    if (cam == nullptr) {
-        return;
-    }
-    const double ayaw = -screenDx * drag_sensitivity_;
-    const double apitch = -screenDy * drag_sensitivity_;
-    if (std::abs(ayaw) < 1e-12 && std::abs(apitch) < 1e-12) {
-        return;
-    }
-
-    const Vec3d eye = cam->eye();
-    const Vec3d target = cam->target();
-    const Vec3d pivot = anchor_;
-    const Vec3d fwd0 = (target - eye).normalized();
-    if (fwd0.length() < kTiny) {
-        return;
-    }
-    const Vec3d right0 = fwd0.cross(cam->up()).normalized();
-    const Vec3d off = eye - pivot;
-    if (right0.length() < kTiny || off.length() < kTiny) {
-        return;
-    }
-    const Vec3d world_up = reference_up_.normalized();
-
-    // Rotate the whole camera rig about the pivot: yaw about the world-up
-    // axis through the pivot, then pitch about the resulting screen-right
-    // axis. A rigid rotation keeps the pivot's screen position exactly fixed,
-    // so the model turns about it with constant apparent size (no drift / no
-    // fly-out), regardless of where the pivot sits in the viewport.
-    const Vec3d eye1 = pivot + rotateAround(off, world_up, ayaw);
-    const Vec3d fwd1 = rotateAround(fwd0, world_up, ayaw);
-    const Vec3d right1 = rotateAround(right0, world_up, ayaw);
-    if (right1.length() < kTiny) {
-        return;
-    }
-    const Vec3d eye2 = pivot + rotateAround(eye1 - pivot, right1, apitch);
-    const Vec3d fwd2 = rotateAround(fwd1, right1, apitch).normalized();
-    if (fwd2.length() < kTiny) {
-        return;
-    }
-
-    // Rebuild an un-rolled up basis so orbiting never rolls the view.
-    Vec3d up = cam->up();
-    const Vec3d right = fwd2.cross(world_up).normalized();
-    if (right.length() >= kTiny) {
-        up = right.cross(fwd2).normalized();
-    } else {
-        // Looking straight up/down: keep the up propagated by the rig rotation.
-        const Vec3d rolled_up = rotateAround(cam->up(), right1, apitch);
-        up = right1.cross(rolled_up).normalized();
-    }
-
-    // Preserve the eye-to-target distance so the frame scale is unchanged.
-    const double d_view = (target - eye).length();
-    const Vec3d target2 = eye2 + fwd2 * d_view;
-    cam->setViewMatrixAsLookAt(eye2, target2, up);
-    syncFromCamera();
-}
-
 Vec3d OrbitCameraManipulator::resolveAnchor(double screenX, double screenY,
                                             bool& onRay) const
 {
@@ -646,11 +610,55 @@ void OrbitCameraManipulator::aimCenterAt(const Vec3d& point)
     }
     center_ = point;
     distance_ = clampDistance(d);
-    const Vec3d dir = offset / d;
-    pitch_ = std::asin(std::clamp(dir.y, -1.0, 1.0));
-    yaw_ = std::atan2(dir.x, dir.z);
-    head_ = 0.0;
+    sphericalFromDirection(offset / d, yaw_, pitch_);
     apply();
+}
+
+void OrbitCameraManipulator::pivotRotate(double screenDx, double screenDy)
+{
+    Camera* cam = camera_;
+    if (cam == nullptr) {
+        return;
+    }
+    const double ayaw = -screenDx * drag_sensitivity_;
+    const double apitch = -screenDy * drag_sensitivity_;
+    if (std::abs(ayaw) < 1e-12 && std::abs(apitch) < 1e-12) {
+        return;
+    }
+
+    const Vec3d eye = cam->eye();
+    const Vec3d target = cam->target();
+    const Vec3d pivot = anchor_;
+    const Vec3d eye_offset = eye - pivot;
+    if (eye_offset.length() < kTiny) {
+        return;  // Eye on the pivot: no meaningful rotation.
+    }
+    const Vec3d fwd0 = (target - eye).normalized();
+    const Vec3d up0 = cam->up().normalized();
+    if (fwd0.length() < kTiny || up0.length() < kTiny) {
+        return;
+    }
+
+    // Rotate the whole camera rig rigidly about the pivot: first yaw about
+    // the world-up axis through the pivot, then pitch about the yawed
+    // screen-right axis. Eye, forward and up are carried together, so the
+    // pivot stays pinned at its screen position and the view may roll as it
+    // sweeps over the top (no gimbal shake, no sudden 180 deg flip).
+    const Vec3d eye1 = pivot + rotateAround(eye_offset, kWorldUp, ayaw);
+    const Vec3d fwd1 = rotateAround(fwd0, kWorldUp, ayaw);
+    const Vec3d up1 = rotateAround(up0, kWorldUp, ayaw);
+    const Vec3d right1 = fwd1.cross(up1).normalized();
+    if (right1.length() < kTiny) {
+        return;
+    }
+    const Vec3d eye2 = pivot + rotateAround(eye1 - pivot, right1, apitch);
+    const Vec3d fwd2 = rotateAround(fwd1, right1, apitch).normalized();
+    const Vec3d up2 = rotateAround(up1, right1, apitch).normalized();
+
+    // Keep the eye-to-target distance so the frame scale is unchanged.
+    const Vec3d target2 = eye2 + fwd2 * (target - eye).length();
+    cam->setViewMatrixAsLookAt(eye2, target2, up2);
+    syncFromCamera();
 }
 
 void OrbitCameraManipulator::syncFromCamera()
@@ -667,7 +675,17 @@ void OrbitCameraManipulator::syncFromCamera()
         distance_ = d;
         const Vec3d dir = offset / d;
         pitch_ = std::asin(std::clamp(dir.y, -1.0, 1.0));
-        yaw_ = std::atan2(dir.x, dir.z);
+        // Near a pole the azimuth is ill defined; keep the previous yaw so the
+        // reconstructed up (viewUp) stays continuous through a 90 deg orbit.
+        if (std::hypot(dir.x, dir.z) > 1e-4) {
+            yaw_ = std::atan2(dir.x, dir.z);
+        }
+        // Roll: the signed rotation about the forward (eye -> centre) axis
+        // that takes the level no-roll up (viewUp) to the camera's actual up.
+        const Vec3d view_fwd = -dir;
+        const Vec3d level_up = viewUp(yaw_, pitch_);
+        const Vec3d cam_up = cam->up().normalized();
+        roll_ = std::atan2(level_up.cross(cam_up).dot(view_fwd), level_up.dot(cam_up));
     }
 }
 
@@ -681,9 +699,7 @@ void OrbitCameraManipulator::clampEyeOutsideBounds()
     if (!bounds.isValid()) {
         return;
     }
-    const Vec3d dir{ std::cos(pitch_) * std::sin(yaw_),
-                     std::sin(pitch_),
-                     std::cos(pitch_) * std::cos(yaw_) };
+    const Vec3d dir = eyeDirection(yaw_, pitch_);
 
     // Slab ray from the orbit centre along the eye direction: the eye must
     // stay outside the box, so it may not sit between the entry and exit.
@@ -737,11 +753,6 @@ void OrbitCameraManipulator::updateOrthoProjection()
     const double half_w = half_h * std::max(cam->aspectRatio(), 1e-6);
     cam->setProjectionMatrixAsOrtho(-half_w, half_w, -half_h, half_h,
                                     cam->nearPlane(), cam->farPlane());
-}
-
-Vec3d OrbitCameraManipulator::referenceUp() const
-{
-    return reference_up_;
 }
 
 V_GRAPHICS_NS_END

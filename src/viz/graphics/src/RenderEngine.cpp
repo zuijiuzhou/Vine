@@ -1,12 +1,9 @@
 #include <vine/graphics/RenderEngine.hpp>
 
-#include <vine/graphics/Camera.hpp>
-#include <vine/graphics/CameraManipulator.hpp>
 #include <vine/graphics/RenderBackend.hpp>
 #include <vine/graphics/RenderPass.hpp>
 #include <vine/graphics/RenderTarget.hpp>
 #include <vine/graphics/Scene.hpp>
-#include <vine/window/InputEvent.hpp>
 
 #include <algorithm>
 
@@ -17,9 +14,9 @@ V_OBJECT_META_IMPL(RenderEngine, vine::Object);
 RenderEngine::RenderEngine()
 {
     // No implicit pipeline: the engine starts empty. The caller registers the
-    // scene passes explicitly (addPass()) or through a RenderPipelineBuilder,
-    // and may set a default content scene (setScene) and a master camera
-    // (setMasterCamera).
+    // scene passes explicitly (addPass()) or through a RenderPipelineBuilder;
+    // the primary interactive view (camera + content + navigation) lives in a
+    // SceneView borrowing this engine.
 }
 
 RenderEngine::~RenderEngine()
@@ -66,7 +63,7 @@ bool RenderEngine::initialize()
         // non-clearing passes ahead of the clearing ones.
         for (const auto& slot : slots_) {
             RenderPass* pass   = slot.pass.get();
-            Scene*      content = (slot.content != nullptr) ? slot.content.get() : scene_.get();
+            Scene*      content = slot.content.get();
             if (pass == nullptr || content == nullptr || !pass->enabled() || pass->clearEnabled()) {
                 continue;
             }
@@ -113,7 +110,7 @@ void RenderEngine::frame(double dt)
         if (pass == nullptr || !pass->enabled()) {
             continue;
         }
-        raw_ptr<Scene> content = (slot.content != nullptr) ? slot.content.get() : scene_.get();
+        raw_ptr<Scene> content = slot.content.get();
         backend_->setPassOrder(slot.order);
         resolvePassInputs(pass);
         drawScenePass(pass, content);
@@ -129,11 +126,11 @@ const FrameContext& RenderEngine::frameContext() const
     return frame_ctx_;
 }
 
-bool RenderEngine::hasWindowPass() const
+bool RenderEngine::hasWindowPass(raw_ptr<Camera> camera) const
 {
     for (const auto& slot : slots_) {
         RenderPass* pass = slot.pass.get();
-        if (pass != nullptr && pass->enabled() && pass->camera() == master_camera_.get()
+        if (pass != nullptr && pass->enabled() && pass->camera() == camera
             && pass->renderTarget() == nullptr) {
             return true;
         }
@@ -242,7 +239,7 @@ raw_ptr<Scene> RenderEngine::contentOf(raw_ptr<RenderPass> pass) const
 {
     for (const auto& slot : slots_) {
         if (slot.pass.get() == pass) {
-            return (slot.content != nullptr) ? slot.content.get() : scene_.get();
+            return slot.content.get();
         }
     }
     return nullptr;
@@ -307,37 +304,6 @@ void RenderEngine::unpublish(const String& name)
     outputs_.erase(name);
 }
 
-void RenderEngine::setScene(intrusive_ptr<Scene> scene)
-{
-    // Setting the same scene again is a no-op (idempotent).
-    if (scene_ == scene) {
-        return;
-    }
-    scene_ = std::move(scene);
-}
-
-raw_ptr<Scene> RenderEngine::scene() const
-{
-    return scene_.get();
-}
-
-void RenderEngine::setMasterCamera(intrusive_ptr<Camera> camera)
-{
-    // Setting the same camera again is a no-op (idempotent). The engine does
-    // not propagate the camera to any pass: registered passes keep their own
-    // cameras, and the window-present pass is registered with this camera.
-    if (master_camera_ == camera) {
-        return;
-    }
-    master_camera_ = std::move(camera);
-
-}
-
-raw_ptr<Camera> RenderEngine::masterCamera() const
-{
-    return master_camera_.get();
-}
-
 void RenderEngine::setShaderPreset(ShaderPreset preset)
 {
     shader_preset_ = preset;
@@ -348,82 +314,20 @@ ShaderPreset RenderEngine::shaderPreset() const
     return shader_preset_;
 }
 
-void RenderEngine::setCameraManipulator(intrusive_ptr<CameraManipulator> manipulator)
+void RenderEngine::resize(int width, int height)
 {
-    // Setting the same manipulator again is a no-op (idempotent).
-    if (camera_manipulator_ == manipulator) {
+    if (width <= 0 || height <= 0) {
         return;
     }
-    camera_manipulator_ = std::move(manipulator);
-}
-
-raw_ptr<CameraManipulator> RenderEngine::cameraManipulator() const
-{
-    return camera_manipulator_.get();
-}
-
-void RenderEngine::pushEvent(const vine::window::MouseEvent& event)
-{
-    if (camera_manipulator_ == nullptr) {
-        return;
-    }
-    if (event.button == vine::window::MouseButton::None) {
-        camera_manipulator_->onMouseMove(event);
-    } else if (event.pressed) {
-        camera_manipulator_->onMousePress(event);
-    } else {
-        camera_manipulator_->onMouseRelease(event);
-    }
-}
-
-void RenderEngine::pushEvent(const vine::window::ScrollEvent& event)
-{
-    if (camera_manipulator_ != nullptr) {
-        camera_manipulator_->onScroll(event);
-    }
-}
-
-void RenderEngine::pushEvent(const vine::window::KeyEvent& event)
-{
-    if (camera_manipulator_ == nullptr) {
-        return;
-    }
-    if (event.pressed) {
-        camera_manipulator_->onKeyDown(event);
-    } else {
-        camera_manipulator_->onKeyUp(event);
-    }
-}
-
-void RenderEngine::pushEvent(const vine::window::ResizeEvent& event)
-{
-    if (event.width <= 0 || event.height <= 0) {
-        return;
-    }
-    frame_ctx_.surface_width  = event.width;
-    frame_ctx_.surface_height = event.height;
-    // Refresh anything the viewport size feeds into, e.g. the camera aspect.
-    if (camera_manipulator_ != nullptr) {
-        camera_manipulator_->onResize(event);
-    } else if (master_camera_ != nullptr
-               && master_camera_->projectionType() == vine::graphics::Camera::ProjectionType::Perspective) {
-        // No manipulator owns the view: keep the master camera's projection
-        // aspect in step with the surface so content is not stretched when the
-        // window changes shape.
-        const double aspect = static_cast<double>(event.width) / static_cast<double>(event.height);
-        master_camera_->setProjectionMatrixAsPerspective(master_camera_->fieldOfView(), aspect,
-                                                         master_camera_->nearPlane(), master_camera_->farPlane());
-    }
+    frame_ctx_.surface_width  = width;
+    frame_ctx_.surface_height = height;
     if (initialized_ && backend_ != nullptr) {
-        backend_->resize(event.width, event.height);
+        backend_->resize(width, height);
     }
-    // Let every registered pass re-lay out anything positioned relative to the
-    // surface (e.g. an axis gizmo in a corner re-anchors its sub-viewport).
-    for (const auto& slot : slots_) {
-        if (slot.pass != nullptr) {
-            slot.pass->onSurfaceResized(event.width, event.height);
-        }
-    }
+    // No layout fan-out here: target sizes, pass viewports and camera
+    // projections are maintained by their creators on the surface size
+    // (e.g. SceneView::addSurfaceLayout). The engine only rebuilds its own
+    // swapchain and records the surface size.
 }
 
 void RenderEngine::setWindowHandle(void* native_handle)

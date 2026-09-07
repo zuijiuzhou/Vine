@@ -306,7 +306,9 @@ class V_VSG_API VsgRenderer : public vine::graphics::RenderBackend {
 
   private:
     struct Impl;
+    struct Persistent;
     std::unique_ptr<Impl> impl;
+    std::unique_ptr<Persistent> persistent;
 };
 
 V_VSG_NS_END

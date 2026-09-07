@@ -62,6 +62,10 @@ class V_GRAPHICS_API RenderTarget : public Object, public RefCounted<RenderTarge
 
     /** @brief Sets the render target dimensions.
      *
+     * The size is maintained by the target's owner at the appropriate time
+     * (e.g. on a surface resize the code that created the target calls this
+     * with the size it wants).
+     *
      * @param w Width in pixels.
      * @param h Height in pixels.
      */

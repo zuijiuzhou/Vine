@@ -19,11 +19,13 @@ class Camera;
 struct RenderCommand;
 
 /**
- * @brief Scene graph container managing root nodes and lights.
+ * @brief Scene container owning one root subtree plus lights.
  *
- * Holds the root nodes of the scene hierarchy and the scene's light sources,
- * and provides tree queries: bounding box computation, name-based search,
- * and render command collection.
+ * A scene holds exactly one root node of the scene graph (an empty scene has
+ * no root and renders nothing), the scene's light sources, and provides tree
+ * queries: bounding box computation, name-based search, and render command
+ * collection. Content is composed under the root through Group; the root is
+ * typically a Group holding the world's top-level subtrees.
  */
 class V_GRAPHICS_API Scene : public Object, public RefCounted<Scene> {
     V_OBJECT_META_DECL;
@@ -52,31 +54,35 @@ class V_GRAPHICS_API Scene : public Object, public RefCounted<Scene> {
     /** @brief Sets the scene-level opacity multiplier in [0, 1]. */
     void setOpacity(float opacity);
 
-    /** @brief Adds a root-level node.
+    /** @brief Gets the root node of the scene.
      *
-     * The scene keeps a reference to the node.
+     * A scene renders exactly one root subtree; content is composed under it
+     * through Group. Returns null for an empty scene (nothing is rendered).
      *
-     * @param node Node to add.
+     * @return The scene root node, or null.
      */
-    void addNode(intrusive_ptr<Node> node);
+    NodePtr root() const;
 
-    /** @brief Removes a root-level node.
+    /** @brief Sets the root node of the scene.
      *
-     * @param node Node to remove.
+     * Replaces any previous root. Content is composed by attaching subtrees
+     * under @p root (typically a Group) before rendering.
+     *
+     * @param root Root node to render; null empties the scene.
      */
-    void removeNode(raw_ptr<Node> node);
+    void setRoot(intrusive_ptr<Node> root);
 
-    /** @brief Gets all root-level nodes. */
-    std::vector<NodePtr> nodes() const;
-
-    /** @brief Finds a node by name (recursive search).
+    /** @brief Finds a node by name (recursive search from the root).
      *
      * @param name Name to search for.
      * @return Found node, or null.
      */
     NodePtr findNode(const String& name) const;
 
-    /** @brief Removes all nodes. */
+    /** @brief Removes the root node, leaving an empty scene.
+     *
+     * Lights are unaffected; use clearLights() to drop them.
+     */
     void clear();
 
     /** @brief Adds a light source to the scene.
@@ -117,7 +123,7 @@ class V_GRAPHICS_API Scene : public Object, public RefCounted<Scene> {
     String name_;
     bool visible_ = true;
     float opacity_ = 1.0f;
-    std::vector<NodePtr>  nodes_;
+    NodePtr root_;
     std::vector<LightPtr> lights_;
 };
 

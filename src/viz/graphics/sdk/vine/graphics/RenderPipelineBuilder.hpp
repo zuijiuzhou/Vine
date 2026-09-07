@@ -7,6 +7,7 @@
 #include <vine/intrusive_ptr.hpp>
 
 #include "RenderPass.hpp"
+#include "RenderPipeline.hpp"
 #include "RenderTarget.hpp"
 
 V_GRAPHICS_NS_BEGIN
@@ -21,19 +22,22 @@ class ScreenPass;
  *
  * RenderPipelineBuilder produces the exact same objects you would build by
  * hand through the RenderEngine / RenderPass public API, but packages the
- * recurring "recipes" (off-screen render-to-texture + screen compositing,
- * later shadowed-lit scenes, ...) so applications do not repeat the wiring.
+ * recurring "recipes" (a main-window forward / deferred pipeline via build(),
+ * an off-screen render-to-texture + screen compositing via
+ * addOffscreenToScreen(), ...) so applications do not repeat the wiring.
  *
  * It is intentionally thin: it does NOT own the per-frame scheduling,
  * content resolution, lighting or shadow logic — those stay in RenderEngine
- * (the builder only fills in order / content / output / input names). Every
- * add*() call applies immediately to the target engine, and created passes
- * are kept alive both by the builder and by the engine.
+ * and in the shaders the recipes bind (the builder only fills in order /
+ * content / output / input names and the pass topology). Every add*() /
+ * build() call applies immediately to the target engine, and created passes
+ * are kept alive both by the builder (or its returned Pipeline) and by the
+ * engine.
  *
  * RenderEngine itself auto-registers nothing (its pipeline is fully
  * explicit); this builder is the convenient, reusable way to assemble common
- * configurations such as an off-screen render-to-texture + screen
- * compositing chain.
+ * configurations, and the SceneView default viewer is assembled through the
+ * same Forward preset so the whole codebase shares one main-pipeline recipe.
  */
 class V_GRAPHICS_API RenderPipelineBuilder {
   public:
@@ -53,10 +57,84 @@ class V_GRAPHICS_API RenderPipelineBuilder {
 
     /** @brief Binds the camera used by the produced scene passes.
      *
-     * @param camera Camera (borrowed), or null to use the engine master
-     *               camera.
+     * Recipes that produce scene passes need a camera; it is provided
+     * explicitly by the caller (typically a SceneView's camera).
+     *
+     * @param camera Camera (borrowed), or null to leave unset (scene-pass
+     *               recipes then refuse to build).
      */
     RenderPipelineBuilder& setCamera(raw_ptr<Camera> camera);
+
+    /** @brief Assembles a main-window pipeline preset.
+     *
+     * Registers the passes for @p preset on the target engine immediately and
+     * returns a Pipeline handle that owns them:
+     *
+     * - Forward (and the ForwardShadowed placeholder) builds a single order-0
+     *   window scene pass drawing this builder's content through its camera;
+     * - Deferred (and the DeferredShadowed placeholder) additionally builds an
+     *   order < 0 G-buffer pass into an off-screen MRT target (published as
+     *   "GBuffer") and uses a fullscreen lighting ScreenPass at order 0 as
+     *   the window pass, so the view camera is presented to the window and
+     *   RenderControl / SceneView do not add a second forward pass.
+     *
+     * The shadowed presets are placeholders: the shadow slice (an order < 0
+     * depth-only pass plus shadowed lighting) is not implemented yet, so they
+     * currently assemble the same pipeline as their unshadowed counterpart.
+     *
+     * Deferred requires a content scene and a camera. Its two shader programs
+     * (G-buffer geometry + fullscreen lighting) default to built-in temporary
+     * programs the builder supplies (matching the canonical G-buffer and the
+     * backend's lighting ABI), so the preset works out of the box; provide
+     * your own through @p options only when you need custom shading. When the
+     * required scene or camera is missing, nothing is registered and null is
+     * returned.
+     *
+     * @param preset  Preset to assemble.
+     * @param options Sizing and program options (see PipelineOptions).
+     * @return The built pipeline, or null when the preset could not be built.
+     */
+    intrusive_ptr<Pipeline> build(PipelinePreset preset, const PipelineOptions& options = {});
+
+    /** @brief Creates the built-in temporary G-buffer geometry program.
+     *
+     * One scene traversal writing the canonical four G-buffer outputs (albedo
+     * / view normal + shininess / specular / view position). This is the
+     * default program the Deferred preset uses, exposed as a single shared
+     * source so deferred A/B previews can reuse it too. Backend-ABI specific
+     * (vsg); it will move into the render backend once the backend ships its
+     * own deferred shading.
+     *
+     * @return A fresh program instance.
+     */
+    static intrusive_ptr<ShaderProgram> defaultGbufferGeometryProgram();
+
+    /** @brief Creates the built-in temporary deferred-lighting program.
+     *
+     * A fullscreen fragment program sampling the G-buffer attachments
+     * (binding 0..3) with ambient + up to three directional lights from the
+     * backend's view-space push block. This is the default program the
+     * Deferred preset uses, exposed as a single shared source so deferred
+     * A/B previews can reuse it too. Backend-ABI specific (vsg).
+     *
+     * @return A fresh program instance (fragment stage only).
+     */
+    static intrusive_ptr<ShaderProgram> defaultDeferredLightProgram();
+
+    /** @brief Creates the canonical G-buffer MRT target of the Deferred
+     * presets.
+     *
+     * Four colour attachments - albedo (RGBA8), view normal + shininess
+     * (RGBA16F), specular (RGBA8), view position (RGBA16F) - plus depth
+     * (D24). The Deferred presets build their G-buffer through this factory,
+     * exposed so deferred A/B previews can share the same canonical layout
+     * (their geometry program must match its attachment order).
+     *
+     * @param width  Target width in pixels (<= 0 uses 640).
+     * @param height Target height in pixels (<= 0 uses 360).
+     * @return A fresh target with the canonical colour + depth attachments.
+     */
+    static intrusive_ptr<RenderTarget> defaultGbufferTarget(int width, int height);
 
     /** @brief Recipe: render content into an off-screen target and composite
      * it back as a picture-in-picture screen pass.
@@ -93,6 +171,12 @@ class V_GRAPHICS_API RenderPipelineBuilder {
     void addPass(intrusive_ptr<RenderPass> pass, int order);
 
   private:
+    /** @brief Builds the Forward preset into @p pipeline. */
+    bool buildForward(Pipeline& pipeline);
+
+    /** @brief Builds the Deferred preset into @p pipeline. */
+    bool buildDeferred(Pipeline& pipeline, const PipelineOptions& options);
+
     raw_ptr<RenderEngine>      engine_;
     raw_ptr<Camera>            camera_      = nullptr;
     intrusive_ptr<Scene>       content_;

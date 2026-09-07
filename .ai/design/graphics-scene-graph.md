@@ -3,8 +3,11 @@
 > 状态：设计稿 v1（2026-09-03），评审对象。
 > 📋 评审（2026-09-03）：正文 §1/§2/§3/§4/§7 为**写作时**设计（沿用 MatrixNode、Drawable、primitive、
 > "Scene 只持 root"等**历史表述**），**以顶部 ⚠/📋 落地记录为准**。代码核对要点：
-> 1. **Scene 根节点**：正文 §5/§7(3) 提"Scene 只持 root"，实现为**多 root**（`Scene::addNode/nodes`
->    + 由调用方组树）——有意保留多 root，未收敛单 root（可后续，不影响架构）。
+> 1. **Scene 根节点**：正文 §5/§7(3) 提"Scene 只持 root"。⚠ 2026-09-07 **已收敛单 root**：
+>    `Scene::addNode/removeNode/nodes()` 已删除，改 **`setRoot(intrusive_ptr<Node>)/root()`**
+>    （root 可为空 = 空场景，不渲染）；内容经根 `Group` 组合（`Group::addChild/removeChild`）；
+>    `findNode/boundingBox/collectRenderCommands` 均自单根出发。消费者（demo/axis gizmo/拾取/
+>    测试）迁到"单恒等根 Group + addChild"模式。此前为多 root（有意过渡，见 ⚠ 落地后修订）。
 > 2. **MatrixNode 名**：已定名 **MatrixTransform**（本稿正文沿用历史名，见顶部 ⚠）。
 > 3. **program 槽**：正文 §2/§4 挂点已部分落地——SDK `ShaderProgram/ShaderStage`、
 >    `Geometry::setProgram`、`StateNode::setProgram`、`effectiveProgram`、`RenderCommand.program`

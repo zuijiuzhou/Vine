@@ -22,10 +22,10 @@ class Camera;
  * (e.g. OrbitCameraManipulator) implement a specific camera control scheme and
  * are driven either directly through their motion methods or through the
  * window input callbacks (onMousePress/onMouseMove/onScroll/onKeyDown...).
- * A RenderEngine typically forwards vine::window events to these callbacks.
+ * A SceneView typically forwards vine::window events to these callbacks.
  *
- * CameraManipulator is reference counted (RefCounted<CameraManipulator>): a
- * RenderEngine that drives it keeps an intrusive_ptr so the manipulator stays
+ * CameraManipulator is reference counted (RefCounted<CameraManipulator>): the
+ * SceneView that drives it keeps an intrusive_ptr so the manipulator stays
  * alive as long as it is attached. The camera must outlive the manipulator.
  */
 class V_GRAPHICS_API CameraManipulator : public RefCounted<CameraManipulator> {
@@ -60,8 +60,25 @@ class V_GRAPHICS_API CameraManipulator : public RefCounted<CameraManipulator> {
     /** @brief Commits pending changes to the bound camera. */
     virtual void apply() = 0;
 
+    /** @brief Frames the scene into the view.
+     *
+     * The base implementation does nothing and reports that nothing was
+     * fitted; subclasses with scene awareness (e.g. an orbit manipulator)
+     * override it.
+     *
+     * @return true when a scene with valid bounds was fitted.
+     */
+    virtual bool fitToScreen();
+
+    /** @brief Restores the view captured as home.
+     *
+     * The base implementation does nothing; subclasses override it with their
+     * home snapshot (e.g. the view captured at construction).
+     */
+    virtual void home();
+
   public:
-    // ---- Window input callbacks (typically driven by a RenderEngine) ----
+    // ---- Window input callbacks (typically driven by a SceneView) ----
 
     /** @brief Handles a mouse button press.
      *

@@ -6,7 +6,10 @@
 #include <vine/RefCounted.hpp>
 #include <vine/raw_ptr.hpp>
 #include <vine/Color.hpp>
+
 #include <vector>
+
+#include "Viewport.hpp"
 
 V_GRAPHICS_NS_BEGIN
 
@@ -101,6 +104,14 @@ class V_GRAPHICS_API RenderPass : public Object, public RefCounted<RenderPass> {
      * Used for sub-viewports such as an axis gizmo in a screen corner. The
      * pass falls back to the full surface when no viewport is set.
      *
+     * @param viewport Draw rectangle in device pixels (top-left origin).
+     */
+    void setViewport(const Viewport& viewport);
+
+    /** @brief Restricts this pass to a sub-rectangle of the render target.
+     *
+     * Convenience for setViewport(const Viewport&).
+     *
      * @param x      Viewport origin x in device pixels.
      * @param y      Viewport origin y in device pixels (top-left origin).
      * @param width  Viewport width in device pixels.
@@ -122,24 +133,17 @@ class V_GRAPHICS_API RenderPass : public Object, public RefCounted<RenderPass> {
      */
     void getViewport(int& x, int& y, int& width, int& height) const;
 
+    /** @brief Gets the configured draw viewport.
+     *
+     * Only meaningful when hasViewport() is true; otherwise the pass draws
+     * the full surface.
+     *
+     * @return The draw rectangle in device pixels.
+     */
+    Viewport viewport() const;
+
     /** @brief Clears any configured sub-viewport (pass renders to the full surface). */
     void clearViewport();
-
-    /** @brief Notifies the pass that the rendering surface was resized.
-     *
-     * Called by the engine for every registered pass when the surface size
-     * changes, so a pass with a sub-viewport positioned relative to the
-     * surface (e.g. an axis gizmo in a corner) can re-lay it out. The base
-     * pass ignores the notice.
-     *
-     * @param width  New surface width in device pixels.
-     * @param height New surface height in device pixels.
-     */
-    virtual void onSurfaceResized(int width, int height)
-    {
-        (void)width;
-        (void)height;
-    }
 
     /** @brief Sets the name this pass publishes its output under.
      *
@@ -233,10 +237,7 @@ class V_GRAPHICS_API RenderPass : public Object, public RefCounted<RenderPass> {
     bool clear_enabled_ = true;
     bool enabled_ = true;
     bool has_viewport_ = false;
-    int viewport_x_ = 0;
-    int viewport_y_ = 0;
-    int viewport_w_ = 0;
-    int viewport_h_ = 0;
+    Viewport viewport_;
 };
 
 using RenderPassPtr = intrusive_ptr<RenderPass>;

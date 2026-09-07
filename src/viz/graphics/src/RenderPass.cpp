@@ -87,10 +87,12 @@ void RenderPass::setEnabled(bool enabled)
 
 void RenderPass::setViewport(int x, int y, int width, int height)
 {
-    viewport_x_ = x;
-    viewport_y_ = y;
-    viewport_w_ = width;
-    viewport_h_ = height;
+    setViewport(Viewport{ x, y, width, height });
+}
+
+void RenderPass::setViewport(const Viewport& viewport)
+{
+    viewport_ = viewport;
     has_viewport_ = true;
 }
 
@@ -101,10 +103,15 @@ bool RenderPass::hasViewport() const
 
 void RenderPass::getViewport(int& x, int& y, int& width, int& height) const
 {
-    x = viewport_x_;
-    y = viewport_y_;
-    width = viewport_w_;
-    height = viewport_h_;
+    x = viewport_.x;
+    y = viewport_.y;
+    width = viewport_.width;
+    height = viewport_.height;
+}
+
+Viewport RenderPass::viewport() const
+{
+    return viewport_;
 }
 
 void RenderPass::clearViewport()
@@ -156,7 +163,7 @@ void RenderPass::execute(raw_ptr<Scene> scene, raw_ptr<RenderBackend> backend)
     }
     backend->setRenderTarget(render_target_.get());
     if (has_viewport_) {
-        backend->setViewport(viewport_x_, viewport_y_, viewport_w_, viewport_h_);
+        backend->setViewport(viewport_.x, viewport_.y, viewport_.width, viewport_.height);
     }
     if (clear_enabled_) {
         backend->clear(clear_color_, clear_depth_);
