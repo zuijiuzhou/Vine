@@ -380,6 +380,22 @@ void addDemoLighting(gui::RenderControl* render_control)
     sun->setIntensity(1.0f);
     scene->addLight(sun);
 
+    // Dev switch: VINE_VSG_EXTRA_SUNS adds two more directional lights so the
+    // scene exercises the deferred light pass' full three-light capacity.
+    if (std::getenv("VINE_VSG_EXTRA_SUNS") != nullptr) {
+        auto sun2 = vine::graphics::Light::createDirectional(vine::math::Vec3d(-0.9, -0.5, -0.3));
+        sun2->setName(u8"scene_sun2");
+        sun2->setColor(vine::Colorf(0.6f, 0.8f, 1.0f, 1.0f));
+        sun2->setIntensity(0.7f);
+        scene->addLight(sun2);
+
+        auto sun3 = vine::graphics::Light::createDirectional(vine::math::Vec3d(-0.2, -0.3, 0.95));
+        sun3->setName(u8"scene_sun3");
+        sun3->setColor(vine::Colorf(1.0f, 0.55f, 0.35f, 1.0f));
+        sun3->setIntensity(0.5f);
+        scene->addLight(sun3);
+    }
+
     // Raise the camera to an elevated 3/4 view of the stack. Runs before
     // RenderControl::init() wires the orbit manipulator, so the manipulator
     // home syncs to this vantage.
@@ -813,11 +829,13 @@ void addDeferredDemo(gui::RenderControl* render_control)
 }
 
 /**
- * @brief Builds the G-buffer geometry program (three fragment outputs).
+ * @brief Builds the G-buffer geometry program (four fragment outputs).
  *
- * One traversal writes albedo (attachment 0), view-space normal (1) and
- * view-space position (2) into an MRT target. Unlit: the deferred lighting
- * pass shades from these buffers.
+ * One traversal writes albedo (attachment 0), view-space normal (1, alpha =
+ * shininess / 256), specular colour (2) and view-space position (3) into an
+ * MRT target. Unlit: the deferred lighting pass shades from these buffers
+ * (position is stored, not reconstructed from depth — exact under the
+ * backend's depth convention).
  *
  * @return The shared geometry program.
  */
@@ -848,7 +866,8 @@ vine::intrusive_ptr<vine::graphics::ShaderProgram> makeGbufferGeometryProgram()
                 u8"layout(location = 1) in vec3 v_view_normal;\n"
                 u8"layout(location = 0) out vec4 out_albedo;\n"
                 u8"layout(location = 1) out vec4 out_normal;\n"
-                u8"layout(location = 2) out vec4 out_position;\n"
+                u8"layout(location = 2) out vec4 out_specular;\n"
+                u8"layout(location = 3) out vec4 out_position;\n"
                 u8"layout(set = 0, binding = 0, std140) uniform MaterialBlock\n"
                 u8"{\n"
                 u8"    vec4 ambient;\n"
@@ -861,14 +880,9 @@ vine::intrusive_ptr<vine::graphics::ShaderProgram> makeGbufferGeometryProgram()
                 u8"} material;\n"
                 u8"void main()\n"
                 u8"{\n"
-                u8"    // Albedo's alpha carries the (mono) specular strength;\n"
-                u8"    // the normal attachment's alpha carries shininess / 256\n"
-                u8"    // so the deferred lighting pass shades per-pixel instead\n"
-                u8"    // of using a fixed approximation.\n"
-                u8"    float spec_strength = max(max(material.specular.r, material.specular.g), material.specular.b);\n"
-                u8"    spec_strength = clamp(spec_strength, 0.0, 1.0);\n"
-                u8"    out_albedo   = vec4(material.diffuse.rgb, spec_strength);\n"
-                u8"    out_normal   = vec4(normalize(v_view_normal), clamp(material.shininess / 256.0, 0.0, 1.0));\n"
+                u8"    out_albedo = vec4(material.diffuse.rgb, 1.0);\n"
+                u8"    out_normal = vec4(normalize(v_view_normal), clamp(material.shininess / 256.0, 0.0, 1.0));\n"
+                u8"    out_specular = vec4(clamp(material.specular.rgb, 0.0, 1.0), 1.0);\n"
                 u8"    out_position = vec4(v_view_pos, 1.0);\n"
                 u8"}\n";
     program->addStage(fs);
@@ -876,17 +890,23 @@ vine::intrusive_ptr<vine::graphics::ShaderProgram> makeGbufferGeometryProgram()
 }
 
 /**
- * @brief Builds a shared G-buffer MRT target (albedo / normal / view pos).
+ * @brief Builds a shared G-buffer MRT target (albedo / normal / spec / pos).
  *
- * @return The target with three colour attachments + depth.
+ * Four colour attachments (albedo RGBA8, view-space normal RGBA16F with alpha
+ * = shininess / 256, specular colour RGBA8, view-space position RGBA16F) plus
+ * a depth attachment. Position is stored so the deferred lighting pass is
+ * exact under the backend's depth convention.
+ *
+ * @return The target with four colour attachments + depth.
  */
 vine::intrusive_ptr<vine::graphics::RenderTarget> makeGbufferTarget()
 {
     auto target = vine::intrusive_ptr<vine::graphics::RenderTarget>(new vine::graphics::RenderTarget());
     target->setSize(640, 360);
-    target->attachColor(vine::graphics::RenderTarget::ColorFormat::RGBA8);
-    target->attachColor(vine::graphics::RenderTarget::ColorFormat::RGBA16F);
-    target->attachColor(vine::graphics::RenderTarget::ColorFormat::RGBA16F);
+    target->attachColor(vine::graphics::RenderTarget::ColorFormat::RGBA8);   // att 0: albedo
+    target->attachColor(vine::graphics::RenderTarget::ColorFormat::RGBA16F); // att 1: view normal (+ shininess in alpha)
+    target->attachColor(vine::graphics::RenderTarget::ColorFormat::RGBA8);   // att 2: specular colour
+    target->attachColor(vine::graphics::RenderTarget::ColorFormat::RGBA16F); // att 3: view position
     target->attachDepth(vine::graphics::RenderTarget::DepthFormat::D24);
     return target;
 }
@@ -894,9 +914,10 @@ vine::intrusive_ptr<vine::graphics::RenderTarget> makeGbufferTarget()
 /**
  * @brief Builds the deferred-lighting fragment program (fullscreen).
  *
- * Samples the G-buffer's albedo / normal / position attachments (binding
- * 0..2) and shades ambient + up to two directional lights whose parameters
- * arrive in the view-space push block (see the backend ABI).
+ * Samples the G-buffer's albedo / normal / specular / view-position
+ * attachments (binding 0..3) and shades ambient + up to three directional
+ * lights whose parameters arrive in the view-space push block (see the
+ * backend ABI).
  *
  * @return The lighting program (fragment stage only).
  */
@@ -911,44 +932,46 @@ vine::intrusive_ptr<vine::graphics::ShaderProgram> makeDeferredLightProgram()
                 u8"layout(location = 0) out vec4 out_color;\n"
                 u8"layout(binding = 0) uniform sampler2D albedo_tex;\n"
                 u8"layout(binding = 1) uniform sampler2D normal_tex;\n"
-                u8"layout(binding = 2) uniform sampler2D pos_tex;\n"
+                u8"layout(binding = 2) uniform sampler2D spec_tex;\n"
+                u8"layout(binding = 3) uniform sampler2D pos_tex;\n"
                 u8"layout(push_constant) uniform PushConstants\n"
                 u8"{\n"
                 u8"    vec4 ambient;\n"
-                u8"    vec4 sun0_dir;\n"
-                u8"    vec4 sun0_color;\n"
-                u8"    vec4 sun1_dir;\n"
-                u8"    vec4 sun1_color;\n"
-                u8"    vec4 misc;\n"
+                u8"    vec4 projparms;\n"
+                u8"    vec4 sun_dir[3];\n"
+                u8"    vec4 sun_color[3];\n"
                 u8"} pc;\n"
                 u8"void main()\n"
                 u8"{\n"
-                u8"    vec2 uv = vec2(v_uv.x, 1.0 - v_uv.y);\n"
-                u8"    vec4 albedo4 = texture(albedo_tex, uv);\n"
-                u8"    vec3 albedo = albedo4.rgb;\n"
+                u8"    // vsg projects world-up to the top G-buffer row (reverse-Y\n"
+                u8"    // perspective) and v_uv.y == 0 is the top of the screen,\n"
+                u8"    // so v_uv samples the buffers upright (no Y flip).\n"
+                u8"    vec2 uv = v_uv;\n"
+                u8"    vec3 albedo = texture(albedo_tex, uv).rgb;\n"
                 u8"    vec4 n4 = texture(normal_tex, uv);\n"
                 u8"    vec3 n = n4.xyz;\n"
                 u8"    vec3 pos = texture(pos_tex, uv).xyz;\n"
+                u8"    // Background (stored position ~0 where nothing was drawn).\n"
                 u8"    if (dot(pos, pos) < 1e-6) { out_color = vec4(vec3(0.06), 1.0); return; }\n"
                 u8"    n = normalize(n);\n"
-                u8"    // Per-pixel material from the G-buffer: specular strength\n"
-                u8"    // rides albedo.alpha, shininess rides normal.alpha.\n"
-                u8"    float spec_strength = clamp(albedo4.a, 0.0, 1.0);\n"
+                u8"    // Per-pixel material from the G-buffer: specular colour rides\n"
+                u8"    // attachment 2, shininess rides the normal attachment's alpha.\n"
+                u8"    vec3 spec_col = clamp(texture(spec_tex, uv).rgb, 0.0, 1.0);\n"
                 u8"    float shininess = max(n4.a * 256.0, 1.0);\n"
                 u8"    vec3 view_dir = normalize(-pos);\n"
                 u8"    vec3 color = albedo * (pc.ambient.rgb * pc.ambient.a);\n"
-                u8"    for (int i = 0; i < 2; ++i)\n"
+                u8"    for (int i = 0; i < 3; ++i)\n"
                 u8"    {\n"
-                u8"        vec3 d = (i == 0) ? pc.sun0_dir.xyz : pc.sun1_dir.xyz;\n"
-                u8"        vec3 c = (i == 0) ? pc.sun0_color.rgb : pc.sun1_color.rgb;\n"
-                u8"        float a = (i == 0) ? pc.sun0_color.a : pc.sun1_color.a;\n"
+                u8"        vec3 d = pc.sun_dir[i].xyz;\n"
+                u8"        vec3 c = pc.sun_color[i].rgb;\n"
+                u8"        float a = pc.sun_color[i].a;\n"
                 u8"        if (dot(d, d) < 1e-6) continue;\n"
                 u8"        vec3 L = normalize(-d);\n"
                 u8"        float ndl = max(dot(n, L), 0.0);\n"
                 u8"        color += albedo * c * a * ndl;\n"
                 u8"        vec3 H = normalize(L + view_dir);\n"
                 u8"        float spec = pow(max(dot(n, H), 0.0), shininess);\n"
-                u8"        color += c * a * spec * spec_strength;\n"
+                u8"        color += c * a * spec * spec_col;\n"
                 u8"    }\n"
                 u8"    out_color = vec4(color, 1.0);\n"
                 u8"}\n";
@@ -966,16 +989,16 @@ vine::intrusive_ptr<vine::graphics::ShaderProgram> makeDeferredLightProgram()
  * RenderControl does not add its default forward window pass; HUD overlays
  * (order 10+) still stack above the lit result.
  *
- * This is the DEFAULT main pipeline. Set VINE_VSG_FORWARD to keep the classic
- * forward-lit window (RenderControl then provisions the window pass) and use
- * this deferred path only as a selectable comparison.
+ * Dev switch (env VINE_VSG_DEFERRED_FULL): the CLASSIC FORWARD window remains
+ * the default (RenderControl provisions the window pass when no deferred
+ * pass claims the master view); run this deferred main only when the env is
+ * set, for A/B / debugging.
  *
  * @param render_control Render view whose engine receives the passes.
  */
 void addDeferredMain(gui::RenderControl* render_control)
 {
-    // Forward mode is the explicit opt-out: keep the classic window scene.
-    if (std::getenv("VINE_VSG_FORWARD") != nullptr) {
+    if (std::getenv("VINE_VSG_DEFERRED_FULL") == nullptr) {
         return;
     }
     auto* engine = render_control->engine();
@@ -1032,8 +1055,9 @@ AppShellDock buildAppShellDock(gui::MainWindow* wnd)
     // Dev switch: VINE_VSG_DEFERRED adds a fullscreen deferred-lighting pass
     // that reads the G-buffer and shows the lit result (S2a, A/B preview).
     addDeferredDemo(render_control);
-    // Default main pipeline (S2b/S3): the window is deferred-lit from a
-    // G-buffer. Set VINE_VSG_FORWARD to keep the classic forward window.
+    // Default main pipeline: the CLASSIC FORWARD window (RenderControl
+    // provisions it). Dev switch VINE_VSG_DEFERRED_FULL swaps the main window
+    // to the deferred G-buffer + fullscreen lighting pipeline (S2b/S3).
     addDeferredMain(render_control);
     // Dev switch: setting VINE_SHADER_PRESET exercises the FlatShaded preset
     // through the whole engine/backend path (default = StandardPhong).

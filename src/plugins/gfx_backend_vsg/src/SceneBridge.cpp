@@ -29,6 +29,7 @@
 
 #include "VsgUtils.hpp"
 
+#include <algorithm>
 #include <cstdint>
 #include <unordered_set>
 
@@ -539,7 +540,35 @@ bool SceneBridge::syncRenderCommands(
     // per-vertex opacity alpha may drop below 1 at any time without a rebuild);
     // depth, culling, polygon mode, blend factors and topology come from the
     // StateNode fold carried by the command.
-    const RenderStateObjects states = makeRenderStateObjects(state);
+    RenderStateObjects states = makeRenderStateObjects(state);
+
+    // MRT: the mapped blend is a single attachment (the renderer's default),
+    // but a pipeline recorded into a multi-colour-attachment subpass must
+    // carry one blend entry PER attachment, or Vulkan only writes attachment 0
+    // (the rest stay cleared -> black). Size it to the slot shader set's
+    // colour count (built from the target's colour attachments): attachment 0
+    // keeps the mapped opacity blend, the extra G-buffer attachments write
+    // opaque, unblended.
+    int mrt = 1;
+    if (shader_set_ != nullptr) {
+        for (const auto& s : shader_set_->defaultGraphicsPipelineStates) {
+            if (auto cb = s.cast<::vsg::ColorBlendState>()) {
+                mrt = std::max(1, static_cast<int>(cb->attachments.size()));
+                break;
+            }
+        }
+    }
+    if (mrt > 1) {
+        const auto first = states.colorBlend->attachments.front();
+        states.colorBlend->attachments.clear();
+        for (int i = 0; i < mrt; ++i) {
+            auto attachment = first;
+            if (i > 0) {
+                attachment.blendEnable = VK_FALSE;
+            }
+            states.colorBlend->attachments.push_back(attachment);
+        }
+    }
     applyRenderStateObjects(*config, states);
 
     config->init();

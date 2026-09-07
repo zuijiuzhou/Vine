@@ -267,11 +267,13 @@ VkFormat toDepthFormat(vine::graphics::RenderTarget::DepthFormat f)
         depth.format                       = depth_format;
         depth.samples                      = VK_SAMPLE_COUNT_1_BIT;
         depth.loadOp                       = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        depth.storeOp                      = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        // Stored + sampleable: the deferred lighting pass reads the depth back
+        // to reconstruct view-space positions (no separate position buffer).
+        depth.storeOp                      = VK_ATTACHMENT_STORE_OP_STORE;
         depth.stencilLoadOp                = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         depth.stencilStoreOp               = VK_ATTACHMENT_STORE_OP_DONT_CARE;
         depth.initialLayout                = VK_IMAGE_LAYOUT_UNDEFINED;
-        depth.finalLayout                  = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        depth.finalLayout                  = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         attachments.push_back(depth);
 
         ::vsg::AttachmentReference depth_ref = {};
@@ -282,23 +284,23 @@ VkFormat toDepthFormat(vine::graphics::RenderTarget::DepthFormat f)
 
     ::vsg::RenderPass::Dependencies dependencies;
 
-    // Initial (UNDEFINED) -> COLOR_ATTACHMENT_OPTIMAL before the first subpass.
+    // Initial (UNDEFINED) -> attachment-optimal before the first subpass.
     ::vsg::SubpassDependency ext_to_sub = {};
     ext_to_sub.srcSubpass               = VK_SUBPASS_EXTERNAL;
     ext_to_sub.dstSubpass               = 0;
-    ext_to_sub.srcStageMask             = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    ext_to_sub.dstStageMask             = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    ext_to_sub.dstAccessMask            = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    ext_to_sub.srcStageMask             = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+    ext_to_sub.dstStageMask             = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+    ext_to_sub.dstAccessMask            = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
     dependencies.push_back(ext_to_sub);
 
-    // After the subpass, transition to SHADER_READ_ONLY and make the colour
-    // writes visible to a later pass that samples the attachment.
+    // After the subpass, transition colour + depth to SHADER_READ_ONLY and
+    // make their writes visible to a later pass that samples either.
     ::vsg::SubpassDependency sub_to_ext = {};
     sub_to_ext.srcSubpass               = 0;
     sub_to_ext.dstSubpass               = VK_SUBPASS_EXTERNAL;
-    sub_to_ext.srcStageMask             = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    sub_to_ext.srcStageMask             = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
     sub_to_ext.dstStageMask             = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-    sub_to_ext.srcAccessMask            = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    sub_to_ext.srcAccessMask            = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
     sub_to_ext.dstAccessMask            = VK_ACCESS_SHADER_READ_BIT;
     dependencies.push_back(sub_to_ext);
 
@@ -391,7 +393,10 @@ layout(location = 0) out vec4 out_color;
 layout(binding = 0) uniform sampler2D screen_tex;
 void main()
 {
-    out_color = texture(screen_tex, vec2(v_uv.x, 1.0 - v_uv.y));
+    // vsg projects world-up to the top image row (reverse-Y perspective), and
+    // the fullscreen triangle's v_uv.y == 0 sits at the top of the screen, so
+    // sampling v_uv directly keeps the source upright (no Y flip).
+    out_color = texture(screen_tex, v_uv);
 }
 )";
 
@@ -443,18 +448,19 @@ void main()
 /**
  * @brief CPU mirror of the deferred-lighting push-constant block.
  *
- * Only vec4 members (std140/std430 offsets coincide), 6 x 16 = 96 bytes <= the
- * declared 128-byte push range. Layout matches the fragment shader ABI the
- * fullscreen program pass expects (see makeFullscreenProgramNode).
+ * All members are vec4-sized (std140/std430 offsets coincide). 8 x 16 = 128
+ * bytes == the declared push range: ambient + projection params + up to three
+ * directional lights (dir/colour pairs). Layout matches the fragment shader
+ * ABI the fullscreen program pass expects (see makeFullscreenProgramNode).
  */
 struct alignas(16) LightPushBlock
 {
-    float ambient[4]; // ambient rgb + intensity
-    float dir0[4];    // directional light 0: view-space direction
-    float col0[4];    // directional light 0: rgb + intensity
-    float dir1[4];    // directional light 1: view-space direction
-    float col1[4];    // directional light 1: rgb + intensity
-    float misc[4];    // x = specular shininess (fixed approximation for now)
+    float ambient[4];   // ambient rgb + intensity
+    // Perspective projection params for view-position reconstruction from the
+    // G-buffer depth: x = near, y = far, z = proj[0][0], w = proj[1][1].
+    float projparms[4];
+    float dirs[3][4];   // directional lights: view-space directions
+    float cols[3][4];   // directional lights: rgb + intensity
 };
 
 /**
@@ -463,7 +469,8 @@ struct alignas(16) LightPushBlock
  * The vertex shader generates the full-screen triangle from gl_VertexIndex
  * (no vertex buffers / camera matrices); the fragment shader is @p program's
  * fragment stage, sampling @p image_views (one per colour attachment of the
- * source MRT target, descriptor binding i = attachment i) and reading a
+ * source MRT target, descriptor binding i = attachment i) plus, when @p
+ * depth_view is set, the source's depth attachment (next binding), and reads a
  * per-frame @p push_data block (see LightPushBlock). Depth test/write are
  * disabled and blending is off: the draw overwrites the sub-viewport it owns.
  * The retained node is drawn as its own View (viewport = the PiP rectangle),
@@ -471,13 +478,15 @@ struct alignas(16) LightPushBlock
  *
  * Fragment-shader ABI the user program must follow:
  *   layout(location = 0) in vec2 v_uv;
- *   layout(binding = i) uniform sampler2D <any>;   // i-th source attachment
+ *   layout(binding = i) uniform sampler2D <any>;   // i-th source colour attachment
+ *   layout(binding = N) uniform sampler2D depth;    // source depth (N = colour count)
  *   layout(push_constant) uniform PushConstants { vec4 ... } pc;  // LightPushBlock
  *   layout(location = 0) out vec4 out_color;
  *
  * @param program    User program supplying the fragment stage (any vertex
  *                   stage is ignored; the backend provides the fullscreen VS).
  * @param image_views Source MRT colour-attachment views to sample.
+ * @param depth_view  Source depth-attachment view to sample (may be null).
  * @param extent     Surface extent for the baked static viewport.
  * @param push_data  Per-frame push-constant bytes (mutated before each record).
  * @return The drawable state-group, or null when shader compilation failed.
@@ -485,6 +494,7 @@ struct alignas(16) LightPushBlock
 ::vsg::ref_ptr<::vsg::Node> makeFullscreenProgramNode(
     vine::raw_ptr<const vine::graphics::ShaderProgram> program,
     const ::vsg::ImageViews&                          image_views,
+    ::vsg::ref_ptr<::vsg::ImageView>                  depth_view,
     const VkExtent2D&                                 extent,
     ::vsg::ref_ptr<::vsg::Data>                       push_data)
 {
@@ -529,7 +539,12 @@ void main()
                                         VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT,
                                         ::vsg::ref_ptr<::vsg::Data>());
     }
-    // Per-frame light/view parameters (LightPushBlock, 96 bytes of the range).
+    if (depth_view != nullptr) {
+        shaderSet->addDescriptorBinding("gbuffer_depth", "", 0, static_cast<uint32_t>(image_views.size()),
+                                        VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT,
+                                        ::vsg::ref_ptr<::vsg::Data>());
+    }
+    // Per-frame light/view parameters (LightPushBlock, the full 128-byte range).
     shaderSet->addPushConstantRange("pc_light", "", VK_SHADER_STAGE_FRAGMENT_BIT, 0, 128);
 
     auto raster                              = ::vsg::RasterizationState::create();
@@ -551,6 +566,15 @@ void main()
     for (std::size_t i = 0; i < image_views.size(); ++i) {
         auto image_info = ::vsg::ImageInfo::create(sampler, image_views[i], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
         config->assignTexture("gbuffer" + std::to_string(i), ::vsg::ImageInfoList{ image_info });
+    }
+    if (depth_view != nullptr) {
+        // Depth is sampled raw (no compare): nearest filter keeps it exact.
+        auto depth_sampler   = ::vsg::Sampler::create();
+        depth_sampler->magFilter  = VK_FILTER_NEAREST;
+        depth_sampler->minFilter  = VK_FILTER_NEAREST;
+        depth_sampler->mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+        auto depth_info = ::vsg::ImageInfo::create(depth_sampler, depth_view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        config->assignTexture("gbuffer_depth", ::vsg::ImageInfoList{ depth_info });
     }
     config->init();
 
@@ -814,7 +838,10 @@ bool VsgRenderer::initialize()
     traits->windowTitle = "Vine";
     traits->width       = 1280;
     traits->height      = 720;
-    traits->debugLayer  = false;
+    // Debug switch VINE_VSG_DEBUG_LAYER turns on the Vulkan validation layer so
+    // silent pipeline/render-pass failures (no validation in normal runs)
+    // surface as messages.
+    traits->debugLayer = std::getenv("VINE_VSG_DEBUG_LAYER") != nullptr;
 
     void* host_handle = impl->bound_handle;
     if (forceOwnWindow()) {
@@ -1219,6 +1246,11 @@ void VsgRenderer::buildOffscreenTarget(vine::graphics::RenderTarget* target)
         t.graph->clearValues.push_back(color_clear);
     }
     if (has_depth) {
+        // Colour targets clear depth to 0.0, matching what the window main's
+        // clear() pushes — the geometry depth test that works for the window
+        // forward path must see the same cleared value off-screen or every
+        // fragment fails and nothing rasterises. Depth-only (shadow) targets
+        // keep clearing to the far plane (1.0).
         VkClearValue depth_clear = {};
         depth_clear.depthStencil = VkClearDepthStencilValue{ has_color ? 0.0f : 1.0f, 0 };
         t.graph->clearValues.push_back(depth_clear);
@@ -1446,8 +1478,8 @@ void viewRotation(const vine::graphics::Camera* camera, double r[3], double u[3]
  * The G-buffer stores view-space normals / positions, so directional lights
  * are pre-transformed from world to view space on the CPU (the fragment
  * shader then never needs a view matrix). Supports the first ambient plus up
- * to two directional lights — enough for the current demo rig; further lights
- * are ignored (documented S2a limitation).
+ * to three directional lights (the push block is exactly 128 bytes); further
+ * lights are ignored (documented S4 limitation).
  *
  * @param camera Camera whose view transforms the lights (may be null).
  * @param lights Scene lights to bake (borrowed).
@@ -1458,9 +1490,19 @@ void fillLightPushBlock(const vine::graphics::Camera*                           
                         LightPushBlock&                                             block)
 {
     block = LightPushBlock{};
-    block.misc[0] = 32.0f; // fixed specular shininess approximation (S2a)
     if (camera == nullptr) {
         return;
+    }
+    // Perspective projection parameters for view-position reconstruction from
+    // the G-buffer depth (near / far / proj00 / proj11).
+    if (camera->projectionType() == vine::graphics::Camera::ProjectionType::Perspective) {
+        const double fov    = camera->fieldOfView() * 0.5; // degrees
+        const double cot    = 1.0 / std::tan(fov * 3.14159265358979323846 / 180.0);
+        const double aspect = camera->aspectRatio();
+        block.projparms[0]  = static_cast<float>(camera->nearPlane());
+        block.projparms[1]  = static_cast<float>(camera->farPlane());
+        block.projparms[2]  = static_cast<float>(cot / aspect); // proj[0][0]
+        block.projparms[3]  = static_cast<float>(cot);          // proj[1][1]
     }
     double r[3] = {}, u[3] = {}, f[3] = {};
     viewRotation(camera, r, u, f);
@@ -1478,8 +1520,8 @@ void fillLightPushBlock(const vine::graphics::Camera*                           
             block.ambient[3] = light->intensity();
             break;
         case vine::graphics::LightType::Directional:
-            if (dirlight >= 2) {
-                break;
+            if (dirlight >= 3) {
+                break; // the push block holds up to three directional lights
             }
             {
                 const auto d = light->direction();
@@ -1493,8 +1535,8 @@ void fillLightPushBlock(const vine::graphics::Camera*                           
                     vy /= vl;
                     vz /= vl;
                 }
-                float* dd = (dirlight == 0) ? block.dir0 : block.dir1;
-                float* cc = (dirlight == 0) ? block.col0 : block.col1;
+                float* dd = block.dirs[dirlight];
+                float* cc = block.cols[dirlight];
                 dd[0] = static_cast<float>(vx);
                 dd[1] = static_cast<float>(vy);
                 dd[2] = static_cast<float>(vz);
@@ -1589,8 +1631,8 @@ void VsgRenderer::drawScreenProgram(vine::graphics::RenderTarget*              s
                            children.end());
         }
         slot = Impl::ProgramSlot{};
-        slot.push_data = ::vsg::ubyteArray::create(128); // range; block uses the first 96
-        auto node      = makeFullscreenProgramNode(program, src.color_views, surface, slot.push_data);
+        slot.push_data = ::vsg::ubyteArray::create(128); // == full block size
+        auto node      = makeFullscreenProgramNode(program, src.color_views, src.depth_view, surface, slot.push_data);
         if (node == nullptr) {
             window_entry.program_slots.erase(source);
             return;
@@ -1965,6 +2007,18 @@ void VsgRenderer::renderContentSlot(vine::graphics::RenderTarget*               
             if (!compileResult) {
                 std::fprintf(stderr, "[VsgRenderer] content slot compile failed: %s\n", compileResult.message.c_str());
             }
+        }
+        // TEMP diagnostics (VINE_VSG_DIAG_MRT): report how many commands were
+        // collected for this slot and how many geometry subtrees were built,
+        // to tell "no geometry collected" from "geometry not rasterised".
+        if (std::getenv("VINE_VSG_DIAG_MRT") != nullptr) {
+            std::fprintf(stderr, "[MRT-DIAG] target=%s on_top=%d order=%d commands=%zu created=%zu rootChildren=%zu\n",
+                         target == nullptr ? "window" : "offscreen",
+                         on_top ? 1 : 0,
+                         order,
+                         commands.size(),
+                         created.size(),
+                         content.root->children.size());
         }
     }
 }

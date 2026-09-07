@@ -1,6 +1,9 @@
 # graphics MRT / GBuffer 设计（一次几何遍历产出多张图）
 
-> 状态：设计稿 v1（2026-09-04）· **S1 ✅ · S2a ✅ · S2b ✅ · S3 ✅（deferred 已成默认主窗）**
+> 状态：设计稿 v1（2026-09-04）· **S1 ✅ · S2a ✅ · S2b ✅ · S3 ✅ · S4a/b/c ✅**（deferred 主窗已实现，但
+> **2026-09-04 默认退回 FORWARD**：S3 曾把 deferred 设为默认，用户实测默认启动窗口空白（本环境无法
+> 截图/像素级核验）→ 默认还原 forward，deferred 主窗改由 `VINE_VSG_DEFERRED_FULL` 开关驱动，待
+> 真机像素目检定位后（疑光照/重建静默黑屏，日志无错）再决定切默认）。
 > 上游：`graphics-render-pipeline.md`（多 pass + 命名产出槽）、`graphics-shader.md`（用户 GLSL /
 > ShaderProgram）、`vsg-custom-shader.md`（自写 shading ABI）、`vsg-target-unification.md`
 > （统一 Target / (camera, order) 内容槽）。
@@ -156,12 +159,32 @@ deferred 光照 pass 复刻当前 phong 产出（与现在画面一致 A/B）。
     shininess/256（RGBA16F）。deferred 光照 FS 读回（spec 强度乘高光项，shininess=normal.a*256），
     消除固定 shininess 32 近似。AppShell 收敛为单源 helper（makeGbufferGeometryProgram /
     makeGbufferTarget / makeDeferredLightProgram），addDeferredDemo（S2a）改走 helper。
-  * **deferred 成为默认主窗**：addDeferredMain 去掉 env 门控（不再 gate on VINE_VSG_DEFERRED_FULL），
-    改为默认执行；设 VINE_VSG_FORWARD=1 保留经典 forward 对照（此时 RenderControl 补默认窗口 pass）。
+  * **deferred 成为默认主窗（2026-09-04 曾落地，随后回退）**：addDeferredMain 曾去掉 env 门控默认执行；
+    用户实测默认启动空白 → 已还原为默认 FORWARD，deferred 主窗由 `VINE_VSG_DEFERRED_FULL` 门控
+    （forward 永远可用）。待像素目检定位 deferred 黑屏后重审默认化。
   * 验证：default 冒烟日志 "deferred fullscreen program 640x360 -> 0,0 378x234 attached"；
     FORWARD 冒烟无 deferred；test_graphics 117 / test_vsg 10；default+FORWARD+五 demo 冒烟全干净。
-- S4（未做）：per-attachment clear 色、深度重建 pos（可省去 viewpos 附件）、多光>2、spec 颜色
-  RGB（当前仅标量强度）、去 FORWARD 后的收尾清理。
+- S4（未做）：per-attachment clear 色、多光>2。
+- **S4a ✅（2026-09-04）**：specular **RGB**（第 4 附件 RGBA8，helper target/gbuffer 几何/光照 FS
+  同步：geometry loc3=out_specular=clamp(specular.rgb)；光照 FS binding3=spec_tex，高光项乘 spec_col；
+  att0 alpha 回 1）。消除 S3 的标量 spec 强度近似，高光色随材质。default deferred 冒烟 0 错误，
+  117/10 测试绿，FORWARD/gbuffer/deferred 冒烟干净。
+- **S4b ✅（2026-09-04）**：**深度重建 view pos（去掉 viewpos 附件）**：
+  * `makeSampleableRenderPass` 的 depth 附件改为 storeOp=STORE + finalLayout=SHADER_READ_ONLY_OPTIMAL，
+    子 pass 外部依赖覆盖 color+depth 的写与 fragment 读（depth 可被后续 pass 采样重建）。
+  * color+RT target 的 depth 清屏改为**远平面 1.0**（背景像素 depth≈1 可在光照 pass 识别为空）。
+  * 全屏程序节点可额外采样源 depth（binding = colorCount，NEAREST 采样）；drawScreenProgram 传入
+    src.depth_view。
+  * push 块 misc → projparms{near, far, proj00, proj11}（仍 96B）；fillLightPushBlock 从透视相机
+    fov/aspect/near/far 填入。
+  * helper gbuffer target 3 色（albedo RGBA8 / normal RGBA16F(alpha=shininess/256) / spec RGBA8）
+    + depth；几何 FS 去 viewpos 输出；光照 FS binding albedo0/normal1/spec2/depth3，由
+    depth→NDC→(A,B,t) 重建 view pos。
+- **S4c ✅（2026-09-04）**：**方向光 2 → 3**（push 块仍 128B，无范围/移植风险）：LightPushBlock
+  改为 `ambient + projparms + dirs[3][4] + cols[3][4]`（恰 128B）；fillLightPushBlock 上限 3；
+  光照 FS push 块改 `sun_dir[3]/sun_color[3]`、循环 0..2。demo 加 env `VINE_VSG_EXTRA_SUNS`（再添
+  2 个方向光，共 3 个方向光）验证。default(3 光) 与 FORWARD(3 光) 冒烟 0 错误；117/10 绿。
+- S4 剩余（未做）：per-attachment clear 色；>3 方向光（需 >128B push，改 UBO 或 range 扩容）。
 - S3（可选）：gbuffer 附带 spec/粗糙度（或 lit color 附件）/ per-attachment clear / 深度重建 pos。
 
 ## 9. 回归与验证
