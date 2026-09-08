@@ -1,4 +1,4 @@
-#include <vine/robotics/kinematics/SerialKinematics.hpp>
+﻿#include <vine/robotics/kinematics/SerialKinematics.hpp>
 
 #include <algorithm>
 #include <stdexcept>

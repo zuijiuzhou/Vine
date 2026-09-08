@@ -1,4 +1,4 @@
-#include <vine/appfw/gui/AboutDialog.hpp>
+﻿#include <vine/appfw/gui/AboutDialog.hpp>
 
 #include <QDialog>
 #include <QFont>

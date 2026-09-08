@@ -1,4 +1,4 @@
-#include <vine/appfw/gui/GuiAppBuilder.hpp>
+﻿#include <vine/appfw/gui/GuiAppBuilder.hpp>
 
 #include <QCoreApplication>
 

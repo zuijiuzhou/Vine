@@ -1,4 +1,4 @@
-#include <vine/modelio/BrepLoader.hpp>
+﻿#include <vine/modelio/BrepLoader.hpp>
 
 #include <algorithm>
 #include <cctype>

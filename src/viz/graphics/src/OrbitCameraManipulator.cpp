@@ -1,4 +1,4 @@
-#include <vine/graphics/OrbitCameraManipulator.hpp>
+﻿#include <vine/graphics/OrbitCameraManipulator.hpp>
 
 #include <vine/graphics/Camera.hpp>
 #include <vine/graphics/Geometry.hpp>

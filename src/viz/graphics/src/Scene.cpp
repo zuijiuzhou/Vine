@@ -1,4 +1,4 @@
-#include <vine/graphics/Scene.hpp>
+﻿#include <vine/graphics/Scene.hpp>
 
 #include <vine/graphics/Camera.hpp>
 #include <vine/graphics/Geometry.hpp>

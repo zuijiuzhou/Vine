@@ -1,4 +1,4 @@
-#include <vine/graphics/RenderPass.hpp>
+﻿#include <vine/graphics/RenderPass.hpp>
 
 #include <vine/graphics/Camera.hpp>
 #include <vine/graphics/RenderBackend.hpp>

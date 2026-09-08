@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <vine/core_global.hpp>
 

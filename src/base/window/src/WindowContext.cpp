@@ -1,4 +1,4 @@
-#include <vine/window/WindowContext.hpp>
+﻿#include <vine/window/WindowContext.hpp>
 
 V_WINDOW_NS_BEGIN
 

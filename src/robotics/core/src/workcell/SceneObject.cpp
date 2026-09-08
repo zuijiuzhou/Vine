@@ -1,4 +1,4 @@
-#include <vine/robotics/workcell/SceneObject.hpp>
+﻿#include <vine/robotics/workcell/SceneObject.hpp>
 
 #include <vine/robotics/workcell/Workcell.hpp>
 

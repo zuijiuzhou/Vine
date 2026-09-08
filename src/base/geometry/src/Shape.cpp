@@ -1,4 +1,4 @@
-#include <vine/geometry/Shape.hpp>
+﻿#include <vine/geometry/Shape.hpp>
 
 V_GEOMETRY_NS_BEGIN
 

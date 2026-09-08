@@ -1,4 +1,4 @@
-# Vine 数据 → vsg 数据的映射流程
+﻿# Vine 数据 → vsg 数据的映射流程
 
 > 模块：`src/plugins/gfx_backend_vsg`（vsg 后端）
 > 2026-09-04 依据本机 vsg 1.1.16 源码 / `vsg_shader_dump` 反序列化 / 后端代码核对。

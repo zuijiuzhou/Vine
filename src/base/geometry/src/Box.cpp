@@ -1,4 +1,4 @@
-#include <vine/geometry/Box.hpp>
+﻿#include <vine/geometry/Box.hpp>
 
 V_GEOMETRY_NS_BEGIN
 

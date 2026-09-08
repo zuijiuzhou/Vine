@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Icon.hpp"
 #include "UIElement.hpp"

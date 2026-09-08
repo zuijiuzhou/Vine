@@ -1,4 +1,4 @@
-#include <vine/robotics/kinematics/JacobianIKSolver.hpp>
+﻿#include <vine/robotics/kinematics/JacobianIKSolver.hpp>
 
 #include <algorithm>
 #include <cmath>

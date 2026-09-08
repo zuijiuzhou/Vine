@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "graphics_global.hpp"
 
 V_GRAPHICS_NS_BEGIN

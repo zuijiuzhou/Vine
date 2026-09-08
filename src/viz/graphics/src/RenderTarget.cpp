@@ -1,4 +1,4 @@
-#include <vine/graphics/RenderTarget.hpp>
+﻿#include <vine/graphics/RenderTarget.hpp>
 
 V_GRAPHICS_NS_BEGIN
 

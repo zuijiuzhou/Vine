@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "vsg_global.hpp"
 
 #include <vine/graphics/RenderBackendRegistry.hpp>

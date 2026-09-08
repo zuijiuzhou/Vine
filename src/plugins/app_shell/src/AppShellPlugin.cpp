@@ -1,4 +1,4 @@
-#include "AppShellPlugin.hpp"
+﻿#include "AppShellPlugin.hpp"
 
 #include <vine/appfw/gui/MainWindow.hpp>
 #include <vine/appfw/plugin_export.hpp>

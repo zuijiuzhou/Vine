@@ -1,4 +1,4 @@
-#include <vine/appfw/ConfigItem.hpp>
+﻿#include <vine/appfw/ConfigItem.hpp>
 
 #include <any>
 #include <stdexcept>

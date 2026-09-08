@@ -1,4 +1,4 @@
-#include <vine/appfw/gui/CommandManagerDialog.hpp>
+﻿#include <vine/appfw/gui/CommandManagerDialog.hpp>
 
 #include <QAbstractItemView>
 #include <QDialog>

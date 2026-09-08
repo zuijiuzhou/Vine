@@ -7,3 +7,4 @@
 .vscode
 .vs
 .cache
+__pycache__

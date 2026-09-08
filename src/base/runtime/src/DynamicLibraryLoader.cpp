@@ -1,4 +1,4 @@
-#include <vine/runtime/DynamicLibraryLoader.hpp>
+﻿#include <vine/runtime/DynamicLibraryLoader.hpp>
 
 #include <algorithm>
 #include <map>

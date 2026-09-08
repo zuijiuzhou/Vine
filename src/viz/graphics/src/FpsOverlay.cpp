@@ -1,4 +1,4 @@
-#include <vine/graphics/FpsOverlay.hpp>
+﻿#include <vine/graphics/FpsOverlay.hpp>
 
 #include <vine/Colorf.hpp>
 #include <vine/graphics/Camera.hpp>

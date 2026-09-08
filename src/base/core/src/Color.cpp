@@ -1,4 +1,4 @@
-#include <vine/Color.hpp>
+﻿#include <vine/Color.hpp>
 
 #include <vine/Colorf.hpp>
 

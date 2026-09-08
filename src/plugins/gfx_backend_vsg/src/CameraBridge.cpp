@@ -1,4 +1,4 @@
-#include <vine/vsg/CameraBridge.hpp>
+﻿#include <vine/vsg/CameraBridge.hpp>
 
 #include <vine/graphics/Camera.hpp>
 

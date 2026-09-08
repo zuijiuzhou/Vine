@@ -1,4 +1,4 @@
-#include <vine/graphics/RenderPipelineBuilder.hpp>
+﻿#include <vine/graphics/RenderPipelineBuilder.hpp>
 
 #include <vine/graphics/AxisGizmo.hpp>
 #include <vine/graphics/FpsOverlay.hpp>

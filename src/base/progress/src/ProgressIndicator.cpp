@@ -1,4 +1,4 @@
-#include <vine/progress/ProgressIndicator.hpp>
+﻿#include <vine/progress/ProgressIndicator.hpp>
 
 #include <utility>
 

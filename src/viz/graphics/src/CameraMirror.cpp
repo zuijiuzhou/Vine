@@ -1,4 +1,4 @@
-#include <vine/graphics/CameraMirror.hpp>
+﻿#include <vine/graphics/CameraMirror.hpp>
 
 #include <vine/graphics/Camera.hpp>
 

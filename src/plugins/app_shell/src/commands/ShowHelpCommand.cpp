@@ -1,4 +1,4 @@
-#include "ShowHelpCommand.hpp"
+﻿#include "ShowHelpCommand.hpp"
 
 #include <vine/appfw/Application.hpp>
 #include <vine/appfw/UserIO.hpp>

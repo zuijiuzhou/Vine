@@ -1,4 +1,4 @@
-#include <vine/appfw/ConfigStandard.hpp>
+﻿#include <vine/appfw/ConfigStandard.hpp>
 
 V_APPFW_NS_BEGIN
 

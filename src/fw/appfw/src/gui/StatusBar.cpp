@@ -1,4 +1,4 @@
-#include <vine/appfw/gui/StatusBar.hpp>
+﻿#include <vine/appfw/gui/StatusBar.hpp>
 
 #include <QStatusBar>
 #include <vine/appfw/gui/UIElementData.hpp>

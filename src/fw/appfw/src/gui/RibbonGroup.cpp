@@ -1,4 +1,4 @@
-#include <vine/appfw/gui/RibbonGroup.hpp>
+﻿#include <vine/appfw/gui/RibbonGroup.hpp>
 
 #include <QToolButton>
 #include <SARibbon.h>

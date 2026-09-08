@@ -1,4 +1,4 @@
-#include <vine/appfw/gui/RenderControl.hpp>
+﻿#include <vine/appfw/gui/RenderControl.hpp>
 
 #include <QAction>
 #include <QCursor>

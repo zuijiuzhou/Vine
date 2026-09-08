@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <vine/math/Matrix4x4.hpp>
 #include <vsg/maths/mat4.h>

@@ -1,4 +1,4 @@
-#include <vine/Version.hpp>
+﻿#include <vine/Version.hpp>
 
 #include <string>
 

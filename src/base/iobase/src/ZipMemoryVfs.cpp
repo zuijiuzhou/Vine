@@ -1,4 +1,4 @@
-#include <vine/io/ZipMemoryVfs.hpp>
+﻿#include <vine/io/ZipMemoryVfs.hpp>
 
 #include <fstream>
 #include <iterator>

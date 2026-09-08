@@ -1,4 +1,4 @@
-#include <vine/progress/ProgressScope.hpp>
+﻿#include <vine/progress/ProgressScope.hpp>
 
 #include <vine/progress/ProgressIndicator.hpp>
 #include <vine/progress/ProgressRange.hpp>

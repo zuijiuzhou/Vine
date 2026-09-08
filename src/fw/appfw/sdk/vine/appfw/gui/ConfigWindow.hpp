@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <vine/raw_ptr.hpp>
 #include <vine/appfw/ConfigManager.hpp>

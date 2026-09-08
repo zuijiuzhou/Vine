@@ -1,4 +1,4 @@
-#include <vine/io/DirectoryVfs.hpp>
+﻿#include <vine/io/DirectoryVfs.hpp>
 
 #include <fstream>
 #include <iterator>

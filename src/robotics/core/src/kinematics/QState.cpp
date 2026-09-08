@@ -1,4 +1,4 @@
-#include <vine/robotics/kinematics/QState.hpp>
+﻿#include <vine/robotics/kinematics/QState.hpp>
 
 #include <stdexcept>
 

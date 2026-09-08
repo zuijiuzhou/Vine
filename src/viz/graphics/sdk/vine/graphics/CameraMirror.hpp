@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "graphics_global.hpp"
 
 #include <vine/raw_ptr.hpp>

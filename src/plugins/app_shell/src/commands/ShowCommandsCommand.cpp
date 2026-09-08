@@ -1,4 +1,4 @@
-#include "ShowCommandsCommand.hpp"
+﻿#include "ShowCommandsCommand.hpp"
 
 #include <vine/appfw/gui/CommandManagerDialog.hpp>
 

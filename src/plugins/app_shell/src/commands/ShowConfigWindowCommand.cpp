@@ -1,4 +1,4 @@
-#include "ShowConfigWindowCommand.hpp"
+﻿#include "ShowConfigWindowCommand.hpp"
 
 #include <vine/appfw/gui/ConfigWindow.hpp>
 

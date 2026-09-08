@@ -1,4 +1,4 @@
-#include <vine/graphics/SceneView.hpp>
+﻿#include <vine/graphics/SceneView.hpp>
 
 #include <vine/graphics/Camera.hpp>
 #include <vine/graphics/CameraManipulator.hpp>

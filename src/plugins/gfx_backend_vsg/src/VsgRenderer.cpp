@@ -1,4 +1,4 @@
-#include <vine/vsg/VsgRenderer.hpp>
+﻿#include <vine/vsg/VsgRenderer.hpp>
 
 #include <algorithm>
 #include <cstdint>

@@ -1,4 +1,4 @@
-#include <vine/geometry/PhongMaterial.hpp>
+﻿#include <vine/geometry/PhongMaterial.hpp>
 
 V_GEOMETRY_NS_BEGIN
 

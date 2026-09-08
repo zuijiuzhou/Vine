@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "crypto_global.hpp"
 
 #include <array>

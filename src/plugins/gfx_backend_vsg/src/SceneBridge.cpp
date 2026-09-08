@@ -1,4 +1,4 @@
-#include <vine/vsg/SceneBridge.hpp>
+﻿#include <vine/vsg/SceneBridge.hpp>
 
 #include <vine/graphics/Geometry.hpp>
 #include <vine/graphics/Material.hpp>

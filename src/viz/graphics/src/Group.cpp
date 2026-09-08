@@ -1,4 +1,4 @@
-#include <vine/graphics/Group.hpp>
+﻿#include <vine/graphics/Group.hpp>
 
 #include <algorithm>
 

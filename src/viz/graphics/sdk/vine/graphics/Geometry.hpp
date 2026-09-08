@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "Node.hpp"
 #include "graphics_global.hpp"
 

@@ -1,4 +1,4 @@
-#include "AboutCommand.hpp"
+﻿#include "AboutCommand.hpp"
 
 #include <vine/appfw/gui/AboutDialog.hpp>
 

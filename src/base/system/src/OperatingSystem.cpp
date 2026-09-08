@@ -1,4 +1,4 @@
-#include <vine/system/OperatingSystem.hpp>
+﻿#include <vine/system/OperatingSystem.hpp>
 
 #include <cstring>
 #include <string>

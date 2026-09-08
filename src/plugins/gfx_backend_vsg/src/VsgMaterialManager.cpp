@@ -1,4 +1,4 @@
-#include <vine/vsg/VsgMaterialManager.hpp>
+﻿#include <vine/vsg/VsgMaterialManager.hpp>
 
 #include <vine/graphics/Material.hpp>
 

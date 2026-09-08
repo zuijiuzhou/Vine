@@ -1,4 +1,4 @@
-// Diagnostic tool: dump the built-in vsg shader-set presets (flat / phong /
+﻿// Diagnostic tool: dump the built-in vsg shader-set presets (flat / phong /
 // pbr) with their attribute + descriptor bindings (incl. each descriptor's
 // data type), used to check preset feasibility against the Vine material path.
 #include <vsg/io/Options.h>

@@ -1,4 +1,4 @@
-#include <vine/geometry/Mesh.hpp>
+﻿#include <vine/geometry/Mesh.hpp>
 
 #include <utility>
 

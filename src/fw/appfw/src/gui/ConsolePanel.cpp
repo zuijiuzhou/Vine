@@ -1,4 +1,4 @@
-#include <vine/appfw/gui/ConsolePanel.hpp>
+﻿#include <vine/appfw/gui/ConsolePanel.hpp>
 
 #include <algorithm>
 #include <cstddef>

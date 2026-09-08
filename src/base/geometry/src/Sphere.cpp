@@ -1,4 +1,4 @@
-#include <vine/geometry/Sphere.hpp>
+﻿#include <vine/geometry/Sphere.hpp>
 
 V_GEOMETRY_NS_BEGIN
 

@@ -1,4 +1,4 @@
-#include <vine/geometry/Material.hpp>
+﻿#include <vine/geometry/Material.hpp>
 
 V_GEOMETRY_NS_BEGIN
 

@@ -1,4 +1,4 @@
-#include <vine/crypto/ByteSequenceFingerprint.hpp>
+﻿#include <vine/crypto/ByteSequenceFingerprint.hpp>
 
 #include <algorithm>
 #include <array>

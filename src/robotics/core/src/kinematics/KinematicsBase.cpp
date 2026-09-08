@@ -1,4 +1,4 @@
-#include <vine/robotics/kinematics/KinematicsBase.hpp>
+﻿#include <vine/robotics/kinematics/KinematicsBase.hpp>
 
 #include <stdexcept>
 

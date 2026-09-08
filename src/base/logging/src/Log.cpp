@@ -1,4 +1,4 @@
-#include <vine/logging/Log.hpp>
+﻿#include <vine/logging/Log.hpp>
 
 #include <utility>
 

@@ -1,4 +1,4 @@
-#include <vine/graphics/RenderBackendRegistry.hpp>
+﻿#include <vine/graphics/RenderBackendRegistry.hpp>
 
 #include <vine/graphics/RenderBackend.hpp>
 

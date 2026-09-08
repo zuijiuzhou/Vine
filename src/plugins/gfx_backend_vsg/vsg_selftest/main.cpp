@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @brief Standalone lavapipe integration self-test of the vsg render backend.
  *
  * Drives vine::vsg::VsgRenderer through the public vine::graphics::RenderBackend

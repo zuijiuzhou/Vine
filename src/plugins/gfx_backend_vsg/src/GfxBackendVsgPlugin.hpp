@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <vine/appfw/Plugin.hpp>
 #include <vine/vsg/vsg_global.hpp>

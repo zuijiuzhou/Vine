@@ -1,4 +1,4 @@
-#include "ListCommandsCommand.hpp"
+﻿#include "ListCommandsCommand.hpp"
 
 #include <vine/appfw/Application.hpp>
 #include <vine/appfw/CommandManager.hpp>

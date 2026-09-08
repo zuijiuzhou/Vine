@@ -1,4 +1,4 @@
-#include <vine/math/Isometry3.hpp>
+﻿#include <vine/math/Isometry3.hpp>
 
 #include <vine/math/Point3.hpp>
 #include <vine/math/Vector3.hpp>

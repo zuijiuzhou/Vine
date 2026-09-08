@@ -1,4 +1,4 @@
-#include <vine/appfw/ConfigManager.hpp>
+﻿#include <vine/appfw/ConfigManager.hpp>
 
 #include <QByteArray>
 #include <QFile>

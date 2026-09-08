@@ -1,4 +1,4 @@
-#include <vine/crypto/Hash.hpp>
+﻿#include <vine/crypto/Hash.hpp>
 #include <vine/MemoryStream.hpp>
 
 #include <array>

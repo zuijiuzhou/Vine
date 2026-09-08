@@ -1,4 +1,4 @@
-#include <vine/crypto/HashCalculator.hpp>
+﻿#include <vine/crypto/HashCalculator.hpp>
 
 #include <cctype>
 #include <cstring>

@@ -1,4 +1,4 @@
-# Executive Summary
+﻿# Executive Summary
 
 Eigen matrices can use **row-major** or **column-major** layout (default) without changing mathematical results. A×B is the same product either way; only the memory layout and access patterns differ. In practice, **row-major** (`RowMajor`) stores data row by row and is faster if you traverse rows in tight loops, whereas **column-major** (`ColMajor`) stores data column by column and benefits column-wise operations. Element access `M(i,j)` and internal pointer arithmetic use different offsets depending on the layout. Eigen’s expression templates defer evaluation, so storage order only affects how the result is stored, not the lazy-expression semantics. Interoperability (BLAS, file I/O, memcpy) requires being aware of the chosen layout but Eigen provides helpers (`Map`, `.data()`, transpose flags) to interoperate. 
 

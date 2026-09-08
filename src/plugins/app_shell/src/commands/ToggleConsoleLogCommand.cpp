@@ -1,4 +1,4 @@
-#include "ToggleConsoleLogCommand.hpp"
+﻿#include "ToggleConsoleLogCommand.hpp"
 
 #include "ConsoleLogRouter.hpp"
 

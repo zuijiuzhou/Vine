@@ -1,4 +1,4 @@
-#include <vine/logging/LogLevel.hpp>
+﻿#include <vine/logging/LogLevel.hpp>
 
 #include <cstddef>
 

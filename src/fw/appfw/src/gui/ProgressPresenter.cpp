@@ -1,4 +1,4 @@
-#include <vine/appfw/gui/ProgressPresenter.hpp>
+﻿#include <vine/appfw/gui/ProgressPresenter.hpp>
 
 #include <chrono>
 

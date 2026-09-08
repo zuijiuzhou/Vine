@@ -1,4 +1,4 @@
-// Standalone minimal vsg probe: renders a raw phong triangle with a red
+﻿// Standalone minimal vsg probe: renders a raw phong triangle with a red
 // material using the EXACT same construction as Vine's
 // VsgRenderer::makeRawDemoNode, but inside a vanilla vsg app (no Vine code).
 // If this renders RED, Vine's VsgRenderer setup is at fault; if it also shows

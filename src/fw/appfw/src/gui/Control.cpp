@@ -1,4 +1,4 @@
-#include <vine/appfw/gui/Control.hpp>
+﻿#include <vine/appfw/gui/Control.hpp>
 
 #include <QWidget>
 

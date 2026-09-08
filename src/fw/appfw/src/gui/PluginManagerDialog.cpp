@@ -1,4 +1,4 @@
-#include <vine/appfw/gui/PluginManagerDialog.hpp>
+﻿#include <vine/appfw/gui/PluginManagerDialog.hpp>
 
 #include <QAbstractItemView>
 #include <QAction>

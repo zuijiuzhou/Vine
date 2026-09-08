@@ -1,4 +1,4 @@
-#include <vine/geometry/ColorMaterial.hpp>
+﻿#include <vine/geometry/ColorMaterial.hpp>
 
 V_GEOMETRY_NS_BEGIN
 

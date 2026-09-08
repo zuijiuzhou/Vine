@@ -1,4 +1,4 @@
-#include <vine/geometry/IndexedTriangleMesh.hpp>
+﻿#include <vine/geometry/IndexedTriangleMesh.hpp>
 
 #include <utility>
 

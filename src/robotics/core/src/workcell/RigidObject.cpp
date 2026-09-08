@@ -1,4 +1,4 @@
-#include <vine/robotics/workcell/RigidObject.hpp>
+﻿#include <vine/robotics/workcell/RigidObject.hpp>
 
 V_ROBOTICS_WORKCELL_NS_BEGIN
 

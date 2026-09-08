@@ -1,4 +1,4 @@
-#include <vine/graphics/ScreenPass.hpp>
+﻿#include <vine/graphics/ScreenPass.hpp>
 
 #include <vine/graphics/Light.hpp>
 #include <vine/graphics/RenderBackend.hpp>

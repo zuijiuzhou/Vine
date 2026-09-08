@@ -1,4 +1,4 @@
-#include "HelloCommand.hpp"
+﻿#include "HelloCommand.hpp"
 
 #include <QMessageBox>
 

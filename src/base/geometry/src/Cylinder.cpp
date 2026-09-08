@@ -1,4 +1,4 @@
-#include <vine/geometry/Cylinder.hpp>
+﻿#include <vine/geometry/Cylinder.hpp>
 
 V_GEOMETRY_NS_BEGIN
 

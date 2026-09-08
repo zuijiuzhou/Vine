@@ -1,4 +1,4 @@
-#include <vine/graphics/RenderCommand.hpp>
+﻿#include <vine/graphics/RenderCommand.hpp>
 
 #include <vine/graphics/Geometry.hpp>
 #include <vine/graphics/Material.hpp>

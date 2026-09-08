@@ -1,4 +1,4 @@
-#include <vine/appfw/gui/Icon.hpp>
+﻿#include <vine/appfw/gui/Icon.hpp>
 
 #include <QIcon>
 

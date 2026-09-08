@@ -1,4 +1,4 @@
-#include <vine/geometry/Ellipsoid.hpp>
+﻿#include <vine/geometry/Ellipsoid.hpp>
 
 V_GEOMETRY_NS_BEGIN
 

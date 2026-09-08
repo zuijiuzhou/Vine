@@ -1,4 +1,4 @@
-#include <vine/graphics/StateNode.hpp>
+﻿#include <vine/graphics/StateNode.hpp>
 
 #include <vine/graphics/Geometry.hpp>
 #include <vine/graphics/ShaderProgram.hpp>

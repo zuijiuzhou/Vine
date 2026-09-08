@@ -1,4 +1,4 @@
-#include "ShowPluginsCommand.hpp"
+﻿#include "ShowPluginsCommand.hpp"
 
 #include <vine/appfw/gui/PluginManagerDialog.hpp>
 

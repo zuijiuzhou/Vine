@@ -1,4 +1,4 @@
-#include <vine/robotics/workcell/Joint.hpp>
+﻿#include <vine/robotics/workcell/Joint.hpp>
 
 #include <vine/robotics/kinematics/State.hpp>
 

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <vine/appfw/Command.hpp>
 #include <vine/appfw/command_export.hpp>

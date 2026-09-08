@@ -1,4 +1,4 @@
-#include <vine/robotics/kinematics/PieperIKSolver.hpp>
+﻿#include <vine/robotics/kinematics/PieperIKSolver.hpp>
 
 #include <algorithm>
 #include <array>

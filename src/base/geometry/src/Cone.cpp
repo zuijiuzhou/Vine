@@ -1,4 +1,4 @@
-#include <vine/geometry/Cone.hpp>
+﻿#include <vine/geometry/Cone.hpp>
 
 V_GEOMETRY_NS_BEGIN
 

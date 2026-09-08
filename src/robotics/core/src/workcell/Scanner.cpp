@@ -1,4 +1,4 @@
-#include <vine/robotics/workcell/Scanner.hpp>
+﻿#include <vine/robotics/workcell/Scanner.hpp>
 
 V_ROBOTICS_WORKCELL_NS_BEGIN
 

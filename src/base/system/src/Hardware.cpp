@@ -1,4 +1,4 @@
-#include <vine/system/Hardware.hpp>
+﻿#include <vine/system/Hardware.hpp>
 
 #include <algorithm>
 #include <cstring>

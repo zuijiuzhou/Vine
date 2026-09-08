@@ -1,4 +1,4 @@
-#include <vine/appfw/gui/Window.hpp>
+﻿#include <vine/appfw/gui/Window.hpp>
 
 #include <QDialog>
 #include <QWidget>

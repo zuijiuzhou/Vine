@@ -1,4 +1,4 @@
-#include <vine/graphics/Node.hpp>
+﻿#include <vine/graphics/Node.hpp>
 
 V_GRAPHICS_NS_BEGIN
 

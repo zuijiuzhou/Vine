@@ -1,4 +1,4 @@
-#include <vine/graphics/CameraManipulator.hpp>
+﻿#include <vine/graphics/CameraManipulator.hpp>
 
 V_GRAPHICS_NS_BEGIN
 

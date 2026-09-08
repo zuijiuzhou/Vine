@@ -1,4 +1,4 @@
-#include <vine/geometry/Primitive.hpp>
+﻿#include <vine/geometry/Primitive.hpp>
 
 V_GEOMETRY_NS_BEGIN
 

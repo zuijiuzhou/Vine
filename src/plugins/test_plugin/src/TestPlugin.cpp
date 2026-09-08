@@ -1,4 +1,4 @@
-#include "TestPlugin.hpp"
+﻿#include "TestPlugin.hpp"
 
 #include <vine/appfw/plugin_export.hpp>
 

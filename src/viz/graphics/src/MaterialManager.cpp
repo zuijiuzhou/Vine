@@ -1,4 +1,4 @@
-#include <vine/graphics/MaterialManager.hpp>
+﻿#include <vine/graphics/MaterialManager.hpp>
 
 V_GRAPHICS_NS_BEGIN
 

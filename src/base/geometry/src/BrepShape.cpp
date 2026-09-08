@@ -1,4 +1,4 @@
-#include <vine/geometry/BrepShape.hpp>
+﻿#include <vine/geometry/BrepShape.hpp>
 
 V_GEOMETRY_NS_BEGIN
 

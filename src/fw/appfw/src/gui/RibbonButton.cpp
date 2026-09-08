@@ -1,4 +1,4 @@
-#include <vine/appfw/gui/RibbonButton.hpp>
+﻿#include <vine/appfw/gui/RibbonButton.hpp>
 
 #include <QAction>
 #include <QIcon>

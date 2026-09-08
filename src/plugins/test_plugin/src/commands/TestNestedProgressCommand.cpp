@@ -1,4 +1,4 @@
-#include "TestNestedProgressCommand.hpp"
+﻿#include "TestNestedProgressCommand.hpp"
 
 #include <chrono>
 

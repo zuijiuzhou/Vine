@@ -1,4 +1,4 @@
-#include "TestRenderLiveCommand.hpp"
+﻿#include "TestRenderLiveCommand.hpp"
 
 #include <QCoreApplication>
 #include <QTimer>

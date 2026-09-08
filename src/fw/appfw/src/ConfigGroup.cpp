@@ -1,4 +1,4 @@
-#include <vine/appfw/ConfigGroup.hpp>
+﻿#include <vine/appfw/ConfigGroup.hpp>
 
 #include <memory>
 #include <utility>

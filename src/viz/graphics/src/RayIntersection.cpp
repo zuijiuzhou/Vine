@@ -1,4 +1,4 @@
-#include <vine/graphics/RayIntersection.hpp>
+﻿#include <vine/graphics/RayIntersection.hpp>
 
 #include <vine/graphics/Geometry.hpp>
 #include <vine/graphics/Group.hpp>

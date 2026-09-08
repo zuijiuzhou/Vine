@@ -1,4 +1,4 @@
-#include <vine/geometry/TriangleMesh.hpp>
+﻿#include <vine/geometry/TriangleMesh.hpp>
 
 V_GEOMETRY_NS_BEGIN
 

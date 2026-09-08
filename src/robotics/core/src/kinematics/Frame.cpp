@@ -1,4 +1,4 @@
-#include <vine/robotics/kinematics/Frame.hpp>
+﻿#include <vine/robotics/kinematics/Frame.hpp>
 
 #include <algorithm>
 #include <stdexcept>

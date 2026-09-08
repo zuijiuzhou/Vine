@@ -1,4 +1,4 @@
-#include <vine/appfw/MainThreadDispatcher.hpp>
+﻿#include <vine/appfw/MainThreadDispatcher.hpp>
 
 #include <utility>
 

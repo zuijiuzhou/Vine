@@ -1,4 +1,4 @@
-#include <vine/di/ServiceBase.hpp>
+﻿#include <vine/di/ServiceBase.hpp>
 
 V_DI_NS_BEGIN
 

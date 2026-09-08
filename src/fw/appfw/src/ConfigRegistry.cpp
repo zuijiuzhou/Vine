@@ -1,4 +1,4 @@
-#include <vine/appfw/ConfigRegistry.hpp>
+﻿#include <vine/appfw/ConfigRegistry.hpp>
 
 #include <algorithm>
 #include <map>

@@ -1,4 +1,4 @@
-#include <vine/progress/ProgressHost.hpp>
+﻿#include <vine/progress/ProgressHost.hpp>
 
 #include <algorithm>
 #include <mutex>

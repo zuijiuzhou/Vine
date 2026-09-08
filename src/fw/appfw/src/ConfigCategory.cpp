@@ -1,4 +1,4 @@
-#include <vine/appfw/ConfigCategory.hpp>
+﻿#include <vine/appfw/ConfigCategory.hpp>
 
 #include <algorithm>
 #include <memory>

@@ -1,4 +1,4 @@
-# gfx_backend_vsg 模块全解（架构 / 数据链路 / 生命周期 / 未定义行为）
+﻿# gfx_backend_vsg 模块全解（架构 / 数据链路 / 生命周期 / 未定义行为）
 
 > 模块：`src/plugins/gfx_backend_vsg`
 > 版本依据：2026-09-04 工作区代码（`git` 后状态）+ 本机 vsg v1.1.16。

@@ -1,4 +1,4 @@
-#include <vine/graphics/AxisGizmo.hpp>
+﻿#include <vine/graphics/AxisGizmo.hpp>
 
 #include <vine/Colorf.hpp>
 #include <vine/graphics/Camera.hpp>

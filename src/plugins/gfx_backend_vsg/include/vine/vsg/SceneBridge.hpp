@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "vsg_global.hpp"
 
 #include <vsg/commands/Commands.h>

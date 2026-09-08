@@ -1,4 +1,4 @@
-#include <vine/logging/LogSink.hpp>
+﻿#include <vine/logging/LogSink.hpp>
 
 #include <cstdint>
 #include <memory>

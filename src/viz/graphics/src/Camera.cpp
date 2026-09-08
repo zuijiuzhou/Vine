@@ -1,4 +1,4 @@
-#include <vine/graphics/Camera.hpp>
+﻿#include <vine/graphics/Camera.hpp>
 
 #include <vine/math/Transform3.hpp>
 
