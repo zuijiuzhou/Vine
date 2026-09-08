@@ -304,6 +304,43 @@ class V_VSG_API VsgRenderer : public vine::graphics::RenderBackend {
     /** @brief Records and presents the frame (once, when swapBuffers is called). */
     void submitFrame();
 
+    /** @brief Consumes the sub-viewport queued by setViewport() for one pass.
+     *
+     * Every draw path (main scene, PiP screen, fullscreen program) reads the
+     * same pending rectangle and clears it, so the consume is factored here.
+     * A pass that never queued a viewport leaves the flags false and the
+     * caller substitutes the full surface.
+     *
+     * @param x Receives the queued origin x (0 when none was queued).
+     * @param y Receives the queued origin y (0 when none was queued).
+     * @param w Receives the queued width (0 when none was queued).
+     * @param h Receives the queued height (0 when none was queued).
+     * @return true when a viewport was queued for this pass.
+     */
+    bool takePendingViewport(int& x, int& y, int& w, int& h);
+
+    /** @brief Incrementally compiles only the content-slot views that gained
+     * new/rebuild subtrees this frame (D22).
+     *
+     * vsg compiles Vulkan objects per viewID and can only create a graphics
+     * pipeline when the compiling context carries the owning target's render
+     * pass (window swapchain or off-screen framebuffer). vsg's own
+     * CompileManager pool is built once from the views present at first
+     * Viewer::compile() — in Vine that runs on an EMPTY window graph, so the
+     * pool's contexts are empty and compileManager->compile(view) silently
+     * compiles nothing (and record then hits unbuilt pipelines). This method
+     * instead registers each queued view's (window/framebuffer render pass +
+     * view) context into the pool on first sight via the public
+     * CompileManager::add() API, then compiles that view through its own
+     * context only — mirroring what Viewer::compile() does for the whole
+     * graph, scoped to the views that actually changed.
+     *
+     * @return true when every queued view was compiled incrementally, false
+     *         when any step failed and the caller should fall back to a full
+     *         Viewer::compile().
+     */
+    bool incrementalCompileViews();
+
   private:
     struct Impl;
     struct Persistent;

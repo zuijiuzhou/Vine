@@ -9,6 +9,14 @@
 > CPU Data 数组，按名字喂进 GraphicsPipelineConfigurator，挂 Bind*/Draw* 命令，
 > 最后由 viewer->compile() 上传 GPU 并建管线**。中间两层各有一张"对应表"。
 
+> ⚠️ **2026-09-08 更新（管线共享已实现并测试）**：`SceneBridge` 构造创建
+> `shared_objects_`，`copyTo()` 的内容级去重生效 —— 同 (program×状态×槽位) 的几何共享
+> 一条 pipeline；并新增 **L1 program ShaderSet 缓存**（`getProgramShaderSet`，glslang
+> 每 (slot,program) 一次）与 **L2 变体模板缓存**（`variant_cache_`，跳过重复 configurator）。
+> 本文件 §9.3 / §12.1 中 `shared_objects_` 共享 pipeline/DS 从此是**事实**（此前文档-代码
+> 漂移：成员声明了却从未赋值）。权威设计见 `.ai/design/vsg-pipeline-sharing.md`；
+> 测试见 `tests/test_vsg/SceneBridgePipelineSharingTest.cpp`。
+
 ## 0. 全景图
 
 ```mermaid
@@ -234,8 +242,10 @@ flat/phong/pbr 共用同一张表（详见 `.ai/design/vsg-custom-shader.md` §9
 | 缓存 | 键 | 值 | 谁持有 |
 |---|---|---|---|
 | `SceneBridge::cache_` | `const Geometry*`（裸指针） | `unique_ptr<Item>`（vsg 子树，vsg `ref_ptr` 自持） | bridge |
+| `SceneBridge::program_shader_sets_` | `const ShaderProgram*`（L1） | `vsg::ref_ptr<ShaderSet>`（glslang 编译产物，失败=null） | bridge（`clearCache`） |
+| `SceneBridge::variant_cache_` | (program, material, ResolvedRenderState) 内容哈希（L2） | `unique_ptr<VariantEntry>`（共享 state 命令+base_binding） | bridge（`clearCache`） |
 | `VsgMaterialManager::cache` | `Material*`（裸指针） | `vsg::ref_ptr<PhongMaterialValue>` | manager |
-| `shared_objects_` | — | `vsg::SharedObjects`（跨几何共享 pipeline/DS） | bridge |
+| `shared_objects_` | —（内容级去重） | 共享 pipeline / layout / DS | bridge（`clearCache` + 析构） |
 
 - **生命周期契约**：缓存键（`Geometry*`/`Material*`）的存活由**场景树 / 调用方保证**。
   后端不持有 Vine 对象的强引用，只在缓存键存活期间使用。
@@ -339,7 +349,7 @@ sequenceDiagram
 | 光照 | Scene 级 `Ambient/Directional` → 每 view 光组；默认 headlight；运行时换灯 |
 | 场景 | `MatrixTransform` 嵌套 + worldMatrix、Node visible/opacity、Vine 侧剔除（另有 no-cull 变体） |
 | 多 pass | 离屏 color±depth / depth-only（shadow RT 基础）、PiP screen pass、overlay、动态 sub-viewport |
-| 复用 | `shared_objects_` 共享 pipeline/DS、逐几何保留缓存、逐帧懒更新 |
+| 复用 | `shared_objects_` 内容级共享 pipeline/DS、**L1 program 缓存**、**L2 变体模板缓存**（跳过重复 configurator）、逐几何保留缓存、逐帧懒更新 |
 
 ### 12.2 不支持 / 待办（现状）
 
@@ -396,7 +406,7 @@ sequenceDiagram
 | D13 | `VsgMaterialManager::cache` **无逐出**：`releaseMaterial/updateMaterial` 接口存在但**全仓零调用点** → 每个出现过的 `Material*` 的 PhongMaterialValue 留到 shutdown（最像内存泄漏的留存） | `VsgMaterialManager` | 🔴 |
 | D14 | 裸指针缓存键 + 600 帧滞留窗：Geometry/Material 删除后、逐出前有悬垂窗口（安全依赖场景树保活） | `SceneBridge::cache_` | 🟡 |
 | D15 | `SceneBridge::cache_` 删除几何 600 帧后才释放（延迟释放） | `syncRenderCommands` | 🟢 |
-| D16 | `shared_objects_` 从不修剪：随"历史见过的不同管线/状态变体数"增长 | `SceneBridge` | 🟢 |
+| D16 | 共享/变体缓存只增不减（随"历史见过的不同变体数"增长）；2026-09-08 起 `clearCache()`（槽 teardown/resize/release）同时清 `shared_objects_`/`program_shader_sets_`/`variant_cache_`，**槽内活跃期间仍不修剪** | `SceneBridge` | 🟢 |
 | D17 | shutdown 顺序错 → 撞 `VSG_MAX_DEVICES==1`；`releaseWindow()` 漏调会 Destroy Qt 宿主窗口 | `VsgRenderer::shutdown` | 🟡 |
 | D18 | resize / release / 离屏 resize 走 `deviceWaitIdle` 全停（简单但会整帧卡顿） | `VsgRenderer` | 🟢 |
 | D19 | 每帧 O(materials) 就地改写 + `updateMaterial` 双路径并存 | `syncRenderCommands` 尾部 | 🟢 |

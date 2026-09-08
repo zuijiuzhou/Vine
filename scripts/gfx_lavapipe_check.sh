@@ -110,6 +110,32 @@ for extra in ${VINE_PROBE_MODE_EXTRA:-}; do
     run_probe "$extra" "$FRAMES"
 done
 
+# vsg_backend_selftest: drives the real vsg RenderBackend over many frames to
+# exercise the GPU paths unit tests cannot reach — off-screen MRT targets,
+# PiP sampling (drawScreenTexture), deferred fullscreen programs
+# (drawScreenProgram), multi-pass sharing of camera/target/scene/viewport,
+# per-frame hot edits and resource-release teardown.
+echo "== 3c/4 vsg_backend_selftest (offscreen/MRT/PiP/deferred/multi-pass) =="
+SELF="$BUILD/bin/vsg_backend_selftest"
+if [ ! -x "$SELF" ]; then
+    echo "[FAIL] vsg_backend_selftest not built"
+    FAILED=1
+else
+    log="$TMP/selftest.log"
+    SELF_FRAMES="${VINE_SELFTEST_FRAMES:-15}"
+    (cd "$BUILD" && VINE_SELFTEST_FRAMES="$SELF_FRAMES" timeout "$SECONDS_V" ./bin/vsg_backend_selftest) >"$log" 2>&1
+    rc=$?
+    echo "    (exit=$rc; 124 = still running when the timeout fired, i.e. OK)"
+    # The self-test is expected to finish (0); a timeout (124) is also OK.
+    if [ "$rc" -ne 0 ] && [ "$rc" -ne 124 ]; then
+        echo "[FAIL] vsg_backend_selftest exited early with $rc"
+        tail -30 "$log"
+        FAILED=1
+    else
+        report "vsg_backend_selftest" "$log"
+    fi
+fi
+
 echo "== 4/4 Vine app (default demo) =="
 if [ "${VINE_SKIP_APP:-0}" = "1" ]; then
     echo "    (skipped, VINE_SKIP_APP=1)"

@@ -139,3 +139,24 @@ set_target_properties(vsg_color_probe PROPERTIES FOLDER third_party)
 add_executable(vsg_shader_dump ${CMAKE_CURRENT_SOURCE_DIR}/vsg_shader_dump/main.cpp)
 target_link_libraries(vsg_shader_dump PRIVATE vsg::vsg)
 set_target_properties(vsg_shader_dump PROPERTIES FOLDER third_party)
+
+# GPU-free (lavapipe) end-to-end self-test of the vsg backend GPU paths that
+# device-free unit tests cannot reach: off-screen MRT targets, PiP sampling,
+# deferred fullscreen programs, multi-pass sharing of camera/target/scene/
+# viewport, hot edits and resource-release teardown. It validates "no crash +
+# no Vulkan validation-layer error"; pixel-level visuals need a real GPU.
+# Run headless under the lavapipe ICD with the validation layer enabled, e.g.
+#   VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.json \
+#   VINE_VSG_DEBUG_LAYER=1 VINE_SELFTEST_FRAMES=30 ./vsg_backend_selftest
+add_executable(vsg_backend_selftest
+    ${CMAKE_CURRENT_SOURCE_DIR}/vsg_selftest/main.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/SceneBridge.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/CameraBridge.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/VsgMaterialManager.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/VsgRenderer.cpp)
+target_compile_definitions(vsg_backend_selftest PRIVATE V_VSG_LIB)
+target_include_directories(vsg_backend_selftest PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(vsg_backend_selftest PRIVATE vi::Graphics vsg::vsg)
+set_target_properties(vsg_backend_selftest PROPERTIES FOLDER third_party)

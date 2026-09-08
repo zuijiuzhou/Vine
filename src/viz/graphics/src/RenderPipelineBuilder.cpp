@@ -1,6 +1,7 @@
 #include <vine/graphics/RenderPipelineBuilder.hpp>
 
 #include <vine/graphics/AxisGizmo.hpp>
+#include <vine/graphics/FpsOverlay.hpp>
 #include <vine/graphics/Camera.hpp>
 #include <vine/graphics/RenderEngine.hpp>
 #include <vine/graphics/Scene.hpp>
@@ -211,6 +212,19 @@ intrusive_ptr<Pipeline> RenderPipelineBuilder::build(PipelinePreset preset,
         engine_->addPass(gizmo, options.gizmo.order);
         pipeline->retainPass(gizmo);
         pipeline->setGizmo(std::move(gizmo));
+    }
+
+    // Optional HUD overlay: a frame-rate readout (bottom-right corner). It
+    // measures the actual render-loop rate and needs no source camera, so it
+    // is enabled by default (see FpsOverlayOptions::enabled). Re-anchored
+    // through Pipeline::resize like the gizmo.
+    if (options.fps.enabled) {
+        auto fps = intrusive_ptr<FpsOverlay>(new FpsOverlay());
+        fps->setPixelRatio(options.fps.pixel_ratio);
+        fps->setSize(options.fps.width_px, options.fps.height_px);
+        engine_->addPass(fps, options.fps.order);
+        pipeline->retainPass(fps);
+        pipeline->setFpsOverlay(std::move(fps));
     }
     return pipeline;
 }

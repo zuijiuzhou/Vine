@@ -1,12 +1,15 @@
 #pragma once
 #include "vsg_global.hpp"
 
+#include <vsg/commands/Commands.h>
 #include <vsg/nodes/Group.h>
 #include <vsg/nodes/Node.h>
+#include <vsg/nodes/StateGroup.h>
 #include <vsg/core/ref_ptr.h>
 #include <vsg/utils/ShaderSet.h>
 #include <vsg/utils/SharedObjects.h>
 
+#include <cstddef>
 #include <memory>
 #include <unordered_map>
 #include <vector>
@@ -81,43 +84,157 @@ class V_VSG_API SceneBridge {
     /** @brief Releases all retained per-geometry vsg nodes. */
     void clearCache();
 
+    /** @brief Gets the number of distinct compiled pipeline variants.
+     *
+     * Counts how many genuinely distinct vsg::GraphicsPipeline objects this
+     * bridge registered with its shared-objects cache. Geometries that
+     * resolve to the same (shader, render state, subpass) variant share one
+     * pipeline, so loading N geometries whose variant count stays far below N
+     * confirms pipeline sharing is collapsing duplicates (pipeline count
+     * follows state variants, not geometry count).
+     *
+     * @return Number of distinct pipeline variants built so far.
+     */
+    std::size_t pipelineVariantCount() const { return pipeline_variants_; }
+
+    /** @brief Gets how many times geometry reused a cached pipeline variant.
+     *
+     * Incremented whenever buildGeometry reuses an already-built (program,
+     * material, render-state) template instead of running a fresh
+     * GraphicsPipelineConfigurator. A load whose reuse count is close to its
+     * geometry count (minus the distinct variants) confirms the L2 fast path
+     * is collapsing repeated variant setup.
+     *
+     * @return Number of variant-template reuses so far.
+     */
+    std::size_t variantReuseCount() const { return variant_reuses_; }
+
   private:
     /** @brief Retained per-geometry render node (defined in the .cpp). */
     struct Item;
 
-    /** @brief Builds (or rebuilds) the vsg subtree for one geometry/material.
+    /** @brief Builds (or rebuilds) the retained vertex-data node of a geometry.
      *
-     * The geometry's pipeline is assembled from @p state (depth, culling,
-     * polygon mode, blending factors, topology) via the RenderStateMapper; a
-     * geometry whose resolved state changed is rebuilt by the caller. When
-     * @p program is set, the pipeline is assembled from the user program
-     * instead of the built-in shader set (its GLSL is compiled at run time
-     * and bound via the official vsg contract: vsg_Vertex + the "pc" push
-     * constant carrying projection/modelView).
+     * Materialises the geometry's attribute buffers into vsg arrays and wraps
+     * them in bind/draw commands. The node is geometry-data only: it carries
+     * no pipeline, so it is reused verbatim across material / render-state /
+     * program changes (only the state wrapper is rebuilt then), and it stays
+     * stable so a later geometry-only edit never re-uploads unchanged meshes.
+     * When @p opacity_carrier is true (built-in path), the per-vertex colour
+     * array is marked DYNAMIC and returned via @p out_colors so per-drawable
+     * opacity edits after upload are re-transferred on dirty().
      *
-     * @param geometry   Geometry to build.
-     * @param material   Bound material (may be null).
-     * @param out_colors Receives the per-vertex color array the caller keeps
-     *                   to drive per-drawable opacity each frame (null when a
-     *                   user program renders instead).
-     * @param state      Resolved render state the pipeline must honour.
-     * @param program    User shader program, or null for the built-in default.
-     * @return Built vsg node, or null when not buildable.
+     * @param geometry        Geometry to build.
+     * @param opacity_carrier True when the built-in path drives per-drawable
+     *                        opacity through the vertex-colour alpha (false
+     *                        when a user program owns opacity).
+     * @param out_colors      Receives the per-vertex colour array the caller
+     *                        keeps to drive opacity each frame (null when
+     *                        @p opacity_carrier is false).
+     * @return Data commands node, or null when not buildable.
      */
-    ::vsg::ref_ptr<::vsg::Node> buildGeometry(
+    ::vsg::ref_ptr<::vsg::Commands> buildGeometryData(
         vine::raw_ptr<const vine::graphics::Geometry> geometry,
+        bool opacity_carrier,
+        ::vsg::ref_ptr<::vsg::vec4Array>& out_colors);
+
+    /** @brief Builds (or rebuilds) the state wrapper around a data node.
+     *
+     * The wrapper is a vsg::StateGroup carrying the pipeline + descriptor-set
+     * binds for one (program, material, resolved-state) variant; @p data is
+     * attached as its child by the caller. Pipelines are resolved through the
+     * per-(slot, program) L1 ShaderSet cache and the per-variant L2 template
+     * cache, so repeated variants skip the configurator entirely.
+     *
+     * @param data     The retained vertex-data node to wrap (non-null).
+     * @param material Bound material (may be null).
+     * @param state    Resolved render state the pipeline must honour.
+     * @param program  User shader program, or null for the built-in default.
+     * @return State wrapper, or null when not buildable.
+     */
+    ::vsg::ref_ptr<::vsg::StateGroup> buildStateGroup(
+        ::vsg::ref_ptr<::vsg::Node> data,
         vine::raw_ptr<vine::graphics::Material> material,
-        ::vsg::ref_ptr<::vsg::vec4Array>& out_colors,
         const vine::graphics::ResolvedRenderState& state,
         vine::raw_ptr<const vine::graphics::ShaderProgram> program);
 
+    /** @brief Gets (and caches) the run-time compiled ShaderSet for a program.
+     *
+     * Compiles the program's stages once per (program, slot) instead of once
+     * per geometry, so N geometry bound to the same program share a single
+     * glslang compile and ShaderSet. A compile/assembly failure is cached too
+     * (null), so later geometry does not retry the failed compile each time.
+     *
+     * @param program User program (non-null).
+     * @return Compiled shader set, or null when it could not be built.
+     */
+    ::vsg::ref_ptr<::vsg::ShaderSet> getProgramShaderSet(
+        vine::raw_ptr<const vine::graphics::ShaderProgram> program);
+
+    /** @brief Gets the material manager used to obtain Phong resources.
+     *
+     * Falls back to the bridge-owned default manager when the renderer never
+     * injected one (setMaterialManager). Both callers that need material
+     * resources route through here so the fallback is decided once.
+     *
+     * @return The active material manager (always non-null).
+     */
+    VsgMaterialManager& materialManager();
+
+    /** @brief Gets the slot's base shader set (the built-in default when unset).
+     *
+     * The built-in Phong set is created lazily on first use and cached, so
+     * the bridge never pays for a fresh createPhongShaderSet() per geometry.
+     * A user program path builds on top of this set's default pipeline states
+     * (the baked viewport / blending), keeping both paths on one material
+     * descriptor ABI.
+     *
+     * @return The base shader set (always non-null).
+     */
+    ::vsg::ref_ptr<::vsg::ShaderSet> baseShaderSet();
+
     ::vsg::ref_ptr<::vsg::ShaderSet> shader_set_;
+    // Shares layout / pipeline / descriptor-set content across every geometry
+    // this bridge builds: GraphicsPipelineConfigurator::copyTo() deduplicates
+    // through SharedObjects (content equality), so geometry that resolves to
+    // the same pipeline state and material registers ONE vsg::GraphicsPipeline
+    // and descriptor set instead of one per geometry.
     ::vsg::ref_ptr<::vsg::SharedObjects> shared_objects_;
+    // Distinct pipeline variants registered with shared_objects_ (diagnostic;
+    // see pipelineVariantCount()).
+    std::size_t pipeline_variants_ = 0;
+    // Times buildGeometry reused a cached (program, material, state) template
+    // instead of running a fresh configurator (diagnostic; see
+    // variantReuseCount()).
+    std::size_t variant_reuses_ = 0;
     vine::raw_ptr<VsgMaterialManager> material_manager_ = nullptr;
     // Default manager used when the renderer does not inject one.
     VsgMaterialManager default_manager_;
     // Retained per-geometry nodes, keyed by geometry pointer for O(1) lookup.
     std::unordered_map<const vine::graphics::Geometry*, std::unique_ptr<Item>> cache_;
+    // Cached run-time compiled ShaderSet per user program (L1): every geometry
+    // bound to the same program shares one glslang compile + ShaderSet instead
+    // of recompiling per geometry. Keyed by raw pointer (program lifetime is
+    // guaranteed by the scene while in use; released with the bridge); the
+    // entry also stores the program content revision it was built from, so
+    // editing a retained program's GLSL (ShaderProgram::revision) rebuilds the
+    // compiled set instead of serving the stale one (D10).
+    struct ProgramEntry
+    {
+        std::uint64_t revision = ~std::uint64_t{0};
+        ::vsg::ref_ptr<::vsg::ShaderSet> shader_set;
+    };
+    std::unordered_map<const vine::graphics::ShaderProgram*, ProgramEntry>
+        program_shader_sets_;
+    // Pipeline-template cache (L2), keyed by a content hash of the (program,
+    // material, resolved-state) variant; the full key lives in VariantEntry
+    // for collision-safe equality. The first geometry of a variant builds its
+    // pipeline through the configurator and captures the reusable bind
+    // commands; later geometry of that variant reuse them and only attach
+    // their own vertex data, keeping pipeline setup cost proportional to the
+    // state-variant count rather than the geometry count.
+    struct VariantEntry;
+    std::unordered_map<std::uint64_t, std::unique_ptr<VariantEntry>> variant_cache_;
 };
 
 V_VSG_NS_END

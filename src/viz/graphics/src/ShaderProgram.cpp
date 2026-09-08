@@ -21,6 +21,34 @@ void ShaderProgram::setName(const String& name)
 void ShaderProgram::addStage(const ShaderStage& stage)
 {
     stages_.push_back(stage);
+    ++revision_;
+}
+
+void ShaderProgram::clearStages()
+{
+    stages_.clear();
+    ++revision_;
+}
+
+void ShaderProgram::replaceStages(const std::vector<ShaderStage>& stages)
+{
+    stages_ = stages;
+    ++revision_;
+}
+
+bool ShaderProgram::setStage(std::size_t index, const ShaderStage& stage)
+{
+    if (index >= stages_.size()) {
+        return false;
+    }
+    stages_[index] = stage;
+    ++revision_;
+    return true;
+}
+
+std::uint64_t ShaderProgram::revision() const
+{
+    return revision_;
 }
 
 std::size_t ShaderProgram::stageCount() const

@@ -838,6 +838,10 @@ void addDemoPipeline(gui::RenderControl* render_control)
     // Axis-gizmo HUD overlay: mirrors the view camera in the bottom-left.
     options.gizmo.source_camera = view->camera();
     options.gizmo.pixel_ratio   = render_control->devicePixelRatio();
+    // Frame-rate readout HUD overlay (bottom-right), on by default in the
+    // demo; set options.fps.enabled = false to turn it off.
+    options.fps.enabled      = true;
+    options.fps.pixel_ratio  = render_control->devicePixelRatio();
     auto pipeline = builder.build(preset, options);
     if (pipeline == nullptr) {
         return;

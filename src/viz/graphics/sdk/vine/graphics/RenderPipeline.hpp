@@ -13,6 +13,7 @@ V_GRAPHICS_NS_BEGIN
 
 class AxisGizmo;
 class Camera;
+class FpsOverlay;
 class RenderPass;
 class RenderTarget;
 
@@ -65,6 +66,35 @@ struct V_GRAPHICS_API AxisGizmoOptions {
 };
 
 /**
+ * @brief Optional HUD overlay: a frame-rate readout in the bottom-right
+ * corner.
+ *
+ * The readout is a self-contained HUD pass (FpsOverlay) stacked above the
+ * window pass; it measures the actual render-loop frame rate and needs no
+ * source camera. Like the axis gizmo it is opt-in per application — set @ref
+ * enabled to true to draw it (the app-shell demo enables it by default).
+ */
+struct V_GRAPHICS_API FpsOverlayOptions {
+    /** @brief Whether the readout is drawn. Disabled by default. */
+    bool enabled = false;
+
+    /** @brief Ratio between logical surface size and device pixels.
+     *
+     * Hosts on high-DPI displays supply their devicePixelRatio (default 1).
+     */
+    double pixel_ratio = 1.0;
+
+    /** @brief Readout box width in device pixels (default 105). */
+    int width_px = 105;
+
+    /** @brief Readout box height in device pixels (default 36). */
+    int height_px = 36;
+
+    /** @brief Draw order, above the gizmo and window pass (default 30). */
+    int order = 30;
+};
+
+/**
  * @brief Options controlling RenderPipelineBuilder::build().
  */
 struct V_GRAPHICS_API PipelineOptions {
@@ -100,6 +130,13 @@ struct V_GRAPHICS_API PipelineOptions {
      * Disabled when AxisGizmoOptions::source_camera is null.
      */
     AxisGizmoOptions gizmo;
+
+    /** @brief Optional frame-rate readout HUD overlay (bottom-right corner).
+     *
+     * Opt-in (like the gizmo); the app-shell demo enables it by default via
+     * FpsOverlayOptions::enabled = true.
+     */
+    FpsOverlayOptions fps;
 };
 
 /**
@@ -141,6 +178,12 @@ class V_GRAPHICS_API Pipeline : public RefCounted<Pipeline> {
      */
     raw_ptr<AxisGizmo> gizmo() const;
 
+    /** @brief Gets the configured frame-rate overlay, if any.
+     *
+     * @return The FPS HUD pass, or null when the readout was disabled.
+     */
+    raw_ptr<FpsOverlay> fpsOverlay() const;
+
     /** @brief Resizes the off-screen target and re-anchors the gizmo overlay.
      *
      * Creator-maintained sizing: the host calls this on surface changes (e.g.
@@ -166,10 +209,14 @@ class V_GRAPHICS_API Pipeline : public RefCounted<Pipeline> {
     /** @brief Sets the axis-gizmo overlay (optional). */
     void setGizmo(intrusive_ptr<AxisGizmo> gizmo);
 
+    /** @brief Sets the frame-rate overlay (optional). */
+    void setFpsOverlay(intrusive_ptr<FpsOverlay> fps);
+
     std::vector<intrusive_ptr<RenderPass>> passes_;
     intrusive_ptr<RenderPass> window_pass_;
     intrusive_ptr<RenderTarget> offscreen_target_;
     intrusive_ptr<AxisGizmo> gizmo_;
+    intrusive_ptr<FpsOverlay> fps_overlay_;
 };
 
 V_GRAPHICS_NS_END

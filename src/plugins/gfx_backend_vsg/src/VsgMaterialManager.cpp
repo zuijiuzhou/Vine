@@ -19,10 +19,19 @@ namespace
  * @param material Vine material (may be null).
  * @return VSG Phong material value.
  */
-::vsg::ref_ptr<::vsg::PhongMaterialValue> makePhongMaterial(vine::graphics::Material* material)
+/**
+ * @brief Writes a Vine material's parameters into a Phong value.
+ *
+ * Shared by creation and by in-place refresh so both paths produce identical
+ * state. Transparency is carried by the per-vertex alpha (Geometry / Node
+ * opacity), never by the shared material: the diffuse alpha stays opaque.
+ *
+ * @param phong    Value to write into (must already be DYNAMIC when reused).
+ * @param material Vine material (may be null -> default grey).
+ */
+void applyPhongMaterial(::vsg::PhongMaterialValue& phong, vine::graphics::Material* material)
 {
-    auto phong = ::vsg::PhongMaterialValue::create();
-    auto& m = phong->value();
+    auto& m = phong.value();
     m.ambient = ::vsg::vec4(0.2f, 0.2f, 0.2f, 1.0f);
     m.diffuse = ::vsg::vec4(0.8f, 0.8f, 0.8f, 1.0f);
     m.specular = ::vsg::vec4(0.2f, 0.2f, 0.2f, 1.0f);
@@ -35,10 +44,27 @@ namespace
         const auto ambient = material->ambient();
         m.ambient = ::vsg::vec4(ambient.r, ambient.g, ambient.b, ambient.a);
         m.shininess = material->shininess();
-        // Transparency is carried by the per-vertex alpha (Geometry/Node
-        // opacity), never by the shared material: diffuse stays opaque.
         m.diffuse.a = 1.0f;
     }
+}
+
+/**
+ * @brief Builds a PhongMaterialValue from a Vine material.
+ *
+ * The uniform backing the value is updated IN PLACE at run time, so it is
+ * marked DYNAMIC: vsg keeps it in a transfer buffer and the per-frame
+ * TransferTask re-copies it after dirty() — a static uniform would only be
+ * uploaded once at compile and later property edits would never reach the GPU
+ * (the same pitfall fixed for the per-vertex opacity carrier).
+ *
+ * @param material Vine material (may be null).
+ * @return VSG Phong material value.
+ */
+::vsg::ref_ptr<::vsg::PhongMaterialValue> makePhongMaterial(vine::graphics::Material* material)
+{
+    auto phong = ::vsg::PhongMaterialValue::create();
+    phong->properties.dataVariance = ::vsg::DYNAMIC_DATA;
+    applyPhongMaterial(*phong, material);
     return phong;
 }
 
@@ -75,7 +101,18 @@ void VsgMaterialManager::updateMaterial(vine::raw_ptr<vine::graphics::Material> 
     if (material == nullptr) {
         return;
     }
-    d->cache[material] = makePhongMaterial(material);
+    auto it = d->cache.find(material);
+    if (it != d->cache.end()) {
+        // Refresh the SAME cached object in place: descriptor sets already
+        // point at this Phong value, so replacing it would orphan the live
+        // bindings. The value is DYNAMIC (see makePhongMaterial); mark it
+        // dirty so the per-frame TransferTask re-copies the update.
+        applyPhongMaterial(*it->second, material);
+        it->second->dirty();
+    }
+    else {
+        d->cache[material] = makePhongMaterial(material);
+    }
 }
 
 void VsgMaterialManager::releaseMaterial(vine::raw_ptr<vine::graphics::Material> material)

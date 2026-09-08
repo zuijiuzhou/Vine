@@ -23,6 +23,7 @@
 #include <vsg/state/ColorBlendState.h>
 #include <vsg/state/material.h>
 #include <vsg/state/ShaderStage.h>
+#include <vsg/state/ArrayState.h>
 #include <vsg/utils/GraphicsPipelineConfigurator.h>
 #include <vsg/utils/ShaderCompiler.h>
 #include <vsg/utils/ShaderSet.h>
@@ -56,6 +57,47 @@ namespace
         v = ::vsg::vec4(1.0f, 1.0f, 1.0f, 1.0f);
     }
     return colors;
+}
+
+/**
+ * @brief Collects the vertex Data bound by a data node's BindVertexBuffers.
+ *
+ * Used to register the same arrays with a GraphicsPipelineConfigurator when a
+ * fresh state wrapper is built over an existing (retained) data node.
+ *
+ * @param node Data node (a vsg::Commands) to inspect.
+ * @return The bound Data in binding order, or an empty list.
+ */
+::vsg::DataList boundArraysOf(const ::vsg::ref_ptr<::vsg::Node>& node)
+{
+    if (node == nullptr) {
+        return {};
+    }
+    if (auto bvb = node->cast<::vsg::BindVertexBuffers>()) {
+        ::vsg::DataList out;
+        out.reserve(bvb->arrays.size());
+        for (const auto& buffer_info : bvb->arrays) {
+            if (buffer_info != nullptr && buffer_info->data != nullptr) {
+                out.emplace_back(buffer_info->data);
+            }
+        }
+        return out;
+    }
+    if (auto commands = node->cast<::vsg::Commands>()) {
+        for (const auto& child : commands->children) {
+            if (auto r = boundArraysOf(child); !r.empty()) {
+                return r;
+            }
+        }
+    }
+    if (auto group = node->cast<::vsg::Group>()) {
+        for (const auto& child : group->children) {
+            if (auto r = boundArraysOf(child); !r.empty()) {
+                return r;
+            }
+        }
+    }
+    return {};
 }
 
 /**
@@ -228,9 +270,64 @@ VkShaderStageFlagBits stageFlag(vine::graphics::ShaderStageType type)
     return shader_set;
 }
 
+/**
+ * @brief Hashes the identity of one (program, material, render-state) pipeline
+ * variant into a cache key for the L2 variant template cache.
+ *
+ * Pointer identities mix in the raw (program, material) pointers — their
+ * lifetime is guaranteed by the scene while the bridge uses them — plus the
+ * program's content revision, so editing a retained program's GLSL yields a
+ * fresh key and pipeline (D10), and every folded render-state field the
+ * pipeline must honour. Collisions with a different variant are safe: they
+ * only displace a template entry, which rebuilds on its next use.
+ *
+ * @param program  User shader program (null = built-in default).
+ * @param material Bound material (may be null).
+ * @param state    Resolved render state the pipeline honours.
+ * @return The content hash used as the variant cache key.
+ */
+std::uint64_t hashStateVariant(const vine::graphics::ShaderProgram* program,
+                               const vine::graphics::Material*     material,
+                               const vine::graphics::ResolvedRenderState& state)
+{
+    const auto combine = [](std::uint64_t h, std::uint64_t v) {
+        return h ^ (v + 0x9e3779b97f4a7c15ull + (h << 6u) + (h >> 2u));
+    };
+    std::uint64_t h = 0xcbf29ce484222325ull;
+    const auto   mix_ptr = [&](const void* p) {
+        h = combine(h, static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(p)));
+    };
+    mix_ptr(program);
+    if (program != nullptr) {
+        // Program content is part of the variant identity: editing a retained
+        // program's GLSL bumps its revision, which yields a new template key
+        // and a fresh pipeline (D10).
+        h = combine(h, program->revision());
+    }
+    mix_ptr(material);
+    h = combine(h, static_cast<std::uint64_t>(state.depth.test));
+    h = combine(h, static_cast<std::uint64_t>(state.depth.write));
+    h = combine(h, static_cast<std::uint64_t>(state.depth.compare));
+    h = combine(h, static_cast<std::uint64_t>(state.cullMode));
+    h = combine(h, static_cast<std::uint64_t>(state.blend.enabled));
+    h = combine(h, static_cast<std::uint64_t>(state.blend.src));
+    h = combine(h, static_cast<std::uint64_t>(state.blend.dst));
+    h = combine(h, static_cast<std::uint64_t>(state.polygonMode));
+    h = combine(h, static_cast<std::uint64_t>(state.topology));
+    return h;
+}
+
 }  // namespace
 
-SceneBridge::SceneBridge() = default;
+SceneBridge::SceneBridge()
+{
+    // Share layout / pipeline / descriptor-set content across the bridge's
+    // geometry so identical (shader, render state, material) resolve to ONE
+    // VkPipeline: the pipeline count follows state variants, not the geometry
+    // count, which is what keeps hundreds/thousands of drawables cheap to load
+    // and run (see GraphicsPipelineConfigurator::copyTo's SharedObjects path).
+    shared_objects_ = ::vsg::SharedObjects::create();
+}
 
 SceneBridge::~SceneBridge() = default;
 
@@ -244,6 +341,52 @@ void SceneBridge::setMaterialManager(vine::raw_ptr<VsgMaterialManager> manager)
     material_manager_ = manager;
 }
 
+VsgMaterialManager& SceneBridge::materialManager()
+{
+    return material_manager_ != nullptr ? *material_manager_ : default_manager_;
+}
+
+::vsg::ref_ptr<::vsg::ShaderSet> SceneBridge::baseShaderSet()
+{
+    if (shader_set_ == nullptr) {
+        shader_set_ = ::vsg::createPhongShaderSet();
+    }
+    return shader_set_;
+}
+
+::vsg::ref_ptr<::vsg::ShaderSet> SceneBridge::getProgramShaderSet(
+    vine::raw_ptr<const vine::graphics::ShaderProgram> program)
+{
+    if (program == nullptr) {
+        return ::vsg::ref_ptr<::vsg::ShaderSet>();
+    }
+    const auto program_rev = program->revision();
+    auto it = program_shader_sets_.find(program);
+    if (it != program_shader_sets_.end() && it->second.revision == program_rev) {
+        return it->second.shader_set;
+    }
+    // Compile once per (program content, slot). The base default pipeline
+    // states (the baked viewport / blend) come from the slot's shader set;
+    // both shader sets bind the same "material" Phong uniform, so the compiled
+    // set stays compatible with the built-in path's descriptor assignment.
+    const auto base_states = baseShaderSet()->defaultGraphicsPipelineStates;
+    auto shaderSet = buildProgramShaderSet(program, base_states);
+    // A failed compile is cached too (null) so later geometry does not retry
+    // the expensive glslang pass every frame (it falls back to the built-in);
+    // editing the program bumps its revision and forces a recompile (D10).
+    auto& entry       = program_shader_sets_[program];
+    entry.revision    = program_rev;
+    entry.shader_set  = shaderSet;
+    // D16: bound slot-lifetime growth. Dropping the whole cache only loses the
+    // fast path (a program recompiles once on its next use); it never breaks
+    // correctness — retained geometry keeps its already-built pipelines.
+    constexpr std::size_t kMaxProgramCacheEntries = 64;
+    if (program_shader_sets_.size() > kMaxProgramCacheEntries) {
+        program_shader_sets_.clear();
+    }
+    return shaderSet;
+}
+
 /** @brief Retained vsg node for one drawn geometry. */
 struct SceneBridge::Item {
     // Last translated identity, used to detect geometry/material/state changes.
@@ -253,8 +396,18 @@ struct SceneBridge::Item {
     vine::graphics::ResolvedRenderState render_state;
     // Last user program the retained pipeline was built with (null = built-in).
     vine::graphics::ShaderProgram* program = nullptr;
-    // Root of the retained subtree (matrix transform -> state group).
+    // Content revision of @ref program the retained pipeline was built with
+    // (D10: editing a retained program's GLSL must invalidate it).
+    std::uint64_t program_revision = ~std::uint64_t{0};
+    // Root of the retained subtree: matrix transform -> state_node -> data_node.
     ::vsg::ref_ptr<::vsg::MatrixTransform> transform;
+    // Pipeline/descriptor wrapper (state group) for the current
+    // (material, state, program) variant; its child is @ref data_node.
+    ::vsg::ref_ptr<::vsg::StateGroup> state_node;
+    // Geometry vertex/index draw commands. Kept stable across state-only
+    // rebuilds so a material/state/program edit never re-materialises or
+    // re-uploads the mesh data.
+    ::vsg::ref_ptr<::vsg::Commands> data_node;
     // Per-vertex color array; its alpha carries the effective per-drawable
     // opacity and is rewritten only when the opacity actually changed.
     ::vsg::ref_ptr<::vsg::vec4Array> colors;
@@ -266,9 +419,41 @@ struct SceneBridge::Item {
     std::uint32_t absent_frames = 0;
 };
 
+/**
+ * @brief Reusable bind commands for one (program, material, render-state)
+ * pipeline variant.
+ *
+ * Captured from the first geometry that built the variant (see buildGeometry):
+ * the canonical shared BindGraphicsPipeline + BindDescriptorSet command list
+ * copyTo produced (already deduplicated through the bridge's SharedObjects),
+ * the vertex-binding start index and the prototype array state. Later geometry
+ * of the same variant reuse these instead of running another configurator, and
+ * only attach their own vertex/index data.
+ */
+struct SceneBridge::VariantEntry {
+    const vine::graphics::ShaderProgram* program = nullptr;
+    vine::graphics::Material*            material = nullptr;
+    vine::graphics::ResolvedRenderState  state;
+    ::vsg::StateCommands state_commands;
+    ::vsg::ref_ptr<::vsg::ArrayState> prototype_array_state;
+    std::uint32_t base_binding = 0;
+};
+
 void SceneBridge::clearCache()
 {
     cache_.clear();
+    program_shader_sets_.clear();
+    variant_cache_.clear();
+    // Forget the shared-object registry (releases the registered pipeline /
+    // layout / descriptor-set objects) when the slot's content is released.
+    // Retained geometry nodes still hold ref_ptr to the shared objects until
+    // they are destroyed, so clearing only drops the registry, never leaves a
+    // dangling reference.
+    if (shared_objects_ != nullptr) {
+        shared_objects_->clear();
+    }
+    pipeline_variants_ = 0;
+    variant_reuses_ = 0;
 }
 
 bool SceneBridge::syncRenderCommands(
@@ -303,40 +488,72 @@ bool SceneBridge::syncRenderCommands(
             item = it->second.get();
         }
 
-        // The geometry data, the material binding, the effective render
-        // state or the user program changed: the retained subtree (geometry +
-        // pipeline + descriptor) must be rebuilt. Any cached write state is
-        // discarded with it.
-        if (item->revision != geometry->revision() || item->material != cmd.material.get() ||
-            item->render_state != cmd.renderState || item->program != cmd.program.get()) {
-            item->revision = geometry->revision();
-            item->material = cmd.material.get();
-            item->render_state = cmd.renderState;
-            item->program = cmd.program.get();
-            item->transform = nullptr;
-            item->colors = nullptr;
-            item->matrix_valid = false;
-            item->last_opacity = -1.0f;
-            changed = true;
+        // Rebuild the retained subtree when any of its inputs changed. The
+        // mesh DATA and the STATE (pipeline + descriptor) are decoupled: a
+        // revision (vertex/index data) change rebuilds only the data node; a
+        // material / resolved-state / program change rebuilds only the state
+        // wrapper and reuses the retained data node, so material/state edits
+        // never re-materialise or re-upload the mesh.
+        const bool had_node = item->transform != nullptr;
+        const auto program_rev =
+            cmd.program.get() != nullptr ? cmd.program.get()->revision() : std::uint64_t{0};
+        const bool data_dirty  = !had_node || item->revision != geometry->revision();
+        const bool state_dirty = !had_node || item->material != cmd.material.get() ||
+                                 item->render_state != cmd.renderState ||
+                                 item->program != cmd.program.get() ||
+                                 item->program_revision != program_rev;
+        if (data_dirty || state_dirty) {
+            item->revision         = geometry->revision();
+            item->material         = cmd.material.get();
+            item->render_state     = cmd.renderState;
+            item->program          = cmd.program.get();
+            item->program_revision = program_rev;
+            changed                = true;
         }
 
-        if (item->transform == nullptr) {
-            auto geomNode = buildGeometry(geometry, item->material, item->colors,
-                                          item->render_state, item->program);
-            if (geomNode == nullptr) {
+        if (data_dirty) {
+            // Fresh vertex data: rebuild the data node; the previous opacity
+            // carrier is dropped with it and rewritten on the next frames.
+            item->data_node = buildGeometryData(geometry, item->program == nullptr,
+                                                item->colors);
+            if (item->data_node == nullptr) {
                 // Unsupported shape / empty mesh: nothing drawable.
                 cache_.erase(geometry);
                 continue;
             }
-            item->transform = ::vsg::MatrixTransform::create();
-            item->transform->addChild(geomNode);
-            // Fresh buffers: the first sync must write matrix and alpha.
             item->matrix_valid = false;
             item->last_opacity = -1.0f;
-            // New/rebuild subtrees must be GPU-compiled before recording.
-            if (created != nullptr) {
-                created->emplace_back(item->transform);
+        }
+
+        if (state_dirty || item->state_node == nullptr) {
+            item->state_node = buildStateGroup(item->data_node, item->material,
+                                               item->render_state, item->program);
+            if (item->state_node == nullptr) {
+                cache_.erase(geometry);
+                continue;
             }
+        }
+
+        // Attach: the wrapper's child is the current data node and the
+        // retained transform's child is the current wrapper.
+        if (item->state_node->children.empty() ||
+            item->state_node->children.front().get() != item->data_node.get()) {
+            item->state_node->children.clear();
+            item->state_node->addChild(item->data_node);
+        }
+        if (!had_node) {
+            item->transform = ::vsg::MatrixTransform::create();
+            item->transform->addChild(item->state_node);
+        }
+        else if (item->transform->children.empty() ||
+                 item->transform->children.front().get() != item->state_node.get()) {
+            item->transform->children.clear();
+            item->transform->addChild(item->state_node);
+        }
+
+        if ((data_dirty || state_dirty) && created != nullptr) {
+            // New/rebuild subtrees must be GPU-compiled before recording.
+            created->emplace_back(item->transform);
         }
 
         // Effective opacity (scene x nodes x leaf geometry) rides the
@@ -348,6 +565,10 @@ bool SceneBridge::syncRenderCommands(
             for (auto& color : *item->colors) {
                 color.a = opacity;
             }
+            // The colour array is DYNAMIC (see buildGeometry): mark it dirty so
+            // vsg's per-frame TransferTask re-copies it this frame; unchanged
+            // frames issue no transfer.
+            item->colors->dirty();
             item->last_opacity = opacity;
         }
 
@@ -401,46 +622,67 @@ bool SceneBridge::syncRenderCommands(
     }
 
     // Refresh bound material values in place so property edits show up live
-    // (the descriptor already points at these cached Phong values).
+    // (the descriptor already points at these cached Phong values). Each
+    // distinct material is visited once per frame and its UBO is rewritten
+    // only when the Vine material's parameters actually changed, so a steady
+    // state costs O(distinct materials) compares instead of O(commands)
+    // unconditional writes (D19).
     if (!commands.empty()) {
-        auto* manager = material_manager_ != nullptr ? material_manager_ : &default_manager_;
+        auto& manager = materialManager();
+        const auto same4 = [](const ::vsg::vec4& a, const ::vsg::vec4& b) {
+            return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
+        };
+        std::unordered_set<const vine::graphics::Material*> refreshed;
+        refreshed.reserve(commands.size());
         for (const auto& cmd : commands) {
-            if (cmd.material == nullptr) {
+            if (cmd.material == nullptr || !refreshed.insert(cmd.material.get()).second) {
                 continue;
             }
-            auto value = manager->getOrCreate(cmd.material.get());
-            auto& m = value->value();
+            auto  value = manager.getOrCreate(cmd.material.get());
+            auto& m     = value->value();
             const auto diffuse  = cmd.material->diffuse();
             const auto specular = cmd.material->specular();
             const auto ambient  = cmd.material->ambient();
-            m.ambient  = ::vsg::vec4(ambient.r, ambient.g, ambient.b, ambient.a);
             // Opacity is carried by the per-vertex alpha, not the shared
-            // material, so per-geometry opacity stays independent.
-            m.diffuse  = ::vsg::vec4(diffuse.r, diffuse.g, diffuse.b, 1.0f);
-            m.specular = ::vsg::vec4(specular.r, specular.g, specular.b, specular.a);
-            m.shininess = cmd.material->shininess();
+            // material, so per-geometry opacity stays independent (the diffuse
+            // alpha is pinned to 1 here).
+            const ::vsg::vec4 want_ambient(ambient.r, ambient.g, ambient.b, ambient.a);
+            const ::vsg::vec4 want_diffuse(diffuse.r, diffuse.g, diffuse.b, 1.0f);
+            const ::vsg::vec4 want_specular(specular.r, specular.g, specular.b, specular.a);
+            const float       want_shininess = cmd.material->shininess();
+            if (same4(m.ambient, want_ambient) && same4(m.diffuse, want_diffuse) &&
+                same4(m.specular, want_specular) && m.shininess == want_shininess) {
+                continue;
+            }
+            m.ambient   = want_ambient;
+            m.diffuse   = want_diffuse;
+            m.specular  = want_specular;
+            m.shininess = want_shininess;
+            // The material uniform is DYNAMIC (see VsgMaterialManager): mark it
+            // dirty so the per-frame TransferTask re-copies it; materials that
+            // did not change are never dirtied, so steady state transfers
+            // nothing.
+            value->dirty();
         }
     }
 
     return changed;
 }
 
-::vsg::ref_ptr<::vsg::Node> SceneBridge::buildGeometry(
+::vsg::ref_ptr<::vsg::Commands> SceneBridge::buildGeometryData(
     vine::raw_ptr<const vine::graphics::Geometry> geometry,
-    vine::raw_ptr<vine::graphics::Material> material,
-    ::vsg::ref_ptr<::vsg::vec4Array>& out_colors,
-    const vine::graphics::ResolvedRenderState& state,
-    vine::raw_ptr<const vine::graphics::ShaderProgram> program)
+    bool opacity_carrier,
+    ::vsg::ref_ptr<::vsg::vec4Array>& out_colors)
 {
     if (geometry == nullptr) {
-        return ::vsg::ref_ptr<::vsg::Node>();
+        return ::vsg::ref_ptr<::vsg::Commands>();
     }
     // Materialise the open attribute list into typed CPU arrays for the vsg
     // build: location 0 = positions, location 1 = (optional) normals.
     const auto* position_attr = geometry->buffer(0);
     if (position_attr == nullptr || position_attr->empty() ||
         position_attr->components < 3u) {
-        return ::vsg::ref_ptr<::vsg::Node>();
+        return ::vsg::ref_ptr<::vsg::Commands>();
     }
     vine::geometry::Vec3fArray positions;
     {
@@ -486,53 +728,102 @@ bool SceneBridge::syncRenderCommands(
         normals = makeNormals(positions, src_normals);
     }
 
+    // White per-vertex colour array bound on every geometry; its alpha is
+    // rewritten in place to drive per-drawable opacity. When this node is the
+    // built-in opacity carrier the array is marked DYNAMIC so vsg's per-frame
+    // TransferTask re-copies it after a dirty() (unchanged frames transfer
+    // nothing); a user-program node keeps it static (D8: the program owns
+    // opacity), only binding it for programs that read vsg_Color.
+    auto colors = makeWhiteColors(vertices->size());
+    if (opacity_carrier) {
+        colors->properties.dataVariance = ::vsg::DYNAMIC_DATA;
+        out_colors = colors;
+    }
+    else {
+        out_colors = ::vsg::ref_ptr<::vsg::vec4Array>();
+    }
+    // The bound vertex data follows the shader set's attribute-binding order
+    // (vertex, normal, colour) starting at binding 0.
+    ::vsg::DataList arrays;
+    arrays.emplace_back(vertices);
+    arrays.emplace_back(normals);
+    arrays.emplace_back(colors);
+
+    // NOTE: manual geometry must use explicit bind/draw commands, NOT a
+    // manually-assembled VertexIndexDraw, or nothing is rasterized (same
+    // finding as VsgRenderer::makeRawDemoNode).
+    auto drawCommands = ::vsg::Commands::create();
+    drawCommands->addChild(::vsg::BindVertexBuffers::create(0u, arrays));
+    drawCommands->addChild(::vsg::BindIndexBuffer::create(indices));
+    drawCommands->addChild(::vsg::DrawIndexed::create(
+        static_cast<uint32_t>(indices->size()), 1, 0, 0, 0));
+    return drawCommands;
+}
+
+::vsg::ref_ptr<::vsg::StateGroup> SceneBridge::buildStateGroup(
+    ::vsg::ref_ptr<::vsg::Node> data,
+    vine::raw_ptr<vine::graphics::Material> material,
+    const vine::graphics::ResolvedRenderState& state,
+    vine::raw_ptr<const vine::graphics::ShaderProgram> program)
+{
+    if (data == nullptr) {
+        return ::vsg::ref_ptr<::vsg::StateGroup>();
+    }
+
     // A user program replaces the built-in pipeline: compile its stages and
     // assemble a custom ShaderSet following the official vsg contract
-    // (vsg_Vertex + "pc" projection/modelView push constant). On any failure
-    // fall back to the built-in default so a bad program cannot break a scene.
-    bool program_path = false;
+    // (vsg_Vertex + "pc" projection/modelView push constant). The compiled set
+    // is cached per (program, slot) — L1 — so N geometry bound to one program
+    // share a single glslang compile. On any failure fall back to the built-in
+    // default so a bad program cannot break a scene.
     ::vsg::ref_ptr<::vsg::ShaderSet> shaderSet;
     if (program != nullptr) {
-        const auto base_states =
-            (shader_set_ != nullptr ? shader_set_ : ::vsg::createPhongShaderSet())
-                ->defaultGraphicsPipelineStates;
-        shaderSet = buildProgramShaderSet(program, base_states);
-        program_path = shaderSet != nullptr;
+        shaderSet = getProgramShaderSet(program);
     }
     if (!shaderSet) {
-        shaderSet = shader_set_ != nullptr ? shader_set_ : ::vsg::createPhongShaderSet();
+        shaderSet = baseShaderSet();
     }
+
+    // L2 variant reuse: an identical (program, material, resolved-state)
+    // variant built earlier contributes its reusable bind commands (the shared
+    // pipeline bind + the per-material descriptor bind). Reuse skips the
+    // configurator entirely.
+    const auto hash_key = hashStateVariant(program, material, state);
+    const auto variant_it = variant_cache_.find(hash_key);
+    if (variant_it != variant_cache_.end() && variant_it->second != nullptr &&
+        variant_it->second->program == program &&
+        variant_it->second->material == material &&
+        variant_it->second->state == state) {
+        ++variant_reuses_;
+        auto stateGroup = ::vsg::StateGroup::create();
+        for (const auto& sc : variant_it->second->state_commands) {
+            stateGroup->stateCommands.push_back(sc);
+        }
+        stateGroup->prototypeArrayState = variant_it->second->prototype_array_state;
+        return stateGroup;
+    }
+
     auto config = ::vsg::GraphicsPipelineConfigurator::create(shaderSet);
 
-    ::vsg::DataList arrays;
-    config->assignArray(arrays, "vsg_Vertex", VK_VERTEX_INPUT_RATE_VERTEX, vertices);
-
-    if (!program_path) {
-        ::vsg::ref_ptr<::vsg::vec4Array> colors = makeWhiteColors(vertices->size());
-        out_colors = colors;
-        config->assignArray(arrays, "vsg_Normal", VK_VERTEX_INPUT_RATE_VERTEX, normals);
-        config->assignArray(arrays, "vsg_Color", VK_VERTEX_INPUT_RATE_VERTEX, colors);
-
-        // Material resources come from the material manager (converted +
-        // cached), never built ad-hoc here.
-        auto material_manager = material_manager_ != nullptr ? material_manager_ : &default_manager_;
-        auto material_value = material_manager->getOrCreate(material);
+    // Material resources come from the material manager (converted + cached),
+    // never built ad-hoc here. The same attributes and the shared "material"
+    // uniform are registered on both paths; the actual vertex data is already
+    // bound by the retained data node, so only the bindings are re-declared.
+    {
+        auto& material_manager = materialManager();
+        auto  material_value   = material_manager.getOrCreate(material);
+        const auto arrays      = boundArraysOf(data);
+        ::vsg::DataList scratch;
+        if (arrays.size() > 0u) {
+            config->assignArray(scratch, "vsg_Vertex", VK_VERTEX_INPUT_RATE_VERTEX, arrays[0]);
+        }
+        if (arrays.size() > 1u) {
+            config->assignArray(scratch, "vsg_Normal", VK_VERTEX_INPUT_RATE_VERTEX, arrays[1]);
+        }
+        if (arrays.size() > 2u) {
+            config->assignArray(scratch, "vsg_Color", VK_VERTEX_INPUT_RATE_VERTEX, arrays[2]);
+        }
         config->assignDescriptor("material", material_value);
-    } else {
-        // User program path: feed the same per-vertex attributes and the
-        // material the default path uses, so a program can shade with
-        // per-vertex normals / read the Vine material (e.g. a G-buffer pass
-        // writing several attachments in one traversal). The per-vertex-alpha
-        // opacity path stays off (out_colors null — the pass-level program
-        // override owns opacity), but the white colour array is still bound
-        // for programs that read vsg_Color.
-        auto colors = makeWhiteColors(vertices->size());
-        config->assignArray(arrays, "vsg_Normal", VK_VERTEX_INPUT_RATE_VERTEX, normals);
-        config->assignArray(arrays, "vsg_Color", VK_VERTEX_INPUT_RATE_VERTEX, colors);
-        auto material_manager = material_manager_ != nullptr ? material_manager_ : &default_manager_;
-        auto material_value = material_manager->getOrCreate(material);
-        config->assignDescriptor("material", material_value);
-        out_colors = nullptr;
     }
 
     // Assemble the pipeline from the geometry's effective render state. The
@@ -573,19 +864,39 @@ bool SceneBridge::syncRenderCommands(
 
     config->init();
 
-    auto stateGroup = ::vsg::StateGroup::create();
+    // Register this pipeline with the shared-object cache: when an identical
+    // variant is already registered, SharedObjects returns the existing object
+    // (content-equal dedup) and the fresh duplicate is dropped. Count only
+    // genuinely new variants so pipelineVariantCount() reflects distinct
+    // pipeline states, not the geometry count.
+    const auto local_bind = config->bindGraphicsPipeline;
+    auto stateGroup       = ::vsg::StateGroup::create();
     config->copyTo(stateGroup, shared_objects_);
+    if (shared_objects_ != nullptr && config->bindGraphicsPipeline == local_bind) {
+        ++pipeline_variants_;
+    }
 
-    // NOTE: manual geometry must use explicit bind/draw commands, NOT a
-    // manually-assembled VertexIndexDraw, or nothing is rasterized (same
-    // finding as VsgRenderer::makeRawDemoNode).
-    auto drawCommands = ::vsg::Commands::create();
-    drawCommands->addChild(
-        ::vsg::BindVertexBuffers::create(config->baseAttributeBinding, arrays));
-    drawCommands->addChild(::vsg::BindIndexBuffer::create(indices));
-    drawCommands->addChild(::vsg::DrawIndexed::create(
-        static_cast<uint32_t>(indices->size()), 1, 0, 0, 0));
-    stateGroup->addChild(drawCommands);
+    // Cache this variant's reusable pieces for later identical geometry. A
+    // hash collision with a different variant simply overwrites the entry —
+    // the displaced variant rebuilds fresh on its next appearance (still
+    // correct, just uncached).
+    {
+        auto entry = std::make_unique<VariantEntry>();
+        entry->program               = program;
+        entry->material              = material;
+        entry->state                 = state;
+        entry->state_commands        = stateGroup->stateCommands;
+        entry->prototype_array_state = stateGroup->prototypeArrayState;
+        entry->base_binding          = config->baseAttributeBinding;
+        variant_cache_[hash_key]     = std::move(entry);
+        // D16: bound slot-lifetime growth. Dropping the template cache only
+        // loses the fast path (variants rebuild on next use); retained state
+        // nodes keep their built pipelines, so correctness is unaffected.
+        constexpr std::size_t kMaxVariantCacheEntries = 256;
+        if (variant_cache_.size() > kMaxVariantCacheEntries) {
+            variant_cache_.clear();
+        }
+    }
 
     return stateGroup;
 }

@@ -52,12 +52,14 @@
 #include <vsg/state/ViewportState.h>
 #include <vsg/state/material.h>
 #include <vsg/utils/Builder.h>
+#include <vsg/app/CompileManager.h>
 #include <vsg/utils/GraphicsPipelineConfigurator.h>
 #include <vsg/utils/ShaderCompiler.h>
 #include <vsg/utils/ShaderSet.h>
 #include <vsg/vk/Device.h>
 #include <vsg/vk/Framebuffer.h>
 #include <vsg/vk/RenderPass.h>
+#include <vsg/vk/ResourceRequirements.h>
 
 #ifdef _WIN32
 #    ifndef NOMINMAX
@@ -365,6 +367,58 @@ VkFormat toDepthFormat(vine::graphics::RenderTarget::DepthFormat f)
 }
 
 /**
+ * @brief Vertex shader source shared by the full-screen overlay passes.
+ *
+ * Generates the full-screen triangle from gl_VertexIndex alone, so the draws
+ * need no vertex buffers or camera matrices. Both overlay builders (PiP
+ * screen sampling and fullscreen user-program lighting) use this identical
+ * vertex stage.
+ *
+ * @return The GLSL vertex source.
+ */
+const std::string& fullscreenVertexSource()
+{
+    static const std::string source = R"(#version 450
+layout(location = 0) out vec2 v_uv;
+void main()
+{
+    v_uv = vec2(float((gl_VertexIndex << 1) & 2), float(gl_VertexIndex & 2));
+    gl_Position = vec4(v_uv * 2.0 - 1.0, 0.0, 1.0);
+}
+)";
+    return source;
+}
+
+/**
+ * @brief Builds the default pipeline states for the full-screen overlay
+ * passes.
+ *
+ * Both overlay draws (PiP screen sampling, fullscreen program lighting)
+ * composite over already-rendered content: depth test/write stay off and the
+ * rasterizer culls nothing; blending stays at the opaque default because each
+ * pass replaces the sub-viewport it owns.
+ *
+ * @param extent Surface extent for the baked static viewport.
+ * @return The default GraphicsPipelineStates.
+ */
+::vsg::GraphicsPipelineStates makeOverlayPipelineStates(const VkExtent2D& extent)
+{
+    auto raster      = ::vsg::RasterizationState::create();
+    raster->cullMode = VK_CULL_MODE_NONE;
+    auto depth_state = ::vsg::DepthStencilState::create();
+    depth_state->depthTestEnable  = VK_FALSE;
+    depth_state->depthWriteEnable = VK_FALSE;
+    return ::vsg::GraphicsPipelineStates{
+        depth_state,
+        raster,
+        ::vsg::ColorBlendState::create(),
+        ::vsg::InputAssemblyState::create(),
+        ::vsg::MultisampleState::create(),
+        ::vsg::ViewportState::create(extent),
+    };
+}
+
+/**
  * @brief Builds a state-group that draws a full-screen textured triangle
  * sampling @p image_view into the current target.
  *
@@ -379,14 +433,7 @@ VkFormat toDepthFormat(vine::graphics::RenderTarget::DepthFormat f)
  */
 ::vsg::ref_ptr<::vsg::Node> makeScreenTextureNode(::vsg::ref_ptr<::vsg::ImageView> image_view, const VkExtent2D& extent)
 {
-    const std::string vertex_source   = R"(#version 450
-layout(location = 0) out vec2 v_uv;
-void main()
-{
-    v_uv = vec2(float((gl_VertexIndex << 1) & 2), float(gl_VertexIndex & 2));
-    gl_Position = vec4(v_uv * 2.0 - 1.0, 0.0, 1.0);
-}
-)";
+    const std::string vertex_source   = fullscreenVertexSource();
     const std::string fragment_source = R"(#version 450
 layout(location = 0) in vec2 v_uv;
 layout(location = 0) out vec4 out_color;
@@ -416,20 +463,7 @@ void main()
     auto shaderSet    = ::vsg::ShaderSet::create();
     shaderSet->stages = ::vsg::ShaderStages{ vs, fs };
     shaderSet->addDescriptorBinding("screen_tex", "", 0, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, {});
-
-    auto raster                              = ::vsg::RasterizationState::create();
-    raster->cullMode                         = VK_CULL_MODE_NONE;
-    auto depth_state                         = ::vsg::DepthStencilState::create();
-    depth_state->depthTestEnable             = VK_FALSE;
-    depth_state->depthWriteEnable            = VK_FALSE;
-    shaderSet->defaultGraphicsPipelineStates = ::vsg::GraphicsPipelineStates{
-        depth_state,
-        raster,
-        ::vsg::ColorBlendState::create(),
-        ::vsg::InputAssemblyState::create(),
-        ::vsg::MultisampleState::create(),
-        ::vsg::ViewportState::create(extent),
-    };
+    shaderSet->defaultGraphicsPipelineStates = makeOverlayPipelineStates(extent);
 
     auto config     = ::vsg::GraphicsPipelineConfigurator::create(shaderSet);
     auto sampler    = ::vsg::Sampler::create();
@@ -514,14 +548,7 @@ struct alignas(16) LightPushBlock
         return ::vsg::ref_ptr<::vsg::Node>();
     }
 
-    const std::string vertex_source = R"(#version 450
-layout(location = 0) out vec2 v_uv;
-void main()
-{
-    v_uv = vec2(float((gl_VertexIndex << 1) & 2), float(gl_VertexIndex & 2));
-    gl_Position = vec4(v_uv * 2.0 - 1.0, 0.0, 1.0);
-}
-)";
+    const std::string vertex_source = fullscreenVertexSource();
 
     auto vs = ::vsg::ShaderStage::create(VK_SHADER_STAGE_VERTEX_BIT, "main", vertex_source);
     auto fs = ::vsg::ShaderStage::create(VK_SHADER_STAGE_FRAGMENT_BIT, fs_spec->entryPoint.stdstr(), fs_spec->source.stdstr());
@@ -546,20 +573,7 @@ void main()
     }
     // Per-frame light/view parameters (LightPushBlock, the full 128-byte range).
     shaderSet->addPushConstantRange("pc_light", "", VK_SHADER_STAGE_FRAGMENT_BIT, 0, 128);
-
-    auto raster                              = ::vsg::RasterizationState::create();
-    raster->cullMode                         = VK_CULL_MODE_NONE;
-    auto depth_state                         = ::vsg::DepthStencilState::create();
-    depth_state->depthTestEnable             = VK_FALSE;
-    depth_state->depthWriteEnable            = VK_FALSE;
-    shaderSet->defaultGraphicsPipelineStates = ::vsg::GraphicsPipelineStates{
-        depth_state,
-        raster,
-        ::vsg::ColorBlendState::create(),
-        ::vsg::InputAssemblyState::create(),
-        ::vsg::MultisampleState::create(),
-        ::vsg::ViewportState::create(extent),
-    };
+    shaderSet->defaultGraphicsPipelineStates = makeOverlayPipelineStates(extent);
 
     auto config  = ::vsg::GraphicsPipelineConfigurator::create(shaderSet);
     auto sampler = ::vsg::Sampler::create();
@@ -657,6 +671,126 @@ void setGroupLights(::vsg::Group* group, const std::vector<const vine::graphics:
     }
 }
 
+/**
+ * @brief Detaches a child node from a vsg group (command graph / render
+ * graph).
+ *
+ * The renderer retires whole views (PiP / fullscreen-program slots), rebuilt
+ * off-screen graphs and released targets by detaching them from the owning
+ * graph. vsg groups store plain child lists, so removal is a remove-and-erase
+ * sweep; a null graph or a null node is a safe no-op.
+ *
+ * @param graph Graph whose children are swept (may be null).
+ * @param node  Child to detach (may be null).
+ */
+void removeGraphChild(::vsg::Group* graph, const ::vsg::ref_ptr<::vsg::Node>& node)
+{
+    if (graph == nullptr) {
+        return;
+    }
+    auto& children = graph->children;
+    children.erase(
+        std::remove_if(children.begin(),
+                       children.end(),
+                       [&node](const ::vsg::ref_ptr<::vsg::Node>& child) { return child.get() == node.get(); }),
+        children.end());
+}
+
+/**
+ * @brief Builds the flat white ambient light used to seed non-scene content
+ * slots (HUD overlays and off-screen main slots).
+ *
+ * Ambient-only lighting makes Phong's colour independent of surface
+ * orientation, which is what keeps HUD/axis content readable from any angle.
+ *
+ * @param name Node name (distinguishes the HUD seed from the off-screen one).
+ * @return The ambient light node.
+ */
+::vsg::ref_ptr<::vsg::Node> makeAmbientLight(const char* name)
+{
+    auto ambient  = ::vsg::AmbientLight::create();
+    ambient->name = name;
+    ambient->color.set(1.0f, 1.0f, 1.0f);
+    ambient->intensity = 1.0f;
+    return ambient;
+}
+
+/**
+ * @brief Waits for all in-flight GPU work on the viewer's device.
+ *
+ * Every teardown path (releasing a slot / target / rebuilding an off-screen
+ * graph) must wait before dropping Vulkan objects that a still-in-flight
+ * command buffer may reference. A null viewer is a safe no-op.
+ *
+ * @param viewer Viewer whose device to wait on (may be null).
+ */
+void waitForIdle(::vsg::Viewer* viewer)
+{
+    if (viewer != nullptr) {
+        viewer->deviceWaitIdle();
+    }
+}
+
+/**
+ * @brief Builds and compiles an overlay View for a full-screen node.
+ *
+ * Wraps @p content in its own View (a dedicated camera carrying the sub-rect
+ * viewport and a group holding the content) and attaches the View to @p graph:
+ * appended as the last child by default (a PiP screen view drawn above the
+ * content), or inserted FIRST when @p front is true (the deferred-lighting
+ * main view, which later HUD content must stack above). The new View is
+ * compiled before its first record — its pipeline is built against the owning
+ * window render pass — and on failure the half-compiled View is detached
+ * again and null is returned so the caller can drop its slot.
+ *
+ * @param viewer   Viewer that compiles the new View.
+ * @param graph    Render graph the View is attached to (may be null).
+ * @param content  Full-screen drawable to wrap.
+ * @param x        Viewport origin x in device pixels.
+ * @param y        Viewport origin y in device pixels.
+ * @param w        Viewport width in device pixels.
+ * @param h        Viewport height in device pixels.
+ * @param front    When true, insert the View as the graph's first child.
+ * @param what     Label for the compile-failure diagnostic.
+ * @return The compiled View, or null when compilation failed.
+ */
+::vsg::ref_ptr<::vsg::View> makeCompiledOverlayView(
+    ::vsg::Viewer& viewer,
+    ::vsg::Group* graph,
+    ::vsg::ref_ptr<::vsg::Node> content,
+    int x,
+    int y,
+    int w,
+    int h,
+    bool front,
+    const char* what)
+{
+    auto camera           = ::vsg::Camera::create();
+    camera->viewportState = ::vsg::ViewportState::create(x, y, static_cast<uint32_t>(w), static_cast<uint32_t>(h));
+    auto view             = ::vsg::View::create(camera);
+    auto group            = ::vsg::Group::create();
+    group->addChild(content);
+    view->addChild(group);
+    if (graph != nullptr) {
+        if (front) {
+            graph->children.insert(graph->children.begin(), view);
+        }
+        else {
+            graph->addChild(view);
+        }
+    }
+    // Compile the new View (its pipeline is built against the window render
+    // pass) before it is first recorded.
+    const auto compileResult = viewer.compile();
+    if (!compileResult) {
+        std::fprintf(stderr, "[VsgRenderer] %s compile failed: %s\n", what, compileResult.message.c_str());
+        // Drop the half-compiled View so it is never recorded.
+        removeGraphChild(graph, view);
+        return ::vsg::ref_ptr<::vsg::View>();
+    }
+    return view;
+}
+
 } // namespace
 
 /** @brief Renderer state that outlives any window session.
@@ -727,6 +861,11 @@ struct VsgRenderer::Impl {
         ::vsg::ref_ptr<::vsg::Group>  light_group; // lights under this slot's view
         ::vsg::ref_ptr<::vsg::View>   view;
         SceneBridge                   bridge;      // per-view pipelines (vsg compiles per viewID)
+        // D22: true once this slot's (window/framebuffer render pass + view)
+        // context has been registered into the viewer's CompileManager pool
+        // (incrementalCompileViews()). Each slot is registered once, so the
+        // pool gains exactly one context per slot View.
+        bool                          compile_context_registered = false;
         bool                          ready = false;
     };
 
@@ -740,6 +879,14 @@ struct VsgRenderer::Impl {
     int pending_pass_order = 0;
     // Set when a frame was drawn; consumed by swapBuffers()/submitFrame().
     bool needs_submit = false;
+
+    // Content-slot VIEWs that gained new/rebuild subtrees this frame. D22
+    // incremental compile: submitFrame() recompiles ONLY these views (not the
+    // whole scene). The view (not a detached subtree) is the compile unit
+    // because vsg assigns the per-View viewID only while traversing the View
+    // node — compiling a detached subtree always uses viewID 0 and crashes at
+    // record for any other slot's viewID.
+    std::vector<::vsg::ref_ptr<::vsg::View>> pending_compile_views;
 
     // ---- Output targets: the window (nullptr key) + off-screen (RT* key) ----
 
@@ -1031,12 +1178,8 @@ void VsgRenderer::render(const std::vector<vine::graphics::RenderCommand>& comma
 
     // Consume the sub-viewport queued by setViewport() just before this pass
     // (overlays); the main pass never sets one and renders the full surface.
-    const bool has_vp          = impl->has_pending_viewport;
-    const int  vp_x            = impl->pending_viewport[0];
-    const int  vp_y            = impl->pending_viewport[1];
-    const int  vp_w            = impl->pending_viewport[2];
-    const int  vp_h            = impl->pending_viewport[3];
-    impl->has_pending_viewport = false;
+    int vp_x = 0, vp_y = 0, vp_w = 0, vp_h = 0;
+    const bool has_vp = takePendingViewport(vp_x, vp_y, vp_w, vp_h);
 
     // Consume the lights queued by setLights() just before this pass (from the
     // content scene). Empty keeps each view's default light(s).
@@ -1078,11 +1221,7 @@ void VsgRenderer::render(const std::vector<vine::graphics::RenderCommand>& comma
     }
 
     auto& target = impl->targets[key];
-    if (key == nullptr) {
-        // Window target: its graph is the shared swapchain graph built at
-        // initialize() and stored on this entry — nothing to (re)build here.
-    }
-    else if (target.graph == nullptr || target.width != key->width() || target.height != key->height()) {
+    if (key != nullptr && (target.graph == nullptr || target.width != key->width() || target.height != key->height())) {
         // First render into this off-screen target, or it was resized: build
         // (or rebuild) its attachments + render graph. Any content slots
         // compiled against an older graph are dropped by buildOffscreenTarget.
@@ -1123,18 +1262,10 @@ void VsgRenderer::buildOffscreenTarget(vine::graphics::RenderTarget* target)
     // content slot compiled against it must be dropped with it (per-view
     // pipelines bind the old render pass).
     if (t.graph != nullptr) {
-        if (impl->command_graph != nullptr) {
-            auto& children = impl->command_graph->children;
-            children.erase(std::remove_if(children.begin(),
-                                          children.end(),
-                                          [&t](const ::vsg::ref_ptr<::vsg::Node>& child) { return child.get() == t.graph.get(); }),
-                           children.end());
-        }
+        removeGraphChild(impl->command_graph.get(), t.graph);
         // Wait for any in-flight command buffer that may still reference the
         // old framebuffer/images before their Vk handles are destroyed.
-        if (impl->viewer != nullptr) {
-            impl->viewer->deviceWaitIdle();
-        }
+        waitForIdle(impl->viewer.get());
         for (auto& slot_entry : t.content_slots) {
             slot_entry.second.bridge.clearCache();
         }
@@ -1272,12 +1403,8 @@ void VsgRenderer::drawScreenTexture(vine::graphics::RenderTarget* source, int at
 
     // Consume the sub-viewport queued by setViewport() (the ScreenPass's PiP
     // rectangle); mirrors how render() consumes one for overlays.
-    const bool has_vp          = impl->has_pending_viewport;
-    const int  vp_x            = impl->pending_viewport[0];
-    const int  vp_y            = impl->pending_viewport[1];
-    const int  vp_w            = impl->pending_viewport[2];
-    const int  vp_h            = impl->pending_viewport[3];
-    impl->has_pending_viewport = false;
+    int vp_x = 0, vp_y = 0, vp_w = 0, vp_h = 0;
+    const bool has_vp = takePendingViewport(vp_x, vp_y, vp_w, vp_h);
 
     auto src_it = impl->targets.find(source);
     if (src_it == impl->targets.end() || src_it->second.color_views.empty()) {
@@ -1312,13 +1439,7 @@ void VsgRenderer::drawScreenTexture(vine::graphics::RenderTarget* source, int at
     {
         const auto old = window_entry.screen_slots.find(key);
         if (old != window_entry.screen_slots.end() && old->second.ready && (old->second.source_w != src.width || old->second.source_h != src.height)) {
-            if (window_entry.graph != nullptr) {
-                auto& children = window_entry.graph->children;
-                children.erase(std::remove_if(children.begin(),
-                                              children.end(),
-                                              [&old](const ::vsg::ref_ptr<::vsg::Node>& child) { return child.get() == old->second.view.get(); }),
-                               children.end());
-            }
+            removeGraphChild(window_entry.graph.get(), old->second.view);
             window_entry.screen_slots.erase(old);
         }
     }
@@ -1374,32 +1495,15 @@ void VsgRenderer::drawScreenTexture(vine::graphics::RenderTarget* source, int at
             window_entry.screen_slots.erase(key);
             return;
         }
-        auto camera           = ::vsg::Camera::create();
-        camera->viewportState = ::vsg::ViewportState::create(rect_x, rect_y, static_cast<uint32_t>(rect_w), static_cast<uint32_t>(rect_h));
-        slot.camera           = camera;
-        auto view             = ::vsg::View::create(camera);
-        auto group            = ::vsg::Group::create();
-        group->addChild(content);
-        view->addChild(group);
-        slot.view = view;
-        if (window_entry.graph != nullptr) {
-            window_entry.graph->addChild(view);
-        }
-        // Compile the new view (its pipeline is built against the window
-        // render pass) before it is first recorded.
-        const auto compileResult = impl->viewer->compile();
-        if (!compileResult) {
-            std::fprintf(stderr, "[VsgRenderer] screen pass compile failed: %s\n", compileResult.message.c_str());
-            // Drop the half-compiled view so it is never recorded.
-            if (window_entry.graph != nullptr) {
-                auto& children = window_entry.graph->children;
-                children.erase(
-                    std::remove_if(children.begin(), children.end(), [&view](const ::vsg::ref_ptr<::vsg::Node>& child) { return child.get() == view.get(); }),
-                    children.end());
-            }
+        auto view = makeCompiledOverlayView(*impl->viewer, window_entry.graph.get(), content,
+                                            rect_x, rect_y, rect_w, rect_h,
+                                            /*front*/ false, "screen pass");
+        if (view == nullptr) {
             window_entry.screen_slots.erase(key);
             return;
         }
+        slot.camera        = view->camera;
+        slot.view          = view;
         slot.ready         = true;
         impl->needs_submit = true;
         std::fprintf(stderr, "[VsgRenderer] EXPERIMENTAL screen PiP %dx%d (att %zu) -> %d,%d %dx%d attached\n", src.width, src.height, attachment_index, rect_x, rect_y, rect_w, rect_h);
@@ -1562,12 +1666,8 @@ void VsgRenderer::drawScreenProgram(vine::graphics::RenderTarget*              s
     }
 
     // Consume the sub-viewport queued by setViewport() (the pass's rectangle).
-    const bool has_vp          = impl->has_pending_viewport;
-    const int  vp_x            = impl->pending_viewport[0];
-    const int  vp_y            = impl->pending_viewport[1];
-    const int  vp_w            = impl->pending_viewport[2];
-    const int  vp_h            = impl->pending_viewport[3];
-    impl->has_pending_viewport = false;
+    int vp_x = 0, vp_y = 0, vp_w = 0, vp_h = 0;
+    const bool has_vp = takePendingViewport(vp_x, vp_y, vp_w, vp_h);
 
     auto src_it = impl->targets.find(source);
     if (src_it == impl->targets.end() || src_it->second.color_views.size() < 3u) {
@@ -1620,13 +1720,7 @@ void VsgRenderer::drawScreenProgram(vine::graphics::RenderTarget*              s
     // (its colour views were rebuilt), or the program changed.
     const bool stale = !slot.ready || slot.source_w != src.width || slot.source_h != src.height || slot.program != program;
     if (stale) {
-        if (slot.view != nullptr && window_entry.graph != nullptr) {
-            auto& children = window_entry.graph->children;
-            children.erase(std::remove_if(children.begin(),
-                                          children.end(),
-                                          [&slot](const ::vsg::ref_ptr<::vsg::Node>& child) { return child.get() == slot.view.get(); }),
-                           children.end());
-        }
+        removeGraphChild(window_entry.graph.get(), slot.view);
         slot = Impl::ProgramSlot{};
         slot.push_data = ::vsg::ubyteArray::create(128); // == full block size
         auto node      = makeFullscreenProgramNode(program, src.color_views, src.depth_view, surface, slot.push_data);
@@ -1639,33 +1733,19 @@ void VsgRenderer::drawScreenProgram(vine::graphics::RenderTarget*              s
         slot.program  = const_cast<vine::graphics::ShaderProgram*>(program);
         slot.node     = node;
 
-        auto camera_vsg           = ::vsg::Camera::create();
-        camera_vsg->viewportState = ::vsg::ViewportState::create(rect_x, rect_y, static_cast<uint32_t>(rect_w), static_cast<uint32_t>(rect_h));
-        slot.camera               = camera_vsg;
-        auto view                 = ::vsg::View::create(camera_vsg);
-        auto group                = ::vsg::Group::create();
-        group->addChild(node);
-        view->addChild(group);
-        slot.view = view;
-        if (window_entry.graph != nullptr) {
-            // The fullscreen program view is the window's main content in
-            // deferred mode: draw it FIRST (front), so content slots created
-            // later (HUD overlays) stack above it (see setupContentSlot's
-            // INT_MIN ordering for program views).
-            window_entry.graph->children.insert(window_entry.graph->children.begin(), view);
-        }
-        const auto compileResult = impl->viewer->compile();
-        if (!compileResult) {
-            std::fprintf(stderr, "[VsgRenderer] fullscreen program compile failed: %s\n", compileResult.message.c_str());
-            if (window_entry.graph != nullptr) {
-                auto& children = window_entry.graph->children;
-                children.erase(
-                    std::remove_if(children.begin(), children.end(), [&view](const ::vsg::ref_ptr<::vsg::Node>& child) { return child.get() == view.get(); }),
-                    children.end());
-            }
+        // The fullscreen program view is the window's main content in
+        // deferred mode: insert it FIRST (front), so content slots created
+        // later (HUD overlays) stack above it (see setupContentSlot's INT_MIN
+        // ordering for program views).
+        auto view = makeCompiledOverlayView(*impl->viewer, window_entry.graph.get(), node,
+                                            rect_x, rect_y, rect_w, rect_h,
+                                            /*front*/ true, "fullscreen program");
+        if (view == nullptr) {
             window_entry.program_slots.erase(source);
             return;
         }
+        slot.camera        = view->camera;
+        slot.view          = view;
         slot.ready         = true;
         impl->needs_submit = true;
         std::fprintf(stderr, "[VsgRenderer] EXPERIMENTAL deferred fullscreen program %dx%d -> %d,%d %dx%d attached\n", src.width, src.height, rect_x, rect_y, rect_w, rect_h);
@@ -1703,15 +1783,8 @@ void VsgRenderer::releaseWindowLayer(vine::raw_ptr<const vine::graphics::Camera>
     // recorded each frame, then drop it (releases its compiled pipelines and
     // the per-slot bridge cache). Slot removal is rare, so a device wait
     // before the drop keeps the release safe against an in-flight frame.
-    if (t.graph != nullptr && it->second.view != nullptr) {
-        auto& children = t.graph->children;
-        children.erase(
-            std::remove_if(children.begin(), children.end(), [&it](const ::vsg::ref_ptr<::vsg::Node>& child) { return child.get() == it->second.view.get(); }),
-            children.end());
-    }
-    if (impl->viewer != nullptr) {
-        impl->viewer->deviceWaitIdle();
-    }
+    removeGraphChild(t.graph.get(), it->second.view);
+    waitForIdle(impl->viewer.get());
     it->second.bridge.clearCache();
     t.content_slots.erase(it);
 }
@@ -1727,15 +1800,8 @@ void VsgRenderer::releaseRenderTarget(vine::graphics::RenderTarget* target)
         // Remove the target's off-screen graph from the command graph before
         // dropping its images / views / render pass / framebuffer / slots.
         auto& t = ot->second;
-        if (impl->command_graph != nullptr && t.graph != nullptr) {
-            auto& children = impl->command_graph->children;
-            children.erase(
-                std::remove_if(children.begin(), children.end(), [&t](const ::vsg::ref_ptr<::vsg::Node>& child) { return child.get() == t.graph.get(); }),
-                children.end());
-        }
-        if (impl->viewer != nullptr) {
-            impl->viewer->deviceWaitIdle();
-        }
+        removeGraphChild(impl->command_graph.get(), t.graph);
+        waitForIdle(impl->viewer.get());
         for (auto& slot_entry : t.content_slots) {
             slot_entry.second.bridge.clearCache();
         }
@@ -1755,16 +1821,8 @@ void VsgRenderer::releaseRenderTarget(vine::graphics::RenderTarget* target)
                 ++it;
                 continue;
             }
-            if (it->second.view != nullptr && target_entry.second.graph != nullptr) {
-                auto& children = target_entry.second.graph->children;
-                children.erase(std::remove_if(children.begin(),
-                                              children.end(),
-                                              [&it](const ::vsg::ref_ptr<::vsg::Node>& child) { return child.get() == it->second.view.get(); }),
-                               children.end());
-            }
-            if (impl->viewer != nullptr) {
-                impl->viewer->deviceWaitIdle();
-            }
+            removeGraphChild(target_entry.second.graph.get(), it->second.view);
+            waitForIdle(impl->viewer.get());
             it = slots.erase(it);
             released = true;
         }
@@ -1777,16 +1835,8 @@ void VsgRenderer::releaseRenderTarget(vine::graphics::RenderTarget* target)
         if (it == slots.end()) {
             continue;
         }
-        if (it->second.view != nullptr && target_entry.second.graph != nullptr) {
-            auto& children = target_entry.second.graph->children;
-            children.erase(std::remove_if(children.begin(),
-                                          children.end(),
-                                          [&it](const ::vsg::ref_ptr<::vsg::Node>& child) { return child.get() == it->second.view.get(); }),
-                           children.end());
-        }
-        if (impl->viewer != nullptr) {
-            impl->viewer->deviceWaitIdle();
-        }
+        removeGraphChild(target_entry.second.graph.get(), it->second.view);
+        waitForIdle(impl->viewer.get());
         slots.erase(it);
         released = true;
     }
@@ -1854,11 +1904,12 @@ void VsgRenderer::setupContentSlot(vine::graphics::RenderTarget* target, vine::g
     // unification off-screen view).
     content.light_group = ::vsg::Group::create();
     if (on_top) {
-        auto ambient  = ::vsg::AmbientLight::create();
-        ambient->name = "content_ambient";
-        ambient->color.set(1.0f, 1.0f, 1.0f);
-        ambient->intensity = 1.0f;
-        content.light_group->addChild(ambient);
+        // On-top (HUD) slots get a single ambient light: with a directional
+        // headlight the axis went dark/black from diagonal views because the
+        // light direction is fixed while the slot camera (which mirrors the
+        // source) rotates. Ambient-only lighting makes phong's colour
+        // independent of surface orientation, giving flat sticks.
+        content.light_group->addChild(makeAmbientLight("content_ambient"));
     }
     else if (target == nullptr) {
         // Seed the window's main slot with vsg's default headlight. Content
@@ -1869,11 +1920,9 @@ void VsgRenderer::setupContentSlot(vine::graphics::RenderTarget* target, vine::g
         content.light_group->addChild(::vsg::createHeadlight());
     }
     else {
-        auto ambient  = ::vsg::AmbientLight::create();
-        ambient->name = "offscreen_ambient";
-        ambient->color.set(1.0f, 1.0f, 1.0f);
-        ambient->intensity = 1.0f;
-        content.light_group->addChild(ambient);
+        // Off-screen main slots keep the ambient fill (matches the pre-
+        // unification off-screen view).
+        content.light_group->addChild(makeAmbientLight("offscreen_ambient"));
     }
 
     content.view = ::vsg::View::create(content.vsg_camera);
@@ -1998,24 +2047,29 @@ void VsgRenderer::renderContentSlot(vine::graphics::RenderTarget*               
         std::vector<::vsg::ref_ptr<::vsg::Node>> created;
         content.bridge.syncRenderCommands(commands, content.root.get(), &created);
         if (!created.empty()) {
-            // A full-graph compile keeps newly built/rebuild subtrees correct
-            // (see design doc §9 Phase 3 for the incremental plan).
-            const auto compileResult = impl->viewer->compile();
-            if (!compileResult) {
-                std::fprintf(stderr, "[VsgRenderer] content slot compile failed: %s\n", compileResult.message.c_str());
+            // Queue this slot's VIEW for an incremental (re)compile in
+            // submitFrame(): traversing the View sets the correct viewID, so
+            // the new/rebuild subtrees compile for the view they will be
+            // recorded under (D22). One entry per view per frame.
+            auto& pending = impl->pending_compile_views;
+            if (std::find(pending.begin(), pending.end(), content.view) == pending.end()) {
+                pending.push_back(content.view);
             }
         }
         // TEMP diagnostics (VINE_VSG_DIAG_MRT): report how many commands were
-        // collected for this slot and how many geometry subtrees were built,
-        // to tell "no geometry collected" from "geometry not rasterised".
+        // collected for this slot, how many geometry subtrees were built and
+        // how many distinct pipeline variants the bridge registered, to tell
+        // "no geometry collected" from "geometry not rasterised" and to
+        // confirm pipeline sharing (variants << commands when states repeat).
         if (std::getenv("VINE_VSG_DIAG_MRT") != nullptr) {
-            std::fprintf(stderr, "[MRT-DIAG] target=%s on_top=%d order=%d commands=%zu created=%zu rootChildren=%zu\n",
+            std::fprintf(stderr, "[MRT-DIAG] target=%s on_top=%d order=%d commands=%zu created=%zu rootChildren=%zu variants=%zu\n",
                          target == nullptr ? "window" : "offscreen",
                          on_top ? 1 : 0,
                          order,
                          commands.size(),
                          created.size(),
-                         content.root->children.size());
+                         content.root->children.size(),
+                         content.bridge.pipelineVariantCount());
         }
     }
 }
@@ -2029,6 +2083,17 @@ void VsgRenderer::setViewport(int x, int y, int width, int height)
     impl->has_pending_viewport = true;
 }
 
+bool VsgRenderer::takePendingViewport(int& x, int& y, int& w, int& h)
+{
+    x = impl->pending_viewport[0];
+    y = impl->pending_viewport[1];
+    w = impl->pending_viewport[2];
+    h = impl->pending_viewport[3];
+    const bool has           = impl->has_pending_viewport;
+    impl->has_pending_viewport = false;
+    return has;
+}
+
 void VsgRenderer::setPassOrder(int order)
 {
     // Queue the pass's explicit pipeline order for the next render() call: the
@@ -2038,12 +2103,136 @@ void VsgRenderer::setPassOrder(int order)
     impl->pending_pass_order = order;
 }
 
+bool VsgRenderer::incrementalCompileViews()
+{
+    auto compileManager = impl->viewer->compileManager;
+    if (compileManager == nullptr) {
+        return false;
+    }
+
+    for (const auto& view : impl->pending_compile_views) {
+        if (view == nullptr) {
+            return false;
+        }
+
+        // Locate the owning target (window target keyed by nullptr) and the
+        // retained content slot the view belongs to, so the compile context
+        // can carry that target's render pass (window swapchain vs off-screen
+        // framebuffer — a graphics pipeline cannot be created without one).
+        Impl::Target*     owner    = nullptr;
+        Impl::ContentSlot* slot    = nullptr;
+        bool              is_window = false;
+        for (auto& [target_key, target] : impl->targets) {
+            for (auto& [slot_key, candidate] : target.content_slots) {
+                if (candidate.ready && candidate.view == view) {
+                    owner     = &target;
+                    slot      = &candidate;
+                    is_window = (target_key == nullptr);
+                    break;
+                }
+            }
+            if (slot != nullptr) {
+                break;
+            }
+        }
+        if (slot == nullptr) {
+            // A pending view that is not a content slot (e.g. a PiP or
+            // program slot compiled by another path): let the caller fall
+            // back to the full compile.
+            return false;
+        }
+
+        // Register the slot's (render pass + view) context once. The pool's
+        // pooled traversal was built by CompileManager::create(viewer, hints)
+        // when the window graph was still empty, so without this the pool has
+        // no context that matches this view and compile() would compile
+        // nothing.
+        if (!slot->compile_context_registered) {
+            ::vsg::CollectResourceRequirements collect;
+            view->accept(collect);
+            const auto& requirements = collect.requirements;
+            try {
+                if (is_window) {
+                    if (impl->window == nullptr) {
+                        return false;
+                    }
+                    compileManager->add(*impl->window, view, requirements);
+                }
+                else {
+                    if (owner->framebuffer == nullptr || owner->framebuffer->getDevice() == nullptr) {
+                        return false;
+                    }
+                    compileManager->add(*owner->framebuffer, view, requirements);
+                }
+            }
+            catch (...) {
+                return false;
+            }
+            slot->compile_context_registered = true;
+        }
+
+        // Compile ONLY this view: restrict the compile to the context whose
+        // pre-assigned view matches, so the new/rebuild subtree is compiled
+        // for the viewID it will be recorded under and no other slot is
+        // touched.
+        ::vsg::CompileResult result;
+        try {
+            ::vsg::View* const target_view = view.get();
+            result = compileManager->compile(
+                view, [target_view](::vsg::Context& context) { return context.view == target_view; });
+        }
+        catch (...) {
+            return false;
+        }
+        if (!result) {
+            return false;
+        }
+        // Feed dynamic data / slot / bin updates from the incremental compile
+        // into the record tasks (per-frame dynamic buffers such as the DYNAMIC
+        // opacity colour arrays rely on this).
+        ::vsg::updateViewer(*impl->viewer, result);
+    }
+
+    return true;
+}
+
 void VsgRenderer::submitFrame()
 {
     if (!impl->initialized || impl->viewer == nullptr || !impl->needs_submit) {
         return;
     }
     impl->needs_submit = false;
+    // Compile any geometry synced this frame before the record. If this frame
+    // never submits, the queue survives to the next submit (nothing was
+    // presented in between).
+    if (!impl->pending_compile_views.empty()) {
+        // D22 incremental compile: ON by default. vsg's compileManager.compile
+        // path is NOT wired for this renderer out of the box — the manager's
+        // pooled traversal is built once at Viewer::compile() time, and in
+        // Vine that first compile runs on an EMPTY window graph (content-slot
+        // views are appended lazily later), so the pool holds no contexts and
+        // compileManager->compile(view) silently compiles nothing ("successful"
+        // but with unbuilt pipelines), which crashes at record
+        // (GraphicsPipeline::vk on an empty _implementation). incrementalCompileViews()
+        // registers each queued view's context into the pool itself and
+        // compiles only that view, so it is safe to run every frame that some
+        // slot gained geometry. Setting VINE_VSG_DISABLE_INCREMENTAL_COMPILE
+        // forces the full-graph compile (stable, vsg skips already-compiled
+        // objects) as an A/B escape hatch; any incremental failure also falls
+        // back to the full compile automatically.
+        bool compiled = false;
+        if (std::getenv("VINE_VSG_DISABLE_INCREMENTAL_COMPILE") == nullptr &&
+            impl->viewer->compileManager != nullptr) {
+            compiled = incrementalCompileViews();
+        }
+        if (!compiled) {
+            const auto compileResult = impl->viewer->compile();
+            if (!compileResult) {
+                std::fprintf(stderr, "[VsgRenderer] frame compile failed: %s\n", compileResult.message.c_str());
+            }
+        }
+        impl->pending_compile_views.clear();
+    }
     impl->viewer->recordAndSubmit();
     impl->viewer->present();
 }

@@ -1,0 +1,248 @@
+/**
+ * @brief Standalone lavapipe integration self-test of the vsg render backend.
+ *
+ * Drives vine::vsg::VsgRenderer through the public vine::graphics::RenderBackend
+ * interface (no Qt, no RenderEngine) over many frames, exercising the GPU
+ * paths that device-free unit tests cannot reach:
+ *
+ *   - an off-screen MRT target (3 colour attachments + depth) written by a
+ *     pass that shares its scene AND camera with the window main pass
+ *     (shared scene / shared camera / different target);
+ *   - a window main pass, a HUD overlay sharing the same camera + target but
+ *     a different pass order and a sub-viewport;
+ *   - a picture-in-picture pass (drawScreenTexture) sampling the MRT's colour
+ *     attachment 0 into the window;
+ *   - a deferred-lighting pass (drawScreenProgram) running a user fragment
+ *     program over the MRT's attachments;
+ *   - per-frame hot edits: material property changes, per-drawable opacity,
+ *     removing / re-adding a drawable from ONE slot, swapping a user program
+ *     on one drawable, and reordering the command stream;
+ *   - teardown: releaseWindowLayer / releaseRenderTarget then a few more
+ *     frames to prove nothing references the freed GPU resources.
+ *
+ * It is a VALIDATION harness, not a pixel checker: pass/fail is "no crash and
+ * no Vulkan validation-layer error". Run it under the lavapipe ICD with the
+ * validation layer enabled, e.g.
+ *
+ *   VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.json \
+ *   VINE_VSG_DEBUG_LAYER=1 \
+ *   VINE_SELFTEST_FRAMES=30 ./vsg_backend_selftest
+ *
+ * Frame count is overridable via VINE_SELFTEST_FRAMES (default 30).
+ */
+
+#include <vine/Color.hpp>
+#include <vine/intrusive_ptr.hpp>
+#include <vine/math/Matrix4x4.hpp>
+#include <vine/graphics/Camera.hpp>
+#include <vine/graphics/Geometry.hpp>
+#include <vine/graphics/Material.hpp>
+#include <vine/graphics/RenderBackend.hpp>
+#include <vine/graphics/RenderCommand.hpp>
+#include <vine/graphics/RenderTarget.hpp>
+#include <vine/graphics/ShaderProgram.hpp>
+#include <vine/graphics/StateNode.hpp>
+#include <vine/vsg/VsgRenderer.hpp>
+
+#include <cstdio>
+#include <cstdlib>
+#include <vector>
+
+using namespace vine::graphics;
+using vine::math::Mat4d;
+
+namespace
+{
+
+/** @brief Builds a triangle geometry translated along x (keeps bounds apart). */
+GeometryPtr makeTriangle(float x)
+{
+    auto geom = GeometryPtr(new Geometry());
+    vine::geometry::Vec3fArray positions;
+    positions.emplace_back(x, 0.0f, 0.0f);
+    positions.emplace_back(x, 1.0f, 0.0f);
+    positions.emplace_back(x, 0.0f, 1.0f);
+    geom->setPositions(positions);
+    vine::geometry::Vec3fArray normals;
+    normals.emplace_back(0.0f, 0.0f, 1.0f);
+    normals.emplace_back(0.0f, 0.0f, 1.0f);
+    normals.emplace_back(0.0f, 0.0f, 1.0f);
+    geom->setNormals(normals);
+    return geom;
+}
+
+/** @brief Builds a scene-geometry user shader program (red). */
+ShaderProgramPtr makeUserProgram()
+{
+    auto program = ShaderProgramPtr(new ShaderProgram());
+    vine::graphics::ShaderStage vs;
+    vs.type   = vine::graphics::ShaderStageType::Vertex;
+    vs.source = u8"#version 450\n"
+                u8"layout(location = 0) in vec3 vsg_Vertex;\n"
+                u8"void main() { gl_Position = vec4(vsg_Vertex, 1.0); }\n";
+    program->addStage(vs);
+    vine::graphics::ShaderStage fs;
+    fs.type   = vine::graphics::ShaderStageType::Fragment;
+    fs.source = u8"#version 450\n"
+                u8"layout(location = 0) out vec4 outColor;\n"
+                u8"void main() { outColor = vec4(1.0, 0.2, 0.2, 1.0); }\n";
+    program->addStage(fs);
+    return program;
+}
+
+/** @brief Builds the deferred-lighting fragment program (backend supplies VS). */
+ShaderProgramPtr makeDeferredProgram()
+{
+    auto program = ShaderProgramPtr(new ShaderProgram());
+    vine::graphics::ShaderStage fs;
+    fs.type   = vine::graphics::ShaderStageType::Fragment;
+    fs.source = u8"#version 450\n"
+                u8"layout(location = 0) out vec4 outColor;\n"
+                u8"void main() { outColor = vec4(0.55, 0.6, 0.65, 1.0); }\n";
+    program->addStage(fs);
+    return program;
+}
+
+/** @brief Builds a look-at perspective camera matching a 16:9 aspect. */
+CameraPtr makeCamera()
+{
+    auto cam = CameraPtr(new Camera());
+    cam->setViewMatrixAsLookAt(vine::math::Vec3d(0.0, 0.0, 5.0),
+                               vine::math::Vec3d(0.0, 0.0, 0.0),
+                               vine::math::Vec3d(0.0, 1.0, 0.0));
+    cam->setProjectionMatrixAsPerspective(60.0, 1280.0 / 720.0, 0.1, 1000.0);
+    return cam;
+}
+
+/** @brief Builds an off-screen MRT target (3 colour attachments + depth). */
+RenderTargetPtr makeMrtTarget()
+{
+    auto rt = RenderTargetPtr(new RenderTarget());
+    rt->setSize(640, 360);
+    rt->attachColor(RenderTarget::ColorFormat::RGBA8);
+    rt->attachColor(RenderTarget::ColorFormat::RGBA16F);
+    rt->attachColor(RenderTarget::ColorFormat::RGBA32F);
+    rt->attachDepth(RenderTarget::DepthFormat::D24);
+    return rt;
+}
+
+}  // namespace
+
+int main()
+{
+    const int frames =
+        std::atoi(std::getenv("VINE_SELFTEST_FRAMES") != nullptr ? std::getenv("VINE_SELFTEST_FRAMES") : "30");
+
+    auto backend = vine::intrusive_ptr<RenderBackend>(new vine::vsg::VsgRenderer());
+    if (!backend->initialize()) {
+        std::fprintf(stderr, "[selftest] backend initialize FAILED\n");
+        return 1;
+    }
+    std::fprintf(stderr, "[selftest] backend initialized, %d frames\n", frames);
+
+    // ---- Shared scene / camera (kept alive for the whole run) ---------------
+    auto camera  = makeCamera();
+    auto mrt     = makeMrtTarget();
+    auto g_red   = makeTriangle(-1.0f);  // drawn in every slot
+    auto g_green = makeTriangle(1.0f);   // window slot toggles presence / program
+    auto g_blue  = makeTriangle(0.0f);   // HUD-only drawable
+    auto m_red   = MaterialPtr(new Material());
+    auto m_green = MaterialPtr(new Material());
+    auto m_blue  = MaterialPtr(new Material());
+    m_red->setDiffuse(vine::Colorf(0.8f, 0.2f, 0.1f, 1.0f));
+    m_green->setDiffuse(vine::Colorf(0.1f, 0.8f, 0.2f, 1.0f));
+    m_blue->setDiffuse(vine::Colorf(0.2f, 0.3f, 0.9f, 1.0f));
+    auto user_program   = makeUserProgram();
+    auto deferred_program = makeDeferredProgram();
+
+    // The SAME geometry + material objects feed the off-screen MRT producer,
+    // the window main pass and (partly) the HUD — the shared-scene case.
+    RenderCommand cmd_red(g_red, m_red, Mat4d());
+    RenderCommand cmd_green(g_green, m_green, Mat4d());
+    RenderCommand cmd_blue(g_blue, m_blue, Mat4d());
+    cmd_red.opacity = 1.0f;
+    cmd_green.opacity = 1.0f;
+    cmd_blue.opacity = 0.8f;
+
+    std::vector<RenderCommand> gbuffer_commands{ cmd_red, cmd_green };
+    std::vector<RenderCommand> window_commands{ cmd_red, cmd_green };
+    std::vector<RenderCommand> hud_commands{ cmd_blue };
+
+    std::fprintf(stderr, "[selftest] targets: offscreen MRT %dx%d (%d color) + window\n",
+                 mrt->width(), mrt->height(), mrt->colorCount());
+
+    for (int i = 0; i < frames; ++i) {
+        // ---- per-frame hot edits -------------------------------------------
+        // Material property hot-edit (shared by every slot).
+        const float t = static_cast<float>(i) / static_cast<float>(frames);
+        m_red->setDiffuse(vine::Colorf(0.5f + 0.5f * t, 0.2f, 0.1f, 1.0f));
+        // Per-drawable opacity hot-edit (green only; HUD keeps its alpha).
+        window_commands[1].opacity = (i % 10 < 5) ? 1.0f : 0.4f;
+        // Remove / re-add the green drawable from the WINDOW slot only (the
+        // off-screen slot keeps drawing it every frame).
+        const bool keep_green_in_window = (i % 12) < 10;
+        window_commands.resize(keep_green_in_window ? 2u : 1u);
+        // Swap a user program onto the green window drawable for a stretch.
+        window_commands[0].program =
+            (i >= 12 && i < 20) ? user_program : ShaderProgramPtr();
+        // Reorder the window stream periodically (retained-transform reuse).
+        if ((i % 7) == 0 && window_commands.size() == 2u) {
+            std::swap(window_commands[0], window_commands[1]);
+        }
+
+        backend->beginFrame();
+
+        // (1) Off-screen MRT producer: same camera + same scene as the window.
+        backend->setPassOrder(-100);
+        backend->setRenderTarget(mrt.get());
+        backend->clear(vine::Color(51, 51, 51, 255), true);
+        backend->setLights({});
+        backend->render(gbuffer_commands, camera.get());
+
+        // (2) Window main pass (shared camera, shared scene, different target).
+        backend->setPassOrder(0);
+        backend->setRenderTarget(nullptr);
+        backend->clear(vine::Color(25, 25, 45, 255), true);
+        backend->setLights({});
+        backend->render(window_commands, camera.get());
+
+        // (3) HUD overlay: same camera + target, higher order, sub-viewport,
+        // no preceding clear (on-top / depth-off slot).
+        backend->setViewport(8, 8, 220, 124);
+        backend->setPassOrder(1);
+        backend->render(hud_commands, camera.get());
+
+        // (4) PiP: sample the MRT's colour attachment 0 into the window.
+        backend->setViewport(8, 560, 240, 135);
+        backend->drawScreenTexture(mrt.get(), 0);
+
+        // (5) Deferred-lighting fullscreen pass over the MRT attachments.
+        backend->setLights({});
+        backend->drawScreenProgram(mrt.get(), deferred_program.get(), camera.get());
+
+        backend->endFrame();
+        backend->swapBuffers();
+
+        if (i == 0 || i == frames - 1) {
+            std::fprintf(stderr, "[selftest] frame %d/%d rendered\n", i + 1, frames);
+        }
+    }
+
+    // ---- Teardown paths, then a few frames to prove nothing dangles ---------
+    backend->releaseWindowLayer(camera.get(), 1);   // drop the HUD slot
+    backend->releaseRenderTarget(mrt.get());         // drop MRT + PiP + deferred slot
+    for (int i = 0; i < 3; ++i) {
+        backend->beginFrame();
+        backend->setPassOrder(0);
+        backend->setRenderTarget(nullptr);
+        backend->clear(vine::Color(25, 25, 45, 255), true);
+        backend->setLights({});
+        backend->render(window_commands, camera.get());
+        backend->endFrame();
+        backend->swapBuffers();
+    }
+    backend->shutdown();
+
+    std::fprintf(stderr, "[selftest] done — no crash, no validation error expected\n");
+    return 0;
+}

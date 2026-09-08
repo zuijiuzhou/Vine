@@ -29,6 +29,12 @@
 > **本文第 7/11/12 节架构文字撰写于 C6 之前**（描述三桶 window_layers/offscreen/screen_slots、绑
 > scene/camera、renderOffscreenTarget/setupWindowLayer 等旧形态），当前形态的权威说明见
 > `.ai/design/vsg-target-unification.md` 与代码本身；该等章节的全量改写为待办。
+>
+> ⚠️ **2026-09-08 更新（管线共享基础已落地）**：`SceneBridge` 的 `shared_objects_`
+> 已接入（此前声明未赋值 = 文档-代码漂移），同 (program×状态×槽位) 的几何共享一条
+> pipeline；并新增 L1 program ShaderSet 缓存与 L2 变体模板缓存（跳过重复
+> configurator）。权威设计见 `.ai/design/vsg-pipeline-sharing.md`；回归测试见
+> `tests/test_vsg/SceneBridgePipelineSharingTest.cpp`（含 1k 量级不变量）。
 
 ## 1. 模块定位与插件模型
 
