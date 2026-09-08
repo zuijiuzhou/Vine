@@ -132,6 +132,10 @@ class V_VSG_API SceneBridge {
     {
         std::uint32_t location = 0;
         std::uint32_t components = 0;
+        bool operator==(const VertexChannel& o) const
+        {
+            return location == o.location && components == o.components;
+        }
     };
 
     /** @brief Retained per-geometry render node (defined in the .cpp). */

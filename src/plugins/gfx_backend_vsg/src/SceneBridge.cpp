@@ -31,6 +31,7 @@
 #include "VsgUtils.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <cstdio>
 #include <string>
@@ -129,9 +130,18 @@ namespace
         const vine::math::Vec3f a = positions[i];
         const vine::math::Vec3f b = positions[i + 1];
         const vine::math::Vec3f c = positions[i + 2];
-        const vine::math::Vec3f n = (b - a).cross(c - a).normalized();
+        const vine::math::Vec3f n0 = (b - a).cross(c - a);
+        // A degenerate triangle (collinear / duplicated vertices) has a
+        // zero-length cross product: leave its normal zero instead of
+        // normalising NaN (mirrors makeIndexedNormals' guard).
+        ::vsg::vec3 n{ 0.0f, 0.0f, 0.0f };
+        const float len_sq = n0.x * n0.x + n0.y * n0.y + n0.z * n0.z;
+        if (len_sq > 0.0f) {
+            const float inv_len = 1.0f / std::sqrt(len_sq);
+            n = ::vsg::vec3(n0.x * inv_len, n0.y * inv_len, n0.z * inv_len);
+        }
         for (std::size_t k = 0; k < 3; ++k) {
-            (*normals)[i + k] = ::vsg::vec3(n.x, n.y, n.z);
+            (*normals)[i + k] = n;
         }
     }
     return normals;
@@ -658,6 +668,12 @@ struct SceneBridge::Item {
     // per-layout ShaderSet / variant identity for state-only rebuilds (a
     // program / material edit reuses this without re-uploading the mesh).
     std::vector<VertexChannel> extra_channels;
+    // Custom channels the retained state wrapper was built for (the layout
+    // identity). Tracked separately so a data rebuild that changes the channel
+    // SET (locations >= 3 added/removed live) forces the state wrapper to be
+    // rebuilt too — its per-layout shader set / pipeline must follow the bound
+    // vertex arrays.
+    std::vector<VertexChannel> state_channels;
     // Primitive topology the retained data was built for: it decides whether
     // automatic normals are derived (Triangles) or defaulted (Points / Lines),
     // so a topology change is a DATA change (part of the node's identity).
@@ -791,6 +807,13 @@ bool SceneBridge::syncRenderCommands(
             changed                = true;
         }
 
+        // A data rebuild may have changed the forwarded custom-channel SET
+        // (locations >= 3 added/removed), which the state wrapper's per-layout
+        // shader set / variant identity depends on. Detect that here so the
+        // wrapper is rebuilt even when material / state / program did not
+        // change: otherwise a live-added channel would stay unbound (and a
+        // removed one leave a stale binding / layout) until some state change.
+        bool state_channels_changed = false;
         if (data_dirty) {
             // Fresh vertex data: rebuild the data node; the previous opacity
             // carrier is dropped with it and rewritten on the next frames.
@@ -807,11 +830,12 @@ bool SceneBridge::syncRenderCommands(
                 cache_.erase(geometry);
                 continue;
             }
-            item->matrix_valid = false;
-            item->last_opacity = -1.0f;
+            state_channels_changed = item->state_channels != item->extra_channels;
+            item->matrix_valid     = false;
+            item->last_opacity     = -1.0f;
         }
 
-        if (state_dirty || item->state_node == nullptr) {
+        if (state_dirty || item->state_node == nullptr || state_channels_changed) {
             item->state_node = buildStateGroup(item->data_node, item->material,
                                                item->render_state, item->program,
                                                item->extra_channels);
@@ -819,6 +843,7 @@ bool SceneBridge::syncRenderCommands(
                 cache_.erase(geometry);
                 continue;
             }
+            item->state_channels = item->extra_channels;
         }
 
         // Attach: the wrapper's child is the current data node and the

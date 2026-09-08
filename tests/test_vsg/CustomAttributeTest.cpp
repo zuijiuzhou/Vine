@@ -392,3 +392,45 @@ TEST(CustomAttributeTest, SameProgramMultipleLayoutsCompileStagesOnce)
     EXPECT_EQ(bridge.pipelineVariantCount(), 3u);
     EXPECT_EQ(bridge.programStageCompileCount(), 1u);
 }
+
+/**
+ * @brief Adding a custom channel to a live geometry rebuilds the state
+ * wrapper for the new per-layout variant.
+ *
+ * The data/state decoupling rebuilds only the data node on a pure data
+ * revision bump; the state wrapper (per-layout shader set / pipeline) must
+ * follow when the forwarded channel SET changed, or a live-added channel would
+ * stay unbound (and a removed one leave a stale binding) until a program /
+ * material / render-state change happened to trigger a rebuild.
+ */
+TEST(CustomAttributeTest, LiveChannelAddForcesStateRebuild)
+{
+    vine::vsg::SceneBridge bridge;
+    bridge.setShaderSet(vsg::createPhongShaderSet());
+    auto root     = vsg::Group::create();
+    auto material = MaterialPtr(new Material());
+    auto program  = makeProgram();
+
+    auto geom = makeTriangleWithChannels({});
+    RenderCommand cmd(geom, material, Mat4d());
+    cmd.program = program;
+
+    std::vector<vsg::ref_ptr<vsg::Node>> created;
+    bridge.syncRenderCommands(std::vector<RenderCommand>{ cmd }, root.get(), &created);
+    ASSERT_EQ(bridge.pipelineVariantCount(), 1u);
+
+    // Live-append a custom channel (loc3): the data revision bumps and the
+    // retained state wrapper must be rebuilt for the new layout even though
+    // the program / material / render state are all unchanged.
+    addChannel(geom.get(), 3u, 3u, { 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f });
+    std::vector<vsg::ref_ptr<vsg::Node>> created2;
+    bridge.syncRenderCommands(std::vector<RenderCommand>{ cmd }, root.get(), &created2);
+    EXPECT_EQ(bridge.pipelineVariantCount(), 2u);
+
+    // A same-layout data edit (only vertex floats changed) must NOT add yet
+    // another variant: the state wrapper is reused.
+    addChannel(geom.get(), 0u, 3u, { 0.0f, 0.0f, 0.0f, 2.0f, 0.0f, 0.0f, 0.0f, 2.0f, 0.0f });
+    std::vector<vsg::ref_ptr<vsg::Node>> created3;
+    bridge.syncRenderCommands(std::vector<RenderCommand>{ cmd }, root.get(), &created3);
+    EXPECT_EQ(bridge.pipelineVariantCount(), 2u);
+}
