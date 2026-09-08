@@ -55,6 +55,26 @@ class V_GRAPHICS_API RenderPipelineBuilder {
      */
     RenderPipelineBuilder& setContent(intrusive_ptr<Scene> content);
 
+    /** @brief Binds an optional forward-only (transparent / overlay) scene.
+     *
+     * When set, the produced main-window preset also renders this scene as
+     * transparent content composited over the lit opaque content WITH depth
+     * occlusion (alpha-blended geometry half behind the opaque scene is
+     * clipped correctly) instead of being drawn depth-less on top:
+     *
+     *  - Forward: a depth-on pass stacked right after the main content pass in
+     *    the same window render pass.
+     *  - Deferred: the lighting pass shades into an off-screen composite
+     *    target together with the opaque depth; this scene is drawn depth-on
+     *    over it and the composite is presented to the window.
+     *
+     * The scene is lit by its own lights (like any forward pass). Without a
+     * transparent scene the presets behave exactly as before.
+     *
+     * @param transparent Transparent / overlay scene, or null for none.
+     */
+    RenderPipelineBuilder& setTransparentContent(intrusive_ptr<Scene> transparent);
+
     /** @brief Binds the camera used by the produced scene passes.
      *
      * Recipes that produce scene passes need a camera; it is provided
@@ -180,6 +200,7 @@ class V_GRAPHICS_API RenderPipelineBuilder {
     raw_ptr<RenderEngine>      engine_;
     raw_ptr<Camera>            camera_      = nullptr;
     intrusive_ptr<Scene>       content_;
+    intrusive_ptr<Scene>       transparent_; // optional forward-only / overlay scene
     // References kept by the builder for as long as it lives; the engine also
     // holds its own references after each add*() call.
     std::vector<intrusive_ptr<RenderPass>> passes_;

@@ -11,8 +11,10 @@ V_OBJECT_META_IMPL(Overlay, vine::Object);
 Overlay::Overlay()
   : pass_(new RenderPass())
 {
-    // Overlays draw over the previous frame: do not clear the whole surface.
+    // Overlays draw over the previous frame: do not clear the whole surface
+    // and never depth-occlude (always on top).
     pass_->setClearEnabled(false);
+    pass_->setOcclusionEnabled(false);
 }
 
 Overlay::~Overlay() = default;

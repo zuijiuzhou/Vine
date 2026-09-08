@@ -158,6 +158,13 @@ class V_VSG_API VsgRenderer : public vine::graphics::RenderBackend {
     /** @brief Sets the clear color and depth-clear state. */
     void clear(const vine::Color& backgroundColor, bool clearDepth) override;
 
+    /** @brief Sets how the next render()'s content handles depth (see
+     * RenderBackend::setDepthMode).
+     *
+     * @param mode Depth handling for the next render() content.
+     */
+    void setDepthMode(vine::graphics::DepthMode mode) override;
+
     /** @brief Presents the rendered frame. */
     void swapBuffers() override;
 
@@ -267,17 +274,19 @@ class V_VSG_API VsgRenderer : public vine::graphics::RenderBackend {
      * (camera, @p order) pair is its own retained View, and the views are
      * stacked in ascending @p order — the order the caller gave addPass() —
      * so several passes sharing one camera stack exactly as the user-ordered
-     * pipeline runs, regardless of creation order. A slot created with
-     * @p on_top == false is the main content (full target, depth testing on);
-     * @p on_top slots are extra depth-off + ambient views (HUD / overlays) —
-     * a style, not an ordering rule.
+     * pipeline runs, regardless of creation order. @p depth_mode is the
+     * content's depth handling (explicit per pass, independent of clearing);
+     * @p presenting marks the full-target pass that cleared the target (its
+     * default light seeds the window headlight when there is no scene light).
+     * Lights come from the content scene each frame.
      *
-     * @param target Output target key the slot lives under (nullptr = window).
-     * @param camera Vine camera identifying the slot.
-     * @param order  The pass's explicit pipeline order (slot key + stacking).
-     * @param on_top True for an on-top (depth-off, HUD) slot.
+     * @param target     Output target key the slot lives under (nullptr = window).
+     * @param camera     Vine camera identifying the slot.
+     * @param order      The pass's explicit pipeline order (slot key + stacking).
+     * @param depth_mode Depth handling for the slot's content.
+     * @param presenting True when this slot is the full-target pass that cleared.
      */
-    void setupContentSlot(vine::graphics::RenderTarget* target, vine::graphics::Camera* camera, int order, bool on_top);
+    void setupContentSlot(vine::graphics::RenderTarget* target, vine::graphics::Camera* camera, int order, vine::graphics::DepthMode depth_mode, bool presenting);
 
     /** @brief Renders one content slot (a View of a target's render graph).
      *
@@ -285,30 +294,33 @@ class V_VSG_API VsgRenderer : public vine::graphics::RenderBackend {
      * order): each (camera, @p order) pair is its own retained View appended
      * to the target's render graph — the window target (nullptr key) or an
      * off-screen target — stacked in ascending @p order (the pass's explicit
-     * pipeline order). A slot with @p on_top == false (a pass that cleared
-     * just before rendering) is the main content: full target, depth testing
-     * on, content lights. An @p on_top slot is an extra HUD slot (depth-off +
-     * ambient).
+     * pipeline order). @p depth_mode is the content's depth handling (explicit,
+     * independent of clearing); @p presenting marks the full-target pass that
+     * cleared the target (such content fills the whole target and seeds the
+     * window headlight when there is no scene light). Lights come from the
+     * content scene each frame.
      *
-     * @param target   Output target key the slot lives under (nullptr = the
-     *                 window).
-     * @param commands Render commands for this slot.
-     * @param camera   Camera identifying the slot.
-     * @param lights   Content lights for the slot (empty keeps the slot's
-     *                 default light: headlight for the window's main slot,
-     *                 ambient otherwise).
-     * @param on_top   True when this is an on-top (depth-off, HUD) slot.
-     * @param order    The pass's explicit pipeline order (slot key + stacking).
-     * @param vp_x     Viewport origin x in device pixels.
-     * @param vp_y     Viewport origin y in device pixels.
-     * @param vp_w     Viewport width (0 = full target).
-     * @param vp_h     Viewport height (0 = full target).
+     * @param target     Output target key the slot lives under (nullptr = the
+     *                   window).
+     * @param commands   Render commands for this slot.
+     * @param camera     Camera identifying the slot.
+     * @param lights     Content lights for the slot (empty keeps the slot's
+     *                   seeded default light: headlight for the window's
+     *                   presenting slot, ambient otherwise).
+     * @param depth_mode Depth handling for the slot's content.
+     * @param presenting True when this slot is the full-target pass that cleared.
+     * @param order      The pass's explicit pipeline order (slot key + stacking).
+     * @param vp_x       Viewport origin x in device pixels.
+     * @param vp_y       Viewport origin y in device pixels.
+     * @param vp_w       Viewport width (0 = full target).
+     * @param vp_h       Viewport height (0 = full target).
      */
     void renderContentSlot(vine::graphics::RenderTarget*                     target,
                            const std::vector<vine::graphics::RenderCommand>& commands,
                            vine::raw_ptr<const vine::graphics::Camera>       camera,
                            const std::vector<const vine::graphics::Light*>&  lights,
-                           bool                                              on_top,
+                           vine::graphics::DepthMode                         depth_mode,
+                           bool                                              presenting,
                            int                                               order,
                            int                                               vp_x,
                            int                                               vp_y,
@@ -332,6 +344,28 @@ class V_VSG_API VsgRenderer : public vine::graphics::RenderBackend {
      * @return true when a viewport was queued for this pass.
      */
     bool takePendingViewport(int& x, int& y, int& w, int& h);
+
+    /** @brief Moves a slot View into its target graph's children at the
+     * position matching its explicit stacking order.
+     *
+     * Every slot view under a target's render graph carries an explicit order
+     * — content slots keyed by (camera, pass order), fullscreen-program views
+     * and PiP / present screen views by the pass order announced via
+     * setPassOrder(). The children stay sorted ascending by that order, so a
+     * fullscreen lighting / present view can be stacked between two content
+     * slots (e.g. an opaque depth pass below it and a forward transparent pass
+     * above it) instead of always drawing first or last. Any child that maps
+     * to no known slot sorts as INT_MAX (drawn last).
+     *
+     * @param target Output target whose graph receives the view (nullptr =
+     *               the window).
+     * @param view   The View to position (removed from any current position
+     *               first).
+     * @param order  The view's explicit stacking order.
+     */
+    void placeViewByOrder(vine::graphics::RenderTarget* target,
+                          const ::vsg::ref_ptr<::vsg::View>& view,
+                          int order);
 
     /** @brief Incrementally compiles only the content-slot views that gained
      * new/rebuild subtrees this frame (D22).

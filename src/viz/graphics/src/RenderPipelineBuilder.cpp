@@ -133,9 +133,17 @@ intrusive_ptr<ShaderProgram> RenderPipelineBuilder::defaultDeferredLightProgram(
                 u8"        vec3 L = normalize(-d);\n"
                 u8"        float ndl = max(dot(n, L), 0.0);\n"
                 u8"        color += albedo * c * a * ndl;\n"
-                u8"        vec3 H = normalize(L + view_dir);\n"
-                u8"        float spec = pow(max(dot(n, H), 0.0), shininess);\n"
-                u8"        color += c * a * spec * spec_col;\n"
+                u8"        // Specular is gated by ndl like the diffuse term:\n"
+                u8"        // a face turned away from the light must not receive\n"
+                u8"        // a highlight (without the gate, shadowed faces pick\n"
+                u8"        // up bright white patches that read as glass / see-\n"
+                u8"        // through on opaque surfaces).\n"
+                u8"        if (ndl > 0.0)\n"
+                u8"        {\n"
+                u8"            vec3 H = normalize(L + view_dir);\n"
+                u8"            float spec = pow(max(dot(n, H), 0.0), shininess);\n"
+                u8"            color += c * a * spec * spec_col * ndl;\n"
+                u8"        }\n"
                 u8"    }\n"
                 u8"    out_color = vec4(color, 1.0);\n"
                 u8"}\n";
@@ -158,6 +166,7 @@ intrusive_ptr<RenderTarget> RenderPipelineBuilder::defaultGbufferTarget(int widt
     gbuffer->attachColor(RenderTarget::ColorFormat::RGBA8);   // att 2: specular
     gbuffer->attachColor(RenderTarget::ColorFormat::RGBA16F); // att 3: view position
     gbuffer->attachDepth(RenderTarget::DepthFormat::D24);
+    gbuffer->setName(u8"gbuffer");
     return gbuffer;
 }
 
@@ -168,6 +177,12 @@ RenderPipelineBuilder::RenderPipelineBuilder(raw_ptr<RenderEngine> engine)
 RenderPipelineBuilder& RenderPipelineBuilder::setContent(intrusive_ptr<Scene> content)
 {
     content_ = std::move(content);
+    return *this;
+}
+
+RenderPipelineBuilder& RenderPipelineBuilder::setTransparentContent(intrusive_ptr<Scene> transparent)
+{
+    transparent_ = std::move(transparent);
     return *this;
 }
 
@@ -243,6 +258,21 @@ bool RenderPipelineBuilder::buildForward(Pipeline& pipeline)
         engine_->addPass(pass, 0);
     }
     pipeline.retainPass(pass);
+    // Optional transparent content: a depth-on pass stacked right after the
+    // main content in the SAME window render pass, so it occludes against the
+    // opaque depth the main pass just wrote (see setTransparentContent).
+    if (transparent_ != nullptr) {
+        auto transparent = make_intrusive<RenderPass>();
+        transparent->setName(u8"forward_transparent");
+        transparent->setCamera(camera_);
+        // Translucent / overlay content: depth-TESTS against the opaque depth
+        // the main content pass just wrote, but does NOT write depth (standard
+        // alpha-blend rule) and does not clear.
+        transparent->setClearEnabled(false);
+        transparent->setDepthMode(DepthMode::TestOnly);
+        engine_->addPass(transparent, transparent_, 1);
+        pipeline.retainPass(transparent);
+    }
     pipeline.setWindowPass(std::move(pass));
     return true;
 }
@@ -291,19 +321,79 @@ bool RenderPipelineBuilder::buildDeferred(Pipeline& pipeline,
     engine_->addPass(gbuf_pass, content_, -3);
     pipeline.retainPass(gbuf_pass);
 
-    // Fullscreen deferred-lighting pass at order 0: it is the window pass
-    // that presents the view camera (so RenderControl / SceneView add no
-    // forward pass). Binding the content scene lets it forward the lights.
+    // Fullscreen deferred lighting. Without transparent content it runs at
+    // order 0 as the WINDOW pass that presents the view camera (so
+    // RenderControl / SceneView add no forward pass). With transparent content
+    // the lit result must first be composited with the forward content
+    // off-screen, so the same program shades into a composite target instead.
+    if (transparent_ == nullptr) {
+        auto light = make_intrusive<ScreenPass>();
+        light->setName(u8"deferred_light");
+        light->setCamera(camera_);
+        light->addInputName(u8"GBuffer");
+        light->setProgram(std::move(light_program));
+        engine_->addPass(light, content_, 0);
+        pipeline.retainPass(light);
+
+        pipeline.setOffscreenTarget(std::move(gbuffer));
+        pipeline.setWindowPass(std::move(light));
+        return true;
+    }
+
+    // ---- Deferred + forward composite (transparent content present) ----
+    // One off-screen composite target whose single render pass stacks the
+    // passes in record order: fullscreen lighting (0) -> forward (+1). It does
+    // NOT own a depth buffer: it borrows the G-buffer's depth (shareDepth), so
+    // the opaque scene is rasterised once and the forward content tests against
+    // that same depth. The G-buffer's depth is therefore kept as an attachment
+    // (not promoted to a sampled texture) here.
+    gbuffer->setDepthPromotion(false);
+    auto composite = make_intrusive<RenderTarget>();
+    composite->setName(u8"composite");
+    composite->setSize(width, height);
+    composite->attachColor(RenderTarget::ColorFormat::RGBA8);
+    composite->shareDepth(gbuffer);
+
+    // Fullscreen deferred lighting (order 0) INTO the composite: a depth-off
+    // program that overwrites every pixel with the lit opaque result.
     auto light = make_intrusive<ScreenPass>();
     light->setName(u8"deferred_light");
     light->setCamera(camera_);
+    light->setRenderTarget(composite);
     light->addInputName(u8"GBuffer");
     light->setProgram(std::move(light_program));
     engine_->addPass(light, content_, 0);
     pipeline.retainPass(light);
 
+    // Forward transparent / overlay content (order +1): depth-TESTS against
+    // the G-buffer depth the composite loaded (TestOnly — it never writes
+    // depth, the standard translucent rule) and blends per material over the
+    // lit opaque result. It is the composite's last writer, so it publishes
+    // the target as "Composite".
+    auto transparent = make_intrusive<RenderPass>();
+    transparent->setName(u8"forward_transparent");
+    transparent->setCamera(camera_);
+    transparent->setRenderTarget(composite);
+    transparent->setClearEnabled(false);
+    transparent->setDepthMode(DepthMode::TestOnly);
+    transparent->setOutputName(u8"Composite");
+    engine_->addPass(transparent, transparent_, 1);
+    pipeline.retainPass(transparent);
+
+    // Present the baked composite to the window (order 2). Carrying the view
+    // camera with a null render target keeps hasWindowPass(camera) true, so
+    // RenderControl / SceneView add no default forward pass; the HUD overlays
+    // (orders 10 / 30) stack above it.
+    auto present = make_intrusive<ScreenPass>();
+    present->setName(u8"present");
+    present->setCamera(camera_);
+    present->addInputName(u8"Composite");
+    engine_->addPass(present, 2);
+    pipeline.retainPass(present);
+
     pipeline.setOffscreenTarget(std::move(gbuffer));
-    pipeline.setWindowPass(std::move(light));
+    pipeline.setCompositeTarget(std::move(composite));
+    pipeline.setWindowPass(std::move(present));
     return true;
 }
 
@@ -326,6 +416,7 @@ raw_ptr<ScreenPass> RenderPipelineBuilder::addOffscreenToScreen(const String& ou
     // Off-screen target + an order < 0 scene pass that renders into it and
     // publishes the result under the slot name.
     auto target = make_intrusive<RenderTarget>();
+    target->setName(output_slot);
     target->setSize(rt_width, rt_height);
     target->attachColor(color_format);
     target->attachDepth(depth_format);

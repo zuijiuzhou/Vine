@@ -29,8 +29,8 @@ constexpr double kTiny = 1e-6;
 constexpr double kMaxElevationRad = vine::math::PI_HALF;
 
 // The world-up axis of the spherical model (eyeDirection / viewUp) and of the
-// pivot yaw. Vine scenes are Y-up.
-const Vec3d kWorldUp{ 0.0, 1.0, 0.0 };
+// pivot yaw. Vine scenes are Z-up (robotics convention: X forward, Z up).
+const Vec3d kWorldUp{ 0.0, 0.0, 1.0 };
 
 /** @brief Rotates a vector around a unit axis (Rodrigues' formula).
  *
@@ -46,22 +46,27 @@ Vec3d rotateAround(const Vec3d& v, const Vec3d& axis, double angle)
     return v * c + axis.cross(v) * s + axis * (axis.dot(v) * (1.0 - c));
 }
 
-/** @brief Unit direction from the orbit centre towards the eye (yaw/pitch). */
+/** @brief Unit direction from the orbit centre towards the eye (yaw/pitch).
+ *
+ * Z-up world: the pole is +Z, so pitch is the elevation out of the horizontal
+ * XY plane and yaw sweeps around Z. At pitch 0 the eye lies in the XY plane
+ * at azimuth (sin yaw, cos yaw).
+ */
 Vec3d eyeDirection(double yaw, double pitch)
 {
     const double cp = std::cos(pitch);
     const double sp = std::sin(pitch);
-    return Vec3d{ cp * std::sin(yaw), sp, cp * std::cos(yaw) };
+    return Vec3d{ cp * std::sin(yaw), cp * std::cos(yaw), sp };
 }
 
 /** @brief Unit camera up for lookAt(), matching eyeDirection() and extended
  * continuously to the poles.
  *
  * Away from the poles this is the no-roll up (the projection of the world-up
- * onto the plane perpendicular to the view). As |pitch| approaches 90 deg the
- * projection shrinks to zero, so its continuous limit - a horizontal vector
- * that follows the azimuth - is used instead. This keeps the up well defined
- * and free of 180-degree flips over a full 90 deg orbit.
+ * +Z onto the plane perpendicular to the view). As |pitch| approaches 90 deg
+ * the projection shrinks to zero, so its continuous limit - a horizontal
+ * vector that follows the azimuth - is used instead. This keeps the up well
+ * defined and free of 180-degree flips over a full 90 deg orbit.
  *
  * @param yaw   Azimuth in radians.
  * @param pitch Signed elevation in radians, within +/-PI_HALF.
@@ -71,7 +76,7 @@ Vec3d viewUp(double yaw, double pitch)
 {
     const double sp = std::sin(pitch);
     const double cp = std::cos(pitch);
-    return Vec3d{ -sp * std::sin(yaw), cp, -sp * std::cos(yaw) };
+    return Vec3d{ -sp * std::sin(yaw), -sp * std::cos(yaw), cp };
 }
 
 /** @brief Extracts the yaw/pitch matching eyeDirection() from a unit vector.
@@ -82,8 +87,8 @@ Vec3d viewUp(double yaw, double pitch)
  */
 void sphericalFromDirection(const Vec3d& dir, double& yaw, double& pitch)
 {
-    pitch = std::asin(std::clamp(dir.y, -1.0, 1.0));
-    yaw = std::atan2(dir.x, dir.z);
+    pitch = std::asin(std::clamp(dir.z, -1.0, 1.0));
+    yaw = std::atan2(dir.x, dir.y);
 }
 
 }  // namespace
@@ -674,11 +679,11 @@ void OrbitCameraManipulator::syncFromCamera()
     if (d > 1e-9) {
         distance_ = d;
         const Vec3d dir = offset / d;
-        pitch_ = std::asin(std::clamp(dir.y, -1.0, 1.0));
+        pitch_ = std::asin(std::clamp(dir.z, -1.0, 1.0));
         // Near a pole the azimuth is ill defined; keep the previous yaw so the
         // reconstructed up (viewUp) stays continuous through a 90 deg orbit.
-        if (std::hypot(dir.x, dir.z) > 1e-4) {
-            yaw_ = std::atan2(dir.x, dir.z);
+        if (std::hypot(dir.x, dir.y) > 1e-4) {
+            yaw_ = std::atan2(dir.x, dir.y);
         }
         // Roll: the signed rotation about the forward (eye -> centre) axis
         // that takes the level no-roll up (viewUp) to the camera's actual up.

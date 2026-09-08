@@ -431,7 +431,9 @@ TEST(CameraTest, ScreenToWorldRayCenter)
 TEST(CameraManipulatorTest, OrbitKeepsTarget)
 {
     auto cam = intrusive_ptr<Camera>(new Camera());
-    cam->setViewMatrixAsLookAt(Vec3d(0, 0, 10), Vec3d(0, 0, 0), Vec3d(0, 1, 0));
+    // Z-up framing: eye in the x = 0 plane, elevated above the horizon, so a
+    // yaw sweep rotates the eye off the original azimuth.
+    cam->setViewMatrixAsLookAt(Vec3d(0, 10, 6), Vec3d(0, 0, 0), Vec3d(0, 0, 1));
 
     OrbitCameraManipulator manip(cam.get());
     manip.orbit(0.5, 0.0);
@@ -440,7 +442,7 @@ TEST(CameraManipulatorTest, OrbitKeepsTarget)
     EXPECT_NEAR(cam->target().x, 0.0, 1e-6);
     EXPECT_NEAR(cam->target().y, 0.0, 1e-6);
     EXPECT_NEAR(cam->target().z, 0.0, 1e-6);
-    // Eye moved off the original axis.
+    // Eye moved off the original axis (x was 0 before the orbit).
     EXPECT_GT(std::abs(cam->eye().x), 1e-3);
 }
 
@@ -2333,6 +2335,104 @@ TEST(RenderPipelineBuilderTest, DeferredPresetRefusesWithoutContent)
 
     EXPECT_EQ(pipeline, nullptr);
     EXPECT_EQ(engine->passCount(), 0u);
+}
+
+TEST(RenderPipelineBuilderTest, DeferredPresetWithTransparentContentBuildsComposite)
+{
+    auto engine  = intrusive_ptr<RenderEngine>(new RenderEngine());
+    auto content = intrusive_ptr<Scene>(new Scene());
+    auto overlay = intrusive_ptr<Scene>(new Scene());
+    auto cam     = intrusive_ptr<Camera>(new Camera());
+
+    PipelineOptions opts;
+    opts.offscreen_width  = 640;
+    opts.offscreen_height = 360;
+
+    RenderPipelineBuilder builder(engine.get());
+    builder.setCamera(cam.get());
+    builder.setContent(content);
+    builder.setTransparentContent(overlay);
+    auto pipeline = builder.build(PipelinePreset::Deferred, opts);
+
+    ASSERT_NE(pipeline, nullptr);
+    // G-buffer + lighting INTO the composite + forward transparent + present:
+    // four registered passes (the opaque scene is rasterised once — the
+    // composite reuses the G-buffer depth instead of re-rendering it).
+    EXPECT_EQ(engine->passCount(), 4u);
+    EXPECT_TRUE(engine->hasWindowPass(cam.get()));
+
+    // Both off-screen stages exist: the G-buffer (sampled by the lighting) and
+    // the composite (baked off-screen, then presented to the window).
+    RenderTarget* gbuffer = pipeline->offscreenTarget();
+    RenderTarget* composite = pipeline->compositeTarget();
+    ASSERT_NE(gbuffer, nullptr);
+    ASSERT_NE(composite, nullptr);
+    EXPECT_NE(composite, gbuffer);
+    // The composite borrows the G-buffer depth (single opaque rasterisation),
+    // which forces the G-buffer depth to stay an attachment (not sampleable).
+    EXPECT_TRUE(composite->hasDepth());
+    EXPECT_EQ(composite->depthSource(), gbuffer);
+    EXPECT_FALSE(gbuffer->depthPromotion());
+    EXPECT_TRUE(composite->depthPromotion()); // (irrelevant: composite has no own depth)
+
+    // The window pass is the PRESENT pass: it carries the view camera (so
+    // RenderControl / SceneView add no default forward pass), targets the
+    // window, does not clear, and consumes the published composite.
+    auto* present = dynamic_cast<ScreenPass*>(pipeline->windowPass());
+    ASSERT_NE(present, nullptr);
+    EXPECT_EQ(present->camera(), cam.get());
+    EXPECT_EQ(present->renderTarget(), nullptr);
+    EXPECT_FALSE(present->clearEnabled());
+    const auto& inputs = present->inputNames();
+    EXPECT_NE(std::find(inputs.begin(), inputs.end(), vine::String(u8"Composite")), inputs.end());
+
+    // Sizing is creator-maintained for both off-screen targets together.
+    pipeline->resize(1280, 720);
+    EXPECT_EQ(pipeline->offscreenTarget()->width(), 1280);
+    EXPECT_EQ(pipeline->compositeTarget()->width(), 1280);
+    EXPECT_EQ(pipeline->offscreenTarget()->height(), 720);
+    EXPECT_EQ(pipeline->compositeTarget()->height(), 720);
+}
+
+TEST(RenderPipelineBuilderTest, ForwardPresetWithTransparentContentStacksDepthOnPass)
+{
+    auto engine  = intrusive_ptr<RenderEngine>(new RenderEngine());
+    auto content = intrusive_ptr<Scene>(new Scene());
+    auto overlay = intrusive_ptr<Scene>(new Scene());
+    auto cam     = intrusive_ptr<Camera>(new Camera());
+
+    RenderPipelineBuilder builder(engine.get());
+    builder.setCamera(cam.get());
+    builder.setContent(content);
+    builder.setTransparentContent(overlay);
+    auto pipeline = builder.build(PipelinePreset::Forward);
+
+    ASSERT_NE(pipeline, nullptr);
+    // Main order-0 window content pass + order-1 transparent content pass.
+    EXPECT_EQ(engine->passCount(), 2u);
+    EXPECT_TRUE(engine->hasWindowPass(cam.get()));
+    ASSERT_NE(pipeline->windowPass(), nullptr);
+    EXPECT_EQ(engine->contentOf(pipeline->windowPass()), content.get());
+    // Forward composites nothing off-screen: no composite target.
+    EXPECT_EQ(pipeline->compositeTarget(), nullptr);
+}
+
+TEST(RenderPassTest, OcclusionIsExplicitAndIndependentOfClear)
+{
+    RenderPass pass;
+    // Depth style is explicit and defaults on; it is NOT inferred from the
+    // clear flag (a depth-on pass may skip clearing).
+    EXPECT_TRUE(pass.occlusionEnabled());
+    EXPECT_TRUE(pass.clearEnabled());
+    pass.setOcclusionEnabled(false);
+    EXPECT_FALSE(pass.occlusionEnabled());
+    // The two flags are orthogonal: disabling the clear does not flip depth.
+    pass.setClearEnabled(false);
+    EXPECT_FALSE(pass.clearEnabled());
+    EXPECT_FALSE(pass.occlusionEnabled());
+    pass.setOcclusionEnabled(true);
+    EXPECT_TRUE(pass.occlusionEnabled());
+    EXPECT_FALSE(pass.clearEnabled());
 }
 
 TEST(RenderPipelineBuilderTest, DefaultGbufferTargetIsCanonicalLayout)

@@ -21,6 +21,11 @@ raw_ptr<RenderTarget> Pipeline::offscreenTarget() const
     return offscreen_target_.get();
 }
 
+raw_ptr<RenderTarget> Pipeline::compositeTarget() const
+{
+    return composite_target_.get();
+}
+
 raw_ptr<AxisGizmo> Pipeline::gizmo() const
 {
     return gizmo_.get();
@@ -38,6 +43,9 @@ void Pipeline::resize(int width, int height)
     }
     if (offscreen_target_ != nullptr) {
         offscreen_target_->setSize(width, height);
+    }
+    if (composite_target_ != nullptr) {
+        composite_target_->setSize(width, height);
     }
     if (gizmo_ != nullptr) {
         gizmo_->onSurfaceResized(width, height);
@@ -60,6 +68,11 @@ void Pipeline::setWindowPass(intrusive_ptr<RenderPass> pass)
 void Pipeline::setOffscreenTarget(intrusive_ptr<RenderTarget> target)
 {
     offscreen_target_ = std::move(target);
+}
+
+void Pipeline::setCompositeTarget(intrusive_ptr<RenderTarget> target)
+{
+    composite_target_ = std::move(target);
 }
 
 void Pipeline::setGizmo(intrusive_ptr<AxisGizmo> gizmo)

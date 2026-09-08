@@ -34,6 +34,7 @@
 #include <vsg/commands/BindIndexBuffer.h>
 #include <vsg/commands/BindVertexBuffers.h>
 #include <vsg/commands/Commands.h>
+#include <vsg/commands/PipelineBarrier.h>
 #include <vsg/commands/Draw.h>
 #include <vsg/commands/DrawIndexed.h>
 #include <vsg/lighting/AmbientLight.h>
@@ -152,7 +153,7 @@ std::string describeCurrentException()
  *                    default).
  * @return Configured shader set.
  */
-::vsg::ref_ptr<::vsg::ShaderSet> buildShaderSet(vine::graphics::ShaderPreset preset, const VkExtent2D& extent, bool depth_test, int color_count = 1)
+::vsg::ref_ptr<::vsg::ShaderSet> buildShaderSet(vine::graphics::ShaderPreset preset, const VkExtent2D& extent, bool depth_test, bool depth_write, int color_count = 1)
 {
     // Pbr / ShadowedPhong are reserved presets without a backend mapping yet
     // (Pbr needs its own PbrMaterialValue; shadow comes last in the roadmap),
@@ -162,10 +163,8 @@ std::string describeCurrentException()
     auto raster_state      = ::vsg::RasterizationState::create();
     raster_state->cullMode = VK_CULL_MODE_NONE; // tolerate either winding order
     auto depth_state       = ::vsg::DepthStencilState::create();
-    if (!depth_test) {
-        depth_state->depthTestEnable  = VK_FALSE;
-        depth_state->depthWriteEnable = VK_FALSE;
-    }
+    depth_state->depthTestEnable  = depth_test ? VK_TRUE : VK_FALSE;
+    depth_state->depthWriteEnable = depth_write ? VK_TRUE : VK_FALSE;
     ::vsg::ref_ptr<::vsg::ColorBlendState> blend_state;
     if (color_count > 1) {
         // MRT: one color-blend attachment per colour attachment, blending off
@@ -287,7 +286,8 @@ VkFormat toDepthFormat(vine::graphics::RenderTarget::DepthFormat f)
 ::vsg::ref_ptr<::vsg::RenderPass> makeSampleableRenderPass(
     ::vsg::Device*                    device,
     const std::vector<VkFormat>&      color_formats,
-    VkFormat                          depth_format)
+    VkFormat                          depth_format,
+    bool                              promote_depth = true)
 {
     const bool has_depth = depth_format != VK_FORMAT_UNDEFINED;
 
@@ -321,13 +321,16 @@ VkFormat toDepthFormat(vine::graphics::RenderTarget::DepthFormat f)
         depth.format                       = depth_format;
         depth.samples                      = VK_SAMPLE_COUNT_1_BIT;
         depth.loadOp                       = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        // Stored + sampleable: the deferred lighting pass reads the depth back
-        // to reconstruct view-space positions (no separate position buffer).
+        // Stored: when @p promote_depth the depth is left sampleable (for
+        // reconstruction / SSAO); otherwise it stays a plain depth attachment so
+        // ANOTHER target can borrow it for a later depth test in the same frame
+        // (see RenderTarget::shareDepth).
         depth.storeOp                      = VK_ATTACHMENT_STORE_OP_STORE;
         depth.stencilLoadOp                = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         depth.stencilStoreOp               = VK_ATTACHMENT_STORE_OP_DONT_CARE;
         depth.initialLayout                = VK_IMAGE_LAYOUT_UNDEFINED;
-        depth.finalLayout                  = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        depth.finalLayout = promote_depth ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+                                          : VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
         attachments.push_back(depth);
 
         ::vsg::AttachmentReference depth_ref = {};
@@ -971,20 +974,22 @@ struct VsgRenderer::Impl {
     ::vsg::ref_ptr<::vsg::Window>       window;
     ::vsg::ref_ptr<::vsg::Viewer>       viewer;
     ::vsg::ref_ptr<::vsg::CommandGraph> command_graph;
-    // Window-target shader sets shared by its content slots' bridges: the
-    // depth-on set keeps depth test/write on; the depth-off set disables them
-    // so the slot's content always draws on top of earlier content (HUD).
-    // Per-geometry pipelines are compiled per view (vsg compiles per viewID),
-    // so every content slot carries its own SceneBridge; off-screen targets
-    // bake their own per-size sets (see Target).
+    // Window-target shader sets shared by its content slots' bridges: one per
+    // DepthMode (TestAndWrite / TestOnly / Disabled) so each slot bakes the
+    // right depth test/write state. Per-geometry pipelines are compiled per
+    // view (vsg compiles per viewID), so every content slot carries its own
+    // SceneBridge; off-screen targets bake their own per-size sets (see Target).
     ::vsg::ref_ptr<::vsg::ShaderSet>    depth_on_shader_set;
+    ::vsg::ref_ptr<::vsg::ShaderSet>    depth_testonly_shader_set;
     ::vsg::ref_ptr<::vsg::ShaderSet>    depth_off_shader_set;
     // Set by clear() (a pass clears, clearEnabled) and consumed by the next
-    // render(): a render that did NOT follow a clear() is styled on-top
-    // (depth-off + ambient, HUD); one that did is the main (depth-on) content.
-    // This only decides the slot's depth STYLE — its stacking position follows
-    // the pass order (pending_pass_order), not this flag.
+    // render(): marks the full-target "presenting" pass (content that fills
+    // the target and seeds the default headlight on the window). It does NOT
+    // decide the depth style — that comes from pending_depth_mode.
     bool                                main_pending = false;
+    // Depth handling queued by setDepthMode(), consumed by the next render().
+    // Explicit per pass; opaque (TestAndWrite) by default.
+    vine::graphics::DepthMode           pending_depth_mode = vine::graphics::DepthMode::TestAndWrite;
     bool                                initialized = false;
 
     /** @brief Identifies one content slot: (camera, explicit pass order). */
@@ -1007,14 +1012,16 @@ struct VsgRenderer::Impl {
      * distinct order). Within a target the slot Views are stacked in ascending
      * @ref order — the pass's explicit pipeline order (the engine runs passes
      * in it and announces it via RenderBackend::setPassOrder) — so a slot's
-     * stacking position is its key. @ref on_top is only a depth STYLE: an
-     * on-top slot disables depth test/write and uses an ambient light (HUD /
-     * overlay), while a main slot fills the whole target with depth testing on
-     * and the content lights.
+     * stacking position is its key. @ref depth_mode is the content's depth
+     * handling (explicit per pass, independent of clearing); @ref presenting
+     * marks the full-target pass that cleared the target (its default light
+     * seeds the window headlight when the scene carries no lights). Lights
+     * come from the content scene each frame.
      */
     struct ContentSlot {
         int                           order  = 0;   // slot key (= the pass's explicit pipeline order) + stacking
-        bool                          on_top = false; // depth-off HUD style (independent of stacking order)
+        vine::graphics::DepthMode     depth_mode = vine::graphics::DepthMode::TestAndWrite;
+        bool                          presenting = false; // this slot cleared the target (full-target main pass)
         ::vsg::ref_ptr<::vsg::Camera> vsg_camera;
         ::vsg::ref_ptr<::vsg::Group>  root;        // retained content root
         ::vsg::ref_ptr<::vsg::Group>  light_group; // lights under this slot's view
@@ -1066,6 +1073,7 @@ struct VsgRenderer::Impl {
     /** @brief One picture-in-picture view sampling another target's colour
      * attachment. */
     struct ScreenSlot {
+        int                              order      = std::numeric_limits<int>::max(); // stacking order (engine pass order); PiP last by default
         ::vsg::ref_ptr<::vsg::Camera>    camera;      // carries the sub-rect viewport
         ::vsg::ref_ptr<::vsg::View>      view;        // extra View of this target's render graph
         ::vsg::ref_ptr<::vsg::ImageView> source_view; // keeps the sampled attachment alive
@@ -1085,6 +1093,7 @@ struct VsgRenderer::Impl {
      * into @p push_data before each record.
      */
     struct ProgramSlot {
+        int                              order      = std::numeric_limits<int>::min(); // stacking order (engine pass order); fullscreen first by default
         ::vsg::ref_ptr<::vsg::Camera>    camera;     // carries the sub-rect viewport
         ::vsg::ref_ptr<::vsg::View>      view;       // extra View of this target's render graph
         ::vsg::ref_ptr<::vsg::Node>      node;       // the fullscreen program drawable
@@ -1120,9 +1129,15 @@ struct VsgRenderer::Impl {
         ::vsg::ref_ptr<::vsg::RenderPass>  render_pass;
         ::vsg::ref_ptr<::vsg::Framebuffer> framebuffer;
         ::vsg::ref_ptr<::vsg::RenderGraph> graph; // off-screen: owned here; window: the shared swapchain graph
+        // Depth sharing (see RenderTarget::shareDepth): the target whose depth
+        // this framebuffer borrows (null = owns its depth) plus the command
+        // barrier that makes that depth visible between the two render graphs.
+        vine::graphics::RenderTarget* depth_source = nullptr;
+        ::vsg::ref_ptr<::vsg::Node>   depth_share_barrier;
         // Per-size shader sets for off-screen slots (window slots share
-        // impl->depth_on_shader_set / depth_off_shader_set). Built lazily.
+        // impl->depth_on / depth_testonly / depth_off shader sets). Built lazily.
         ::vsg::ref_ptr<::vsg::ShaderSet> depth_on_shader_set;
+        ::vsg::ref_ptr<::vsg::ShaderSet> depth_testonly_shader_set;
         ::vsg::ref_ptr<::vsg::ShaderSet> depth_off_shader_set;
         int width  = 0; // off-screen logical size
         int height = 0;
@@ -1241,8 +1256,9 @@ bool VsgRenderer::initialize()
     // earlier content (HUD). Off-screen targets bake their own per-size sets
     // lazily.
     init_stage = "building window shader sets";
-    impl->depth_on_shader_set  = buildShaderSet(persistent->shader_preset, impl->window->extent2D(), true);
-    impl->depth_off_shader_set = buildShaderSet(persistent->shader_preset, impl->window->extent2D(), false);
+    impl->depth_on_shader_set        = buildShaderSet(persistent->shader_preset, impl->window->extent2D(), true, true);
+    impl->depth_testonly_shader_set  = buildShaderSet(persistent->shader_preset, impl->window->extent2D(), true, false);
+    impl->depth_off_shader_set       = buildShaderSet(persistent->shader_preset, impl->window->extent2D(), false, false);
 
     // The primary window layer is created lazily on the first window render
     // (the first pass that clears and draws the scene into the backbuffer).
@@ -1395,15 +1411,16 @@ void VsgRenderer::render(const std::vector<vine::graphics::RenderCommand>& comma
     const int pass_order     = impl->pending_pass_order;
     impl->pending_pass_order = 0;
 
-    // Decide main vs on-top from the clear() marker queued by
-    // RenderPass::execute: a pass clears (clearEnabled) right before it
-    // renders the main scene into the window, so a window render that
-    // followed a clear() is the main (depth-on) layer; one without a clear()
-    // is an on-top (HUD) layer. The marker is consumed here for every render,
-    // so an off-screen pass's clear cannot leak into a later window render.
-    // This decides the slot's depth STYLE; its stacking position is governed
-    // by pass_order, not by main/on-top semantics.
-    const bool on_top     = !impl->main_pending;
+    // The content slot's depth handling is EXPLICIT: setDepthMode() (from
+    // RenderPass::depthMode) decides Disabled / TestOnly / TestAndWrite. The
+    // clear() marker only records that this render is the full-target
+    // "presenting" pass (used to seed the default light and to keep main slots
+    // filling the whole target); it does not imply a depth mode. Both are
+    // consumed here for every render, so one pass's state cannot leak into a
+    // later render of another target.
+    const vine::graphics::DepthMode depth_mode = impl->pending_depth_mode;
+    impl->pending_depth_mode = vine::graphics::DepthMode::TestAndWrite;
+    const bool presenting = impl->main_pending;
     impl->main_pending    = false;
 
     // The active target (setRenderTarget, nullptr = the window). Every target
@@ -1443,10 +1460,10 @@ void VsgRenderer::render(const std::vector<vine::graphics::RenderCommand>& comma
 
     // Render into a content slot keyed by (camera, pass order) under the
     // active target — window and off-screen share the same slot machinery
-    // (C6.4). The slot's depth style (main vs on-top / HUD) is carried per
-    // call; its stacking position follows the pass's explicit order.
+    // (C6.4). The slot's depth style (depth_on) and presenting role are carried
+    // per call; its stacking position follows the pass's explicit order.
     if (camera != nullptr) {
-        renderContentSlot(key, commands, camera, lights, on_top, pass_order, has_vp ? vp_x : 0, has_vp ? vp_y : 0, has_vp ? vp_w : 0, has_vp ? vp_h : 0);
+        renderContentSlot(key, commands, camera, lights, depth_mode, presenting, pass_order, has_vp ? vp_x : 0, has_vp ? vp_y : 0, has_vp ? vp_w : 0, has_vp ? vp_h : 0);
     }
 
     // Submission is deferred to swapBuffers() so one frame (main pass + all
@@ -1489,8 +1506,11 @@ void VsgRenderer::buildOffscreenTarget(vine::graphics::RenderTarget* target)
         t.render_pass_load     = {};
         t.depth_ready          = false;
         t.framebuffer          = {};
+        t.depth_source         = nullptr;
+        t.depth_share_barrier  = {};
         t.graph                = {};
         t.depth_on_shader_set  = {};
+        t.depth_testonly_shader_set = {};
         t.depth_off_shader_set = {};
         t.width                = 0;
         t.height               = 0;
@@ -1507,6 +1527,11 @@ void VsgRenderer::buildOffscreenTarget(vine::graphics::RenderTarget* target)
     const int  color_count = target->colorCount();
     const bool has_color   = color_count > 0;
     const bool has_depth   = target->hasDepth();
+    // Depth may be OWNED (allocated below) or BORROWED from an earlier target
+    // in the same frame (RenderTarget::shareDepth): the deferred-lit composite
+    // reuses the G-buffer's depth so forward content can test against it.
+    vine::graphics::RenderTarget* const depth_src = target->depthSource();
+    const bool                        borrowed    = depth_src != nullptr;
 
     std::vector<VkFormat> color_formats;
     color_formats.reserve(static_cast<std::size_t>(color_count));
@@ -1539,7 +1564,7 @@ void VsgRenderer::buildOffscreenTarget(vine::graphics::RenderTarget* target)
         t.color_views[static_cast<std::size_t>(i)] = ::vsg::createImageView(device.get(), color, VK_IMAGE_ASPECT_COLOR_BIT);
         attachments.push_back(t.color_views[static_cast<std::size_t>(i)]);
     }
-    if (has_depth) {
+    if (has_depth && !borrowed) {
         auto depth           = ::vsg::Image::create();
         depth->imageType     = VK_IMAGE_TYPE_2D;
         depth->format        = toDepthFormat(target->depthFormat());
@@ -1553,6 +1578,18 @@ void VsgRenderer::buildOffscreenTarget(vine::graphics::RenderTarget* target)
         t.depth_view         = ::vsg::createImageView(device.get(), depth, VK_IMAGE_ASPECT_DEPTH_BIT);
         attachments.push_back(t.depth_view);
     }
+    else if (borrowed) {
+        // Borrow the source's depth image/view (it renders earlier this frame):
+        // the framebuffer below attaches the shared depth, loaded not cleared.
+        auto src_it = impl->targets.find(depth_src);
+        if (src_it == impl->targets.end() || src_it->second.depth_view == nullptr) {
+            std::fprintf(stderr, "[VsgRenderer] shared-depth target '%s': source '%s' not built yet\n",
+                         target->name().empty() ? "(unnamed)" : target->name().stdstr().c_str(),
+                         depth_src->name().empty() ? "(unnamed)" : depth_src->name().stdstr().c_str());
+            return;
+        }
+        attachments.push_back(src_it->second.depth_view);
+    }
 
     // The depth policy of this target's pass follows its persisted clearDepth
     // request: CLEAR (the default, depth sampled afterwards) when the engine
@@ -1564,8 +1601,18 @@ void VsgRenderer::buildOffscreenTarget(vine::graphics::RenderTarget* target)
     t.depth_load          = load_depth;
     if (has_color) {
         const VkFormat depth_format =
-            has_depth ? toDepthFormat(target->depthFormat()) : VK_FORMAT_UNDEFINED;
-        if (load_depth) {
+            has_depth ? (borrowed ? toDepthFormat(depth_src->depthFormat()) : toDepthFormat(target->depthFormat()))
+                      : VK_FORMAT_UNDEFINED;
+        if (borrowed) {
+            // Composite sharing the source's depth: colour is cleared + stored
+            // (sampleable for the present pass) while the depth is LOADED from
+            // the source graph recorded earlier this frame. Both graphs leave
+            // the depth in DEPTH_STENCIL_ATTACHMENT_OPTIMAL; the depth-share
+            // barrier inserted between them orders the write -> load/test.
+            t.depth_load  = false;
+            t.render_pass = makeDepthLoadRenderPass(device.get(), color_formats, depth_format, /*initial_clear*/ false);
+        }
+        else if (load_depth) {
             // Two compatible passes over the same attachments: the first-frame
             // pass CLEARs the fresh (UNDEFINED) depth image — transitioning it
             // into DEPTH_STENCIL_ATTACHMENT_OPTIMAL and seeding its content —
@@ -1576,7 +1623,7 @@ void VsgRenderer::buildOffscreenTarget(vine::graphics::RenderTarget* target)
             t.render_pass      = makeDepthLoadRenderPass(device.get(), color_formats, depth_format, true);
             t.depth_ready      = false;
         } else {
-            t.render_pass = makeSampleableRenderPass(device.get(), color_formats, depth_format);
+            t.render_pass = makeSampleableRenderPass(device.get(), color_formats, depth_format, target->depthPromotion());
         }
     } else {
         t.render_pass = makeDepthOnlyRenderPass(device.get(), toDepthFormat(target->depthFormat()));
@@ -1649,6 +1696,30 @@ void VsgRenderer::buildOffscreenTarget(vine::graphics::RenderTarget* target)
         }
     }
 
+    if (borrowed) {
+        // Create the depth-share barrier now (the source's graph is already
+        // built earlier this frame). reconcileOffscreenOrder() inserts it into
+        // the command graph right after the source's render graph so the depth
+        // writes are visible before this pass LOADs / tests them.
+        auto src_it = impl->targets.find(depth_src);
+        if (src_it != impl->targets.end() && src_it->second.depth_image != nullptr) {
+            auto imb = ::vsg::ImageMemoryBarrier::create(
+                VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+                VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT,
+                VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+                VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+                VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED,
+                src_it->second.depth_image,
+                VkImageSubresourceRange{ VK_IMAGE_ASPECT_DEPTH_BIT, 0, 1, 0, 1 });
+            t.depth_share_barrier = ::vsg::PipelineBarrier::create(
+                VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
+                VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
+                0,
+                imb);
+        }
+        t.depth_source = depth_src;
+    }
+
     if (impl->command_graph != nullptr) {
         // Add the graph as the command graph's last child, then reorder every
         // off-screen graph into a dependency-valid sequence — each consumer is
@@ -1657,7 +1728,8 @@ void VsgRenderer::buildOffscreenTarget(vine::graphics::RenderTarget* target)
         impl->command_graph->children.push_back(t.graph);
         reconcileOffscreenOrder();
     }
-    std::fprintf(stderr, "[VsgRenderer] EXPERIMENTAL off-screen target %ux%u attached\n", w, h);
+    std::fprintf(stderr, "[VsgRenderer] EXPERIMENTAL off-screen target '%s' %ux%u attached\n",
+                 target->name().empty() ? "(unnamed)" : target->name().stdstr().c_str(), w, h);
     // NOTE: no compile here — the graph is empty until its first content slot
     // is added; setupContentSlot() compiles the (whole) command graph then.
 }
@@ -1774,6 +1846,15 @@ void VsgRenderer::reconcileOffscreenOrder()
     children.clear();
     for (auto* t : order) {
         children.push_back(graph_of[t]);
+        // After a graph whose depth another target borrows, insert that
+        // borrower's depth-share barrier so its LOAD / depth test sees this
+        // graph's writes (both share one depth image in the attachment layout).
+        for (const auto& entry : impl->targets) {
+            const auto& other = entry.second;
+            if (other.depth_source == t && other.graph != nullptr && other.depth_share_barrier != nullptr) {
+                children.push_back(other.depth_share_barrier);
+            }
+        }
     }
     children.push_back(window_graph);
 }
@@ -1893,6 +1974,13 @@ void VsgRenderer::drawScreenTexture(vine::graphics::RenderTarget* source, int at
     }
 
     if (!slot.ready) {
+        // Capture the pass's explicit order (announced by the engine before
+        // this pass) so the view stacks among the target's slot views at its
+        // pipeline position: a full-screen present at a low order draws
+        // beneath later HUD slots, while a small PiP at a high order stays on
+        // top of them (the INT_MAX default keeps a legacy-created PiP last).
+        slot.order = impl->pending_pass_order;
+        impl->pending_pass_order = 0;
         slot.source_w    = src.width;
         slot.source_h    = src.height;
         slot.dest_w      = surf_w;
@@ -1919,6 +2007,10 @@ void VsgRenderer::drawScreenTexture(vine::graphics::RenderTarget* source, int at
         slot.camera        = view->camera;
         slot.view          = view;
         slot.ready         = true;
+        // Position the view by its explicit order; the compile above already
+        // ran against this target's render pass, so only the record order
+        // changes.
+        placeViewByOrder(dest, view, slot.order);
         impl->needs_submit = true;
         std::fprintf(stderr, "[VsgRenderer] EXPERIMENTAL screen PiP %dx%d (att %zu) -> %s %d,%d %dx%d attached\n", src.width, src.height, attachment_index, dest == nullptr ? "window" : "offscreen", rect_x, rect_y, rect_w, rect_h);
         if (dest != nullptr) {
@@ -2172,9 +2264,15 @@ void VsgRenderer::drawScreenProgram(vine::graphics::RenderTarget*              s
     if (stale) {
         removeGraphChild(dest_entry.graph.get(), slot.view);
         slot = Impl::ProgramSlot{};
+        // Capture the pass's explicit order (announced by the engine before
+        // this pass) so the fullscreen view stacks at its pipeline position
+        // among the target's content slots (e.g. between an opaque depth pass
+        // and a forward transparent pass) instead of always drawing first.
+        slot.order = impl->pending_pass_order;
+        impl->pending_pass_order = 0;
         slot.push_data = ::vsg::ubyteArray::create(128); // == full block size
         const VkExtent2D surface{ static_cast<uint32_t>(surf_w), static_cast<uint32_t>(surf_h) };
-        auto node = makeFullscreenProgramNode(program, src.color_views, src.depth_view, surface, slot.push_data);
+        auto node = makeFullscreenProgramNode(program, src.color_views, source->depthPromotion() ? src.depth_view : ::vsg::ref_ptr<::vsg::ImageView>(), surface, slot.push_data);
         if (node == nullptr) {
             dest_entry.program_slots.erase(source);
             return;
@@ -2186,10 +2284,9 @@ void VsgRenderer::drawScreenProgram(vine::graphics::RenderTarget*              s
         slot.program  = const_cast<vine::graphics::ShaderProgram*>(program);
         slot.node     = node;
 
-        // The fullscreen program view is the destination's main content in
-        // deferred mode: insert it FIRST (front), so content slots created
-        // later (HUD overlays) stack above it (see setupContentSlot's INT_MIN
-        // ordering for program views).
+        // Create + compile the fullscreen view against this target's render
+        // pass (inserted provisionally at the front so the compile sees it),
+        // then move it to its explicit-order position below.
         auto view = makeCompiledOverlayView(*impl->viewer, dest_entry.graph.get(), node,
                                             rect_x, rect_y, rect_w, rect_h,
                                             /*front*/ true, "fullscreen program");
@@ -2200,6 +2297,7 @@ void VsgRenderer::drawScreenProgram(vine::graphics::RenderTarget*              s
         slot.camera        = view->camera;
         slot.view          = view;
         slot.ready         = true;
+        placeViewByOrder(dest, view, slot.order);
         impl->needs_submit = true;
         std::fprintf(stderr, "[VsgRenderer] EXPERIMENTAL deferred fullscreen program %dx%d -> %s %d,%d %dx%d attached\n", src.width, src.height, dest == nullptr ? "window" : "offscreen", rect_x, rect_y, rect_w, rect_h);
         if (dest != nullptr) {
@@ -2305,7 +2403,57 @@ void VsgRenderer::releaseRenderTarget(vine::graphics::RenderTarget* target)
     }
 }
 
-void VsgRenderer::setupContentSlot(vine::graphics::RenderTarget* target, vine::graphics::Camera* cam, int order, bool on_top)
+void VsgRenderer::placeViewByOrder(vine::graphics::RenderTarget* target,
+                                   const ::vsg::ref_ptr<::vsg::View>& view,
+                                   int order)
+{
+    auto& t = impl->targets[target];
+    if (t.graph == nullptr || view == nullptr) {
+        return;
+    }
+    auto& children = t.graph->children; // RenderGraph is a Group: children are ref_ptr<Node>
+    // Drop any previous position, then insert so the children stay ascending
+    // by each slot's explicit order: content slots carry theirs, fullscreen-
+    // program and PiP / present screen slots carry theirs, and any child with
+    // no known slot sorts last. Reordering render-graph children only changes
+    // per-frame record order within the (single) render pass, so no
+    // recompilation is needed.
+    for (auto it = children.begin(); it != children.end();) {
+        if (it->get() == view.get()) {
+            it = children.erase(it);
+        }
+        else {
+            ++it;
+        }
+    }
+    const auto child_order = [&](const ::vsg::ref_ptr<::vsg::Node>& child) -> int {
+        for (const auto& kv : t.content_slots) {
+            if (kv.second.ready && kv.second.view.get() == child.get()) {
+                return kv.second.order;
+            }
+        }
+        for (const auto& kv : t.program_slots) {
+            if (kv.second.ready && kv.second.view.get() == child.get()) {
+                return kv.second.order;
+            }
+        }
+        for (const auto& kv : t.screen_slots) {
+            if (kv.second.ready && kv.second.view.get() == child.get()) {
+                return kv.second.order;
+            }
+        }
+        return std::numeric_limits<int>::max();
+    };
+    auto it = children.begin();
+    for (; it != children.end(); ++it) {
+        if (child_order(*it) > order) {
+            break;
+        }
+    }
+    children.insert(it, view); // ref_ptr<View> -> ref_ptr<Node> (View is a Node)
+}
+
+void VsgRenderer::setupContentSlot(vine::graphics::RenderTarget* target, vine::graphics::Camera* cam, int order, vine::graphics::DepthMode depth_mode, bool presenting)
 {
     // Content slots are retained Views under the TARGET's render graph — the
     // window target (target == nullptr) and every off-screen target share
@@ -2323,7 +2471,8 @@ void VsgRenderer::setupContentSlot(vine::graphics::RenderTarget* target, vine::g
         return;
     }
     content.order      = order;
-    content.on_top     = on_top;
+    content.depth_mode = depth_mode;
+    content.presenting = presenting;
     content.vsg_camera = persistent->cameraBridge.create(cam);
     if (content.vsg_camera == nullptr) {
         t.content_slots.erase(Impl::ContentKey{ cam, order });
@@ -2337,16 +2486,22 @@ void VsgRenderer::setupContentSlot(vine::graphics::RenderTarget* target, vine::g
     // shader set bakes the slot's depth policy.
     if (target == nullptr) {
         // Window slots share the renderer's (window-sized) shader sets.
-        content.bridge.setShaderSet(on_top ? impl->depth_off_shader_set : impl->depth_on_shader_set);
+        content.bridge.setShaderSet(depth_mode == vine::graphics::DepthMode::TestAndWrite ? impl->depth_on_shader_set
+                                    : depth_mode == vine::graphics::DepthMode::TestOnly ? impl->depth_testonly_shader_set
+                                                                                         : impl->depth_off_shader_set);
     }
     else {
         // Off-screen slots get a per-target shader set baked at the target's
         // size (created lazily).
-        auto& set_ref = on_top ? t.depth_off_shader_set : t.depth_on_shader_set;
+        auto& set_ref = depth_mode == vine::graphics::DepthMode::TestAndWrite ? t.depth_on_shader_set
+                        : depth_mode == vine::graphics::DepthMode::TestOnly ? t.depth_testonly_shader_set
+                                                                            : t.depth_off_shader_set;
         if (set_ref == nullptr) {
+            const bool depth_test  = depth_mode != vine::graphics::DepthMode::Disabled;
+            const bool depth_write = depth_mode == vine::graphics::DepthMode::TestAndWrite;
             set_ref = buildShaderSet(persistent->shader_preset,
                                      VkExtent2D{ static_cast<uint32_t>(t.width), static_cast<uint32_t>(t.height) },
-                                     !on_top,
+                                     depth_test, depth_write,
                                      target->colorCount());
         }
         content.bridge.setShaderSet(set_ref);
@@ -2354,94 +2509,41 @@ void VsgRenderer::setupContentSlot(vine::graphics::RenderTarget* target, vine::g
     content.bridge.setMaterialManager(&persistent->materialManager);
     content.bridge.clearCache();
 
-    // Seed the slot's default light before the first compile. On-top (HUD)
-    // slots get a single ambient light: with a directional headlight the axis
-    // went dark/black from diagonal views because the light direction is fixed
-    // while the slot camera (which mirrors the source) rotates. Ambient-only
-    // lighting makes phong's colour independent of surface orientation, giving
-    // flat sticks. The window's main slot gets vsg's default headlight; an
-    // off-screen main slot keeps its ambient fill (matches the pre-
-    // unification off-screen view).
+    // Seed the slot's default light before the first compile. A slot whose
+    // scene carries no lights (checked per frame) keeps this seed: the
+    // window's presenting (full-target) slot gets vsg's default headlight,
+    // everything else an ambient fill — ambient keeps HUD / off-screen content
+    // readable from any angle (a directional headlight would shade the axis
+    // gizmo dark from diagonal views). When the content scene provides lights
+    // they replace this seed each frame, so the light source always reflects
+    // the scene, never the slot's depth style.
     content.light_group = ::vsg::Group::create();
-    if (on_top) {
-        // On-top (HUD) slots get a single ambient light: with a directional
-        // headlight the axis went dark/black from diagonal views because the
-        // light direction is fixed while the slot camera (which mirrors the
-        // source) rotates. Ambient-only lighting makes phong's colour
-        // independent of surface orientation, giving flat sticks.
-        content.light_group->addChild(makeAmbientLight("content_ambient"));
-    }
-    else if (target == nullptr) {
-        // Seed the window's main slot with vsg's default headlight. Content
-        // lights (setLights) replace the group's children at render time each
-        // frame (cheap: light nodes are collected into the lightData uniform
-        // at record time, no recompile), so the seed only needs to yield a
-        // valid light for the first compile.
+    if (presenting && target == nullptr) {
         content.light_group->addChild(::vsg::createHeadlight());
     }
     else {
-        // Off-screen main slots keep the ambient fill (matches the pre-
-        // unification off-screen view).
-        content.light_group->addChild(makeAmbientLight("offscreen_ambient"));
+        content.light_group->addChild(makeAmbientLight(presenting ? "offscreen_ambient" : "content_ambient"));
     }
 
     content.view = ::vsg::View::create(content.vsg_camera);
     content.view->addChild(content.light_group);
     content.view->addChild(content.root);
 
-    // Append the slot as another View of the target's render graph, then
-    // compile it before it is first recorded. Content slots are only created
-    // from render() calls that follow initialize(), so the target's graph is
-    // always present here.
+    // Position the slot's View in the target's render graph by its explicit
+    // order, then compile it before it is first recorded. Content slots are
+    // only created from render() calls that follow initialize(), so the
+    // target's graph is always present here.
     //
     // Within a target the slot views are stacked in ASCENDING pass order —
     // the order the caller gave addPass() and the engine already runs passes
-    // in. The slot stores that explicit @p order (announced via
-    // RenderBackend::setPassOrder) and is inserted so the children stay
-    // sorted by it: stable for equal orders (registration order), and Views
-    // that are not content slots (PiP screen views, always drawn last) are
-    // treated as the highest order. No main/on-top semantic constrains the
-    // order — a pass positioned by the user at any order draws exactly there.
-    // Ordering by the explicit value also keeps the pre-frame warm-up safe:
-    // warm-up may create a higher-order (on-top) slot before a lower-order
-    // (main) slot has run, but the main slot is inserted ahead of it by its
-    // smaller order when it is finally created.
-    {
-        auto& children  = t.graph->children;
-        auto  insert_at = children.end();
-        for (auto it = children.begin(); it != children.end(); ++it) {
-            // Order of an already-placed child: content slots carry their own
-            // explicit order; fullscreen-program views (deferred lighting,
-            // the window's main content in deferred mode) are drawn FIRST
-            // (INT_MIN) so later HUD content slots stack above them; any other
-            // view (a PiP screen view, always drawn last) is INT_MAX.
-            int other_order = std::numeric_limits<int>::max();
-            for (const auto& kv : t.content_slots) {
-                if (kv.second.ready && kv.second.view == *it) {
-                    other_order = kv.second.order;
-                    break;
-                }
-            }
-            if (other_order == std::numeric_limits<int>::max()) {
-                for (const auto& kv : t.program_slots) {
-                    if (kv.second.ready && kv.second.view == *it) {
-                        other_order = std::numeric_limits<int>::min();
-                        break;
-                    }
-                }
-            }
-            if (other_order > order) {
-                insert_at = it; // first child with a strictly higher order
-                break;
-            }
-        }
-        if (insert_at != children.end()) {
-            children.insert(insert_at, content.view);
-        }
-        else {
-            children.push_back(content.view);
-        }
-    }
+    // in (placeViewByOrder keeps content, fullscreen-program and PiP / present
+    // views all sorted by it). No main/on-top semantic constrains the order —
+    // a pass positioned by the user at any order draws exactly there. Ordering
+    // by the explicit value also keeps the pre-frame warm-up safe: warm-up may
+    // create a higher-order (on-top) slot before a lower-order (main) slot has
+    // run, but the main slot is inserted ahead of it by its smaller order when
+    // it is finally created.
+    placeViewByOrder(target, content.view, content.order);
     content.ready = true;
     if (impl->viewer != nullptr) {
         impl->viewer->compile();
@@ -2452,7 +2554,8 @@ void VsgRenderer::renderContentSlot(vine::graphics::RenderTarget*               
                                     const std::vector<vine::graphics::RenderCommand>& commands,
                                     vine::raw_ptr<const vine::graphics::Camera>       camera,
                                     const std::vector<const vine::graphics::Light*>&  lights,
-                                    bool                                              on_top,
+                                    vine::graphics::DepthMode                         depth_mode,
+                                    bool                                              presenting,
                                     int                                               order,
                                     int                                               vp_x,
                                     int                                               vp_y,
@@ -2463,7 +2566,7 @@ void VsgRenderer::renderContentSlot(vine::graphics::RenderTarget*               
     auto& t     = impl->targets[target];
     auto  it    = t.content_slots.find(Impl::ContentKey{ cam, order });
     if (it == t.content_slots.end() || !it->second.ready) {
-        setupContentSlot(target, cam, order, on_top);
+        setupContentSlot(target, cam, order, depth_mode, presenting);
         it = t.content_slots.find(Impl::ContentKey{ cam, order });
     }
     if (it == t.content_slots.end() || !it->second.ready) {
@@ -2477,33 +2580,33 @@ void VsgRenderer::renderContentSlot(vine::graphics::RenderTarget*               
     const int surf_h = (target == nullptr) ? static_cast<int>(impl->window->extent2D().height) : t.height;
 
     // Keep the slot's vsg camera viewport in step with its role each frame:
-    // on-top (HUD) slots carry their sub-viewport (zero size = full target);
-    // main (scene) slots always fill the whole target — the slot is created
-    // lazily on its first render, so this also covers the first frame and any
-    // resize that happened before the slot existed.
-    if (content.on_top) {
+    // presenting (full-target) content always fills the whole target; other
+    // content carries its pass sub-viewport when set (zero size = full
+    // target). The slot is created lazily on its first render, so this also
+    // covers the first frame and any resize that happened before the slot
+    // existed.
+    if (content.presenting) {
+        content.vsg_camera->viewportState = ::vsg::ViewportState::create(VkExtent2D{ static_cast<uint32_t>(surf_w), static_cast<uint32_t>(surf_h) });
+    }
+    else {
         if (vp_w <= 0 || vp_h <= 0) {
             vp_w = surf_w;
             vp_h = surf_h;
         }
         content.vsg_camera->viewportState = ::vsg::ViewportState::create(vp_x, vp_y, static_cast<uint32_t>(vp_w), static_cast<uint32_t>(vp_h));
     }
-    else {
-        content.vsg_camera->viewportState = ::vsg::ViewportState::create(VkExtent2D{ static_cast<uint32_t>(surf_w), static_cast<uint32_t>(surf_h) });
-    }
 
     persistent->cameraBridge.apply(cam, content.vsg_camera);
 
-    // Content lights: replace the slot's default light each frame; on-top
-    // (HUD) slots keep their seeded ambient light.
-    if (!content.on_top) {
-        setGroupLights(content.light_group.get(), lights);
-    }
+    // Lights come from the pass's content scene each frame (the scene is the
+    // source of truth); an empty list keeps the slot's seeded default light.
+    // The light source is never chosen by the slot's depth style.
+    setGroupLights(content.light_group.get(), lights);
 
     // The command stream is the source of truth: reconcile the retained slot
     // root against it (in-place for moves/material edits). The legacy own-
-    // window debug path skips syncing the window's main slot.
-    if (!(target == nullptr && forceOwnWindow() && !content.on_top)) {
+    // window debug path skips syncing the window's presenting slot.
+    if (!(target == nullptr && forceOwnWindow() && content.presenting)) {
         std::vector<::vsg::ref_ptr<::vsg::Node>> created;
         content.bridge.syncRenderCommands(commands, content.root.get(), &created);
         if (!created.empty()) {
@@ -2522,9 +2625,10 @@ void VsgRenderer::renderContentSlot(vine::graphics::RenderTarget*               
         // "no geometry collected" from "geometry not rasterised" and to
         // confirm pipeline sharing (variants << commands when states repeat).
         if (std::getenv("VINE_VSG_DIAG_MRT") != nullptr) {
-            std::fprintf(stderr, "[MRT-DIAG] target=%s on_top=%d order=%d commands=%zu created=%zu rootChildren=%zu variants=%zu\n",
-                         target == nullptr ? "window" : "offscreen",
-                         on_top ? 1 : 0,
+            std::fprintf(stderr, "[MRT-DIAG] target=%s depth_mode=%d order=%d commands=%zu created=%zu rootChildren=%zu variants=%zu\n",
+                         target == nullptr ? "window"
+                                           : (target->name().empty() ? "offscreen" : target->name().stdstr().c_str()),
+                         static_cast<int>(depth_mode),
                          order,
                          commands.size(),
                          created.size(),
@@ -2776,6 +2880,16 @@ void VsgRenderer::clear(const vine::Color& backgroundColor, bool clearDepth)
     }
 }
 
+void VsgRenderer::setDepthMode(vine::graphics::DepthMode mode)
+{
+    // The content's depth handling is explicit (Disabled / TestOnly /
+    // TestAndWrite). Consumed by the next render() to pick the slot's depth
+    // shader set. Independent of clear() (a pass can test-only against depth
+    // an earlier pass of the same target wrote, without clearing) and of
+    // lighting.
+    impl->pending_depth_mode = mode;
+}
+
 void VsgRenderer::swapBuffers()
 {
     // One record+submit+present per frame, after all passes were synced.
@@ -2804,11 +2918,11 @@ void VsgRenderer::resize(int width, int height)
     if (impl->window != nullptr) {
         impl->window->resize();
     }
-    // Every window main (full-target) content slot's camera viewport follows
-    // the live window size so the render graph's render area tracks a resize
-    // (renderContentSlot also re-derives each slot's viewport every frame;
-    // refreshing here keeps slots correct even before their next render).
-    // On-top (HUD) slots keep their own sub-viewport, re-set per frame by
+    // Every window presenting (full-target) content slot's camera viewport
+    // follows the live window size so the render graph's render area tracks a
+    // resize (renderContentSlot also re-derives each slot's viewport every
+    // frame; refreshing here keeps slots correct even before their next
+    // render). Other slots carry their own sub-viewport, re-set per frame by
     // their pass.
     auto& window_target = impl->targets[nullptr];
     if (impl->window == nullptr) {
@@ -2817,7 +2931,7 @@ void VsgRenderer::resize(int width, int height)
     const auto extent = impl->window->extent2D();
     for (auto& kv : window_target.content_slots) {
         auto& slot = kv.second;
-        if (slot.ready && slot.vsg_camera != nullptr && !slot.on_top) {
+        if (slot.ready && slot.vsg_camera != nullptr && slot.presenting) {
             slot.vsg_camera->viewportState = ::vsg::ViewportState::create(extent);
         }
     }

@@ -172,6 +172,18 @@ class V_GRAPHICS_API Pipeline : public RefCounted<Pipeline> {
      */
     raw_ptr<RenderTarget> offscreenTarget() const;
 
+    /** @brief Gets the off-screen composite target of a composite pipeline.
+     *
+     * A Deferred pipeline that also receives forward-only (transparent /
+     * overlay) content bakes an off-screen composite target holding the lit
+     * opaque image plus the opaque depth the forward content occludes
+     * against; the window pass then presents that composite. Null when the
+     * pipeline has no transparent content.
+     *
+     * @return The composite target, or null when none was created.
+     */
+    raw_ptr<RenderTarget> compositeTarget() const;
+
     /** @brief Gets the configured axis-gizmo overlay, if any.
      *
      * @return The gizmo HUD pass, or null when no gizmo was configured.
@@ -206,6 +218,10 @@ class V_GRAPHICS_API Pipeline : public RefCounted<Pipeline> {
     /** @brief Sets the off-screen G-buffer (Deferred presets). */
     void setOffscreenTarget(intrusive_ptr<RenderTarget> target);
 
+    /** @brief Sets the off-screen composite target (Deferred + transparent
+     * content). */
+    void setCompositeTarget(intrusive_ptr<RenderTarget> target);
+
     /** @brief Sets the axis-gizmo overlay (optional). */
     void setGizmo(intrusive_ptr<AxisGizmo> gizmo);
 
@@ -215,6 +231,7 @@ class V_GRAPHICS_API Pipeline : public RefCounted<Pipeline> {
     std::vector<intrusive_ptr<RenderPass>> passes_;
     intrusive_ptr<RenderPass> window_pass_;
     intrusive_ptr<RenderTarget> offscreen_target_;
+    intrusive_ptr<RenderTarget> composite_target_;
     intrusive_ptr<AxisGizmo> gizmo_;
     intrusive_ptr<FpsOverlay> fps_overlay_;
 };

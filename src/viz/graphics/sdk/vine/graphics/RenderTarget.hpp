@@ -2,6 +2,7 @@
 #include "graphics_global.hpp"
 
 #include <vine/intrusive_ptr.hpp>
+#include <vine/raw_ptr.hpp>
 #include <vine/Object.hpp>
 #include <vine/RefCounted.hpp>
 #include <cstdint>
@@ -36,6 +37,22 @@ class V_GRAPHICS_API RenderTarget : public Object, public RefCounted<RenderTarge
     RenderTarget();
 
   public:
+    /** @brief Returns the render target name.
+     *
+     * An optional identity label used for diagnostics and logs (a pipeline
+     * builder names the targets it creates, e.g. the Deferred G-buffer).
+     *
+     * @return The target name (empty when unset).
+     */
+    const String& name() const noexcept;
+
+    /** @brief Sets the render target name.
+     *
+     * @param name The new name (empty clears it).
+     */
+    void setName(const String& name);
+
+  public:
     /** @brief Appends a color attachment (attachment index = current count).
      *
      * A render target may carry several color attachments (MRT / G-buffer):
@@ -53,6 +70,47 @@ class V_GRAPHICS_API RenderTarget : public Object, public RefCounted<RenderTarge
      * @param format Depth buffer format.
      */
     void attachDepth(DepthFormat format);
+
+    /** @brief Returns whether this target's depth may be promoted to a
+     * sampleable texture after the pass renders.
+     *
+     * @return True when the depth is sampleable (the default).
+     */
+    bool depthPromotion() const;
+
+    /** @brief Sets whether the backend may end this target's depth in a
+     * sampleable (SHADER_READ_ONLY) layout.
+     *
+     * False keeps the depth as a plain depth attachment so ANOTHER target can
+     * borrow it for a later depth test in the same frame (see shareDepth);
+     * such a depth must not be sampled. The deferred G-buffer usually needs
+     * its depth only for that later occlusion, so the pipeline builder turns
+     * promotion off when a composite shares it.
+     *
+     * @param promote True to keep the depth sampleable (the default).
+     */
+    void setDepthPromotion(bool promote);
+
+    /** @brief Returns the target whose depth this target borrows.
+     *
+     * @return The depth source, or null when this target owns its depth.
+     */
+    raw_ptr<RenderTarget> depthSource() const;
+
+    /** @brief Makes this target reuse @p source's depth attachment instead of
+     * allocating its own.
+     *
+     * Lets two off-screen targets share one depth buffer within a frame: the
+     * source renders first (its depth is preserved via a depth-LOAD pass here)
+     * and this target draws against the same depth (a deferred-lit composite
+     * testing forward content against the G-buffer depth). Constraints: both
+     * targets are off-screen and equally sized, the source renders earlier in
+     * the frame, and the source's depth is not promoted to a sampled texture
+     * (see setDepthPromotion). The reference keeps the source alive.
+     *
+     * @param source The target whose depth is reused.
+     */
+    void shareDepth(intrusive_ptr<RenderTarget> source);
 
     /** @brief Gets the render target width. */
     int width() const;
@@ -132,10 +190,14 @@ class V_GRAPHICS_API RenderTarget : public Object, public RefCounted<RenderTarge
     std::vector<float> readDepthBuffer() const;
 
   private:
+    // Optional identity label for diagnostics and logs (see setName()).
+    String name_;
     // One entry per configured color attachment, in attachment order.
     std::vector<ColorFormat> color_formats_;
     DepthFormat depth_format_ = DepthFormat::D24;
     bool has_depth_ = false;
+    bool depth_promotion_ = true;            // depth ends sampleable (SHADER_READ_ONLY)
+    intrusive_ptr<RenderTarget> depth_source_; // borrowed depth (null = own)
     int width_ = 1;
     int height_ = 1;
 };

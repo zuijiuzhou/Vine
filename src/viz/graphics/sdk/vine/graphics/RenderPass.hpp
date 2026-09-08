@@ -22,6 +22,21 @@ class ShaderProgram;
 using ShaderProgramPtr = intrusive_ptr<ShaderProgram>;
 
 /**
+ * @brief Depth handling of a pass's content relative to the target's depth.
+ *
+ * Independent of clearing (clearEnabled) and of lighting: whether the content
+ * is lit comes from the lights of the scene it renders. Depth test and depth
+ * write are separated so translucent content can occlude against existing
+ * depth (test on) without writing depth of its own (write off) — the standard
+ * rule for alpha-blended geometry.
+ */
+enum class DepthMode {
+    Disabled,     ///< No depth test / write (drawn on top — HUD overlays).
+    TestOnly,     ///< Depth test on, depth write off (translucent content).
+    TestAndWrite, ///< Depth test + write on (opaque scene content).
+};
+
+/**
  * @brief A render pass describing one complete rendering stage.
  *
  * Binds a camera, render target, and clear state. Executing a pass
@@ -96,6 +111,43 @@ class V_GRAPHICS_API RenderPass : public Object, public RefCounted<RenderPass> {
      * @param enabled True to clear the buffers (the default).
      */
     void setClearEnabled(bool enabled);
+
+    /** @brief Returns how this pass's content handles depth.
+     *
+     * @return The depth mode (DepthMode::TestAndWrite by default).
+     */
+    DepthMode depthMode() const;
+
+    /** @brief Sets how this pass's content handles depth.
+     *
+     * TestAndWrite (the default) draws the content as depth-occluded opaque
+     * scene content; TestOnly tests against the target's current depth but
+     * does not write it (translucent content composited over already-written
+     * depth); Disabled draws on top of whatever is already in the target with
+     * no depth testing (HUD / overlay style). Independent of clearing and of
+     * lighting. A translucent pass drawn into a target whose depth an earlier
+     * pass wrote uses TestOnly and disables only the clear.
+     *
+     * @param mode The depth mode.
+     */
+    void setDepthMode(DepthMode mode);
+
+    /** @brief Returns whether this pass's content is occluded by (tests
+     * against) the target's current depth.
+     *
+     * Convenience for depthMode() != DepthMode::Disabled.
+     *
+     * @return True when depth testing is on.
+     */
+    bool occlusionEnabled() const;
+
+    /** @brief Convenience: TestAndWrite when enabled, Disabled when not.
+     *
+     * Use setDepthMode for the finer-grained translucent (TestOnly) case.
+     *
+     * @param enabled True for depth-tested scene content.
+     */
+    void setOcclusionEnabled(bool enabled);
 
     /** @brief Returns whether this pass is drawn by the engine this frame. */
     bool enabled() const;
@@ -246,6 +298,7 @@ class V_GRAPHICS_API RenderPass : public Object, public RefCounted<RenderPass> {
     Color clear_color_{ 51, 51, 51, 255 };
     bool clear_depth_ = true;
     bool clear_enabled_ = true;
+    DepthMode depth_mode_ = DepthMode::TestAndWrite;
     bool enabled_ = true;
     bool has_viewport_ = false;
     Viewport viewport_;

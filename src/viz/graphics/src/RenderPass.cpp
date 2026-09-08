@@ -75,6 +75,26 @@ void RenderPass::setClearEnabled(bool enabled)
     clear_enabled_ = enabled;
 }
 
+DepthMode RenderPass::depthMode() const
+{
+    return depth_mode_;
+}
+
+void RenderPass::setDepthMode(DepthMode mode)
+{
+    depth_mode_ = mode;
+}
+
+bool RenderPass::occlusionEnabled() const
+{
+    return depth_mode_ != DepthMode::Disabled;
+}
+
+void RenderPass::setOcclusionEnabled(bool enabled)
+{
+    depth_mode_ = enabled ? DepthMode::TestAndWrite : DepthMode::Disabled;
+}
+
 bool RenderPass::enabled() const
 {
     return enabled_;
@@ -168,6 +188,11 @@ void RenderPass::execute(raw_ptr<Scene> scene, raw_ptr<RenderBackend> backend)
     if (clear_enabled_) {
         backend->clear(clear_color_, clear_depth_);
     }
+    // Depth handling is explicit (DepthMode), never inferred from the clear
+    // flag: depth test/write are independent of whether the pass clears and of
+    // how it is lit (the content scene decides the lights). Forwarded so the
+    // backend's render() picks the right content-slot depth state.
+    backend->setDepthMode(depth_mode_);
     std::vector<RenderCommand> commands = scene->collectRenderCommands(camera_);
     // Pass-level global program override: replace every command's effective
     // (per-geometry / StateNode) program so the whole content renders with one

@@ -91,8 +91,10 @@ FpsOverlay::FpsOverlay()
     camera_->setProjectionMatrixAsPerspective(45.0, 1.0, 0.05, 20.0);
     setCamera(camera_.get());
 
-    // A HUD pass draws over the main content each frame: never clear.
+    // A HUD pass draws over the main content each frame: never clear and no
+    // depth occlusion (always on top).
     setClearEnabled(false);
+    setOcclusionEnabled(false);
     rebuild();
 }
 

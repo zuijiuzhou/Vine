@@ -8,7 +8,9 @@
 #include <QTimer>
 
 #include <vine/Colorf.hpp>
+#include <vine/graphics/AxisGizmo.hpp>
 #include <vine/graphics/Camera.hpp>
+#include <vine/graphics/FpsOverlay.hpp>
 #include <vine/graphics/Geometry.hpp>
 #include <vine/graphics/Group.hpp>
 #include <vine/graphics/MatrixTransform.hpp>
@@ -155,6 +157,12 @@ vine::intrusive_ptr<vine::graphics::MatrixTransform> addBox(vine::graphics::Grou
 
     auto material = vine::make_intrusive<vine::graphics::Material>();
     material->setDiffuse(diffuse);
+    // Matte plastic: a low grey specular keeps lit surfaces looking solid.
+    // The Material default specular is pure white, which makes the deferred
+    // specular G-buffer attachment read all-white and paints broad white
+    // highlights that read as glass / see-through on opaque boxes.
+    material->setSpecular(vine::Colorf(0.12f, 0.12f, 0.12f, 1.0f));
+    material->setShininess(64.0f);
     geometry->setMaterial(material);
 
     // Place the box with a MatrixTransform: the transform node carries the
@@ -268,24 +276,26 @@ void addDemoCubes(vine::graphics::Scene* scene)
     using vine::math::Vec3f;
 
     // Single root: one identity Group owns every demo subtree; the scene
-    // renders exactly this root.
+    // renders exactly this root. The world is Z-up (robotics convention), so
+    // the ground is a slab in the XY plane (top at z = 0) and boxes stand on
+    // +Z.
     auto root = make_intrusive<vine::graphics::Group>();
     scene->setRoot(root);
 
     // Ground (wide, slightly below origin) + one plain lit box: the default
     // material / Phong path.
     addBox(root.get(), vine::Colorf(0.45f, 0.47f, 0.52f, 1.0f), u8"ground",
-           Vec3d(0.0, -0.05, 0.0), Vec3d(3.0, 0.05, 3.0));
+           Vec3d(0.0, 0.0, -0.05), Vec3d(3.0, 3.0, 0.05));
     addBox(root.get(), vine::Colorf(0.30f, 0.62f, 0.36f, 1.0f), u8"lit_box",
-           Vec3d(0.0, 0.4, 0.0), Vec3d(0.5, 0.4, 0.5));
+           Vec3d(0.0, 0.0, 0.4), Vec3d(0.5, 0.5, 0.4));
 
     // --- StateNode{ PolygonMode::Line }: wireframe box ----------------------
+    // Each box is attached under ITS state node only (single parent).
     {
         auto state = make_intrusive<StateNode>();
         state->setPolygonMode(vine::graphics::PolygonMode::Line);
-        auto box = addBox(root.get(), vine::Colorf(1.0f, 0.68f, 0.12f, 1.0f), u8"wire_box",
-                          Vec3d(-2.3, 0.35, 0.6), Vec3d(0.35, 0.35, 0.35));
-        state->addChild(box);
+        addBox(state.get(), vine::Colorf(1.0f, 0.68f, 0.12f, 1.0f), u8"wire_box",
+               Vec3d(-2.3, 0.6, 0.35), Vec3d(0.35, 0.35, 0.35));
         root->addChild(state);
     }
 
@@ -293,9 +303,8 @@ void addDemoCubes(vine::graphics::Scene* scene)
     {
         auto state = make_intrusive<StateNode>();
         state->setCullMode(vine::graphics::CullMode::Back);
-        auto box = addBox(root.get(), vine::Colorf(0.20f, 0.75f, 0.85f, 1.0f), u8"culled_box",
-                          Vec3d(-1.6, 0.4, -0.8), Vec3d(0.4, 0.4, 0.4));
-        state->addChild(box);
+        addBox(state.get(), vine::Colorf(0.20f, 0.75f, 0.85f, 1.0f), u8"culled_box",
+               Vec3d(-1.6, -0.8, 0.4), Vec3d(0.4, 0.4, 0.4));
         root->addChild(state);
     }
 
@@ -318,7 +327,7 @@ void addDemoCubes(vine::graphics::Scene* scene)
         program->addStage(fs);
 
         auto box = addBox(root.get(), vine::Colorf(1.0f, 1.0f, 1.0f, 1.0f), u8"custom_program",
-                          Vec3d(0.0, 0.85, 0.0), Vec3d(0.42, 0.45, 0.42));
+                          Vec3d(0.0, 0.0, 0.85), Vec3d(0.42, 0.42, 0.45));
         auto* geometry = dynamic_cast<Geometry*>(box->children().front().get());
         if (geometry != nullptr) {
             geometry->setProgram(program);
@@ -348,12 +357,14 @@ void addDemoCubes(vine::graphics::Scene* scene)
         auto cloud = make_intrusive<Geometry>();
         cloud->setName(u8"point_cloud");
         vine::geometry::Vec3fArray points;
+        // Four stacked rings in the Z-up world: horizontal rings at rising
+        // heights, centred on the footprint (-2.3, -1.2).
         for (int ring = 0; ring < 4; ++ring) {
             const float r = 0.35f + 0.12f * static_cast<float>(ring);
-            const float y = -0.25f + 0.17f * static_cast<float>(ring);
+            const float z_h = 0.75f + (-0.25f + 0.17f * static_cast<float>(ring));
             for (int k = 0; k < 36; ++k) {
                 const float a = 6.2831853f * static_cast<float>(k) / 36.0f;
-                points.emplace_back(r * std::cos(a), y, r * std::sin(a));
+                points.emplace_back(-2.3f + r * std::cos(a), -1.2f + r * std::sin(a), z_h);
             }
         }
         cloud->setPositions(points);
@@ -361,11 +372,7 @@ void addDemoCubes(vine::graphics::Scene* scene)
 
         auto state = make_intrusive<StateNode>();
         state->setTopology(vine::graphics::Topology::Points);
-        auto mt = make_intrusive<MatrixTransform>();
-        mt->setName(u8"point_cloud_node");
-        mt->setMatrix(vine::math::translate(Vec3d(-2.3, 0.75, -1.2)));
-        mt->addChild(cloud);
-        state->addChild(mt);
+        state->addChild(cloud);
         root->addChild(state);
     }
 
@@ -381,13 +388,13 @@ void addDemoCubes(vine::graphics::Scene* scene)
         stars->setName(u8"star_cloud");
         vine::geometry::Vec3fArray points;
         // Three stacked rings (a "some point geometry" showcase) with radius
-        // and height growing per ring.
+        // and height growing per ring, centred on footprint (2.05, 0.1).
         for (int ring = 0; ring < 3; ++ring) {
             const float r = 0.30f + 0.16f * static_cast<float>(ring);
-            const float y = -0.55f + 0.55f * static_cast<float>(ring);
+            const float z_h = 0.95f + (-0.55f + 0.55f * static_cast<float>(ring));
             for (int k = 0; k < 12; ++k) {
                 const float a = 6.2831853f * static_cast<float>(k) / 12.0f + static_cast<float>(ring);
-                points.emplace_back(r * std::cos(a), y, r * std::sin(a));
+                points.emplace_back(2.05f + r * std::cos(a), 0.1f + r * std::sin(a), z_h);
             }
         }
         stars->setPositions(points);
@@ -395,23 +402,19 @@ void addDemoCubes(vine::graphics::Scene* scene)
 
         auto state = make_intrusive<StateNode>();
         state->setTopology(vine::graphics::Topology::Points);
-        auto mt = make_intrusive<MatrixTransform>();
-        mt->setName(u8"star_cloud_node");
-        mt->setMatrix(vine::math::translate(Vec3d(2.05, 0.95, 0.1)));
-        mt->addChild(stars);
-        state->addChild(mt);
+        state->addChild(stars);
         root->addChild(state);
     }
 
     // --- Nested MatrixTransform: world-matrix chain --------------------------
     {
-        auto inner = addBox(root.get(), vine::Colorf(0.95f, 0.5f, 0.1f, 1.0f), u8"nested_inner",
-                            Vec3d(0.0, 0.0, 0.0), Vec3d(0.28, 0.28, 0.28));
-        inner->setMatrix(vine::math::translate(Vec3d(0.0, 0.32, 0.0)));
         auto outer = make_intrusive<MatrixTransform>();
         outer->setName(u8"nested_outer");
-        outer->setMatrix(vine::math::translate(Vec3d(1.5, 0.0, 0.9)));
-        outer->addChild(inner);
+        outer->setMatrix(vine::math::translate(Vec3d(1.5, 0.9, 0.0)));
+        // Inner box built directly under the outer transform (single parent);
+        // its own matrix raises it along +Z.
+        addBox(outer.get(), vine::Colorf(0.95f, 0.5f, 0.1f, 1.0f), u8"nested_inner",
+               Vec3d(0.0, 0.0, 0.32), Vec3d(0.28, 0.28, 0.28));
         root->addChild(outer);
     }
 
@@ -424,13 +427,12 @@ void addDemoCubes(vine::graphics::Scene* scene)
         blend.dst = vine::graphics::BlendFactor::OneMinusSrcAlpha;
         state->setBlend(blend);
 
-        auto box = addBox(root.get(), vine::Colorf(1.0f, 0.25f, 0.25f, 1.0f), u8"translucent",
-                          Vec3d(0.9, 0.7, -1.1), Vec3d(0.55, 0.55, 0.55));
+        auto box = addBox(state.get(), vine::Colorf(1.0f, 0.25f, 0.25f, 1.0f), u8"translucent",
+                          Vec3d(0.9, -1.1, 0.7), Vec3d(0.55, 0.55, 0.55));
         auto* geometry = dynamic_cast<Geometry*>(box->children().front().get());
         if (geometry != nullptr) {
             geometry->setOpacity(0.5f);
         }
-        state->addChild(box);
         root->addChild(state);
     }
 }
@@ -441,9 +443,9 @@ void addDemoCubes(vine::graphics::Scene* scene)
  * @brief Lights the demo scene (scene-level v4a rig) and frames it.
  *
  * Runs unconditionally so the default demo (ground + box stack) is lit by an
- * ambient fill plus a sun-like directional light, viewed from an elevated 3/4
- * angle. The off-screen/PiP validation renders the same engine scene and
- * camera, so the PiP matches the main view.
+ * ambient fill plus a camera-side key sun and a soft back fill, viewed from
+ * an elevated 3/4 angle. The off-screen/PiP validation renders the same
+ * engine scene and camera, so the PiP matches the main view.
  *
  * Shadow mapping is deferred until the custom-shader / multi-pass slice is
  * mature: the demo sun never sets castShadow() yet, so no half-built shadow
@@ -459,39 +461,51 @@ void addDemoLighting(gui::RenderControl* render_control)
     }
     auto ambient = vine::graphics::Light::createAmbient();
     ambient->setName(u8"scene_ambient");
-    ambient->setIntensity(0.25f);
+    ambient->setIntensity(0.35f);
     scene->addLight(ambient);
 
-    // A sun-like directional light from behind-left-top (warm side-light).
-    auto sun = vine::graphics::Light::createDirectional(vine::math::Vec3d(0.35, -0.75, 0.35));
+    // Key sun from the camera side (front-right-top of the default elevated
+    // 3/4 view): it lights the box faces the camera actually sees. The world
+    // is Z-up (robotics convention), so "above" is +Z and the sun travels
+    // downward (negative z). Lights travel toward the given direction and
+    // both the deferred and forward shaders shade with the opposite ray, so
+    // the negative x / y / z here puts the source on the camera's side.
+    auto sun = vine::graphics::Light::createDirectional(vine::math::Vec3d(-0.35, -0.35, -0.75));
     sun->setName(u8"scene_sun");
     sun->setIntensity(1.0f);
     scene->addLight(sun);
 
+    // Soft cool fill from the opposite (back) side so orbiting to the far
+    // side does not drop those faces to ambient-only either.
+    auto fill = vine::graphics::Light::createDirectional(vine::math::Vec3d(0.5, 0.5, -0.4));
+    fill->setName(u8"scene_fill");
+    fill->setIntensity(0.5f);
+    scene->addLight(fill);
+
     // Dev switch: VINE_VSG_EXTRA_SUNS adds two more directional lights so the
     // scene exercises the deferred light pass' full three-light capacity.
     if (std::getenv("VINE_VSG_EXTRA_SUNS") != nullptr) {
-        auto sun2 = vine::graphics::Light::createDirectional(vine::math::Vec3d(-0.9, -0.5, -0.3));
+        auto sun2 = vine::graphics::Light::createDirectional(vine::math::Vec3d(-0.9, -0.3, -0.5));
         sun2->setName(u8"scene_sun2");
         sun2->setColor(vine::Colorf(0.6f, 0.8f, 1.0f, 1.0f));
         sun2->setIntensity(0.7f);
         scene->addLight(sun2);
 
-        auto sun3 = vine::graphics::Light::createDirectional(vine::math::Vec3d(-0.2, -0.3, 0.95));
+        auto sun3 = vine::graphics::Light::createDirectional(vine::math::Vec3d(-0.2, 0.95, -0.3));
         sun3->setName(u8"scene_sun3");
         sun3->setColor(vine::Colorf(1.0f, 0.55f, 0.35f, 1.0f));
         sun3->setIntensity(0.5f);
         scene->addLight(sun3);
     }
 
-    // Raise the camera to an elevated 3/4 view of the stack. Runs before
-    // RenderControl::init() creates the orbit manipulator, so the manipulator
-    // home syncs to this vantage.
+    // Raise the camera to an elevated 3/4 view of the stack (Z-up: the up
+    // vector is +Z). Runs before RenderControl::init() creates the orbit
+    // manipulator, so the manipulator home syncs to this vantage.
     auto* camera = render_control->view()->camera();
     if (camera != nullptr) {
-        camera->setViewMatrixAsLookAt(vine::math::Vec3d(6.5, 5.0, 6.5), // eye: front-right, elevated
-                                      vine::math::Vec3d(0.0, 0.6, 0.0), // target: mid-stack
-                                      vine::math::Vec3d(0.0, 1.0, 0.0));
+        camera->setViewMatrixAsLookAt(vine::math::Vec3d(6.5, 6.5, 5.0), // eye: front-right, elevated
+                                      vine::math::Vec3d(0.0, 0.0, 0.6), // target: mid-stack
+                                      vine::math::Vec3d(0.0, 0.0, 1.0)); // up: +Z
     }
 }
 
@@ -668,13 +682,14 @@ void addSlotOverlayDemo(gui::RenderControl* render_control)
         };
         // Sparse, vivid boxes offset from the main cubes so the overlay is
         // clearly visible on top while tracking the main camera.
-        add_overlay_box(vine::Colorf(1.0f, 0.30f, 0.10f, 1.0f), vine::math::Vec3d(-2.9, 0.8, -2.4), 0.35);
-        add_overlay_box(vine::Colorf(1.0f, 0.95f, 0.10f, 1.0f), vine::math::Vec3d(2.6, 1.2, 1.9), 0.28);
+        add_overlay_box(vine::Colorf(1.0f, 0.30f, 0.10f, 1.0f), vine::math::Vec3d(-2.9, -2.4, 0.8), 0.35);
+        add_overlay_box(vine::Colorf(1.0f, 0.95f, 0.10f, 1.0f), vine::math::Vec3d(2.6, 1.9, 1.2), 0.28);
 
         auto pass = vine::make_intrusive<vine::graphics::RenderPass>();
         pass->setName(u8"slot_overlay");
         pass->setCamera(render_control->view()->camera());
-        pass->setClearEnabled(false); // overlay: no clear -> on-top (depth-off)
+        pass->setClearEnabled(false); // overlay: no clear + no depth -> on-top
+        pass->setOcclusionEnabled(false);
         engine->addPass(pass, overlay, 20); // its own (master camera, order 20) slot
     });
 }
@@ -739,15 +754,16 @@ void addOffscreenMultiSlotDemo(gui::RenderControl* render_control)
             }
         }
     };
-    add_overlay_box(vine::Colorf(1.0f, 0.30f, 0.10f, 1.0f), vine::math::Vec3d(-2.4, 0.9, -1.8), vine::math::Vec3d(0.55, 0.55, 0.55));
-    add_overlay_box(vine::Colorf(0.30f, 0.90f, 0.30f, 1.0f), vine::math::Vec3d(2.2, 1.3, 1.6), vine::math::Vec3d(0.45, 0.45, 0.45));
+    add_overlay_box(vine::Colorf(1.0f, 0.30f, 0.10f, 1.0f), vine::math::Vec3d(-2.4, -1.8, 0.9), vine::math::Vec3d(0.55, 0.55, 0.55));
+    add_overlay_box(vine::Colorf(0.30f, 0.90f, 0.30f, 1.0f), vine::math::Vec3d(2.2, 1.6, 1.3), vine::math::Vec3d(0.45, 0.45, 0.45));
 
     auto pass_top = vine::make_intrusive<vine::graphics::RenderPass>();
     pass_top->setName(u8"multislot_top");
     pass_top->setCamera(render_control->view()->camera());
     pass_top->setRenderTarget(target);
     pass_top->setOutputName(u8"MultiColor"); // publishes the same baked target
-    pass_top->setClearEnabled(false); // no clear -> on-top (depth-off) slot
+    pass_top->setClearEnabled(false); // no clear + no depth -> on-top slot
+    pass_top->setOcclusionEnabled(false);
     engine->addPass(pass_top, overlay, -1); // slot = (master, -1)
 
     // PiP screen pass sampling the baked texture into the window.
@@ -894,28 +910,23 @@ vine::intrusive_ptr<vine::graphics::RenderTarget> makeGbufferTarget()
 }
 
 /**
- * @brief Adds a forward overlay over the Deferred main window (stars +
- * translucent box).
+ * @brief Builds the forward-only overlay scene of the DEFAULT (Deferred) demo.
  *
  * The Deferred G-buffer pass only bakes opaque content through one geometry
  * program, so forward-only elements — the rainbow five-pointed star point
- * cloud and the alpha-blended translucent box — are drawn by a separate
- * forward pass STACKED over the deferred-lit window on the master camera
- * (clear disabled -> on-top, depth-off style). They sit in open airspace over
- * the opaque backdrop so the depth-less overdraw does not collide with the
- * deferred geometry. Gated to the Deferred default demo; the Forward preset
- * already renders them inside its own scene (addDemoCubes).
+ * cloud and the alpha-blended translucent box — cannot live in the opaque
+ * scene. This scene is handed to the pipeline builder as transparent content
+ * (RenderPipelineBuilder::setTransparentContent) and is composited depth-on
+ * over the deferred-lit result: the translucent box is positioned overlapping
+ * the opaque stack, so it is genuinely occluded / blended against the opaque
+ * geometry instead of floating on top. Gated to the Deferred default demo;
+ * the Forward preset already renders the same elements inside its own scene
+ * (addDemoCubes).
  *
- * @param render_control Render view whose engine receives the overlay pass.
+ * @return The overlay scene (owned by the caller / the engine).
  */
-void addForwardOverlayDemo(gui::RenderControl* render_control)
+vine::intrusive_ptr<vine::graphics::Scene> makeForwardOverlayScene()
 {
-    auto* engine = render_control->engine();
-    auto* camera = render_control->view() != nullptr ? render_control->view()->camera() : nullptr;
-    if (engine == nullptr || camera == nullptr) {
-        return;
-    }
-
     using vine::intrusive_ptr;
     using vine::graphics::BlendState;
     using vine::graphics::Geometry;
@@ -928,7 +939,9 @@ void addForwardOverlayDemo(gui::RenderControl* render_control)
 
     auto overlay_root = make_intrusive<Group>();
 
-    // Translucent box (forward alpha blend over the opaque deferred backdrop).
+    // Translucent box: forward alpha blend, placed overlapping the opaque
+    // stack so the depth-composited result shows real occlusion. Z-up world:
+    // the box stands above the ground plane footprint (1.0, -0.9).
     {
         auto state = make_intrusive<StateNode>();
         BlendState blend;
@@ -937,19 +950,15 @@ void addForwardOverlayDemo(gui::RenderControl* render_control)
         blend.dst = vine::graphics::BlendFactor::OneMinusSrcAlpha;
         state->setBlend(blend);
 
-        auto box = addBox(overlay_root.get(), vine::Colorf(1.0f, 0.25f, 0.25f, 1.0f), u8"translucent_overlay",
-                          Vec3d(0.0, 0.65, 1.9), Vec3d(0.55, 0.55, 0.55));
-        // On-top (depth-off) slots are lit by a pure ambient light: a WHITE
-        // ambient makes ambientColor == diffuse so the box shows its colour,
-        // and per-geometry opacity (0.5) drives the forward alpha blend.
+        // addBox attaches the node under the given group: attach under the
+        // blend StateNode only, so the box is NOT also drawn unblended as a
+        // direct child of the overlay root.
+        auto box = addBox(state.get(), vine::Colorf(1.0f, 0.30f, 0.25f, 1.0f), u8"translucent_overlay",
+                          Vec3d(1.0, -0.9, 1.05), Vec3d(0.55, 0.55, 0.55));
         if (auto* geometry = dynamic_cast<Geometry*>(box->children().front().get())) {
-            if (auto* material = geometry->material(); material != nullptr) {
-                material->setAmbient(vine::Colorf(1.0f, 1.0f, 1.0f, 1.0f));
-                material->setSpecular(vine::Colorf(0.0f, 0.0f, 0.0f, 1.0f));
-            }
+            // Per-geometry opacity drives the forward alpha blend.
             geometry->setOpacity(0.5f);
         }
-        state->addChild(box);
         overlay_root->addChild(state);
     }
 
@@ -959,14 +968,15 @@ void addForwardOverlayDemo(gui::RenderControl* render_control)
         auto stars   = make_intrusive<Geometry>();
         stars->setName(u8"star_cloud_overlay");
         vine::geometry::Vec3fArray points;
-        // Three stacked rings (radius and height growing per ring), identical
-        // layout to the forward showcase's star cloud.
+        // Three stacked rings (radius and height growing per ring) in the
+        // Z-up world: the rings are horizontal (XY) at rising heights above
+        // the opaque stack's right side (clear airspace).
         for (int ring = 0; ring < 3; ++ring) {
             const float r = 0.30f + 0.16f * static_cast<float>(ring);
-            const float y = -0.55f + 0.55f * static_cast<float>(ring);
+            const float h = 1.35f + (-0.55f + 0.55f * static_cast<float>(ring));
             for (int k = 0; k < 12; ++k) {
                 const float a = 6.2831853f * static_cast<float>(k) / 12.0f + static_cast<float>(ring);
-                points.emplace_back(r * std::cos(a), y, r * std::sin(a));
+                points.emplace_back(2.0f + r * std::cos(a), 0.1f + r * std::sin(a), h);
             }
         }
         stars->setPositions(points);
@@ -974,23 +984,32 @@ void addForwardOverlayDemo(gui::RenderControl* render_control)
 
         auto state = make_intrusive<StateNode>();
         state->setTopology(Topology::Points);
-        auto mt = make_intrusive<MatrixTransform>();
-        mt->setName(u8"star_cloud_overlay_node");
-        // Elevated clear of the opaque stack's right side, so the depth-less
-        // overlay never collides with deferred geometry.
-        mt->setMatrix(vine::math::translate(Vec3d(2.0, 1.35, 0.1)));
-        mt->addChild(stars);
-        state->addChild(mt);
+        state->addChild(stars);
         overlay_root->addChild(state);
     }
 
     auto overlay = make_intrusive<Scene>();
     overlay->setRoot(overlay_root);
-    auto pass = make_intrusive<vine::graphics::RenderPass>();
-    pass->setName(u8"forward_overlay");
-    pass->setCamera(camera);
-    pass->setClearEnabled(false); // no clear -> on-top (depth-off) over the lit window
-    engine->addPass(pass, overlay, 40);
+
+    // The overlay is drawn as main content (depth-on, receives content lights)
+    // inside the composite, so give it the same light rig as the opaque scene
+    // so the translucent box shows consistent shading (Z-up directions).
+    auto ambient = vine::graphics::Light::createAmbient();
+    ambient->setName(u8"overlay_ambient");
+    ambient->setIntensity(0.35f);
+    overlay->addLight(ambient);
+    // Same key + fill rig as the opaque scene (see addDemoLighting) so the
+    // translucent box / star cloud shade consistently with the lit result.
+    auto sun = vine::graphics::Light::createDirectional(vine::math::Vec3d(-0.35, -0.35, -0.75));
+    sun->setName(u8"overlay_sun");
+    sun->setIntensity(1.0f);
+    overlay->addLight(sun);
+    auto fill = vine::graphics::Light::createDirectional(vine::math::Vec3d(0.5, 0.5, -0.4));
+    fill->setName(u8"overlay_fill");
+    fill->setIntensity(0.5f);
+    overlay->addLight(fill);
+
+    return overlay;
 }
 
 /**
@@ -1028,24 +1047,23 @@ void addDeferredDemoCubes(vine::graphics::Scene* scene)
     auto root = vine::make_intrusive<vine::graphics::Group>();
     scene->setRoot(root);
 
-    // Ground (like the forward scene) + a central stack and a ring of opaque
-    // coloured boxes at varied heights/positions so the lit result and the
-    // G-buffer previews (albedo / normal / position) have clear content.
+    // Z-up world (robotics convention: X forward, Z up): the ground is a slab
+    // lying in the XY plane (top at z = 0) and every box stands along +Z.
     addBox(root.get(), vine::Colorf(0.45f, 0.47f, 0.52f, 1.0f), u8"ground",
-           Vec3d(0.0, -0.05, 0.0), Vec3d(3.0, 0.05, 3.0));
+           Vec3d(0.0, 0.0, -0.05), Vec3d(3.0, 3.0, 0.05));
     addBox(root.get(), vine::Colorf(0.30f, 0.62f, 0.36f, 1.0f), u8"box_green",
-           Vec3d(0.0, 0.4, 0.0), Vec3d(0.5, 0.4, 0.5));
+           Vec3d(0.0, 0.0, 0.4), Vec3d(0.5, 0.5, 0.4));
     addBox(root.get(), vine::Colorf(0.90f, 0.30f, 0.25f, 1.0f), u8"box_red",
-           Vec3d(1.4, 0.35, 0.5), Vec3d(0.35, 0.35, 0.35));
+           Vec3d(1.4, 0.5, 0.35), Vec3d(0.35, 0.35, 0.35));
     addBox(root.get(), vine::Colorf(0.20f, 0.55f, 0.90f, 1.0f), u8"box_blue",
-           Vec3d(-1.4, 0.35, -0.5), Vec3d(0.35, 0.35, 0.35));
+           Vec3d(-1.4, -0.5, 0.35), Vec3d(0.35, 0.35, 0.35));
     addBox(root.get(), vine::Colorf(0.95f, 0.72f, 0.15f, 1.0f), u8"box_gold",
-           Vec3d(-1.2, 0.3, 1.3), Vec3d(0.3, 0.3, 0.3));
+           Vec3d(-1.2, 1.3, 0.3), Vec3d(0.3, 0.3, 0.3));
     // A tall pillar and a low slab for varied depth/position content.
     addBox(root.get(), vine::Colorf(0.55f, 0.30f, 0.85f, 1.0f), u8"box_purple",
-           Vec3d(1.1, 0.95, -1.1), Vec3d(0.3, 0.95, 0.3));
+           Vec3d(1.1, -1.1, 0.95), Vec3d(0.3, 0.3, 0.95));
     addBox(root.get(), vine::Colorf(0.15f, 0.75f, 0.65f, 1.0f), u8"box_teal",
-           Vec3d(-1.6, 0.2, 0.9), Vec3d(0.5, 0.2, 0.3));
+           Vec3d(-1.6, 0.9, 0.2), Vec3d(0.5, 0.3, 0.2));
 }
 
 /**
@@ -1068,7 +1086,8 @@ void addDeferredDemoCubes(vine::graphics::Scene* scene)
  *
  * @param render_control Render view whose engine receives the passes.
  */
-void addDemoPipeline(gui::RenderControl* render_control)
+void addDemoPipeline(gui::RenderControl* render_control,
+                     vine::intrusive_ptr<vine::graphics::Scene> transparent)
 {
     auto* engine = render_control->engine();
     auto* view   = render_control->view();
@@ -1088,6 +1107,12 @@ void addDemoPipeline(gui::RenderControl* render_control)
     vine::graphics::RenderPipelineBuilder builder(engine);
     builder.setCamera(view->camera());
     builder.setContent(view->scene());
+    // Forward-only overlay content (Deferred default demo): handed to the
+    // builder so it composites the content depth-on over the deferred-lit
+    // result instead of floating on top (see setTransparentContent).
+    if (transparent != nullptr) {
+        builder.setTransparentContent(std::move(transparent));
+    }
     vine::graphics::PipelineOptions options;
     // Axis-gizmo HUD overlay: mirrors the view camera in the bottom-left.
     options.gizmo.source_camera = view->camera();
@@ -1122,7 +1147,23 @@ void addDemoPipeline(gui::RenderControl* render_control)
 
     // One creator-managed layout step keeps the (deferred) G-buffer and the
     // gizmo overlay in step with the window; it owns the pipeline handle.
-    view->addSurfaceLayout([pipeline](int width, int height) { pipeline->resize(width, height); });
+    // The deferred off-screen targets are sized at DEVICE pixels so the light
+    // pass samples them 1:1 with the swapchain (sizing them at the logical
+    // surface size made the whole deferred result a 2x-upscaled soft image).
+    // The gizmo / fps overlays take the LOGICAL size (they apply their own
+    // pixel_ratio internally), so they are re-laid-out at logical afterwards.
+    view->addSurfaceLayout([pipeline, render_control](int width, int height) {
+        const double d = render_control->devicePixelRatio();
+        const int    dw = static_cast<int>(width * d);
+        const int    dh = static_cast<int>(height * d);
+        pipeline->resize(dw, dh);
+        if (auto* g = pipeline->gizmo(); g != nullptr) {
+            g->onSurfaceResized(width, height);
+        }
+        if (auto* f = pipeline->fpsOverlay(); f != nullptr) {
+            f->onSurfaceResized(width, height);
+        }
+    });
 }
 
 AppShellDock buildAppShellDock(gui::MainWindow* wnd)
@@ -1140,9 +1181,16 @@ AppShellDock buildAppShellDock(gui::MainWindow* wnd)
     manager->setCentralWidget(render_control);
     // Default demo = Deferred with an OPAQUE scene; VINE_PIPELINE=forward uses
     // the forward feature-showcase scene (translucent / wireframe / custom
-    // point & star programs, which a G-buffer pass would override).
+    // point & star programs, which a G-buffer pass would override). Under the
+    // Deferred preset the forward-only elements (rainbow star point cloud +
+    // translucent box) live in a separate overlay scene that the pipeline
+    // builder composites depth-on over the deferred result (see
+    // makeForwardOverlayScene / setTransparentContent). The translucent box
+    // overlaps the opaque pillar to demonstrate the depth-correct composite.
+    vine::intrusive_ptr<vine::graphics::Scene> overlay_scene;
     if (demoUsesDeferred()) {
         addDeferredDemoCubes(render_control->view()->scene().get());
+        overlay_scene = makeForwardOverlayScene();
     } else {
         addDemoCubes(render_control->view()->scene().get());
     }
@@ -1163,14 +1211,10 @@ AppShellDock buildAppShellDock(gui::MainWindow* wnd)
     // Main window pipeline: env VINE_PIPELINE (forward | deferred |
     // forward_shadowed | deferred_shadowed) selects a shared preset; the
     // DEFAULT is Deferred (demoUsesDeferred). An axis-gizmo HUD overlay rides
-    // on the built pipeline.
-    addDemoPipeline(render_control);
-    // Default (Deferred) demo: a forward overlay pass stacks the star point
-    // cloud and the translucent box over the deferred-lit window (the
-    // G-buffer geometry pass only bakes opaque content).
-    if (demoUsesDeferred()) {
-        addForwardOverlayDemo(render_control);
-    }
+    // on the built pipeline. Under Deferred the overlay scene is handed to the
+    // builder as transparent content, so the builder composites it depth-on
+    // over the deferred-lit result.
+    addDemoPipeline(render_control, overlay_scene);
     // Dev switch: setting VINE_SHADER_PRESET exercises the FlatShaded preset
     // through the whole engine/backend path (default = StandardPhong).
     if (std::getenv("VINE_SHADER_PRESET") != nullptr) {

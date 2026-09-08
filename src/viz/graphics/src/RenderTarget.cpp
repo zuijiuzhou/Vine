@@ -6,6 +6,16 @@ V_OBJECT_META_IMPL(RenderTarget, vine::Object);
 
 RenderTarget::RenderTarget() = default;
 
+const String& RenderTarget::name() const noexcept
+{
+    return name_;
+}
+
+void RenderTarget::setName(const String& name)
+{
+    name_ = name;
+}
+
 void RenderTarget::attachColor(ColorFormat format)
 {
     color_formats_.push_back(format);
@@ -14,7 +24,27 @@ void RenderTarget::attachColor(ColorFormat format)
 void RenderTarget::attachDepth(DepthFormat format)
 {
     depth_format_ = format;
-    has_depth_ = true;
+    has_depth_    = true;
+}
+
+bool RenderTarget::depthPromotion() const
+{
+    return depth_promotion_;
+}
+
+void RenderTarget::setDepthPromotion(bool promote)
+{
+    depth_promotion_ = promote;
+}
+
+raw_ptr<RenderTarget> RenderTarget::depthSource() const
+{
+    return depth_source_.get();
+}
+
+void RenderTarget::shareDepth(intrusive_ptr<RenderTarget> source)
+{
+    depth_source_ = std::move(source);
 }
 
 int RenderTarget::width() const
@@ -40,7 +70,7 @@ bool RenderTarget::hasColor() const
 
 bool RenderTarget::hasDepth() const
 {
-    return has_depth_;
+    return has_depth_ || depth_source_ != nullptr;
 }
 
 RenderTarget::ColorFormat RenderTarget::colorFormat() const

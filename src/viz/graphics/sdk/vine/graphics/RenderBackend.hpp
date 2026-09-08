@@ -1,5 +1,7 @@
 ﻿#pragma once
 #include "graphics_global.hpp"
+
+#include "RenderPass.hpp"
 #include "ShaderPreset.hpp"
 
 #include <cstdint>
@@ -273,6 +275,24 @@ class V_GRAPHICS_API RenderBackend : public Object, public RefCounted<RenderBack
     virtual void setLights(const std::vector<raw_ptr<const Light>>& lights)
     {
         (void)lights;
+    }
+
+    /** @brief Sets how the upcoming render()'s content handles the target's
+     * current depth.
+     *
+     * TestAndWrite depth-tests and writes (opaque scene content); TestOnly
+     * depth-tests without writing (translucent content over already-written
+     * depth); Disabled draws on top with no depth (HUD overlays). This is the
+     * content slot's depth style and is independent of clearing and of
+     * lighting: the backend chooses the light source from the content scene,
+     * not from this setting. The default no-op lets backends without a
+     * per-slot depth state ignore it.
+     *
+     * @param mode The depth handling for the next render() content.
+     */
+    virtual void setDepthMode(DepthMode mode)
+    {
+        (void)mode;
     }
 
     /** @brief Clears the colour buffer, and optionally the depth buffer, of

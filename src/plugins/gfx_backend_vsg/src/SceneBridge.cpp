@@ -1312,16 +1312,25 @@ bool SceneBridge::syncRenderCommands(
         }
     }
     if (mrt > 1) {
-        // Every attachment must carry IDENTICAL blend state unless the device
-        // enables the (optional) independentBlend feature, so the G-buffer
-        // attachments reuse attachment 0's mapped opacity blend verbatim. For
-        // opaque geometry the source-over blend with alpha 1 is an identity,
-        // so the extra G-buffer outputs stay correct without a device feature
-        // (translucent deferred geometry is out of scope for the MRT path).
-        const auto first = states.colorBlend->attachments.front();
+        // A G-buffer is written OPAQUE and UNBLENDED: the mapped opacity blend
+        // would attenuate any attachment whose alpha is not 1 — the normal
+        // attachment carries shininess/256 in alpha (~0.125), so blending
+        // scaled the stored normal down to ~12.5% of its real value. Every
+        // MRT attachment must carry identical blend state unless the
+        // independentBlend device feature is enabled, so build one
+        // blend-DISABLED attachment and replicate it across all outputs.
+        VkPipelineColorBlendAttachmentState opaque{};
+        opaque.blendEnable         = VK_FALSE;
+        opaque.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+        opaque.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;
+        opaque.colorBlendOp        = VK_BLEND_OP_ADD;
+        opaque.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+        opaque.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+        opaque.alphaBlendOp        = VK_BLEND_OP_ADD;
+        opaque.colorWriteMask      = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
         states.colorBlend->attachments.clear();
         for (int i = 0; i < mrt; ++i) {
-            states.colorBlend->attachments.push_back(first);
+            states.colorBlend->attachments.push_back(opaque);
         }
     }
     applyRenderStateObjects(*config, states);
