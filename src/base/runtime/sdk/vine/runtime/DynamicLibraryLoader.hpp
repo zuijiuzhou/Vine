@@ -16,9 +16,12 @@ V_RUNTIME_NS_BEGIN
  *
  * The loader performs the actual loading and hands out DynamicLibrary objects
  * that wrap the loaded handle. Loading the same path twice returns the
- * already-loaded DynamicLibrary, so each library is loaded and unloaded
- * exactly once per loader. The loader owns all loaded libraries and unloads
- * them when it is destroyed.
+ * already-loaded DynamicLibrary, so each library is loaded exactly once per
+ * loader. The loader owns all loaded libraries and keeps them mapped for the
+ * process lifetime (see the destructor): its only client, the appfw plugin
+ * manager, loads plugins once and never unloads them, so unloading the
+ * libraries at process exit — before the registries that reference their code
+ * are torn down — would crash (SIGSEGV).
  *
  * A bare library name passed to load() is resolved through the configured
  * search paths: each directory is tried in order, then the name falls back to
@@ -42,7 +45,13 @@ class V_RUNTIME_API DynamicLibraryLoader {
     DynamicLibraryLoader();
 
     /**
-     * @brief Destroys the loader and unloads every library it owns.
+     * @brief Destroys the loader WITHOUT unloading its libraries.
+     *
+     * Loaded libraries are deliberately leaked (never dlclose'd): plugins live
+     * for the process lifetime, and tearing the code down during exit-time
+     * static destruction would leave the registries (commands / render-backend
+     * factories) referencing unmapped plugin code. The OS reclaims the
+     * libraries when the process exits.
      */
     ~DynamicLibraryLoader();
 

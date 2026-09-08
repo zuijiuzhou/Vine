@@ -26,6 +26,8 @@
 #   VINE_CHECK_SECONDS      Seconds to run Vine    (default 12)
 #   VINE_SKIP_APP=1         Skip the Vine app run.
 #   VINE_PROBE_MODE_EXTRA   Extra vsg_color_probe modes to run (space list).
+#   VINE_VSG_DEBUG_LAYER    Existing value wins; defaults to ON when the
+#                           Khronos validation layer is installed (0 disables).
 #
 # Exit code 0 when every stage is clean, 1 otherwise.
 
@@ -57,6 +59,29 @@ if [ -n "$ICD" ]; then
     echo "[info] Vulkan ICD: $ICD"
 else
     echo "[warn] lavapipe ICD not found; relying on the default driver selection"
+fi
+
+# ---- Enable the Khronos validation layer by default --------------------------
+# The whole point of this check is a validation-clean lavapipe run, so the
+# layer is turned on unless the caller opted out (VINE_VSG_DEBUG_LAYER=0) or the
+# layer is not installed (warn and proceed without it so the rest of the smoke
+# still runs, e.g. on machines without vulkan-validationlayers). The vsg backend
+# reads VINE_VSG_DEBUG_LAYER to enable validation on its window/device.
+if [ -z "${VINE_VSG_DEBUG_LAYER:-}" ]; then
+    VLAYER=""
+    for f in /usr/share/vulkan/explicit_layer.d/VkLayer_khronos_validation.json \
+             /etc/vulkan/explicit_layer.d/VkLayer_khronos_validation.json; do
+        if [ -f "$f" ]; then
+            VLAYER="$f"
+            break
+        fi
+    done
+    if [ -n "$VLAYER" ]; then
+        export VINE_VSG_DEBUG_LAYER=1
+        echo "[info] Khronos validation layer enabled (VINE_VSG_DEBUG_LAYER=1)"
+    else
+        echo "[warn] Khronos validation layer not found; validation disabled"
+    fi
 fi
 
 # ---- Checks -----------------------------------------------------------------

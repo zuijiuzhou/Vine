@@ -45,6 +45,7 @@
 #include <vine/vsg/VsgRenderer.hpp>
 
 #include <cstdio>
+#include <algorithm>
 #include <cstdlib>
 #include <vector>
 
@@ -86,6 +87,49 @@ ShaderProgramPtr makeUserProgram()
     fs.source = u8"#version 450\n"
                 u8"layout(location = 0) out vec4 outColor;\n"
                 u8"void main() { outColor = vec4(1.0, 0.2, 0.2, 1.0); }\n";
+    program->addStage(fs);
+    return program;
+}
+
+/** @brief Builds a triangle whose vertices carry a loc3 vec3 colour channel. */
+GeometryPtr makeChannelTriangle()
+{
+    auto geom = GeometryPtr(new Geometry());
+    vine::geometry::Vec3fArray positions;
+    positions.emplace_back(0.0f, 0.0f, 0.0f);
+    positions.emplace_back(0.0f, 1.0f, 0.0f);
+    positions.emplace_back(0.0f, 0.0f, 1.0f);
+    geom->setPositions(positions);
+    // Custom per-vertex channel at location 3: one distinct colour per vertex
+    // (red / green / blue). The backend must forward it as vine_Attribute3.
+    vine::graphics::AttributeBuffer channel;
+    channel.components = 3;
+    channel.data       = std::make_shared<std::vector<float>>(std::vector<float>{
+        1.0f, 0.0f, 0.0f,
+        0.0f, 1.0f, 0.0f,
+        0.0f, 0.0f, 1.0f });
+    geom->addBuffer(3u, channel);
+    return geom;
+}
+
+/** @brief Builds a custom program that reads vine_Attribute3 (loc3) as colour. */
+ShaderProgramPtr makeAttributeProgram()
+{
+    auto program = ShaderProgramPtr(new ShaderProgram());
+    vine::graphics::ShaderStage vs;
+    vs.type   = vine::graphics::ShaderStageType::Vertex;
+    vs.source = u8"#version 450\n"
+                u8"layout(location = 0) in vec3 vsg_Vertex;\n"
+                u8"layout(location = 3) in vec3 vine_Attribute3;\n"
+                u8"layout(location = 0) out vec3 vColor;\n"
+                u8"void main() { gl_Position = vec4(vsg_Vertex, 1.0); vColor = vine_Attribute3; }\n";
+    program->addStage(vs);
+    vine::graphics::ShaderStage fs;
+    fs.type   = vine::graphics::ShaderStageType::Fragment;
+    fs.source = u8"#version 450\n"
+                u8"layout(location = 0) in vec3 vColor;\n"
+                u8"layout(location = 0) out vec4 outColor;\n"
+                u8"void main() { outColor = vec4(vColor, 1.0); }\n";
     program->addStage(fs);
     return program;
 }
@@ -226,6 +270,74 @@ int main()
         if (i == 0 || i == frames - 1) {
             std::fprintf(stderr, "[selftest] frame %d/%d rendered\n", i + 1, frames);
         }
+    }
+
+    // ---- clear() semantics: active-target clear + clearDepth + rebuild -----
+    // An off-screen colour+depth target driven with clearDepth=false (the
+    // backend must build a depth-LOAD pass so depth survives), then flipped to
+    // clearDepth=true (pass policy change -> graph rebuilt), then resized (the
+    // rebuild reapplies the persisted clear colour, not a hard-coded grey).
+    // "No crash / no validation error" is the pass criteria; the per-target
+    // colour reaching the off-screen graph is what a black-box can check here.
+    auto depth_rt = RenderTargetPtr(new RenderTarget());
+    depth_rt->setSize(320, 180);
+    depth_rt->attachColor(RenderTarget::ColorFormat::RGBA8);
+    depth_rt->attachDepth(RenderTarget::DepthFormat::D24);
+    std::vector<RenderCommand> depth_commands{ cmd_red };
+    const int clear_frames = std::max(4, frames / 3);
+    for (int i = 0; i < clear_frames; ++i) {
+        // First half clearDepth=false (depth-LOAD), second half clearDepth=true
+        // (depth-CLEAR): exercises both pass policies and the policy-flip
+        // rebuild in one run.
+        const bool clear_depth = (i >= clear_frames / 2);
+        backend->beginFrame();
+        backend->setPassOrder(-200);
+        backend->setRenderTarget(depth_rt.get());
+        backend->clear(vine::Color(12, 40 + i % 40, 90, 255), clear_depth);
+        backend->setLights({});
+        backend->render(depth_commands, camera.get());
+        backend->endFrame();
+        backend->swapBuffers();
+    }
+    // Resize the target after a clear request: the (re)built graph must apply
+    // the recorded clear colour and the current depth policy.
+    depth_rt->setSize(400, 240);
+    for (int i = 0; i < 4; ++i) {
+        backend->beginFrame();
+        backend->setPassOrder(-200);
+        backend->setRenderTarget(depth_rt.get());
+        backend->clear(vine::Color(70, 20, 30, 255), (i % 2) == 0);
+        backend->setLights({});
+        backend->render(depth_commands, camera.get());
+        backend->endFrame();
+        backend->swapBuffers();
+    }
+    backend->releaseRenderTarget(depth_rt.get());
+
+    // ---- End-to-end custom vertex attribute (loc3) phase ----------------------
+    // A geometry carrying a loc3 per-vertex channel is drawn with a custom
+    // program whose vertex stage consumes vine_Attribute3 and forwards it as
+    // colour. This drives the whole custom-attribute path on a real Vulkan
+    // device: data-node superset -> per-layout ShaderSet (vine_Attribute3
+    // binding) -> pipeline vertex input -> rasterisation. The selftest's
+    // success criterion is a clean record/draw/present with no crash.
+    {
+        auto attr_geom    = makeChannelTriangle();
+        auto attr_program = makeAttributeProgram();
+        auto m_attr       = MaterialPtr(new Material());
+        RenderCommand attr_cmd(attr_geom, m_attr, Mat4d());
+        attr_cmd.program = attr_program;
+        for (int i = 0; i < 6; ++i) {
+            backend->beginFrame();
+            backend->setPassOrder(0);
+            backend->setRenderTarget(nullptr);
+            backend->clear(vine::Color(20, 20, 40, 255), true);
+            backend->setLights({});
+            backend->render(std::vector<RenderCommand>{ attr_cmd }, camera.get());
+            backend->endFrame();
+            backend->swapBuffers();
+        }
+        std::fprintf(stderr, "[selftest] custom-attribute (loc3) phase rendered\n");
     }
 
     // ---- Teardown paths, then a few frames to prove nothing dangles ---------

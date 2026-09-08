@@ -76,7 +76,22 @@ DynamicLibraryLoader::DynamicLibraryLoader()
   : d(new Impl)
 {}
 
-DynamicLibraryLoader::~DynamicLibraryLoader() = default;
+DynamicLibraryLoader::~DynamicLibraryLoader()
+{
+    // Plugins are process-lifetime: PluginManager loads them once and never
+    // unloads them, so their libraries must stay mapped for the whole process.
+    // Unloading them here — at process exit, in a static-destruction order
+    // relative to the Application and the process-wide registries
+    // (CommandManager, RenderBackendRegistry) that still hold command
+    // callables / factory pointers into the plugin code — crashes with SIGSEGV
+    // because the plugin code is unmapped before those objects are destroyed.
+    // Deliberately leak the loaded libraries instead: the OS reclaims them
+    // when the process exits, so every registry teardown runs while the plugin
+    // code is still mapped. When real plugin unload support is added, this
+    // destructor must release the libraries only AFTER the registries that
+    // reference their code have been cleared.
+    d.release(); // never dlclose: keep the process-lifetime plugin code mapped
+}
 
 DynamicLibraryLoader& DynamicLibraryLoader::instance()
 {

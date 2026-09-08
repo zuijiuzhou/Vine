@@ -263,7 +263,9 @@ void addDemoCubes(vine::graphics::Scene* scene)
         vs.source = u8"#version 450\n"
                     u8"layout(push_constant) uniform PushConstants { mat4 projection; mat4 modelView; } pc;\n"
                     u8"layout(location = 0) in vec3 vsg_Vertex;\n"
-                    u8"void main(){ gl_Position = pc.projection * pc.modelView * vec4(vsg_Vertex, 1.0); }\n";
+                    // A POINT_LIST pipeline must write gl_PointSize or it trips
+                    // VUID-VkGraphicsPipelineCreateInfo-topology-08773.
+                    u8"void main(){ gl_Position = pc.projection * pc.modelView * vec4(vsg_Vertex, 1.0); gl_PointSize = 3.0; }\n";
         program->addStage(vs);
         ShaderStage fs;
         fs.type = ShaderStageType::Fragment;
