@@ -9,6 +9,18 @@
 > CPU Data 数组，按名字喂进 GraphicsPipelineConfigurator，挂 Bind*/Draw* 命令，
 > 最后由 viewer->compile() 上传 GPU 并建管线**。中间两层各有一张"对应表"。
 
+> ⚠️ **2026-09-08 复核（批次 A 之后）——本文部分段落已过期，以本注 + 代码为准**。
+> 权威来源：`SceneBridge.cpp` / `VsgRenderer.cpp`（本次核对版本）；契约见
+> `.ai/design/vsg-custom-attributes.md`（已实现）。已变更的要点：
+> - loc0/loc1 已按 **AttributeBuffer.components 作 stride** 解包（3/4 分量取 xyz，
+>   跳过 w），不再是写死 `i+=3`（下文 §6 坑① 已过期）。
+> - **loc≥3 自定义通道已接线**：数据超集绑定 + `vine_Attribute{L}` 绑定名（§7
+>   两步接线已落地）；loc2 语义 = 内建白 opacity carrier / custom 透传 authored
+>   color（见 custom-attributes 设计）。
+> - **索引流保真**：DrawIndexed count == 源索引数（仅越界拒绝）；法线推导仅 Triangles。
+> - 缓存/编译：`getProgramShaderSet` 已按 (program, revision, layout) 双级缓存
+>   （L1a stages + L1b ShaderSet），非早期"每 slot 编译一次"描述。
+
 > ⚠️ **2026-09-08 更新（管线共享已实现并测试）**：`SceneBridge` 构造创建
 > `shared_objects_`，`copyTo()` 的内容级去重生效 —— 同 (program×状态×槽位) 的几何共享
 > 一条 pipeline；并新增 **L1 program ShaderSet 缓存**（`getProgramShaderSet`，glslang
@@ -196,8 +208,10 @@ flat/phong/pbr 共用同一张表（详见 `.ai/design/vsg-custom-shader.md` §9
 
 **坑①**：`AttributeBuffer.components` 没被当 stride 用。后端读 loc0/loc1 一律
 `i += 3`，`components` 只当 ">=3" 门槛。若 `addBuffer(0, {vec4 数据, components=4})`
-会交错读错（v0.xyz 后接 v0.w+v1.xy…）。要支持非 3 分量通道，读取端需按
-`components` 跳步（数据模型已承诺、消费端未兑现）。
+会交错读错（v0.xyz 后接 v0.w+v1.xy…）。
+**✅ 已于 2026-09-08 修复**：读端按 `components` 跳步（3/4 分量取 xyz 跳过 w）；
+非 3/4 分量或不可整除 → 诊断并拒用（loc0 拒几何，可选 loc1 忽略后推导/默认）。
+本条保留为演进记录。
 
 **坑②**：`components<3` 的 loc1（如把 uv 错放到 loc1）会被静默忽略并走法线推导，
 不报错——表现为"你的数据被无视"。
@@ -208,11 +222,12 @@ flat/phong/pbr 共用同一张表（详见 `.ai/design/vsg-custom-shader.md` §9
   - 放 loc2..5（uv）：内建可读，但需激活变体 + 绑纹理；后端目前不喂 uv/纹理。
   - 放 loc6（顶点色）：内建会消费，但 `SceneBridge` 现在**无视用户 loc6**（永远写白+opacity）。
   - 放其它位置：内建未声明 → 一律不支持。
-- **正确路径 = 自定义 program + 两步接线（尚未做）**：
-  1. `buildProgramShaderSet()` 里按用户 GLSL 的 `layout(location=N)` 加
-     `addAttributeBinding(name, loc, format)`，否则 configurator 查不到、无顶点输入；
-  2. `buildGeometry` 遍历 `geometry->bufferLocations()`，把 loc0 之外的自定义通道
-     逐条 `assignArray` 喂进去（现在只读 loc0/loc1）。
+- **正确路径 = 自定义 program + 两步接线（✅ 已实现，2026-09-08）**：
+  1. `assembleProgramShaderSet()` 按几何提供的 loc≥3 通道加
+     `addAttributeBinding("vine_Attribute{N}", …)`（format 随 components）；
+  2. `buildGeometryData()` 遍历 `geometry->bufferLocations()`，把 loc≥3 自定义通道
+     物化后追加绑定；`buildStateGroup` 按 `vine_Attribute{N}` 逐个 `assignArray`。
+  （早期"两步接线尚未做 / 现在只读 loc0/loc1"的描述已过时。）
 - `AttributeBuffer` 的设计初衷正是"后端无关的自定义逐顶点通道"（点云色/尺寸/任意属性）。
 
 ## 8. 关键结论备忘
