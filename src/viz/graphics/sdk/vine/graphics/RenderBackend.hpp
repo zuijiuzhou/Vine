@@ -2,6 +2,7 @@
 #include "graphics_global.hpp"
 #include "ShaderPreset.hpp"
 
+#include <cstdint>
 #include <vector>
 
 #include <vine/Color.hpp>
@@ -203,6 +204,54 @@ class V_GRAPHICS_API RenderBackend : public Object, public RefCounted<RenderBack
         (void)target;
     }
 
+    /** @brief Reads back a colour attachment of an off-screen render target.
+     *
+     * Synchronously copies colour attachment @p attachment of @p target (a
+     * target this backend rendered into) into @p outPixels as tightly packed
+     * RGBA8 — width * height * 4 bytes, row-major. This is the controlled
+     * readback entry point: a logical RenderTarget holds no GPU pixels, so the
+     * transfer belongs to the backend that owns the attachments. The default
+     * implementation reports the operation as unsupported; a backend that
+     * implements readback overrides it (staging buffer, image-to-buffer copy,
+     * queue/fence synchronisation and format conversion). Backends without
+     * readback support return false and leave @p outPixels untouched, so a
+     * caller can always distinguish a successful read from unsupported.
+     *
+     * @param target     Off-screen target whose colour attachment to read.
+     * @param attachment Colour attachment index in [0, target->colorCount()).
+     * @param outPixels  Receives the packed RGBA8 pixels on success.
+     * @return true when the pixels were read; false when unsupported or the
+     *         read failed.
+     */
+    virtual bool readColorBuffer(vine::graphics::RenderTarget* target, int attachment,
+                                 std::vector<std::uint8_t>& outPixels)
+    {
+        (void)target;
+        (void)attachment;
+        (void)outPixels;
+        return false;
+    }
+
+    /** @brief Reads back the depth attachment of an off-screen render target.
+     *
+     * Synchronously copies @p target's depth buffer into @p outDepths as
+     * width * height floats in [0, 1], row-major. Ownership and support model
+     * match readColorBuffer(): the default implementation reports the
+     * operation as unsupported.
+     *
+     * @param target    Off-screen target whose depth buffer to read.
+     * @param outDepths Receives the depth values on success.
+     * @return true when the depth values were read; false when unsupported or
+     *         the read failed.
+     */
+    virtual bool readDepthBuffer(vine::graphics::RenderTarget* target,
+                                 std::vector<float>& outDepths)
+    {
+        (void)target;
+        (void)outDepths;
+        return false;
+    }
+
     /** @brief Renders a list of commands.
      *
      * @param commands Render commands to draw.
@@ -226,10 +275,25 @@ class V_GRAPHICS_API RenderBackend : public Object, public RefCounted<RenderBack
         (void)lights;
     }
 
-    /** @brief Clears buffers.
+    /** @brief Clears the colour buffer, and optionally the depth buffer, of
+     * the current render target.
+     *
+     * Applies to the target selected with setRenderTarget(); null (the
+     * default) means the window / main surface. For the WINDOW target the
+     * depth buffer is always cleared regardless of @p clearDepth: the
+     * windowing system owns the surface render pass and fixes its depth
+     * load-op to CLEAR, so clearDepth=false cannot be honoured there and is
+     * treated as true (only the clear colour takes effect).
+     *
+     * clearDepth=false IS honoured for off-screen render targets: their depth
+     * content is preserved across frames through a depth-LOAD pass. Passes
+     * that need a previous frame's depth (accumulation, or incremental writes
+     * that depth-test against existing content) should render into an
+     * off-screen target and composite it into the window.
      *
      * @param backgroundColor Clear color.
-     * @param clearDepth      Whether to also clear the depth buffer.
+     * @param clearDepth      Whether to also clear the depth buffer. Ignored
+     *                        for the window target (always cleared).
      */
     virtual void clear(const Color& backgroundColor, bool clearDepth = true) = 0;
 

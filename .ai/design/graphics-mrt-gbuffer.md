@@ -36,7 +36,9 @@ deferred 光照 pass 复刻当前 phong 产出（与现在画面一致 A/B）。
 ### 4.1 RenderTarget（SDK）：N 个 color 附件
 - `attachColor(format)` **追加**一个 color 附件（兼容：现有调用方最多 1 次 → 行为不变）；
 - `colorCount()` / `colorFormat(int i)`（`colorFormat()` = i0，保持）；`hasColor()` = colorCount()>0；
-- `readColorBuffer()` 仍读附件 0（+可选 `readColorBuffer(int i)` 以后扩展）。
+- `readColorBuffer()` 仍读附件 0（+可选 `readColorBuffer(int i)` 以后扩展）。注：RenderTarget 的
+  读回是占位（恒全零，见 graphics-design.md）；真实读回入口为 `RenderBackend::readColorBuffer(int)` /
+  `readDepthBuffer()`（默认 unsupported，后端实现点）。
 - 附件 0..N-1 各自独立可采样；渲染时 fragment `layout(location=i) out` 写附件 i。
 
 ### 4.2 命名产出（engine）：保持 1 RT = 1 name，纹理在 RT 内

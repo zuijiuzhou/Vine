@@ -70,7 +70,18 @@ class V_GRAPHICS_API RenderPass : public Object, public RefCounted<RenderPass> {
     /** @brief Returns whether the depth buffer is cleared. */
     bool shouldClearDepth() const;
 
-    /** @brief Sets whether the depth buffer is cleared. */
+    /** @brief Sets whether the depth buffer is cleared before this pass.
+     *
+     * Controls the clearDepth argument passed to RenderBackend::clear() when
+     * this pass clears (see setClearEnabled). Whether a false value actually
+     * preserves the previous depth depends on the target: it is honoured for
+     * off-screen targets (their depth survives via a depth-LOAD pass), but a
+     * pass rendering into the window / main surface always gets a cleared
+     * depth buffer (the surface render pass clears depth), so the flag is
+     * ignored there.
+     *
+     * @param clear True to clear the depth buffer (the default).
+     */
     void setShouldClearDepth(bool clear);
 
     /** @brief Returns whether the colour/depth buffer is cleared before this pass.

@@ -340,6 +340,40 @@ int main()
         std::fprintf(stderr, "[selftest] custom-attribute (loc3) phase rendered\n");
     }
 
+    // ---- Post-processing chain: off-screen A -> off-screen B -> window --------
+    // A screen (PiP) pass samples the off-screen MRT (A) into ANOTHER off-screen
+    // target (B), then a second PiP samples B into the window. Exercises #2:
+    // screen draws honour the CURRENT render target (setRenderTarget) and the
+    // producer-before-consumer command-graph order (A recorded before B).
+    {
+        auto mid = RenderTargetPtr(new RenderTarget());
+        mid->setSize(320, 180);
+        mid->attachColor(RenderTarget::ColorFormat::RGBA8);
+        for (int i = 0; i < 4; ++i) {
+            backend->beginFrame();
+            // Producer: render the MRT (A) content.
+            backend->setPassOrder(-60);
+            backend->setRenderTarget(mrt.get());
+            backend->clear(vine::Color(51, 51, 51, 255), true);
+            backend->setLights({});
+            backend->render(gbuffer_commands, camera.get());
+            // Step 1: sample A's colour attachment 0 into the off-screen B.
+            backend->setRenderTarget(mid.get());
+            backend->setViewport(0, 0, mid->width(), mid->height());
+            backend->setPassOrder(-50);
+            backend->drawScreenTexture(mrt.get(), 0);
+            // Step 2: sample B into the window.
+            backend->setRenderTarget(nullptr);
+            backend->setViewport(16, 16, 200, 112);
+            backend->setPassOrder(-40);
+            backend->drawScreenTexture(mid.get(), 0);
+            backend->endFrame();
+            backend->swapBuffers();
+        }
+        backend->releaseRenderTarget(mid.get());
+        std::fprintf(stderr, "[selftest] off-screen post chain (A->B->window) rendered\n");
+    }
+
     // ---- Teardown paths, then a few frames to prove nothing dangles ---------
     backend->releaseWindowLayer(camera.get(), 1);   // drop the HUD slot
     backend->releaseRenderTarget(mrt.get());         // drop MRT + PiP + deferred slot

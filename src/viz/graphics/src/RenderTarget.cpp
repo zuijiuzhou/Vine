@@ -73,13 +73,18 @@ bool RenderTarget::valid() const
 
 std::vector<std::uint8_t> RenderTarget::readColorBuffer() const
 {
-    // Backend-specific implementation fills this buffer. Without a bound
-    // backend this returns an all-zero buffer of the expected size.
+    // Placeholder: a logical RenderTarget holds no GPU pixels. Real readback
+    // goes through RenderBackend::readColorBuffer() — the backend that owns
+    // this target's attachments. Until a backend implements it, return an
+    // all-zero buffer of the expected size so callers can treat the data as
+    // invalid rather than as a real frame.
     return std::vector<std::uint8_t>(static_cast<std::size_t>(width_) * height_ * 4, 0);
 }
 
 std::vector<float> RenderTarget::readDepthBuffer() const
 {
+    // Placeholder (see readColorBuffer()); real readback is
+    // RenderBackend::readDepthBuffer().
     return std::vector<float>(static_cast<std::size_t>(width_) * height_, 0.0f);
 }
 

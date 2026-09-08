@@ -1020,6 +1020,8 @@ struct VsgRenderer::Impl {
         ::vsg::ref_ptr<::vsg::ImageView> source_view; // keeps the sampled attachment alive
         int                              source_w = 0;
         int                              source_h = 0;
+        int                              dest_w   = 0; // destination surface the node was built for
+        int                              dest_h   = 0;
         bool                             ready    = false;
     };
 
@@ -1039,6 +1041,8 @@ struct VsgRenderer::Impl {
         vine::graphics::ShaderProgram*   program = nullptr; // program the node was built with
         int                              source_w = 0;
         int                              source_h = 0;
+        int                              dest_w   = 0; // destination surface the node was built for
+        int                              dest_h   = 0;
         bool                             ready    = false;
     };
 
@@ -1554,10 +1558,23 @@ void VsgRenderer::buildOffscreenTarget(vine::graphics::RenderTarget* target)
     }
 
     if (impl->command_graph != nullptr) {
-        // Record off-screen graphs BEFORE the main window graph so the colour
-        // texture they produce is current when a later pass samples it in the
-        // same frame.
-        impl->command_graph->children.insert(impl->command_graph->children.begin(), t.graph);
+        // Record off-screen graphs BEFORE the main window graph, in CREATION
+        // order, so the colour texture a producer produces is current when a
+        // later consumer pass samples it in the same frame (A -> B chains:
+        // the producer's graph is inserted first, the consumer's after it).
+        // Inserting at the front would reverse creation order and make a
+        // later consumer run before its producer (stale sampling).
+        auto& children = impl->command_graph->children;
+        auto  win_it   = children.end();
+        if (const auto win = impl->targets.find(nullptr);
+            win != impl->targets.end() && win->second.graph != nullptr) {
+            win_it = std::find(children.begin(), children.end(), win->second.graph);
+        }
+        if (win_it != children.end()) {
+            children.insert(win_it, t.graph);
+        } else {
+            children.push_back(t.graph);
+        }
     }
     std::fprintf(stderr, "[VsgRenderer] EXPERIMENTAL off-screen target %ux%u attached\n", w, h);
     // NOTE: no compile here — the graph is empty until its first content slot
@@ -1596,30 +1613,58 @@ void VsgRenderer::drawScreenTexture(vine::graphics::RenderTarget* source, int at
     }
     const auto source_view = src.color_views[attachment_index];
 
-    // PiP (screen) views are children of the single window render graph, so
-    // their slots live in the window entry (nullptr key) of the target table.
-    // Each slot is keyed by (sampled target, attachment): two PiPs may sample
-    // different attachments of the same MRT target.
-    auto& window_entry = impl->targets[nullptr];
+    // PiP (screen) views are drawn into the CURRENT target (setRenderTarget;
+    // nullptr = the window), so their slots live in that target's entry: a
+    // pass can composite a sampled source into an off-screen target, enabling
+    // post-processing chains (A -> B -> window). Each slot is keyed by
+    // (sampled target, attachment): two PiPs may sample different attachments
+    // of the same MRT source.
+    vine::graphics::RenderTarget* dest = impl->active_target;
+    impl->active_target               = nullptr;
+    // A source == destination feedback loop would sample the very attachments
+    // this pass writes. Reject it with a diagnostic (a ping-pong pair of
+    // targets is the standard way to build a feedback chain).
+    if (dest == source) {
+        std::fprintf(stderr, "[VsgRenderer] drawScreenTexture: source == destination; feedback loop rejected\n");
+        return;
+    }
+    auto& dest_entry = impl->targets[dest];
+    if (dest != nullptr) {
+        // Writing into an off-screen target: (re)build its graph to its size.
+        if (dest->colorCount() <= 0 || dest->width() <= 0 || dest->height() <= 0) {
+            std::fprintf(stderr, "[VsgRenderer] drawScreenTexture: destination off-screen target has no usable colour attachment\n");
+            return;
+        }
+        if (dest_entry.graph == nullptr || dest_entry.width != dest->width() || dest_entry.height != dest->height()) {
+            buildOffscreenTarget(dest);
+            if (dest_entry.graph == nullptr) {
+                return;
+            }
+        }
+    }
+    else if (dest_entry.graph == nullptr) {
+        return; // window graph not created yet
+    }
+    const int surf_w = (dest == nullptr) ? static_cast<int>(impl->window->extent2D().width) : dest_entry.width;
+    const int surf_h = (dest == nullptr) ? static_cast<int>(impl->window->extent2D().height) : dest_entry.height;
+
     const Impl::ScreenKey key{ source, static_cast<int>(attachment_index) };
 
-    // Drop a stale slot when the sampled target was resized (its colour view
-    // was rebuilt, so the old descriptor would sample a destroyed image).
+    // Drop a stale slot when the sampled target OR the destination was resized
+    // (the sampled colour view / the baked viewport was rebuilt).
     {
-        const auto old = window_entry.screen_slots.find(key);
-        if (old != window_entry.screen_slots.end() && old->second.ready && (old->second.source_w != src.width || old->second.source_h != src.height)) {
-            removeGraphChild(window_entry.graph.get(), old->second.view);
-            window_entry.screen_slots.erase(old);
+        const auto old = dest_entry.screen_slots.find(key);
+        if (old != dest_entry.screen_slots.end() && old->second.ready &&
+            (old->second.source_w != src.width || old->second.source_h != src.height ||
+             old->second.dest_w != surf_w || old->second.dest_h != surf_h)) {
+            removeGraphChild(dest_entry.graph.get(), old->second.view);
+            dest_entry.screen_slots.erase(old);
         }
     }
 
-    auto& slot = window_entry.screen_slots[key];
+    auto& slot = dest_entry.screen_slots[key];
 
     // Destination rectangle: the pass's sub-viewport, else the full surface.
-    const auto surface = impl->window->extent2D();
-    const int  surf_w  = static_cast<int>(surface.width);
-    const int  surf_h  = static_cast<int>(surface.height);
-
     int req_x = 0, req_y = 0, req_w = surf_w, req_h = surf_h;
     if (has_vp && vp_w > 0 && vp_h > 0) {
         req_x = vp_x;
@@ -1653,29 +1698,32 @@ void VsgRenderer::drawScreenTexture(vine::graphics::RenderTarget* source, int at
     if (!slot.ready) {
         slot.source_w    = src.width;
         slot.source_h    = src.height;
+        slot.dest_w      = surf_w;
+        slot.dest_h      = surf_h;
         slot.source_view = source_view;
 
         // Full-screen textured triangle sampling the off-screen colour
-        // attachment, drawn as a second View of the main window render graph
-        // (like overlays) so the sub-viewport clips the picture-in-picture
-        // rectangle.
+        // attachment, drawn as another View of the DESTINATION target's render
+        // graph (like overlays) so the sub-viewport clips the
+        // picture-in-picture rectangle.
+        const VkExtent2D surface{ static_cast<uint32_t>(surf_w), static_cast<uint32_t>(surf_h) };
         auto content = makeScreenTextureNode(source_view, surface);
         if (content == nullptr) {
-            window_entry.screen_slots.erase(key);
+            dest_entry.screen_slots.erase(key);
             return;
         }
-        auto view = makeCompiledOverlayView(*impl->viewer, window_entry.graph.get(), content,
+        auto view = makeCompiledOverlayView(*impl->viewer, dest_entry.graph.get(), content,
                                             rect_x, rect_y, rect_w, rect_h,
                                             /*front*/ false, "screen pass");
         if (view == nullptr) {
-            window_entry.screen_slots.erase(key);
+            dest_entry.screen_slots.erase(key);
             return;
         }
         slot.camera        = view->camera;
         slot.view          = view;
         slot.ready         = true;
         impl->needs_submit = true;
-        std::fprintf(stderr, "[VsgRenderer] EXPERIMENTAL screen PiP %dx%d (att %zu) -> %d,%d %dx%d attached\n", src.width, src.height, attachment_index, rect_x, rect_y, rect_w, rect_h);
+        std::fprintf(stderr, "[VsgRenderer] EXPERIMENTAL screen PiP %dx%d (att %zu) -> %s %d,%d %dx%d attached\n", src.width, src.height, attachment_index, dest == nullptr ? "window" : "offscreen", rect_x, rect_y, rect_w, rect_h);
     }
 
     // Follow the requested sub-viewport each frame (dynamic viewport + scissor).
@@ -1848,15 +1896,42 @@ void VsgRenderer::drawScreenProgram(vine::graphics::RenderTarget*              s
         return;
     }
 
-    // Fullscreen-program slots are drawn under the window graph (nullptr key).
-    auto& window_entry = impl->targets[nullptr];
-    auto& slot         = window_entry.program_slots[source];
+    // Fullscreen-program views are drawn into the CURRENT target
+    // (setRenderTarget; nullptr = the window), so their slots live in that
+    // target's entry: deferred / post passes can write into an off-screen
+    // target as well as the window.
+    vine::graphics::RenderTarget* dest = impl->active_target;
+    impl->active_target               = nullptr;
+    // A source == destination feedback loop would sample the very attachments
+    // this pass writes. Reject it (a ping-pong pair of targets is the standard
+    // way to build a feedback chain).
+    if (dest == source) {
+        std::fprintf(stderr, "[VsgRenderer] drawScreenProgram: source == destination; feedback loop rejected\n");
+        return;
+    }
+    auto& dest_entry = impl->targets[dest];
+    if (dest != nullptr) {
+        if (dest->colorCount() <= 0 || dest->width() <= 0 || dest->height() <= 0) {
+            std::fprintf(stderr, "[VsgRenderer] drawScreenProgram: destination off-screen target has no usable colour attachment\n");
+            return;
+        }
+        if (dest_entry.graph == nullptr || dest_entry.width != dest->width() || dest_entry.height != dest->height()) {
+            buildOffscreenTarget(dest);
+            if (dest_entry.graph == nullptr) {
+                return;
+            }
+        }
+    }
+    else if (dest_entry.graph == nullptr) {
+        return; // window graph not created yet
+    }
+    const int surf_w = (dest == nullptr) ? static_cast<int>(impl->window->extent2D().width) : dest_entry.width;
+    const int surf_h = (dest == nullptr) ? static_cast<int>(impl->window->extent2D().height) : dest_entry.height;
+
+    auto& slot = dest_entry.program_slots[source];
 
     // Destination rectangle: the pass's sub-viewport, else the full surface
     // (clamped into the surface — the fullscreen draw has no auto-fit).
-    const auto surface = impl->window->extent2D();
-    const int  surf_w  = static_cast<int>(surface.width);
-    const int  surf_h  = static_cast<int>(surface.height);
     int rect_x = 0, rect_y = 0, rect_w = surf_w, rect_h = surf_h;
     if (has_vp && vp_w > 0 && vp_h > 0) {
         rect_x = vp_x;
@@ -1886,38 +1961,43 @@ void VsgRenderer::drawScreenProgram(vine::graphics::RenderTarget*              s
     }
 
     // (Re)build the retained slot when it is missing, the source was resized
-    // (its colour views were rebuilt), or the program changed.
-    const bool stale = !slot.ready || slot.source_w != src.width || slot.source_h != src.height || slot.program != program;
+    // (its colour views were rebuilt), the DESTINATION was resized, or the
+    // program changed.
+    const bool stale = !slot.ready || slot.source_w != src.width || slot.source_h != src.height ||
+                       slot.dest_w != surf_w || slot.dest_h != surf_h || slot.program != program;
     if (stale) {
-        removeGraphChild(window_entry.graph.get(), slot.view);
+        removeGraphChild(dest_entry.graph.get(), slot.view);
         slot = Impl::ProgramSlot{};
         slot.push_data = ::vsg::ubyteArray::create(128); // == full block size
-        auto node      = makeFullscreenProgramNode(program, src.color_views, src.depth_view, surface, slot.push_data);
+        const VkExtent2D surface{ static_cast<uint32_t>(surf_w), static_cast<uint32_t>(surf_h) };
+        auto node = makeFullscreenProgramNode(program, src.color_views, src.depth_view, surface, slot.push_data);
         if (node == nullptr) {
-            window_entry.program_slots.erase(source);
+            dest_entry.program_slots.erase(source);
             return;
         }
         slot.source_w = src.width;
         slot.source_h = src.height;
+        slot.dest_w   = surf_w;
+        slot.dest_h   = surf_h;
         slot.program  = const_cast<vine::graphics::ShaderProgram*>(program);
         slot.node     = node;
 
-        // The fullscreen program view is the window's main content in
+        // The fullscreen program view is the destination's main content in
         // deferred mode: insert it FIRST (front), so content slots created
         // later (HUD overlays) stack above it (see setupContentSlot's INT_MIN
         // ordering for program views).
-        auto view = makeCompiledOverlayView(*impl->viewer, window_entry.graph.get(), node,
+        auto view = makeCompiledOverlayView(*impl->viewer, dest_entry.graph.get(), node,
                                             rect_x, rect_y, rect_w, rect_h,
                                             /*front*/ true, "fullscreen program");
         if (view == nullptr) {
-            window_entry.program_slots.erase(source);
+            dest_entry.program_slots.erase(source);
             return;
         }
         slot.camera        = view->camera;
         slot.view          = view;
         slot.ready         = true;
         impl->needs_submit = true;
-        std::fprintf(stderr, "[VsgRenderer] EXPERIMENTAL deferred fullscreen program %dx%d -> %d,%d %dx%d attached\n", src.width, src.height, rect_x, rect_y, rect_w, rect_h);
+        std::fprintf(stderr, "[VsgRenderer] EXPERIMENTAL deferred fullscreen program %dx%d -> %s %d,%d %dx%d attached\n", src.width, src.height, dest == nullptr ? "window" : "offscreen", rect_x, rect_y, rect_w, rect_h);
     }
 
     // Consume the lights queued by setLights() (from the pass's content scene)
@@ -2456,9 +2536,10 @@ void VsgRenderer::clear(const vine::Color& backgroundColor, bool clearDepth)
     if (key == nullptr) {
         // Window graph: the swapchain render pass (vsg-owned) clears colour AND
         // depth at the start of every frame, so the requested colour is pushed
-        // through and the depth-clear value is the main pass's (0.0). clearDepth
-        // cannot suppress the swapchain depth clear — vsg fixes the pass load-op
-        // when the window is created — so the window honours the colour value;
+        // through and the depth-clear value is the main pass's (0.0). The
+        // window CANNOT honour clearDepth=false — vsg fixes the pass depth
+        // load-op to CLEAR when the window is created — so a false request is
+        // treated as true there (documented on RenderBackend::clear()); only
         // off-screen targets honour clearDepth through their depth-LOAD pass.
         const VkClearColorValue clear_value{
             { color.r, color.g, color.b, color.a }

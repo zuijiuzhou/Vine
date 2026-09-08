@@ -596,7 +596,12 @@ class V_GRAPHICS_API RenderTarget : public Object, public RefCounted<RenderTarge
     int height() const;
     void setSize(int w, int h);
 
-    /** @brief 回读颜色缓冲（RGBA8，w*h*4 字节）。 */
+    /** @brief 回读颜色缓冲（RGBA8，w*h*4 字节）。
+     *
+     * 未实现占位：logical RenderTarget 无 GPU 像素，恒返回全零；真实读回入口为
+     * RenderBackend::readColorBuffer()/readDepthBuffer()（默认 unsupported，
+     * 实现点在各后端，见 VsgRenderer 离屏 image 的 TRANSFER_SRC usage）。
+     */
     std::vector<std::uint8_t> readColorBuffer() const;
 
     /** @brief 回读深度缓冲（[0,1]，w*h 个 float）。 */
