@@ -180,6 +180,10 @@ int main()
     auto backend = vine::intrusive_ptr<RenderBackend>(new vine::vsg::VsgRenderer());
     if (!backend->initialize()) {
         std::fprintf(stderr, "[selftest] backend initialize FAILED\n");
+        std::fprintf(stderr,
+                     "[selftest]   see the [VsgRenderer] initialize messages above; env: VK_ICD_FILENAMES=%s  VINE_VSG_DEBUG_LAYER=%s\n",
+                     std::getenv("VK_ICD_FILENAMES") ? std::getenv("VK_ICD_FILENAMES") : "(unset)",
+                     std::getenv("VINE_VSG_DEBUG_LAYER") ? std::getenv("VINE_VSG_DEBUG_LAYER") : "(unset)");
         return 1;
     }
     std::fprintf(stderr, "[selftest] backend initialized, %d frames\n", frames);
@@ -370,8 +374,33 @@ int main()
             backend->endFrame();
             backend->swapBuffers();
         }
+        // A is resized mid-chain: this REBUILDS producer A's graph +
+        // attachments while consumer B (and the window PiP) already sample it.
+        // The ordering fix must drop B's stale slot (it holds A's OLD image
+        // views) so the next drawScreenTexture reattaches to the NEW A, and
+        // re-order the command graph so A is still recorded before B — without
+        // it, B would keep sampling a frozen, no-longer-drawn A image.
+        mrt->setSize(480, 270);
+        for (int i = 0; i < 5; ++i) {
+            backend->beginFrame();
+            backend->setPassOrder(-60);
+            backend->setRenderTarget(mrt.get());
+            backend->clear(vine::Color(51, 51, 51, 255), true);
+            backend->setLights({});
+            backend->render(gbuffer_commands, camera.get());
+            backend->setRenderTarget(mid.get());
+            backend->setViewport(0, 0, mid->width(), mid->height());
+            backend->setPassOrder(-50);
+            backend->drawScreenTexture(mrt.get(), 0);
+            backend->setRenderTarget(nullptr);
+            backend->setViewport(16, 16, 200, 112);
+            backend->setPassOrder(-40);
+            backend->drawScreenTexture(mid.get(), 0);
+            backend->endFrame();
+            backend->swapBuffers();
+        }
         backend->releaseRenderTarget(mid.get());
-        std::fprintf(stderr, "[selftest] off-screen post chain (A->B->window) rendered\n");
+        std::fprintf(stderr, "[selftest] off-screen post chain (A->B->window, A resized) rendered\n");
     }
 
     // ---- Teardown paths, then a few frames to prove nothing dangles ---------

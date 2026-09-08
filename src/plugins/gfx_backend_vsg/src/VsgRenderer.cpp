@@ -7,6 +7,12 @@
 #include <cstring>
 #include <limits>
 #include <map>
+#include <string>
+
+#if defined(__GNUG__)
+#    include <cxxabi.h>
+#endif
+#include <typeinfo>
 
 #include <vine/graphics/Camera.hpp>
 #include <vine/graphics/Geometry.hpp>
@@ -36,6 +42,7 @@
 #include <vsg/nodes/StateGroup.h>
 #include <vsg/nodes/VertexIndexDraw.h>
 #include <vsg/core/Array.h>
+#include <vsg/core/Exception.h>
 #include <vsg/maths/vec4.h>
 #include <vsg/state/ColorBlendState.h>
 #include <vsg/state/DepthStencilState.h>
@@ -73,6 +80,50 @@ V_VSG_NS_BEGIN
 
 namespace
 {
+
+/**
+ * @brief Returns a diagnostic description of the exception currently being
+ * handled (must be called from inside a catch handler).
+ *
+ * std::exception-derived exceptions report their what(); any other C++ type is
+ * reported by its runtime type name (demangled on GCC/Clang), so an unexpected
+ * failure never collapses to a bare "unknown exception" with no way to tell an
+ * environment problem (no Vulkan ICD / display / device) from a code defect.
+ *
+ * @return Human-readable description of the active exception.
+ */
+std::string describeCurrentException()
+{
+    try {
+        throw; // re-dispatch the exception being handled
+    }
+    catch (const ::vsg::Exception& e) {
+        // vsg::Exception is a plain struct (message + VkResult), NOT derived
+        // from std::exception — without this branch it would fall through to
+        // the generic catch below and its message would be lost (the historical
+        // "unknown exception").
+        std::string text = "vsg::Exception: " + e.message;
+        if (e.result != 0) {
+            text += " (VkResult " + std::to_string(e.result) + ")";
+        }
+        return text;
+    }
+    catch (const std::exception& e) {
+        return std::string("std::exception: ") + e.what();
+    }
+    catch (...) {
+#if defined(__GNUG__)
+        if (const std::type_info* type = abi::__cxa_current_exception_type()) {
+            int          status    = 0;
+            char*        demangled = abi::__cxa_demangle(type->name(), nullptr, nullptr, &status);
+            std::string  name      = (demangled != nullptr) ? demangled : type->name();
+            std::free(demangled);
+            return "non-std exception of type '" + name + "'";
+        }
+#endif
+        return "non-std exception (type name unavailable)";
+    }
+}
 
 /**
  * @brief Builds the shader set for the given shading preset with complete
@@ -1125,6 +1176,10 @@ bool VsgRenderer::initialize()
         shutdown();
         persistent->bound_handle = bound;
     }
+    // The stage label is printed if any step below throws, so a failing init
+    // reports exactly where it died (window/device/swapchain creation, shader
+    // sets, viewer compile) instead of a bare "unknown exception".
+    const char* init_stage = "creating Vulkan window (instance/device/swapchain)";
     try {
     // Window. When a host native window is bound, attach to its surface (e.g.
     // a Qt QWindow) instead of creating a separate window.
@@ -1185,6 +1240,7 @@ bool VsgRenderer::initialize()
     // depth-off set disables it so the slot's content always draws on top of
     // earlier content (HUD). Off-screen targets bake their own per-size sets
     // lazily.
+    init_stage = "building window shader sets";
     impl->depth_on_shader_set  = buildShaderSet(persistent->shader_preset, impl->window->extent2D(), true);
     impl->depth_off_shader_set = buildShaderSet(persistent->shader_preset, impl->window->extent2D(), false);
 
@@ -1198,6 +1254,7 @@ bool VsgRenderer::initialize()
     // the message loop here). Content slots are appended to the render graph
     // later (see setupContentSlot) as extra Views — the canonical vsg
     // multi-viewport pattern: one render pass, later Views drawn on top.
+    init_stage = "creating viewer / command graph";
     impl->viewer = ::vsg::ref_ptr<::vsg::Viewer>(new EmbeddedViewer());
     impl->viewer->addWindow(impl->window);
 
@@ -1213,9 +1270,10 @@ bool VsgRenderer::initialize()
     impl->command_graph = commandGraph;
     impl->viewer->assignRecordAndSubmitTaskAndPresentation(::vsg::CommandGraphs{ commandGraph });
 
+    init_stage = "initial viewer compile";
     const auto compileResult = impl->viewer->compile();
     if (!compileResult) {
-        std::fprintf(stderr, "[VsgRenderer] compile failed: %s\n", compileResult.message.c_str());
+        std::fprintf(stderr, "[VsgRenderer] initialize FAILED at '%s': %s\n", init_stage, compileResult.message.c_str());
         shutdown();
         return false;
     }
@@ -1223,11 +1281,19 @@ bool VsgRenderer::initialize()
     impl->initialized = true;
     return true;
     }
-    catch (const std::exception& e) {
-        std::fprintf(stderr, "[VsgRenderer] initialize exception: %s\n", e.what());
-    }
     catch (...) {
-        std::fprintf(stderr, "[VsgRenderer] initialize unknown exception\n");
+        std::fprintf(stderr, "[VsgRenderer] initialize FAILED at '%s': %s\n",
+                     init_stage, describeCurrentException().c_str());
+        // Environment hints: an init failure here is usually a missing/invalid
+        // Vulkan ICD (VK_ICD_FILENAMES), a device/driver problem or a missing
+        // display — print what the backend saw so a local environment issue is
+        // not mistaken for a code defect.
+        std::fprintf(stderr,
+                     "[VsgRenderer]   init env: VK_ICD_FILENAMES=%s  VINE_VSG_DEBUG_LAYER=%s  DISPLAY=%s  WAYLAND_DISPLAY=%s\n",
+                     std::getenv("VK_ICD_FILENAMES") ? std::getenv("VK_ICD_FILENAMES") : "(unset)",
+                     std::getenv("VINE_VSG_DEBUG_LAYER") ? std::getenv("VINE_VSG_DEBUG_LAYER") : "(unset)",
+                     std::getenv("DISPLAY") ? std::getenv("DISPLAY") : "(unset)",
+                     std::getenv("WAYLAND_DISPLAY") ? std::getenv("WAYLAND_DISPLAY") : "(unset)");
     }
     shutdown();
     return false;
@@ -1557,28 +1623,159 @@ void VsgRenderer::buildOffscreenTarget(vine::graphics::RenderTarget* target)
         t.graph->clearValues.push_back(depth_clear);
     }
 
+    // A (re)built target created FRESH colour views: any OTHER target that
+    // samples this one (PiP screen slots / fullscreen-program slots) still
+    // holds the OLD views and would sample a stale, no-longer-drawn image
+    // (its stale check only watches source size, which a same-size rebuild
+    // does not change). Drop those slots so the next drawScreenTexture /
+    // drawScreenProgram call reattaches against the new attachments.
+    for (auto& entry : impl->targets) {
+        auto& other = entry.second;
+        if (entry.first == target || other.graph == nullptr) {
+            continue;
+        }
+        for (auto it = other.screen_slots.begin(); it != other.screen_slots.end();) {
+            if (it->first.target == target) {
+                removeGraphChild(other.graph.get(), it->second.view);
+                it = other.screen_slots.erase(it);
+            } else {
+                ++it;
+            }
+        }
+        const auto pit = other.program_slots.find(target);
+        if (pit != other.program_slots.end()) {
+            removeGraphChild(other.graph.get(), pit->second.view);
+            other.program_slots.erase(pit);
+        }
+    }
+
     if (impl->command_graph != nullptr) {
-        // Record off-screen graphs BEFORE the main window graph, in CREATION
-        // order, so the colour texture a producer produces is current when a
-        // later consumer pass samples it in the same frame (A -> B chains:
-        // the producer's graph is inserted first, the consumer's after it).
-        // Inserting at the front would reverse creation order and make a
-        // later consumer run before its producer (stale sampling).
-        auto& children = impl->command_graph->children;
-        auto  win_it   = children.end();
-        if (const auto win = impl->targets.find(nullptr);
-            win != impl->targets.end() && win->second.graph != nullptr) {
-            win_it = std::find(children.begin(), children.end(), win->second.graph);
-        }
-        if (win_it != children.end()) {
-            children.insert(win_it, t.graph);
-        } else {
-            children.push_back(t.graph);
-        }
+        // Add the graph as the command graph's last child, then reorder every
+        // off-screen graph into a dependency-valid sequence — each consumer is
+        // recorded after the targets it samples (see reconcileOffscreenOrder()
+        // for why creation order alone is not enough).
+        impl->command_graph->children.push_back(t.graph);
+        reconcileOffscreenOrder();
     }
     std::fprintf(stderr, "[VsgRenderer] EXPERIMENTAL off-screen target %ux%u attached\n", w, h);
     // NOTE: no compile here — the graph is empty until its first content slot
     // is added; setupContentSlot() compiles the (whole) command graph then.
+}
+
+void VsgRenderer::reconcileOffscreenOrder()
+{
+    // Keeps the command graph's child render graphs in a dependency-valid
+    // RECORD order. The engine can build a target's graph out of dependency
+    // order — a producer (re)built after its consumers existed (resize or
+    // depth-policy change in render()), or a consumer wired to a producer
+    // built later — so creation order alone is not enough: a screen pass that
+    // samples another target (drawScreenTexture / drawScreenProgram) reads
+    // that target's colour texture, and the sample is only CURRENT when the
+    // producer's graph is recorded before the consumer's in the same frame.
+    // This orders every off-screen graph by its sampling edges (source before
+    // the targets that sample it), seeding ties with the current child order
+    // so unrelated targets keep a stable sequence; the window swapchain graph
+    // stays the last child (it may itself sample off-screen targets).
+    if (impl->command_graph == nullptr) {
+        return;
+    }
+    auto& children = impl->command_graph->children;
+    const auto win = impl->targets.find(nullptr);
+    if (win == impl->targets.end() || win->second.graph == nullptr) {
+        return;
+    }
+    const auto window_graph = win->second.graph;
+
+    // Index every off-screen graph by its target, and collect the ones
+    // currently in the command graph, preserving their current relative order
+    // as the stable tie-break seed.
+    std::map<vine::graphics::RenderTarget*, ::vsg::ref_ptr<::vsg::RenderGraph>> graph_of;
+    for (const auto& entry : impl->targets) {
+        if (entry.first != nullptr && entry.second.graph != nullptr) {
+            graph_of.emplace(entry.first, entry.second.graph);
+        }
+    }
+    std::vector<vine::graphics::RenderTarget*> present;
+    present.reserve(graph_of.size());
+    for (const auto& child : children) {
+        if (child == window_graph) {
+            continue;
+        }
+        for (const auto& entry : graph_of) {
+            if (entry.second == child) {
+                present.push_back(entry.first);
+                break;
+            }
+        }
+    }
+
+    // Sampling edges: a consumer depends on every source it samples (screen
+    // slot keys carry the sampled target; program slots are keyed by it).
+    // Self-sampling is rejected on attach and mutual same-frame sampling
+    // (ping-pong inside one frame) is not a supported pattern, so the edge
+    // graph is acyclic in practice; a cycle would only leave targets in their
+    // current order below.
+    std::map<vine::graphics::RenderTarget*, int>                                              indegree;
+    std::map<vine::graphics::RenderTarget*, std::vector<vine::graphics::RenderTarget*>> consumers;
+    for (auto* t : present) {
+        indegree[t] = 0;
+    }
+    for (auto* t : present) {
+        const auto entry = impl->targets.find(t);
+        if (entry == impl->targets.end()) {
+            continue;
+        }
+        const auto& target = entry->second;
+        const auto add_source = [&](vine::graphics::RenderTarget* source) {
+            if (source == nullptr || source == t || graph_of.find(source) == graph_of.end()) {
+                return;
+            }
+            consumers[source].push_back(t);
+            ++indegree[t];
+        };
+        for (const auto& slot : target.screen_slots) {
+            add_source(slot.first.target);
+        }
+        for (const auto& slot : target.program_slots) {
+            add_source(slot.first);
+        }
+    }
+
+    // Stable topological order (Kahn): seed with the zero-indegree targets in
+    // current order, emit each and unlock its consumers.
+    std::vector<vine::graphics::RenderTarget*> order;
+    order.reserve(present.size());
+    std::vector<vine::graphics::RenderTarget*> ready;
+    ready.reserve(present.size());
+    for (auto* t : present) {
+        if (indegree[t] == 0) {
+            ready.push_back(t);
+        }
+    }
+    for (std::size_t head = 0; head < ready.size(); ++head) {
+        auto* t = ready[head];
+        order.push_back(t);
+        for (auto* c : consumers[t]) {
+            if (--indegree[c] == 0) {
+                ready.push_back(c);
+            }
+        }
+    }
+    for (auto* t : present) {
+        if (indegree[t] > 0) {
+            order.push_back(t); // cycle remainder (unsupported pattern)
+        }
+    }
+
+    // Rewrite the command graph's children: off-screen graphs in dependency
+    // order, then the window graph last. Reordering render-graph children only
+    // changes per-frame record order — each graph is its own render pass, so
+    // no recompilation is needed.
+    children.clear();
+    for (auto* t : order) {
+        children.push_back(graph_of[t]);
+    }
+    children.push_back(window_graph);
 }
 
 void VsgRenderer::drawScreenTexture(vine::graphics::RenderTarget* source, int attachment)
@@ -1724,6 +1921,13 @@ void VsgRenderer::drawScreenTexture(vine::graphics::RenderTarget* source, int at
         slot.ready         = true;
         impl->needs_submit = true;
         std::fprintf(stderr, "[VsgRenderer] EXPERIMENTAL screen PiP %dx%d (att %zu) -> %s %d,%d %dx%d attached\n", src.width, src.height, attachment_index, dest == nullptr ? "window" : "offscreen", rect_x, rect_y, rect_w, rect_h);
+        if (dest != nullptr) {
+            // A new sampling edge appeared under an off-screen destination:
+            // re-order the command graph so this consumer records after every
+            // target it samples (source == dest is rejected above, so this
+            // cannot feed the producer back on itself).
+            reconcileOffscreenOrder();
+        }
     }
 
     // Follow the requested sub-viewport each frame (dynamic viewport + scissor).
@@ -1998,6 +2202,13 @@ void VsgRenderer::drawScreenProgram(vine::graphics::RenderTarget*              s
         slot.ready         = true;
         impl->needs_submit = true;
         std::fprintf(stderr, "[VsgRenderer] EXPERIMENTAL deferred fullscreen program %dx%d -> %s %d,%d %dx%d attached\n", src.width, src.height, dest == nullptr ? "window" : "offscreen", rect_x, rect_y, rect_w, rect_h);
+        if (dest != nullptr) {
+            // New sampling edges (this program samples every colour attachment
+            // of source) appeared under an off-screen destination: re-order so
+            // the consumer records after its producer (source == dest is
+            // rejected above, so this cannot feed back on itself).
+            reconcileOffscreenOrder();
+        }
     }
 
     // Consume the lights queued by setLights() (from the pass's content scene)

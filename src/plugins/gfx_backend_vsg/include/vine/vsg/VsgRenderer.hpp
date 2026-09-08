@@ -245,6 +245,20 @@ class V_VSG_API VsgRenderer : public vine::graphics::RenderBackend {
      */
     void buildOffscreenTarget(vine::graphics::RenderTarget* target);
 
+    /** @brief Keeps the command graph's off-screen render graphs in a
+     * dependency-valid record order.
+     *
+     * A consumer's graph is ordered after every target it samples (its PiP
+     * screen / fullscreen-program sources), so a same-frame producer chain
+     * (A -> B -> window) samples the CURRENT frame; the window swapchain graph
+     * stays the last child. Called whenever an off-screen graph is (re)built
+     * or a sampling slot is newly attached — creation order alone cannot
+     * guarantee the dependency order (a producer rebuilt after its consumers
+     * existed, or a consumer wired to a producer built later would otherwise
+     * record the consumer first and sample stale / undefined content).
+     */
+    void reconcileOffscreenOrder();
+
     /** @brief Builds (on first use) the retained vsg view for a content slot.
      *
      * A content slot is a View of a TARGET's render graph — the window target
