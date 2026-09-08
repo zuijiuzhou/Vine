@@ -149,18 +149,17 @@ vine::intrusive_ptr<vine::graphics::MatrixTransform> addBox(vine::graphics::Grou
     // Pre-compute the cached AABB so drawable/scene bounds reuse it.
     mesh->computeAabb();
 
-    auto geometry = vine::intrusive_ptr<vine::graphics::Geometry>(new vine::graphics::Geometry());
+    auto geometry = vine::make_intrusive<vine::graphics::Geometry>();
     geometry->setName(name);
     geometry->setShape(mesh);
 
-    auto material = vine::intrusive_ptr<vine::graphics::Material>(new vine::graphics::Material());
+    auto material = vine::make_intrusive<vine::graphics::Material>();
     material->setDiffuse(diffuse);
     geometry->setMaterial(material);
 
     // Place the box with a MatrixTransform: the transform node carries the
     // position and owns the leaf geometry.
-    auto node = vine::intrusive_ptr<vine::graphics::MatrixTransform>(
-        new vine::graphics::MatrixTransform());
+    auto node = vine::make_intrusive<vine::graphics::MatrixTransform>();
     node->setName(name);
     node->setMatrix(vine::math::translate(centre));
     node->addChild(geometry);
@@ -199,7 +198,7 @@ void addDemoCubes(vine::graphics::Scene* scene)
 
     // Single root: one identity Group owns every demo subtree; the scene
     // renders exactly this root.
-    auto root = intrusive_ptr<vine::graphics::Group>(new vine::graphics::Group());
+    auto root = make_intrusive<vine::graphics::Group>();
     scene->setRoot(root);
 
     // Ground (wide, slightly below origin) + one plain lit box: the default
@@ -211,7 +210,7 @@ void addDemoCubes(vine::graphics::Scene* scene)
 
     // --- StateNode{ PolygonMode::Line }: wireframe box ----------------------
     {
-        auto state = intrusive_ptr<StateNode>(new StateNode());
+        auto state = make_intrusive<StateNode>();
         state->setPolygonMode(vine::graphics::PolygonMode::Line);
         auto box = addBox(root.get(), vine::Colorf(1.0f, 0.68f, 0.12f, 1.0f), u8"wire_box",
                           Vec3d(-2.3, 0.35, 0.6), Vec3d(0.35, 0.35, 0.35));
@@ -221,7 +220,7 @@ void addDemoCubes(vine::graphics::Scene* scene)
 
     // --- StateNode{ CullMode::Back }: single-sided box ----------------------
     {
-        auto state = intrusive_ptr<StateNode>(new StateNode());
+        auto state = make_intrusive<StateNode>();
         state->setCullMode(vine::graphics::CullMode::Back);
         auto box = addBox(root.get(), vine::Colorf(0.20f, 0.75f, 0.85f, 1.0f), u8"culled_box",
                           Vec3d(-1.6, 0.4, -0.8), Vec3d(0.4, 0.4, 0.4));
@@ -231,7 +230,7 @@ void addDemoCubes(vine::graphics::Scene* scene)
 
     // --- Custom magenta program on a box (Geometry::setProgram) -------------
     {
-        auto program = intrusive_ptr<ShaderProgram>(new ShaderProgram());
+        auto program = make_intrusive<ShaderProgram>();
         program->setName(u8"demo_magenta");
         ShaderStage vs;
         vs.type = ShaderStageType::Vertex;
@@ -257,7 +256,7 @@ void addDemoCubes(vine::graphics::Scene* scene)
 
     // --- Point cloud: StateNode{ Topology::Points } + cyan program ----------
     {
-        auto program = intrusive_ptr<ShaderProgram>(new ShaderProgram());
+        auto program = make_intrusive<ShaderProgram>();
         program->setName(u8"demo_cyan_points");
         ShaderStage vs;
         vs.type = ShaderStageType::Vertex;
@@ -273,7 +272,7 @@ void addDemoCubes(vine::graphics::Scene* scene)
                     u8"void main(){ outColor = vec4(0.1, 0.9, 0.95, 1.0); }\n";
         program->addStage(fs);
 
-        auto cloud = intrusive_ptr<Geometry>(new Geometry());
+        auto cloud = make_intrusive<Geometry>();
         cloud->setName(u8"point_cloud");
         vine::geometry::Vec3fArray points;
         for (int ring = 0; ring < 4; ++ring) {
@@ -287,9 +286,9 @@ void addDemoCubes(vine::graphics::Scene* scene)
         cloud->setPositions(points);
         cloud->setProgram(program);
 
-        auto state = intrusive_ptr<StateNode>(new StateNode());
+        auto state = make_intrusive<StateNode>();
         state->setTopology(vine::graphics::Topology::Points);
-        auto mt = intrusive_ptr<MatrixTransform>(new MatrixTransform());
+        auto mt = make_intrusive<MatrixTransform>();
         mt->setName(u8"point_cloud_node");
         mt->setMatrix(vine::math::translate(Vec3d(-2.3, 0.75, -1.2)));
         mt->addChild(cloud);
@@ -302,7 +301,7 @@ void addDemoCubes(vine::graphics::Scene* scene)
         auto inner = addBox(root.get(), vine::Colorf(0.95f, 0.5f, 0.1f, 1.0f), u8"nested_inner",
                             Vec3d(0.0, 0.0, 0.0), Vec3d(0.28, 0.28, 0.28));
         inner->setMatrix(vine::math::translate(Vec3d(0.0, 0.32, 0.0)));
-        auto outer = intrusive_ptr<MatrixTransform>(new MatrixTransform());
+        auto outer = make_intrusive<MatrixTransform>();
         outer->setName(u8"nested_outer");
         outer->setMatrix(vine::math::translate(Vec3d(1.5, 0.0, 0.9)));
         outer->addChild(inner);
@@ -311,7 +310,7 @@ void addDemoCubes(vine::graphics::Scene* scene)
 
     // --- StateNode blend + translucent box -----------------------------------
     {
-        auto state = intrusive_ptr<StateNode>(new StateNode());
+        auto state = make_intrusive<StateNode>();
         BlendState blend;
         blend.enabled = true;
         blend.src = vine::graphics::BlendFactor::SrcAlpha;
@@ -543,9 +542,8 @@ void addSlotOverlayDemo(gui::RenderControl* render_control)
         if (engine == nullptr || render_control->view()->camera() == nullptr) {
             return;
         }
-        auto overlay = vine::intrusive_ptr<vine::graphics::Scene>(new vine::graphics::Scene());
-        auto overlay_root = vine::intrusive_ptr<vine::graphics::Group>(
-            new vine::graphics::Group());
+        auto overlay = vine::make_intrusive<vine::graphics::Scene>();
+        auto overlay_root = vine::make_intrusive<vine::graphics::Group>();
         overlay->setRoot(overlay_root);
         const auto add_overlay_box = [overlay_root](const vine::Colorf& color,
                                                     const vine::math::Vec3d& centre,
@@ -566,7 +564,7 @@ void addSlotOverlayDemo(gui::RenderControl* render_control)
         add_overlay_box(vine::Colorf(1.0f, 0.30f, 0.10f, 1.0f), vine::math::Vec3d(-2.9, 0.8, -2.4), 0.35);
         add_overlay_box(vine::Colorf(1.0f, 0.95f, 0.10f, 1.0f), vine::math::Vec3d(2.6, 1.2, 1.9), 0.28);
 
-        auto pass = vine::intrusive_ptr<vine::graphics::RenderPass>(new vine::graphics::RenderPass());
+        auto pass = vine::make_intrusive<vine::graphics::RenderPass>();
         pass->setName(u8"slot_overlay");
         pass->setCamera(render_control->view()->camera());
         pass->setClearEnabled(false); // overlay: no clear -> on-top (depth-off)
@@ -604,13 +602,13 @@ void addOffscreenMultiSlotDemo(gui::RenderControl* render_control)
     }
 
     // Shared off-screen target: two content slots bake into it.
-    auto target = vine::intrusive_ptr<vine::graphics::RenderTarget>(new vine::graphics::RenderTarget());
+    auto target = vine::make_intrusive<vine::graphics::RenderTarget>();
     target->setSize(640, 360);
     target->attachColor(vine::graphics::RenderTarget::ColorFormat::RGBA8);
     target->attachDepth(vine::graphics::RenderTarget::DepthFormat::D24);
 
     // Slot 0: the main engine scene, cleared (depth-on).
-    auto pass_main = vine::intrusive_ptr<vine::graphics::RenderPass>(new vine::graphics::RenderPass());
+    auto pass_main = vine::make_intrusive<vine::graphics::RenderPass>();
     pass_main->setName(u8"multislot_main");
     pass_main->setCamera(render_control->view()->camera());
     pass_main->setRenderTarget(target);
@@ -618,9 +616,8 @@ void addOffscreenMultiSlotDemo(gui::RenderControl* render_control)
     engine->addPass(pass_main, render_control->view()->scene(), -2); // content = view scene
 
     // Slot 1: an extra scene drawn on top (no clear -> on-top, depth-off).
-    auto overlay = vine::intrusive_ptr<vine::graphics::Scene>(new vine::graphics::Scene());
-    auto overlay_root = vine::intrusive_ptr<vine::graphics::Group>(
-        new vine::graphics::Group());
+    auto overlay = vine::make_intrusive<vine::graphics::Scene>();
+    auto overlay_root = vine::make_intrusive<vine::graphics::Group>();
     overlay->setRoot(overlay_root);
     const auto add_overlay_box = [overlay_root](const vine::Colorf& color,
                                                 const vine::math::Vec3d& centre,
@@ -638,7 +635,7 @@ void addOffscreenMultiSlotDemo(gui::RenderControl* render_control)
     add_overlay_box(vine::Colorf(1.0f, 0.30f, 0.10f, 1.0f), vine::math::Vec3d(-2.4, 0.9, -1.8), vine::math::Vec3d(0.55, 0.55, 0.55));
     add_overlay_box(vine::Colorf(0.30f, 0.90f, 0.30f, 1.0f), vine::math::Vec3d(2.2, 1.3, 1.6), vine::math::Vec3d(0.45, 0.45, 0.45));
 
-    auto pass_top = vine::intrusive_ptr<vine::graphics::RenderPass>(new vine::graphics::RenderPass());
+    auto pass_top = vine::make_intrusive<vine::graphics::RenderPass>();
     pass_top->setName(u8"multislot_top");
     pass_top->setCamera(render_control->view()->camera());
     pass_top->setRenderTarget(target);
@@ -663,7 +660,7 @@ void addOffscreenMultiSlotDemo(gui::RenderControl* render_control)
         sx = sw - pip_w - margin;
         sy = sh - pip_h - margin;
     }
-    auto screen = vine::intrusive_ptr<vine::graphics::ScreenPass>(new vine::graphics::ScreenPass());
+    auto screen = vine::make_intrusive<vine::graphics::ScreenPass>();
     screen->setName(u8"multislot_pip");
     screen->addInputName(u8"MultiColor");
     screen->setViewport(sx, sy, pip_w, pip_h);
@@ -700,7 +697,7 @@ void addGbufferDemo(gui::RenderControl* render_control)
     // Canonical G-buffer: engine scene through the default multi-output
     // program into the shared MRT target (single source with the Deferred
     // preset), published as "GBuffer".
-    auto target = makeGbufferTarget();    auto gbuf   = vine::intrusive_ptr<vine::graphics::RenderPass>(new vine::graphics::RenderPass());
+    auto target = makeGbufferTarget();    auto gbuf   = vine::make_intrusive<vine::graphics::RenderPass>();
     gbuf->setName(u8"gbuffer_pass");
     gbuf->setCamera(render_control->view()->camera());
     gbuf->setRenderTarget(target);
@@ -714,7 +711,7 @@ void addGbufferDemo(gui::RenderControl* render_control)
     const int    pip_w = static_cast<int>(108.0 * dpr);
     const int    pip_h = static_cast<int>(61.0 * dpr);
     for (int attachment = 0; attachment < 4; ++attachment) {
-        auto screen = vine::intrusive_ptr<vine::graphics::ScreenPass>(new vine::graphics::ScreenPass());
+        auto screen = vine::make_intrusive<vine::graphics::ScreenPass>();
         screen->setName(u8"gbuffer_preview");
         screen->addInputName(u8"GBuffer");
         screen->setSourceAttachment(attachment);
@@ -749,7 +746,7 @@ void addDeferredDemo(gui::RenderControl* render_control)
     }
 
     // Shared G-buffer: engine scene through the multi-output program.
-    auto target = makeGbufferTarget();    auto gbuf   = vine::intrusive_ptr<vine::graphics::RenderPass>(new vine::graphics::RenderPass());
+    auto target = makeGbufferTarget();    auto gbuf   = vine::make_intrusive<vine::graphics::RenderPass>();
     gbuf->setName(u8"deferred_gbuffer");
     gbuf->setCamera(render_control->view()->camera());
     gbuf->setRenderTarget(target);
@@ -762,7 +759,7 @@ void addDeferredDemo(gui::RenderControl* render_control)
     const double dpr = render_control->devicePixelRatio();
     const int    pw  = static_cast<int>(340.0 * dpr);
     const int    ph  = static_cast<int>(191.0 * dpr);
-    auto light = vine::intrusive_ptr<vine::graphics::ScreenPass>(new vine::graphics::ScreenPass());
+    auto light = vine::make_intrusive<vine::graphics::ScreenPass>();
     light->setName(u8"deferred_light");
     light->addInputName(u8"GBuffer");
     light->setCamera(render_control->view()->camera());

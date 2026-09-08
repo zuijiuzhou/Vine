@@ -219,8 +219,8 @@ vine::intrusive_ptr<vine::geometry::Material> XmlIOBase::parseMaterial(ParseCont
         double r = 0.0, g = 0.0, b = 0.0, a = 1.0;
         std::istringstream stream(color_str.stdstr());
         if (stream >> r >> g >> b >> a) {
-            return vine::intrusive_ptr<vine::geometry::ColorMaterial>(new vine::geometry::ColorMaterial(
-                vine::Colorf(static_cast<float>(r), static_cast<float>(g), static_cast<float>(b), static_cast<float>(a))));
+            return vine::make_intrusive<vine::geometry::ColorMaterial>(
+                vine::Colorf(static_cast<float>(r), static_cast<float>(g), static_cast<float>(b), static_cast<float>(a)));
         }
     }
     return {};
@@ -243,14 +243,14 @@ vine::intrusive_ptr<vine::geometry::Shape> XmlIOBase::parseGeometry(ParseContext
         if (!(stream >> w >> h >> d)) {
             return {};
         }
-        return vine::intrusive_ptr<vine::geometry::Box>(new vine::geometry::Box(w * s, h * s, d * s));
+        return vine::make_intrusive<vine::geometry::Box>(w * s, h * s, d * s);
     }
     if (tag == "sphere") {
         double r = 0.0;
         if (!getAttrDouble(child, "radius", r)) {
             return {};
         }
-        return vine::intrusive_ptr<vine::geometry::Sphere>(new vine::geometry::Sphere(r * s));
+        return vine::make_intrusive<vine::geometry::Sphere>(r * s);
     }
     if (tag == "cylinder" || tag == "cone") {
         double r = 0.0, h = 0.0;
@@ -258,9 +258,9 @@ vine::intrusive_ptr<vine::geometry::Shape> XmlIOBase::parseGeometry(ParseContext
             return {};
         }
         if (tag == "cylinder") {
-            return vine::intrusive_ptr<vine::geometry::Cylinder>(new vine::geometry::Cylinder(r * s, h * s));
+            return vine::make_intrusive<vine::geometry::Cylinder>(r * s, h * s);
         }
-        return vine::intrusive_ptr<vine::geometry::Cone>(new vine::geometry::Cone(r * s, h * s));
+        return vine::make_intrusive<vine::geometry::Cone>(r * s, h * s);
     }
     if (tag == "ellipsoid") {
         const String radii_str = attr(child, "radii");
@@ -299,7 +299,7 @@ vine::intrusive_ptr<vine::geometry::Shape> XmlIOBase::parseGeometry(ParseContext
             return {};
         }
         if (tag == "triangle_mesh") {
-            auto mesh = vine::intrusive_ptr<vine::geometry::TriangleMesh>(new vine::geometry::TriangleMesh());
+            auto mesh = vine::make_intrusive<vine::geometry::TriangleMesh>();
             mesh->setPositions(std::move(positions));
             if (!normals.empty()) {
                 mesh->setNormals(std::move(normals));

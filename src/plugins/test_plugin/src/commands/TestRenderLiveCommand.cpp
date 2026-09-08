@@ -46,14 +46,14 @@ intrusive_ptr<vine::graphics::MatrixTransform> addDemoTriangle(vine::graphics::S
                                                               const vine::String& name,
                                                               const Vec3d& at)
 {
-    auto mesh = intrusive_ptr<vine::geometry::TriangleMesh>(new vine::geometry::TriangleMesh());
+    auto mesh = make_intrusive<vine::geometry::TriangleMesh>();
     mesh->addTriangle(Vec3f(-1.0f, -1.0f, 0.0f), Vec3f(1.0f, -1.0f, 0.0f), Vec3f(0.0f, 1.0f, 0.0f));
 
-    auto geometry = intrusive_ptr<vine::graphics::Geometry>(new vine::graphics::Geometry());
+    auto geometry = make_intrusive<vine::graphics::Geometry>();
     geometry->setName(name);
     geometry->setShape(mesh);
 
-    auto material = intrusive_ptr<vine::graphics::Material>(new vine::graphics::Material());
+    auto material = make_intrusive<vine::graphics::Material>();
     material->setDiffuse(diffuse);
     geometry->setMaterial(material);
 
@@ -65,7 +65,7 @@ intrusive_ptr<vine::graphics::MatrixTransform> addDemoTriangle(vine::graphics::S
 
     vine::graphics::Group* root = dynamic_cast<vine::graphics::Group*>(scene->root().get());
     if (root == nullptr) {
-        auto group = intrusive_ptr<vine::graphics::Group>(new vine::graphics::Group());
+        auto group = make_intrusive<vine::graphics::Group>();
         scene->setRoot(group);
         root = group.get();
     }

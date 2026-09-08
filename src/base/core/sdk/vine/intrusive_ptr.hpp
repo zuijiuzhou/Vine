@@ -271,6 +271,26 @@ class intrusive_ptr {
 };
 
 /**
+ * @brief Constructs an object owned by an intrusive_ptr in place.
+ *
+ * Equivalent to intrusive_ptr<T>(new T(std::forward<Args>(args)...)): the
+ * object's intrusive counter starts at 0 and the returned pointer takes the
+ * first reference (see RefCounted). Mirrors std::make_unique / std::make_shared
+ * so callers never write a bare `new`; existing raw pointers are still adopted
+ * with intrusive_ptr<T>(p) / reset(p).
+ *
+ * @tparam T    Referenced type.
+ * @tparam Args Constructor argument types.
+ * @param args  Forwarded to T's constructor.
+ * @return Owning pointer to the new object.
+ */
+template <typename T, typename... Args>
+inline intrusive_ptr<T> make_intrusive(Args&&... args)
+{
+    return intrusive_ptr<T>(new T(std::forward<Args>(args)...));
+}
+
+/**
  * @brief Performs a static pointer cast.
  *
  * @tparam T Target element type.

@@ -17,8 +17,8 @@
 V_GRAPHICS_NS_BEGIN
 
 SceneView::SceneView()
-  : camera_(intrusive_ptr<Camera>(new Camera()))
-  , scene_(intrusive_ptr<Scene>(new Scene()))
+  : camera_(make_intrusive<Camera>())
+  , scene_(make_intrusive<Scene>())
 {}
 
 SceneView::~SceneView()

@@ -6,7 +6,6 @@
 #include <set>
 #include <string>
 #include <utility>
-#include <vector>
 
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
@@ -234,7 +233,7 @@ vine::intrusive_ptr<Mesh> MeshLoader::load(const std::filesystem::path& file_pat
         return {};
     }
 
-    auto mesh = vine::intrusive_ptr<IndexedTriangleMesh>(new IndexedTriangleMesh());
+    auto mesh = vine::make_intrusive<IndexedTriangleMesh>();
     mergeAssimpScene(*mesh, scene);
     applyScale(options_, *mesh);
 

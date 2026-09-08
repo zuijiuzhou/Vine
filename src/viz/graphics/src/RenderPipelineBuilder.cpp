@@ -25,7 +25,7 @@ V_GRAPHICS_NS_BEGIN
  */
 intrusive_ptr<ShaderProgram> RenderPipelineBuilder::defaultGbufferGeometryProgram()
 {
-    auto program = intrusive_ptr<ShaderProgram>(new ShaderProgram());
+    auto program = make_intrusive<ShaderProgram>();
     program->setName(u8"gbuffer_geometry");
     ShaderStage vs;
     vs.type   = ShaderStageType::Vertex;
@@ -87,7 +87,7 @@ intrusive_ptr<ShaderProgram> RenderPipelineBuilder::defaultGbufferGeometryProgra
  */
 intrusive_ptr<ShaderProgram> RenderPipelineBuilder::defaultDeferredLightProgram()
 {
-    auto program = intrusive_ptr<ShaderProgram>(new ShaderProgram());
+    auto program = make_intrusive<ShaderProgram>();
     program->setName(u8"deferred_light");
     ShaderStage fs;
     fs.type   = ShaderStageType::Fragment;
@@ -151,7 +151,7 @@ intrusive_ptr<RenderTarget> RenderPipelineBuilder::defaultGbufferTarget(int widt
     if (height <= 0) {
         height = 360;
     }
-    auto gbuffer = intrusive_ptr<RenderTarget>(new RenderTarget());
+    auto gbuffer = make_intrusive<RenderTarget>();
     gbuffer->setSize(width, height);
     gbuffer->attachColor(RenderTarget::ColorFormat::RGBA8);   // att 0: albedo
     gbuffer->attachColor(RenderTarget::ColorFormat::RGBA16F); // att 1: view normal (+ shininess)
@@ -192,7 +192,7 @@ intrusive_ptr<Pipeline> RenderPipelineBuilder::build(PipelinePreset preset,
         base = PipelinePreset::Deferred;
     }
 
-    auto pipeline = intrusive_ptr<Pipeline>(new Pipeline());
+    auto pipeline = make_intrusive<Pipeline>();
     const bool ok = (base == PipelinePreset::Forward)
         ? buildForward(*pipeline)
         : buildDeferred(*pipeline, options);
@@ -203,7 +203,7 @@ intrusive_ptr<Pipeline> RenderPipelineBuilder::build(PipelinePreset preset,
     // Optional HUD overlay: an axis gizmo (mirrors the source camera) stacked
     // above the window pass. It is re-anchored through Pipeline::resize.
     if (options.gizmo.source_camera != nullptr) {
-        auto gizmo = intrusive_ptr<AxisGizmo>(new AxisGizmo());
+        auto gizmo = make_intrusive<AxisGizmo>();
         gizmo->setSourceCamera(options.gizmo.source_camera);
         gizmo->setPixelRatio(options.gizmo.pixel_ratio);
         gizmo->setBoxSize(options.gizmo.box_size);
@@ -219,7 +219,7 @@ intrusive_ptr<Pipeline> RenderPipelineBuilder::build(PipelinePreset preset,
     // is enabled by default (see FpsOverlayOptions::enabled). Re-anchored
     // through Pipeline::resize like the gizmo.
     if (options.fps.enabled) {
-        auto fps = intrusive_ptr<FpsOverlay>(new FpsOverlay());
+        auto fps = make_intrusive<FpsOverlay>();
         fps->setPixelRatio(options.fps.pixel_ratio);
         fps->setSize(options.fps.width_px, options.fps.height_px);
         engine_->addPass(fps, options.fps.order);
@@ -234,7 +234,7 @@ bool RenderPipelineBuilder::buildForward(Pipeline& pipeline)
     if (engine_ == nullptr || camera_ == nullptr) {
         return false;
     }
-    auto pass = intrusive_ptr<RenderPass>(new RenderPass());
+    auto pass = make_intrusive<RenderPass>();
     pass->setName(u8"main");
     pass->setCamera(camera_);
     if (content_ != nullptr) {
@@ -282,7 +282,7 @@ bool RenderPipelineBuilder::buildDeferred(Pipeline& pipeline,
     auto gbuffer = defaultGbufferTarget(width, height);
 
     // G-buffer geometry pass (order < 0), publishing the target as "GBuffer".
-    auto gbuf_pass = intrusive_ptr<RenderPass>(new RenderPass());
+    auto gbuf_pass = make_intrusive<RenderPass>();
     gbuf_pass->setName(u8"gbuffer");
     gbuf_pass->setCamera(camera_);
     gbuf_pass->setRenderTarget(gbuffer);
@@ -294,7 +294,7 @@ bool RenderPipelineBuilder::buildDeferred(Pipeline& pipeline,
     // Fullscreen deferred-lighting pass at order 0: it is the window pass
     // that presents the view camera (so RenderControl / SceneView add no
     // forward pass). Binding the content scene lets it forward the lights.
-    auto light = intrusive_ptr<ScreenPass>(new ScreenPass());
+    auto light = make_intrusive<ScreenPass>();
     light->setName(u8"deferred_light");
     light->setCamera(camera_);
     light->addInputName(u8"GBuffer");
@@ -325,12 +325,12 @@ raw_ptr<ScreenPass> RenderPipelineBuilder::addOffscreenToScreen(const String& ou
 
     // Off-screen target + an order < 0 scene pass that renders into it and
     // publishes the result under the slot name.
-    auto target = intrusive_ptr<RenderTarget>(new RenderTarget());
+    auto target = make_intrusive<RenderTarget>();
     target->setSize(rt_width, rt_height);
     target->attachColor(color_format);
     target->attachDepth(depth_format);
 
-    auto offscreen = intrusive_ptr<RenderPass>(new RenderPass());
+    auto offscreen = make_intrusive<RenderPass>();
     offscreen->setName(output_slot);
     offscreen->setCamera(camera);
     offscreen->setRenderTarget(target);
@@ -343,7 +343,7 @@ raw_ptr<ScreenPass> RenderPipelineBuilder::addOffscreenToScreen(const String& ou
     passes_.push_back(offscreen);
 
     // An order > 0 ScreenPass sampling the slot into the PiP sub-viewport.
-    auto screen = intrusive_ptr<ScreenPass>(new ScreenPass());
+    auto screen = make_intrusive<ScreenPass>();
     screen->setName(output_slot);
     screen->addInputName(output_slot);
     screen->setViewport(pip_x, pip_y, pip_w, pip_h);

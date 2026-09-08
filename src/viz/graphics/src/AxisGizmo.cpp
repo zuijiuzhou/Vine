@@ -80,7 +80,7 @@ AxisGizmo::AxisGizmo()
     // mirror distance. The view is overwritten every frame by Orientation
     // mirroring; only the framing distance and projection are kept. Owned by
     // this gizmo so the pass' raw camera pointer never dangles.
-    camera_ = intrusive_ptr<Camera>(new Camera());
+    camera_ = make_intrusive<Camera>();
     // Framing distance chosen so the unit sticks fill most of the square
     // sub-viewport (half-height = 3.3 * tan(22.5) ~ 1.37 world units maps a
     // length-1 stick to ~73% of the half box).
@@ -190,25 +190,24 @@ void AxisGizmo::rebuild()
         { Vec3f(-t, -t, 0.0f), Vec3f(t, t, l), Colorf(0.2f, 0.4f, 0.95f, 1.0f) },
     };
 
-    auto scene = intrusive_ptr<Scene>(new Scene());
+    auto scene = make_intrusive<Scene>();
     // Single root: one identity Group owns the three axis sticks.
-    auto root = intrusive_ptr<Group>(new Group());
+    auto root = make_intrusive<Group>();
     for (const auto& stick : sticks) {
         vine::geometry::Vec3fArray positions;
         vine::geometry::Vec3fArray normals;
         vine::geometry::UInt32Array indices;
         appendBox(positions, normals, indices, stick.mn, stick.mx);
 
-        auto mesh = intrusive_ptr<vine::geometry::IndexedTriangleMesh>(
-            new vine::geometry::IndexedTriangleMesh());
+        auto mesh = make_intrusive<vine::geometry::IndexedTriangleMesh>();
         mesh->setPositions(std::move(positions));
         mesh->setNormals(std::move(normals));
         mesh->setIndices(std::move(indices));
 
-        auto geometry = intrusive_ptr<Geometry>(new Geometry());
+        auto geometry = make_intrusive<Geometry>();
         geometry->setShape(mesh);
 
-        auto material = intrusive_ptr<Material>(new Material());
+        auto material = make_intrusive<Material>();
         material->setDiffuse(stick.color);
         // Flat unshaded sticks: with the gizmo lit by a pure ambient light,
         // phong's ambientColor = diffuse * ambient * ambient.a, so a WHITE
@@ -220,7 +219,7 @@ void AxisGizmo::rebuild()
         material->setSpecular(Colorf(0.0f, 0.0f, 0.0f, 1.0f));
         geometry->setMaterial(material);
 
-        auto group = intrusive_ptr<Group>(new Group());
+        auto group = make_intrusive<Group>();
         group->addChild(geometry);
         root->addChild(group);
     }

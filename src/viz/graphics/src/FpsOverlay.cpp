@@ -9,7 +9,6 @@
 #include <vine/graphics/Scene.hpp>
 #include <vine/geometry/IndexedTriangleMesh.hpp>
 
-#include <algorithm>
 #include <cstdint>
 #include <utility>
 
@@ -86,7 +85,7 @@ FpsOverlay::FpsOverlay()
     // Framing camera: the digit row lies in the z == 0 plane; the camera
     // looks down -z from a distance that fits the row, with the projection
     // aspect updated to match the (wide) readout box on every resize.
-    camera_ = intrusive_ptr<Camera>(new Camera());
+    camera_ = make_intrusive<Camera>();
     camera_->setViewMatrixAsLookAt(vine::math::Vec3d(0.0, 0.0, 1.6), vine::math::Vec3d(0.0, 0.0, 0.0),
                                    vine::math::Vec3d(0.0, 1.0, 0.0));
     camera_->setProjectionMatrixAsPerspective(45.0, 1.0, 0.05, 20.0);
@@ -243,8 +242,8 @@ void FpsOverlay::rebuild()
 
     static const Colorf kDim(0.08f, 0.08f, 0.09f, 1.0f);
 
-    auto scene = intrusive_ptr<Scene>(new Scene());
-    auto root  = intrusive_ptr<Group>(new Group());
+    auto scene = make_intrusive<Scene>();
+    auto root  = make_intrusive<Group>();
     segment_materials_.clear();
     segment_materials_.reserve(3u * 7u);
 
@@ -260,15 +259,15 @@ void FpsOverlay::rebuild()
             vine::geometry::UInt32Array indices;
             appendBox(positions, normals, indices, centre - half, centre + half);
 
-            auto mesh = intrusive_ptr<vine::geometry::IndexedTriangleMesh>(new vine::geometry::IndexedTriangleMesh());
+            auto mesh = make_intrusive<vine::geometry::IndexedTriangleMesh>();
             mesh->setPositions(std::move(positions));
             mesh->setNormals(std::move(normals));
             mesh->setIndices(std::move(indices));
 
-            auto geometry = intrusive_ptr<Geometry>(new Geometry());
+            auto geometry = make_intrusive<Geometry>();
             geometry->setShape(mesh);
 
-            auto material = intrusive_ptr<Material>(new Material());
+            auto material = make_intrusive<Material>();
             material->setDiffuse(kDim);
             // On-top HUD content is lit by a pure ambient light: a WHITE
             // ambient material makes ambientColor == diffuse == the segment
@@ -279,7 +278,7 @@ void FpsOverlay::rebuild()
             geometry->setMaterial(material);
             segment_materials_.push_back(material);
 
-            auto group = intrusive_ptr<Group>(new Group());
+            auto group = make_intrusive<Group>();
             group->addChild(geometry);
             root->addChild(group);
         }
