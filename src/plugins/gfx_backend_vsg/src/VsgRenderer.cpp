@@ -36,6 +36,7 @@
 #include <vsg/nodes/StateGroup.h>
 #include <vsg/nodes/VertexIndexDraw.h>
 #include <vsg/core/Array.h>
+#include <vsg/maths/vec4.h>
 #include <vsg/state/ColorBlendState.h>
 #include <vsg/state/DepthStencilState.h>
 #include <vsg/state/DescriptorImage.h>
@@ -360,6 +361,113 @@ VkFormat toDepthFormat(vine::graphics::RenderTarget::DepthFormat f)
     sub_to_ext.srcStageMask             = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
     sub_to_ext.dstStageMask             = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
     sub_to_ext.srcAccessMask            = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+    sub_to_ext.dstAccessMask            = VK_ACCESS_SHADER_READ_BIT;
+    dependencies.push_back(sub_to_ext);
+
+    return ::vsg::RenderPass::create(device, attachments, ::vsg::RenderPass::Subpasses{ subpass }, dependencies);
+}
+
+/**
+ * @brief Builds a colour + depth render pass that PRESERVES depth (LOAD).
+ *
+ * Same attachment set / colour handling as makeSampleableRenderPass, but the
+ * depth attachment keeps its previous contents across frames instead of being
+ * cleared at pass start (loadOp = LOAD, staying in the depth-attachment
+ * layout). Used when an engine clear(color, clearDepth=false) targets an
+ * off-screen RenderTarget, so a pass keeps drawing against depth a previous
+ * pass wrote. Because depth is never promoted to a sampled texture here, such
+ * targets must not be sampled for depth (the deferred G-buffer always clears
+ * depth, so it never selects this pass).
+ *
+ * @param device        Device the render pass is created on.
+ * @param color_formats Colour attachment formats.
+ * @param depth_format  Depth format (VK_FORMAT_UNDEFINED when no depth).
+ * @param initial_clear When true, the depth attachment is CLEARED on this
+ *                      (first) pass — transitioning a freshly created image
+ *                      from UNDEFINED into DEPTH_STENCIL_ATTACHMENT_OPTIMAL —
+ *                      instead of being LOADed. Use it for exactly the first
+ *                      frame after (re)building a depth-LOAD target.
+ * @return The configured render pass.
+ */
+::vsg::ref_ptr<::vsg::RenderPass> makeDepthLoadRenderPass(
+    ::vsg::Device*               device,
+    const std::vector<VkFormat>& color_formats,
+    VkFormat                     depth_format,
+    bool                         initial_clear = false)
+{
+    const bool has_depth = depth_format != VK_FORMAT_UNDEFINED;
+
+    ::vsg::RenderPass::Attachments attachments;
+    attachments.reserve(color_formats.size() + (has_depth ? 1u : 0u));
+
+    ::vsg::SubpassDescription subpass = {};
+    subpass.pipelineBindPoint         = VK_PIPELINE_BIND_POINT_GRAPHICS;
+
+    uint32_t attachment_index = 0;
+    for (const VkFormat color_format : color_formats) {
+        ::vsg::AttachmentDescription color = {};
+        color.format                       = color_format;
+        color.samples                      = VK_SAMPLE_COUNT_1_BIT;
+        color.loadOp                       = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        color.storeOp                      = VK_ATTACHMENT_STORE_OP_STORE;
+        color.stencilLoadOp                = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        color.stencilStoreOp               = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        color.initialLayout                = VK_IMAGE_LAYOUT_UNDEFINED;
+        color.finalLayout                  = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        attachments.push_back(color);
+
+        ::vsg::AttachmentReference color_ref = {};
+        color_ref.attachment                 = attachment_index++;
+        color_ref.layout                     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        subpass.colorAttachments.emplace_back(color_ref);
+    }
+
+    if (has_depth) {
+        ::vsg::AttachmentDescription depth = {};
+        depth.format                       = depth_format;
+        depth.samples                      = VK_SAMPLE_COUNT_1_BIT;
+        depth.loadOp = initial_clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
+        depth.storeOp                      = VK_ATTACHMENT_STORE_OP_STORE;
+        depth.stencilLoadOp                = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        depth.stencilStoreOp               = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        // The depth attachment stays in the depth-attachment layout so the
+        // next pass can LOAD it; the colour attachments still end up sampled.
+        // On the initial-clear pass the depth starts UNDEFINED (fresh image)
+        // and is cleared into DEPTH_STENCIL_ATTACHMENT_OPTIMAL.
+        depth.initialLayout = initial_clear ? VK_IMAGE_LAYOUT_UNDEFINED
+                                            : VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        depth.finalLayout                  = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        attachments.push_back(depth);
+
+        ::vsg::AttachmentReference depth_ref = {};
+        depth_ref.attachment                 = attachment_index;
+        depth_ref.layout                     = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        subpass.depthStencilAttachments.emplace_back(depth_ref);
+    }
+
+    ::vsg::RenderPass::Dependencies dependencies;
+
+    // Initial layout -> attachment layouts before the first subpass. Colour is
+    // cleared (UNDEFINED -> colour); depth is LOADED, so prior depth writes
+    // (the previous frame's pass, ordered by queue submission) must be visible
+    // before this pass reads them.
+    ::vsg::SubpassDependency ext_to_sub = {};
+    ext_to_sub.srcSubpass               = VK_SUBPASS_EXTERNAL;
+    ext_to_sub.dstSubpass               = 0;
+    ext_to_sub.srcStageMask             = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+    ext_to_sub.dstStageMask             = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+    ext_to_sub.srcAccessMask            = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+    ext_to_sub.dstAccessMask            = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+    dependencies.push_back(ext_to_sub);
+
+    // After the subpass, transition the colour attachments to SHADER_READ_ONLY
+    // so a later pass can sample them (the preserved depth is not sampled).
+    ::vsg::SubpassDependency sub_to_ext = {};
+    sub_to_ext.srcSubpass               = 0;
+    sub_to_ext.dstSubpass               = VK_SUBPASS_EXTERNAL;
+    sub_to_ext.srcStageMask             = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+    sub_to_ext.dstStageMask             = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+    sub_to_ext.srcAccessMask            = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
     sub_to_ext.dstAccessMask            = VK_ACCESS_SHADER_READ_BIT;
     dependencies.push_back(sub_to_ext);
 
@@ -963,6 +1071,21 @@ struct VsgRenderer::Impl {
         ::vsg::ref_ptr<::vsg::ShaderSet> depth_off_shader_set;
         int width  = 0; // off-screen logical size
         int height = 0;
+        // Engine clear() request for this target, persisted so an off-screen
+        // graph (re)built later reapplies the last requested clear values
+        // instead of a hard-coded default. clear_depth also selects the depth
+        // policy of the off-screen pass (CLEAR vs depth-LOAD) at (re)build.
+        bool        clear_seen  = false;
+        ::vsg::vec4 clear_color{ 0.2f, 0.2f, 0.2f, 1.0f };
+        bool        clear_depth = true;
+        bool        depth_load  = false; // off-screen pass LOADs (preserves) depth
+        // Depth-LOAD targets keep two compatible render passes over the same
+        // attachments: the first-frame pass CLEARs the freshly created
+        // (UNDEFINED) depth image so its layout becomes
+        // DEPTH_STENCIL_ATTACHMENT_OPTIMAL, and the steady pass LOADs it every
+        // later frame. depth_ready tracks that one-time initialisation.
+        ::vsg::ref_ptr<::vsg::RenderPass> render_pass_load;
+        bool        depth_ready = false;
         // ---- content slots (retained Views under graph), keyed (camera, order) ----
         std::map<ContentKey, ContentSlot> content_slots;
         // ---- PiP views sampling other targets (drawn under this graph) ----
@@ -1009,6 +1132,14 @@ bool VsgRenderer::initialize()
     // silent pipeline/render-pass failures (no validation in normal runs)
     // surface as messages.
     traits->debugLayer = std::getenv("VINE_VSG_DEBUG_LAYER") != nullptr;
+    // The SDK render-state model maps to pipeline features that are optional in
+    // Vulkan: PolygonMode::Line needs fillModeNonSolid, and MRT pipelines with
+    // differing attachments need independentBlend. Both are near-universal core
+    // features; request them so pipelines honour the mapped state instead of
+    // tripping validation / pipeline creation on capable devices.
+    traits->deviceFeatures = ::vsg::DeviceFeatures::create();
+    traits->deviceFeatures->get().fillModeNonSolid = VK_TRUE;
+    traits->deviceFeatures->get().independentBlend = VK_TRUE;
 
     void* host_handle = persistent->bound_handle;
     if (forceOwnWindow()) {
@@ -1221,10 +1352,19 @@ void VsgRenderer::render(const std::vector<vine::graphics::RenderCommand>& comma
     }
 
     auto& target = impl->targets[key];
-    if (key != nullptr && (target.graph == nullptr || target.width != key->width() || target.height != key->height())) {
-        // First render into this off-screen target, or it was resized: build
-        // (or rebuild) its attachments + render graph. Any content slots
-        // compiled against an older graph are dropped by buildOffscreenTarget.
+    // A depth-LOAD policy (clearDepth=false) needs a render pass whose depth
+    // attachment is not cleared; when the target's persisted clear policy
+    // differs from its current pass, the graph is rebuilt so depth is either
+    // genuinely preserved (LOAD) or cleared (CLEAR) — buildOffscreenTarget
+    // bakes the policy and colour into the pass.
+    const bool want_load_depth = target.clear_seen && !target.clear_depth;
+    if (key != nullptr &&
+        (target.graph == nullptr || target.width != key->width() ||
+         target.height != key->height() || target.depth_load != want_load_depth)) {
+        // First render into this off-screen target, or it was resized, or its
+        // depth-clear policy changed: build (or rebuild) its attachments +
+        // render graph. Any content slots compiled against an older graph are
+        // dropped by buildOffscreenTarget.
         buildOffscreenTarget(key);
         if (target.graph == nullptr) {
             return; // off-screen target could not be built
@@ -1276,6 +1416,8 @@ void VsgRenderer::buildOffscreenTarget(vine::graphics::RenderTarget* target)
         t.depth_image          = {};
         t.depth_view           = {};
         t.render_pass          = {};
+        t.render_pass_load     = {};
+        t.depth_ready          = false;
         t.framebuffer          = {};
         t.graph                = {};
         t.depth_on_shader_set  = {};
@@ -1342,10 +1484,33 @@ void VsgRenderer::buildOffscreenTarget(vine::graphics::RenderTarget* target)
         attachments.push_back(t.depth_view);
     }
 
-    t.render_pass = has_color ? makeSampleableRenderPass(device.get(),
-                                                         color_formats,
-                                                         has_depth ? toDepthFormat(target->depthFormat()) : VK_FORMAT_UNDEFINED)
-                              : makeDepthOnlyRenderPass(device.get(), toDepthFormat(target->depthFormat()));
+    // The depth policy of this target's pass follows its persisted clearDepth
+    // request: CLEAR (the default, depth sampled afterwards) when the engine
+    // asked to clear depth; depth-LOAD (depth preserved across frames, not
+    // sampled) when it asked not to. A depth-LOAD pass cannot also promote the
+    // depth to a sampled texture, so such a target must not be depth-sampled
+    // (the deferred G-buffer always clears depth, so it never selects LOAD).
+    const bool load_depth = t.clear_seen && !t.clear_depth;
+    t.depth_load          = load_depth;
+    if (has_color) {
+        const VkFormat depth_format =
+            has_depth ? toDepthFormat(target->depthFormat()) : VK_FORMAT_UNDEFINED;
+        if (load_depth) {
+            // Two compatible passes over the same attachments: the first-frame
+            // pass CLEARs the fresh (UNDEFINED) depth image — transitioning it
+            // into DEPTH_STENCIL_ATTACHMENT_OPTIMAL and seeding its content —
+            // so the steady depth-LOAD pass that follows is valid (a LOAD pass
+            // cannot start from an UNDEFINED image). submitFrame records the
+            // first-frame pass once, then the steady one.
+            t.render_pass_load = makeDepthLoadRenderPass(device.get(), color_formats, depth_format, false);
+            t.render_pass      = makeDepthLoadRenderPass(device.get(), color_formats, depth_format, true);
+            t.depth_ready      = false;
+        } else {
+            t.render_pass = makeSampleableRenderPass(device.get(), color_formats, depth_format);
+        }
+    } else {
+        t.render_pass = makeDepthOnlyRenderPass(device.get(), toDepthFormat(target->depthFormat()));
+    }
     t.framebuffer = ::vsg::Framebuffer::create(t.render_pass, attachments, w, h, 1);
 
     t.graph              = ::vsg::RenderGraph::create();
@@ -1357,18 +1522,22 @@ void VsgRenderer::buildOffscreenTarget(vine::graphics::RenderTarget* target)
     t.graph->contents      = VK_SUBPASS_CONTENTS_INLINE;
     t.graph->viewportState = ::vsg::ViewportState::create(VkExtent2D{ w, h });
     // Clear values match the attachment order (colour attachments in order,
-    // then depth). Depth is cleared to the far plane for depth-only (shadow)
-    // targets and to the previously proven value for colour+RT targets.
-    // Off-screen targets keep this fixed clear (the engine clear() targets
-    // the window graph — see clear()). The first colour attachment keeps the
-    // legacy grey; extra MRT attachments clear transparent black (empty
-    // regions stay black until a fragment writes them).
+    // then depth). Attachment 0 is cleared to the last engine clear() colour
+    // requested for this target (recorded on the target so a rebuild reapplies
+    // it); extra MRT attachments clear transparent black (empty regions stay
+    // black until a fragment writes them). Depth is cleared to the far plane
+    // for depth-only (shadow) targets and to the value that makes the window
+    // forward-path geometry test pass for colour+RT targets; a depth-LOAD pass
+    // ignores its depth clear value (its depth attachment is not cleared).
     t.graph->clearValues.clear();
     for (int i = 0; i < color_count; ++i) {
         VkClearValue color_clear = {};
         if (i == 0) {
             color_clear.color = VkClearColorValue{
-                { 0.2f, 0.2f, 0.2f, 1.0f }
+                { t.clear_seen ? t.clear_color.r : 0.2f,
+                  t.clear_seen ? t.clear_color.g : 0.2f,
+                  t.clear_seen ? t.clear_color.b : 0.2f,
+                  t.clear_seen ? t.clear_color.a : 1.0f }
             };
         }
         t.graph->clearValues.push_back(color_clear);
@@ -2233,28 +2402,85 @@ void VsgRenderer::submitFrame()
         }
         impl->pending_compile_views.clear();
     }
+    // Depth-LOAD (clearDepth=false) off-screen targets alternate between two
+    // compatible render passes: the first frame after a (re)build uses the
+    // depth-CLEAR pass, which initialises the fresh depth image's layout and
+    // content; every later frame uses the depth-LOAD pass, which preserves it.
+    // Swapping the graph's render pass is legal because the two passes differ
+    // only in the depth load-op (framebuffer / pipeline compatible).
+    for (auto& entry : impl->targets) {
+        auto& t = entry.second;
+        if (entry.first == nullptr || t.graph == nullptr || !t.depth_load ||
+            t.render_pass_load == nullptr) {
+            continue;
+        }
+        t.graph->renderPass = t.depth_ready ? t.render_pass_load : t.render_pass;
+        t.depth_ready       = true;
+    }
     impl->viewer->recordAndSubmit();
     impl->viewer->present();
 }
 
 void VsgRenderer::clear(const vine::Color& backgroundColor, bool clearDepth)
 {
-    (void)clearDepth;
     // A clear marks the next render() as main (depth-on) content; a render
     // without a preceding clear is styled on-top (HUD, depth-off). The style
-    // is consumed in render(); the clear colour is pushed to the window graph
-    // below so the pass clear state reaches the GPU clear.
+    // is consumed in render(). This marker is separate from the real clear
+    // below (colour + optional depth on the CURRENT target), so the depth-on/
+    // off mechanism no longer swallows the actual clear semantics.
     impl->main_pending = true;
-    auto& window_target = impl->targets[nullptr];
-    if (window_target.graph != nullptr) {
-        // The window render graph captured the clear colour when it was
-        // created; push the requested colour through so the pass clear state
-        // actually reaches the GPU clear. The colour components are floats in
-        // [0,1]; the Vine Color stores them as 0-255 bytes.
+
+    // The clear applies to the CURRENT render target (set by setRenderTarget;
+    // nullptr = the window): an off-screen pass's clear must reach ITS graph,
+    // not the window's. The request is recorded on that target so a later
+    // off-screen graph (re)build reapplies the colour and the depth policy
+    // (buildOffscreenTarget), then pushed into the graph when one exists.
+    vine::graphics::RenderTarget* key = impl->active_target;
+    auto& t = impl->targets[key];
+    const ::vsg::vec4 color{
+        backgroundColor.r / 255.0f,
+        backgroundColor.g / 255.0f,
+        backgroundColor.b / 255.0f,
+        backgroundColor.a / 255.0f
+    };
+    t.clear_seen  = true;
+    t.clear_color = color;
+    t.clear_depth = clearDepth;
+
+    if (t.graph == nullptr) {
+        // No graph yet (e.g. the first pass into an off-screen target): render()
+        // builds one from the recorded request via buildOffscreenTarget.
+        return;
+    }
+
+    if (key == nullptr) {
+        // Window graph: the swapchain render pass (vsg-owned) clears colour AND
+        // depth at the start of every frame, so the requested colour is pushed
+        // through and the depth-clear value is the main pass's (0.0). clearDepth
+        // cannot suppress the swapchain depth clear — vsg fixes the pass load-op
+        // when the window is created — so the window honours the colour value;
+        // off-screen targets honour clearDepth through their depth-LOAD pass.
         const VkClearColorValue clear_value{
-            { backgroundColor.r / 255.0f, backgroundColor.g / 255.0f, backgroundColor.b / 255.0f, backgroundColor.a / 255.0f }
+            { color.r, color.g, color.b, color.a }
         };
-        window_target.graph->setClearValues(clear_value, VkClearDepthStencilValue{ 0.0f, 0 });
+        t.graph->setClearValues(clear_value, VkClearDepthStencilValue{ 0.0f, 0 });
+        return;
+    }
+
+    // Off-screen graph: update the colour entries in place (the pass was built
+    // with the right depth load-op — CLEAR or LOAD — from t.clear_depth).
+    // Attachment 0 gets the requested colour; extra MRT attachments stay
+    // transparent black so untouched G-buffer regions remain empty.
+    const int color_count = key->colorCount();
+    const std::size_t n   = std::min<std::size_t>(t.graph->clearValues.size(),
+                                                  static_cast<std::size_t>(color_count));
+    for (std::size_t i = 0; i < n; ++i) {
+        t.graph->clearValues[i].color = VkClearColorValue{
+            { i == 0u ? color.r : 0.0f,
+              i == 0u ? color.g : 0.0f,
+              i == 0u ? color.b : 0.0f,
+              i == 0u ? color.a : 0.0f }
+        };
     }
 }
 

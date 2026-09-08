@@ -32,7 +32,10 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <cstdio>
+#include <string>
 #include <unordered_set>
+#include <utility>
 
 V_VSG_NS_BEGIN
 
@@ -135,20 +138,68 @@ namespace
 }
 
 /**
+ * @brief Unpacks an attribute buffer's xyz using its components as the stride.
+ *
+ * The AttributeBuffer contract allows 1-4 scalar components per vertex.
+ * Position / normal consumers need at least three and take the first three
+ * scalars of each vertex (a vec4 channel keeps its xyz and skips the extra w).
+ * A channel whose component count is not a usable xyz stride, or whose float
+ * count is not divisible by that stride, cannot be unpacked safely and is
+ * reported (returning false) instead of being misread element by element.
+ *
+ * @param attr Attribute buffer to unpack.
+ * @param what Human-readable role used in the diagnostic (e.g. "loc0 position").
+ * @param out  Receives the unpacked Vec3 values (cleared first).
+ * @return true when unpacked, false when the channel was rejected.
+ */
+bool unpackXyz(const vine::graphics::AttributeBuffer& attr, const char* what,
+               vine::geometry::Vec3fArray& out)
+{
+    const auto  comps = attr.components;
+    const auto& data  = *attr.data;
+    if (comps < 3u || comps > 4u) {
+        std::fprintf(stderr,
+                     "[SceneBridge] %s has components=%u (a 3/4-component xyz "
+                     "channel is required); channel ignored\n",
+                     what, comps);
+        return false;
+    }
+    if (data.size() % comps != 0u) {
+        std::fprintf(stderr,
+                     "[SceneBridge] %s holds %zu floats, not divisible by its "
+                     "components=%u stride; channel ignored\n",
+                     what, data.size(), comps);
+        return false;
+    }
+    const std::size_t count = data.size() / comps;
+    out.clear();
+    out.reserve(count);
+    for (std::size_t v = 0; v < count; ++v) {
+        const std::size_t b = v * comps;
+        out.emplace_back(data[b], data[b + 1], data[b + 2]);
+    }
+    return true;
+}
+
+/**
  * @brief Builds a per-vertex normal array for an indexed mesh.
  *
  * When the mesh provides normals they are copied; otherwise face normals are
- * computed per triangle and assigned to the referenced vertices.
+ * computed per triangle and accumulated at the referenced vertices.
+ * Out-of-range indices are skipped instead of read (the data path already
+ * rejects such geometry, but this keeps the CPU derivation safe on its own),
+ * and a zero-length accumulated normal is left unnormalised rather than
+ * turning into a NaN.
  *
  * @param positions Shared vertex positions.
  * @param meshNormals Optional mesh normals (may be empty).
- * @param indices  Triangle indices (three per triangle).
+ * @param indices  Consumed triangle indices (three per triangle).
  * @return Normal array.
  */
 ::vsg::ref_ptr<::vsg::vec3Array> makeIndexedNormals(
     const vine::geometry::Vec3fArray& positions,
     const vine::geometry::Vec3fArray& meshNormals,
-    const vine::geometry::UInt32Array& indices)
+    const ::vsg::uintArray& indices)
 {
     auto normals = ::vsg::vec3Array::create(static_cast<uint32_t>(positions.size()));
     if (meshNormals.size() == positions.size()) {
@@ -158,20 +209,138 @@ namespace
         }
         return normals;
     }
-    // Accumulate face normals per vertex for a smoother result.
+    const auto vertex_count = positions.size();
+    // Accumulate face normals per vertex for a smoother result. Each triangle
+    // is validated before use so a malformed index can never read OOB here.
     for (std::size_t tri = 0; tri + 2 < indices.size(); tri += 3) {
-        const vine::math::Vec3f a = positions[indices[tri]];
-        const vine::math::Vec3f b = positions[indices[tri + 1]];
-        const vine::math::Vec3f c = positions[indices[tri + 2]];
+        const std::uint32_t ia = indices[tri];
+        const std::uint32_t ib = indices[tri + 1];
+        const std::uint32_t ic = indices[tri + 2];
+        if (ia >= vertex_count || ib >= vertex_count || ic >= vertex_count) {
+            continue; // defensive: rejected upstream; never index OOB.
+        }
+        const vine::math::Vec3f a = positions[ia];
+        const vine::math::Vec3f b = positions[ib];
+        const vine::math::Vec3f c = positions[ic];
         const vine::math::Vec3f n = (b - a).cross(c - a);
-        (*normals)[indices[tri]] += ::vsg::vec3(n.x, n.y, n.z);
-        (*normals)[indices[tri + 1]] += ::vsg::vec3(n.x, n.y, n.z);
-        (*normals)[indices[tri + 2]] += ::vsg::vec3(n.x, n.y, n.z);
+        (*normals)[ia] += ::vsg::vec3(n.x, n.y, n.z);
+        (*normals)[ib] += ::vsg::vec3(n.x, n.y, n.z);
+        (*normals)[ic] += ::vsg::vec3(n.x, n.y, n.z);
     }
     for (auto& n : *normals) {
-        n = ::vsg::normalize(n);
+        const float len_sq = n.x * n.x + n.y * n.y + n.z * n.z;
+        if (len_sq > 0.0f) {
+            n = ::vsg::normalize(n);
+        }
     }
     return normals;
+}
+
+/**
+ * @brief Maps a custom vertex channel's components to its Vulkan format.
+ *
+ * @param components Scalar components per vertex (1..4).
+ * @return The matching vertex-input format.
+ */
+VkFormat formatForComponents(std::uint32_t components)
+{
+    switch (components) {
+        case 1u: return VK_FORMAT_R32_SFLOAT;
+        case 2u: return VK_FORMAT_R32G32_SFLOAT;
+        case 3u: return VK_FORMAT_R32G32B32_SFLOAT;
+        default: return VK_FORMAT_R32G32B32A32_SFLOAT;
+    }
+}
+
+/**
+ * @brief Returns the stable binding name for a custom attribute location.
+ *
+ * Built-in locations 0/1/2 keep vsg_Vertex/vsg_Normal/vsg_Color; any custom
+ * channel is named vine_Attribute{location}. The name is only a key between
+ * the ShaderSet bindings and the configurator's assignArray (vsg matches the
+ * Data by name and takes the location from the binding), so the user GLSL just
+ * declares layout(location=N) with any input name.
+ *
+ * @param location Shader attribute location (>= 3).
+ * @return The stable binding name.
+ */
+std::string customAttributeName(std::uint32_t location)
+{
+    return "vine_Attribute" + std::to_string(location);
+}
+
+/**
+ * @brief Builds a one-element typed vsg array for a channel's components.
+ *
+ * Used as the sample Data of an attribute binding (its value type must match
+ * the binding format).
+ *
+ * @param components Scalar components per vertex (1..4).
+ * @return A one-element typed array.
+ */
+::vsg::ref_ptr<::vsg::Data> sampleVertexData(std::uint32_t components)
+{
+    switch (components) {
+        case 1u: return ::vsg::floatArray::create(1);
+        case 2u: return ::vsg::vec2Array::create(1);
+        case 3u: return ::vsg::vec3Array::create(1);
+        default: return ::vsg::vec4Array::create(1);
+    }
+}
+
+/**
+ * @brief Materialises a packed float channel into a typed per-vertex array.
+ *
+ * The channel must carry exactly @p vertex_count vertices of @p components
+ * scalars each (divisible, count-matching); anything else returns null so a
+ * malformed custom channel is skipped rather than misread.
+ *
+ * @param components   Scalar components per vertex (1..4).
+ * @param data         Packed per-vertex floats.
+ * @param vertex_count Expected vertex count.
+ * @return Typed array, or null when the channel is unusable.
+ */
+::vsg::ref_ptr<::vsg::Data> makeTypedVertexData(std::uint32_t components,
+                                                const std::vector<float>& data,
+                                                std::size_t vertex_count)
+{
+    if (components < 1u || components > 4u || data.size() % components != 0u ||
+        data.size() / components != vertex_count) {
+        return ::vsg::ref_ptr<::vsg::Data>();
+    }
+    const auto n = static_cast<uint32_t>(vertex_count);
+    switch (components) {
+        case 1u: {
+            auto arr = ::vsg::floatArray::create(n);
+            for (std::size_t v = 0; v < vertex_count; ++v) {
+                (*arr)[v] = data[v];
+            }
+            return arr;
+        }
+        case 2u: {
+            auto arr = ::vsg::vec2Array::create(n);
+            for (std::size_t v = 0; v < vertex_count; ++v) {
+                (*arr)[v] = ::vsg::vec2(data[v * 2u], data[v * 2u + 1u]);
+            }
+            return arr;
+        }
+        case 3u: {
+            auto arr = ::vsg::vec3Array::create(n);
+            for (std::size_t v = 0; v < vertex_count; ++v) {
+                (*arr)[v] =
+                    ::vsg::vec3(data[v * 3u], data[v * 3u + 1u], data[v * 3u + 2u]);
+            }
+            return arr;
+        }
+        default: {
+            auto arr = ::vsg::vec4Array::create(n);
+            for (std::size_t v = 0; v < vertex_count; ++v) {
+                (*arr)[v] = ::vsg::vec4(data[v * 4u], data[v * 4u + 1u],
+                                       data[v * 4u + 2u], data[v * 4u + 3u]);
+            }
+            return arr;
+        }
+    }
 }
 
 /**
@@ -208,43 +377,64 @@ VkShaderStageFlagBits stageFlag(vine::graphics::ShaderStageType type)
 }
 
 /**
- * @brief Assembles the custom vsg::ShaderSet for a user program.
+ * @brief Compiles a user program's GLSL stages to SPIR-V (L1a).
  *
- * Compiles the program's GLSL stages to SPIR-V at run time and wraps them in
- * a hand-built ShaderSet following the official vsg contract (see
- * vsgExamples/utils/vsgcustomshaderset): one vsg_Vertex attribute binding at
- * location 0 and the canonical "pc" push-constant range that vsg fills per
- * drawable with { mat4 projection; mat4 modelView; }. The default pipeline
- * states are borrowed from the built-in shader set so the pipeline keeps the
- * baked viewport / multisampling; the per-geometry render state is applied
- * afterwards by the caller.
+ * The glslang pass is the expensive part of building a custom ShaderSet, so it
+ * runs once per (program, content revision) and the result is cached; every
+ * vertex layout of the same program shares these compiled stages and only the
+ * ShaderSet assembly differs (see assembleProgramShaderSet).
  *
- * @param program    User program (non-null).
- * @param base_states Default pipeline states to inherit (viewport etc.).
- * @return Shader set, or null when compilation/assembly failed.
+ * @param program User program (non-null).
+ * @return Compiled stages, or an empty list when compilation is unsupported /
+ *         failed (callers treat empty as "not buildable").
  */
-::vsg::ref_ptr<::vsg::ShaderSet> buildProgramShaderSet(
-    vine::raw_ptr<const vine::graphics::ShaderProgram> program,
-    const ::vsg::GraphicsPipelineStates& base_states)
+::vsg::ShaderStages compileProgramStages(
+    vine::raw_ptr<const vine::graphics::ShaderProgram> program)
 {
+    ::vsg::ShaderStages stages;
     if (program == nullptr) {
-        return ::vsg::ref_ptr<::vsg::ShaderSet>();
+        return stages;
     }
     auto compiler = shaderCompiler();
     if (!compiler || !compiler->supported()) {
-        return ::vsg::ref_ptr<::vsg::ShaderSet>();
+        return stages;
     }
-
-    ::vsg::ShaderStages stages;
     for (const auto& stage_spec : program->stages()) {
         auto stage = ::vsg::ShaderStage::create(
             stageFlag(stage_spec.type), stage_spec.entryPoint.stdstr(),
             stage_spec.source.stdstr());
         if (!compiler->compile(stage) || !stage->module || stage->module->code.empty()) {
-            return ::vsg::ref_ptr<::vsg::ShaderSet>();
+            return ::vsg::ShaderStages();
         }
         stages.push_back(stage);
     }
+    return stages;
+}
+
+/**
+ * @brief Assembles a custom vsg::ShaderSet from already-compiled stages (L1b).
+ *
+ * Wraps the program's compiled stages in a hand-built ShaderSet following the
+ * official vsg contract (see vsgExamples/utils/vsgcustomshaderset): the
+ * canonical vsg_Vertex/Normal/Color bindings (locations 0/1/2) plus one
+ * vine_Attribute{location} binding per forwarded custom channel, and the
+ * "pc" push-constant range vsg fills per drawable with { mat4 projection;
+ * mat4 modelView; }. Default pipeline states are borrowed from the built-in
+ * shader set so the pipeline keeps the baked viewport / multisampling; the
+ * per-geometry render state is applied afterwards by the caller.
+ *
+ * @param stages         Compiled SPIR-V stages (non-empty).
+ * @param base_states    Default pipeline states to inherit (viewport etc.).
+ * @param extra_channels Custom channels (location, components) whose bindings
+ *                       the set must declare, in binding order (empty for the
+ *                       built-in-layout-only case).
+ * @return Shader set, or null when assembly failed.
+ */
+::vsg::ref_ptr<::vsg::ShaderSet> assembleProgramShaderSet(
+    const ::vsg::ShaderStages& stages,
+    const ::vsg::GraphicsPipelineStates& base_states,
+    const std::vector<std::pair<std::uint32_t, std::uint32_t>>& extra_channels)
+{
     if (stages.empty()) {
         return ::vsg::ref_ptr<::vsg::ShaderSet>();
     }
@@ -259,6 +449,15 @@ VkShaderStageFlagBits stageFlag(vine::graphics::ShaderStageType type)
                                     ::vsg::vec3Array::create(1));
     shader_set->addAttributeBinding("vsg_Color", "", 2, VK_FORMAT_R32G32B32A32_SFLOAT,
                                     ::vsg::vec4Array::create(1));
+    // Custom vertex channels: one vine_Attribute{location} binding per
+    // forwarded channel, whose format follows its components. The channel set
+    // is part of the ShaderSet cache key (getProgramShaderSet), so each
+    // distinct layout is its own set and shares the compiled program stages.
+    for (const auto& [location, components] : extra_channels) {
+        shader_set->addAttributeBinding(customAttributeName(location), "", location,
+                                        formatForComponents(components),
+                                        sampleVertexData(components));
+    }
     // Material: the same vsg::PhongMaterialValue uniform the default path
     // binds (SceneBridge assigns the cached value), so a program can read the
     // Vine material's diffuse/specular etc. Unused when the program does not
@@ -278,17 +477,21 @@ VkShaderStageFlagBits stageFlag(vine::graphics::ShaderStageType type)
  * lifetime is guaranteed by the scene while the bridge uses them — plus the
  * program's content revision, so editing a retained program's GLSL yields a
  * fresh key and pipeline (D10), and every folded render-state field the
- * pipeline must honour. Collisions with a different variant are safe: they
- * only displace a template entry, which rebuilds on its next use.
+ * pipeline must honour. The vertex layout (custom channels) is also part of
+ * the identity, so geometry with a different binding set never shares a
+ * variant template. Collisions with a different variant are safe: they only
+ * displace a template entry, which rebuilds on its next use.
  *
  * @param program  User shader program (null = built-in default).
  * @param material Bound material (may be null).
  * @param state    Resolved render state the pipeline honours.
+ * @param layout   Hash of the geometry's forwarded custom channels.
  * @return The content hash used as the variant cache key.
  */
 std::uint64_t hashStateVariant(const vine::graphics::ShaderProgram* program,
                                const vine::graphics::Material*     material,
-                               const vine::graphics::ResolvedRenderState& state)
+                               const vine::graphics::ResolvedRenderState& state,
+                               std::uint64_t layout)
 {
     const auto combine = [](std::uint64_t h, std::uint64_t v) {
         return h ^ (v + 0x9e3779b97f4a7c15ull + (h << 6u) + (h >> 2u));
@@ -305,6 +508,7 @@ std::uint64_t hashStateVariant(const vine::graphics::ShaderProgram* program,
         h = combine(h, program->revision());
     }
     mix_ptr(material);
+    h = combine(h, layout);
     h = combine(h, static_cast<std::uint64_t>(state.depth.test));
     h = combine(h, static_cast<std::uint64_t>(state.depth.write));
     h = combine(h, static_cast<std::uint64_t>(state.depth.compare));
@@ -355,34 +559,72 @@ VsgMaterialManager& SceneBridge::materialManager()
 }
 
 ::vsg::ref_ptr<::vsg::ShaderSet> SceneBridge::getProgramShaderSet(
-    vine::raw_ptr<const vine::graphics::ShaderProgram> program)
+    vine::raw_ptr<const vine::graphics::ShaderProgram> program,
+    const std::vector<VertexChannel>& extra_channels)
 {
     if (program == nullptr) {
         return ::vsg::ref_ptr<::vsg::ShaderSet>();
     }
-    const auto program_rev = program->revision();
-    auto it = program_shader_sets_.find(program);
-    if (it != program_shader_sets_.end() && it->second.revision == program_rev) {
-        return it->second.shader_set;
+    // The vertex layout (which custom channels the geometry carries) is part
+    // of the cache key: geometry bound to the same program but with different
+    // channel sets needs different ShaderSets (different bindings).
+    const auto combine = [](std::uint64_t h, std::uint64_t v) {
+        return h ^ (v + 0x9e3779b97f4a7c15ull + (h << 6u) + (h >> 2u));
+    };
+    std::uint64_t layout = 0x517cc1b727220a95ull;
+    for (const auto& ch : extra_channels) {
+        layout = combine(layout, static_cast<std::uint64_t>(ch.location));
+        layout = combine(layout, static_cast<std::uint64_t>(ch.components));
     }
-    // Compile once per (program content, slot). The base default pipeline
-    // states (the baked viewport / blend) come from the slot's shader set;
-    // both shader sets bind the same "material" Phong uniform, so the compiled
-    // set stays compatible with the built-in path's descriptor assignment.
-    const auto base_states = baseShaderSet()->defaultGraphicsPipelineStates;
-    auto shaderSet = buildProgramShaderSet(program, base_states);
-    // A failed compile is cached too (null) so later geometry does not retry
-    // the expensive glslang pass every frame (it falls back to the built-in);
+    std::uint64_t key = 0xcbf29ce484222325ull;
+    key = combine(key, static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(program)));
+    key = combine(key, layout);
+
+    const auto program_rev = program->revision();
+    const auto it          = program_shader_sets_.find(key);
+    if (it != program_shader_sets_.end() && it->second != nullptr &&
+        it->second->program == program && it->second->layout == layout &&
+        it->second->revision == program_rev) {
+        return it->second->shader_set;
+    }
+    // L1a: compile the program's stages ONCE per (program, content revision);
+    // every vertex layout of the same program then shares these stages and
+    // only the ShaderSet assembly differs (L1b below). A compile failure is
+    // cached as empty stages so later geometry does not retry the expensive
+    // glslang pass every frame (the assembled set falls back to the built-in);
     // editing the program bumps its revision and forces a recompile (D10).
-    auto& entry       = program_shader_sets_[program];
-    entry.revision    = program_rev;
-    entry.shader_set  = shaderSet;
-    // D16: bound slot-lifetime growth. Dropping the whole cache only loses the
-    // fast path (a program recompiles once on its next use); it never breaks
-    // correctness — retained geometry keeps its already-built pipelines.
+    auto sit = program_stages_.find(program);
+    if (sit == program_stages_.end() || sit->second.revision != program_rev) {
+        ::vsg::ShaderStages stages = compileProgramStages(program);
+        ++program_stage_compiles_;
+        program_stages_[program]   = StageEntry{ program_rev, std::move(stages) };
+        sit                        = program_stages_.find(program);
+    }
+    const auto base_states = baseShaderSet()->defaultGraphicsPipelineStates;
+    std::vector<std::pair<std::uint32_t, std::uint32_t>> extra;
+    extra.reserve(extra_channels.size());
+    for (const auto& ch : extra_channels) {
+        extra.emplace_back(ch.location, ch.components);
+    }
+    // L1b: assemble the per-layout ShaderSet from the cached stages. A failed
+    // assembly is cached too (null) so later geometry of this layout does not
+    // rebuild it every frame.
+    auto shaderSet = assembleProgramShaderSet(sit->second.stages, base_states, extra);
+    auto entry          = std::make_unique<ProgramEntry>();
+    entry->program      = program;
+    entry->layout       = layout;
+    entry->revision     = program_rev;
+    entry->shader_set   = shaderSet;
+    program_shader_sets_[key] = std::move(entry);
+    // D16: bound slot-lifetime growth. Dropping the set cache only loses the
+    // fast path (a layout re-assembles from the cached stages on its next
+    // use); it never breaks correctness — retained geometry keeps its
+    // already-built pipelines. Bound the stage cache with it (recompiled on
+    // demand once their ShaderSets are all gone).
     constexpr std::size_t kMaxProgramCacheEntries = 64;
     if (program_shader_sets_.size() > kMaxProgramCacheEntries) {
         program_shader_sets_.clear();
+        program_stages_.clear();
     }
     return shaderSet;
 }
@@ -411,6 +653,15 @@ struct SceneBridge::Item {
     // Per-vertex color array; its alpha carries the effective per-drawable
     // opacity and is rewritten only when the opacity actually changed.
     ::vsg::ref_ptr<::vsg::vec4Array> colors;
+    // Forwarded custom vertex channels (locations >= 3) bound after the three
+    // canonical arrays, in binding order (see buildGeometryData). Drives the
+    // per-layout ShaderSet / variant identity for state-only rebuilds (a
+    // program / material edit reuses this without re-uploading the mesh).
+    std::vector<VertexChannel> extra_channels;
+    // Primitive topology the retained data was built for: it decides whether
+    // automatic normals are derived (Triangles) or defaulted (Points / Lines),
+    // so a topology change is a DATA change (part of the node's identity).
+    vine::graphics::Topology topology = vine::graphics::Topology::Triangles;
     // Cached write state so steady-state frames skip redundant work.
     ::vsg::dmat4 last_matrix;
     bool matrix_valid = false;
@@ -434,6 +685,7 @@ struct SceneBridge::VariantEntry {
     const vine::graphics::ShaderProgram* program = nullptr;
     vine::graphics::Material*            material = nullptr;
     vine::graphics::ResolvedRenderState  state;
+    std::uint64_t layout = 0; // custom-channel hash (see hashStateVariant)
     ::vsg::StateCommands state_commands;
     ::vsg::ref_ptr<::vsg::ArrayState> prototype_array_state;
     std::uint32_t base_binding = 0;
@@ -442,7 +694,9 @@ struct SceneBridge::VariantEntry {
 void SceneBridge::clearCache()
 {
     cache_.clear();
+    rejected_.clear();
     program_shader_sets_.clear();
+    program_stages_.clear();
     variant_cache_.clear();
     // Forget the shared-object registry (releases the registered pipeline /
     // layout / descriptor-set objects) when the slot's content is released.
@@ -454,6 +708,7 @@ void SceneBridge::clearCache()
     }
     pipeline_variants_ = 0;
     variant_reuses_ = 0;
+    program_stage_compiles_ = 0;
 }
 
 bool SceneBridge::syncRenderCommands(
@@ -477,6 +732,20 @@ bool SceneBridge::syncRenderCommands(
         }
         seen.insert(geometry);
 
+        // A geometry whose data was rejected earlier (malformed attributes /
+        // out-of-range indices) is skipped until its data revision changes, so
+        // its rejection diagnostic is emitted once per revision instead of
+        // spamming the log on every frame while the bad mesh is still drawn.
+        {
+            const auto rej = rejected_.find(geometry);
+            if (rej != rejected_.end()) {
+                if (rej->second == geometry->revision()) {
+                    continue;
+                }
+                rejected_.erase(rej); // data changed: allow a rebuild below
+            }
+        }
+
         Item* item = nullptr;
         auto it = cache_.find(geometry);
         if (it == cache_.end()) {
@@ -497,13 +766,24 @@ bool SceneBridge::syncRenderCommands(
         const bool had_node = item->transform != nullptr;
         const auto program_rev =
             cmd.program.get() != nullptr ? cmd.program.get()->revision() : std::uint64_t{0};
-        const bool data_dirty  = !had_node || item->revision != geometry->revision();
+        // The DATA identity is the vertex/index payload plus the two draw
+        // inputs that change how it is materialised: the primitive topology
+        // (drives normal derivation) and, for a mesh that carries an authored
+        // loc2 colour, whether the built-in (white opacity carrier) or the
+        // custom (authored colour) path binds binding 2.
+        const bool has_loc2 =
+            geometry->buffer(2) != nullptr && !geometry->buffer(2)->empty();
+        const bool data_dirty =
+            !had_node || item->revision != geometry->revision() ||
+            item->topology != cmd.renderState.topology ||
+            (has_loc2 && (item->program == nullptr) != (cmd.program.get() == nullptr));
         const bool state_dirty = !had_node || item->material != cmd.material.get() ||
                                  item->render_state != cmd.renderState ||
                                  item->program != cmd.program.get() ||
                                  item->program_revision != program_rev;
         if (data_dirty || state_dirty) {
             item->revision         = geometry->revision();
+            item->topology         = cmd.renderState.topology;
             item->material         = cmd.material.get();
             item->render_state     = cmd.renderState;
             item->program          = cmd.program.get();
@@ -514,10 +794,16 @@ bool SceneBridge::syncRenderCommands(
         if (data_dirty) {
             // Fresh vertex data: rebuild the data node; the previous opacity
             // carrier is dropped with it and rewritten on the next frames.
+            item->extra_channels.clear();
             item->data_node = buildGeometryData(geometry, item->program == nullptr,
-                                                item->colors);
+                                                cmd.renderState.topology, item->colors,
+                                                item->extra_channels);
             if (item->data_node == nullptr) {
-                // Unsupported shape / empty mesh: nothing drawable.
+                // Unsupported shape / malformed vertex data (unusable attribute
+                // strides, out-of-range indices, ...): nothing drawable. The
+                // rejection is recorded so the diagnostic prints once per data
+                // revision and the rebuild is not retried on every frame.
+                rejected_[geometry] = geometry->revision();
                 cache_.erase(geometry);
                 continue;
             }
@@ -527,7 +813,8 @@ bool SceneBridge::syncRenderCommands(
 
         if (state_dirty || item->state_node == nullptr) {
             item->state_node = buildStateGroup(item->data_node, item->material,
-                                               item->render_state, item->program);
+                                               item->render_state, item->program,
+                                               item->extra_channels);
             if (item->state_node == nullptr) {
                 cache_.erase(geometry);
                 continue;
@@ -598,6 +885,17 @@ bool SceneBridge::syncRenderCommands(
             it = cache_.erase(it);
         } else {
             ++it;
+        }
+    }
+
+    // Drop rejection records for geometries that left the frame: if such a
+    // geometry comes back its data is re-evaluated (a fix that bumps the
+    // revision clears the stale record above).
+    for (auto it = rejected_.begin(); it != rejected_.end();) {
+        if (seen.count(it->first) != 0) {
+            ++it;
+        } else {
+            it = rejected_.erase(it);
         }
     }
 
@@ -672,69 +970,142 @@ bool SceneBridge::syncRenderCommands(
 ::vsg::ref_ptr<::vsg::Commands> SceneBridge::buildGeometryData(
     vine::raw_ptr<const vine::graphics::Geometry> geometry,
     bool opacity_carrier,
-    ::vsg::ref_ptr<::vsg::vec4Array>& out_colors)
+    vine::graphics::Topology topology,
+    ::vsg::ref_ptr<::vsg::vec4Array>& out_colors,
+    std::vector<VertexChannel>& extra_channels)
 {
+    extra_channels.clear();
     if (geometry == nullptr) {
         return ::vsg::ref_ptr<::vsg::Commands>();
     }
     // Materialise the open attribute list into typed CPU arrays for the vsg
-    // build: location 0 = positions, location 1 = (optional) normals.
+    // build. Location 0 is positions (mandatory), location 1 normals
+    // (optional). Each channel is unpacked honouring its AttributeBuffer
+    // components stride, and a malformed channel is rejected instead of being
+    // misread element by element.
+    vine::geometry::Vec3fArray positions;
     const auto* position_attr = geometry->buffer(0);
-    if (position_attr == nullptr || position_attr->empty() ||
-        position_attr->components < 3u) {
+    if (position_attr == nullptr || position_attr->empty()) {
+        std::fprintf(stderr, "[SceneBridge] geometry has no loc0 position attribute; geometry rejected\n");
         return ::vsg::ref_ptr<::vsg::Commands>();
     }
-    vine::geometry::Vec3fArray positions;
-    {
-        const auto& data = *position_attr->data;
-        positions.reserve(data.size() / 3u);
-        for (std::size_t i = 0; i + 2 < data.size(); i += 3) {
-            positions.emplace_back(data[i], data[i + 1], data[i + 2]);
-        }
+    if (!unpackXyz(*position_attr, "loc0 position", positions)) {
+        std::fprintf(stderr, "[SceneBridge] geometry loc0 position attribute is unusable; geometry rejected\n");
+        return ::vsg::ref_ptr<::vsg::Commands>();
     }
+    if (positions.empty()) {
+        std::fprintf(stderr, "[SceneBridge] geometry loc0 position attribute is empty; geometry rejected\n");
+        return ::vsg::ref_ptr<::vsg::Commands>();
+    }
+    const std::size_t vertex_count = positions.size();
 
     ::vsg::ref_ptr<::vsg::vec3Array> vertices =
-        ::vsg::vec3Array::create(static_cast<uint32_t>(positions.size()));
-    for (std::size_t i = 0; i < positions.size(); ++i) {
+        ::vsg::vec3Array::create(static_cast<uint32_t>(vertex_count));
+    for (std::size_t i = 0; i < vertex_count; ++i) {
         const auto& v = positions[i];
         (*vertices)[i] = ::vsg::vec3(v.x, v.y, v.z);
     }
 
+    // Optional normals: when the channel is missing or unusable (bad stride
+    // or non-divisible length) it is reported and treated as absent; the
+    // normals are then derived (Triangles) or defaulted (Points / Lines)
+    // below. A bad OPTIONAL channel must not reject an otherwise drawable mesh.
     vine::geometry::Vec3fArray src_normals;
     if (const auto* normal_attr = geometry->buffer(1);
-        normal_attr != nullptr && !normal_attr->empty() &&
-        normal_attr->components >= 3u) {
-        const auto& data = *normal_attr->data;
-        src_normals.reserve(data.size() / 3u);
-        for (std::size_t i = 0; i + 2 < data.size(); i += 3) {
-            src_normals.emplace_back(data[i], data[i + 1], data[i + 2]);
+        normal_attr != nullptr && !normal_attr->empty()) {
+        if (!unpackXyz(*normal_attr, "loc1 normal", src_normals)) {
+            src_normals.clear();
         }
     }
 
+    // Points / lines have no surface to derive normals from: authored normals
+    // (one per vertex) are used when present, otherwise a constant +Z normal.
+    const auto non_triangle_normals = [&]() -> ::vsg::ref_ptr<::vsg::vec3Array> {
+        auto out = ::vsg::vec3Array::create(static_cast<uint32_t>(vertex_count));
+        const bool authored = src_normals.size() == vertex_count;
+        for (std::size_t v = 0; v < vertex_count; ++v) {
+            (*out)[v] = authored
+                            ? ::vsg::vec3(src_normals[v].x, src_normals[v].y, src_normals[v].z)
+                            : ::vsg::vec3(0.0f, 0.0f, 1.0f);
+        }
+        return out;
+    };
+
+    // The index stream is kept VERBATIM — it is never truncated to whole
+    // triangles, and an indexed Points / Lines draw must not lose indices to
+    // triangle-oriented rules: primitive assembly is the topology's job. Only
+    // an out-of-range index is rejected (it would read OOB in the CPU normal
+    // derivation and OOB / validation-fault on the GPU via DrawIndexed).
     ::vsg::ref_ptr<::vsg::vec3Array> normals;
     ::vsg::ref_ptr<::vsg::uintArray> indices;
+    const bool is_triangles = topology == vine::graphics::Topology::Triangles;
     if (geometry->hasIndices()) {
         const auto& src_indices = *geometry->indices();
+        for (std::size_t i = 0; i < src_indices.size(); ++i) {
+            if (src_indices[i] >= vertex_count) {
+                std::fprintf(stderr,
+                             "[SceneBridge] geometry index %zu (%u) is out of "
+                             "range for %zu vertices; geometry rejected\n",
+                             i, src_indices[i], vertex_count);
+                return ::vsg::ref_ptr<::vsg::Commands>();
+            }
+        }
         indices = ::vsg::uintArray::create(static_cast<uint32_t>(src_indices.size()));
         for (std::size_t i = 0; i < src_indices.size(); ++i) {
             (*indices)[i] = src_indices[i];
         }
-        normals = makeIndexedNormals(positions, src_normals, src_indices);
+        normals = is_triangles ? makeIndexedNormals(positions, src_normals, *indices)
+                               : non_triangle_normals();
     } else {
-        indices = ::vsg::uintArray::create(static_cast<uint32_t>(positions.size()));
-        for (uint32_t i = 0; i < positions.size(); ++i) {
+        // Non-indexed: one identity index per vertex over the whole position
+        // buffer; a trailing partial primitive is simply not rasterised.
+        indices = ::vsg::uintArray::create(static_cast<uint32_t>(vertex_count));
+        for (uint32_t i = 0; i < vertex_count; ++i) {
             (*indices)[i] = i;
         }
-        normals = makeNormals(positions, src_normals);
+        normals = is_triangles ? makeNormals(positions, src_normals)
+                               : non_triangle_normals();
     }
 
-    // White per-vertex colour array bound on every geometry; its alpha is
-    // rewritten in place to drive per-drawable opacity. When this node is the
-    // built-in opacity carrier the array is marked DYNAMIC so vsg's per-frame
-    // TransferTask re-copies it after a dirty() (unchanged frames transfer
-    // nothing); a user-program node keeps it static (D8: the program owns
-    // opacity), only binding it for programs that read vsg_Color.
-    auto colors = makeWhiteColors(vertices->size());
+    // vsg_Color (binding 2). On the built-in path this is ALWAYS the backend
+    // white DYNAMIC carrier whose alpha drives per-drawable opacity: rewriting
+    // an authored loc2 array would clobber its alpha for every drawable that
+    // shares the geometry, so an authored loc2 colour is ignored there. On the
+    // custom path the program owns opacity (D8, no carrier rewrite), so an
+    // authored loc2 colour — when present and well-formed — is bound verbatim
+    // as vsg_Color; otherwise a static white fallback is bound.
+    const auto pack_color4 = [](const vine::graphics::AttributeBuffer& attr,
+                                std::size_t vertex_count)
+        -> ::vsg::ref_ptr<::vsg::vec4Array> {
+        const auto  comps = attr.components;
+        const auto& data  = *attr.data;
+        if (comps < 3u || comps > 4u || data.size() % comps != 0u ||
+            data.size() / comps != vertex_count) {
+            return {};
+        }
+        auto out = ::vsg::vec4Array::create(static_cast<uint32_t>(vertex_count));
+        for (std::size_t v = 0; v < vertex_count; ++v) {
+            const std::size_t b = v * comps;
+            const float       w = comps >= 4u ? data[b + 3u] : 1.0f;
+            (*out)[v] = ::vsg::vec4(data[b], data[b + 1u], data[b + 2u], w);
+        }
+        return out;
+    };
+    ::vsg::ref_ptr<::vsg::vec4Array> colors;
+    if (!opacity_carrier) {
+        if (const auto* loc2 = geometry->buffer(2); loc2 != nullptr && !loc2->empty()) {
+            colors = pack_color4(*loc2, vertex_count);
+            if (colors == nullptr) {
+                std::fprintf(stderr,
+                             "[SceneBridge] geometry loc2 colour channel is "
+                             "unusable (expected 3/4 components, one per "
+                             "vertex); falling back to white\n");
+            }
+        }
+    }
+    if (colors == nullptr) {
+        colors = makeWhiteColors(vertices->size());
+    }
     if (opacity_carrier) {
         colors->properties.dataVariance = ::vsg::DYNAMIC_DATA;
         out_colors = colors;
@@ -743,11 +1114,51 @@ bool SceneBridge::syncRenderCommands(
         out_colors = ::vsg::ref_ptr<::vsg::vec4Array>();
     }
     // The bound vertex data follows the shader set's attribute-binding order
-    // (vertex, normal, colour) starting at binding 0.
+    // (vertex, normal, colour) starting at binding 0, followed by every
+    // well-formed custom channel (location >= 3) the geometry carries, in
+    // ascending location order. The data node is program-independent: it binds
+    // this superset so switching a geometry between the built-in pipeline and
+    // a custom program that reads the extra channels never re-uploads the
+    // mesh (only the state wrapper is rebuilt). A malformed custom channel
+    // (bad component count, non-divisible or count-mismatched payload) is
+    // reported and skipped — it must not misread or reject the mesh.
     ::vsg::DataList arrays;
     arrays.emplace_back(vertices);
     arrays.emplace_back(normals);
     arrays.emplace_back(colors);
+    for (const std::uint32_t location : geometry->bufferLocations()) {
+        if (location <= 2u) {
+            continue; // canonical position / normal / colour handled above
+        }
+        const auto* attr = geometry->buffer(location);
+        if (attr == nullptr || attr->empty()) {
+            continue;
+        }
+        const auto comps = attr->components;
+        if (comps < 1u || comps > 4u) {
+            std::fprintf(stderr,
+                         "[SceneBridge] loc%u custom channel has components=%u "
+                         "(expected 1..4); channel ignored\n",
+                         location, comps);
+            continue;
+        }
+        if (attr->data->size() % comps != 0u) {
+            std::fprintf(stderr,
+                         "[SceneBridge] loc%u custom channel holds %zu floats, "
+                         "not divisible by components=%u; channel ignored\n",
+                         location, attr->data->size(), comps);
+            continue;
+        }
+        if (attr->data->size() / comps != vertex_count) {
+            std::fprintf(stderr,
+                         "[SceneBridge] loc%u custom channel has %zu vertices, "
+                         "expected %zu; channel ignored\n",
+                         location, attr->data->size() / comps, vertex_count);
+            continue;
+        }
+        arrays.push_back(makeTypedVertexData(comps, *attr->data, vertex_count));
+        extra_channels.push_back(VertexChannel{ location, comps });
+    }
 
     // NOTE: manual geometry must use explicit bind/draw commands, NOT a
     // manually-assembled VertexIndexDraw, or nothing is rasterized (same
@@ -764,7 +1175,8 @@ bool SceneBridge::syncRenderCommands(
     ::vsg::ref_ptr<::vsg::Node> data,
     vine::raw_ptr<vine::graphics::Material> material,
     const vine::graphics::ResolvedRenderState& state,
-    vine::raw_ptr<const vine::graphics::ShaderProgram> program)
+    vine::raw_ptr<const vine::graphics::ShaderProgram> program,
+    const std::vector<VertexChannel>& extra_channels)
 {
     if (data == nullptr) {
         return ::vsg::ref_ptr<::vsg::StateGroup>();
@@ -773,27 +1185,40 @@ bool SceneBridge::syncRenderCommands(
     // A user program replaces the built-in pipeline: compile its stages and
     // assemble a custom ShaderSet following the official vsg contract
     // (vsg_Vertex + "pc" projection/modelView push constant). The compiled set
-    // is cached per (program, slot) — L1 — so N geometry bound to one program
-    // share a single glslang compile. On any failure fall back to the built-in
-    // default so a bad program cannot break a scene.
+    // is cached per (program, vertex layout) — L1 — so N geometry bound to one
+    // program share a single glslang compile per layout. On any failure fall
+    // back to the built-in default so a bad program cannot break a scene.
     ::vsg::ref_ptr<::vsg::ShaderSet> shaderSet;
     if (program != nullptr) {
-        shaderSet = getProgramShaderSet(program);
+        shaderSet = getProgramShaderSet(program, extra_channels);
     }
     if (!shaderSet) {
         shaderSet = baseShaderSet();
     }
 
-    // L2 variant reuse: an identical (program, material, resolved-state)
-    // variant built earlier contributes its reusable bind commands (the shared
-    // pipeline bind + the per-material descriptor bind). Reuse skips the
-    // configurator entirely.
-    const auto hash_key = hashStateVariant(program, material, state);
+    // The forwarded custom channels define the geometry's vertex layout, which
+    // is part of the L2 variant identity: geometry with a different binding
+    // set must never reuse another geometry's template.
+    const auto combine_hash = [](std::uint64_t h, std::uint64_t v) {
+        return h ^ (v + 0x9e3779b97f4a7c15ull + (h << 6u) + (h >> 2u));
+    };
+    std::uint64_t layout = 0x517cc1b727220a95ull;
+    for (const auto& ch : extra_channels) {
+        layout = combine_hash(layout, static_cast<std::uint64_t>(ch.location));
+        layout = combine_hash(layout, static_cast<std::uint64_t>(ch.components));
+    }
+
+    // L2 variant reuse: an identical (program, material, resolved-state,
+    // vertex-layout) variant built earlier contributes its reusable bind
+    // commands (the shared pipeline bind + the per-material descriptor bind).
+    // Reuse skips the configurator entirely.
+    const auto hash_key = hashStateVariant(program, material, state, layout);
     const auto variant_it = variant_cache_.find(hash_key);
     if (variant_it != variant_cache_.end() && variant_it->second != nullptr &&
         variant_it->second->program == program &&
         variant_it->second->material == material &&
-        variant_it->second->state == state) {
+        variant_it->second->state == state &&
+        variant_it->second->layout == layout) {
         ++variant_reuses_;
         auto stateGroup = ::vsg::StateGroup::create();
         for (const auto& sc : variant_it->second->state_commands) {
@@ -823,6 +1248,18 @@ bool SceneBridge::syncRenderCommands(
         if (arrays.size() > 2u) {
             config->assignArray(scratch, "vsg_Color", VK_VERTEX_INPUT_RATE_VERTEX, arrays[2]);
         }
+        // Custom channels: bind each forwarded array under its stable
+        // vine_Attribute{location} name. Only a ShaderSet that declares the
+        // name consumes it (the built-in set does not declare any, so extra
+        // arrays are simply unused vertex buffers for the built-in path).
+        for (std::size_t i = 0; i < extra_channels.size(); ++i) {
+            const std::size_t binding_index = 3u + i;
+            if (arrays.size() <= binding_index) {
+                break;
+            }
+            config->assignArray(scratch, customAttributeName(extra_channels[i].location),
+                                VK_VERTEX_INPUT_RATE_VERTEX, arrays[binding_index]);
+        }
         config->assignDescriptor("material", material_value);
     }
 
@@ -850,14 +1287,16 @@ bool SceneBridge::syncRenderCommands(
         }
     }
     if (mrt > 1) {
+        // Every attachment must carry IDENTICAL blend state unless the device
+        // enables the (optional) independentBlend feature, so the G-buffer
+        // attachments reuse attachment 0's mapped opacity blend verbatim. For
+        // opaque geometry the source-over blend with alpha 1 is an identity,
+        // so the extra G-buffer outputs stay correct without a device feature
+        // (translucent deferred geometry is out of scope for the MRT path).
         const auto first = states.colorBlend->attachments.front();
         states.colorBlend->attachments.clear();
         for (int i = 0; i < mrt; ++i) {
-            auto attachment = first;
-            if (i > 0) {
-                attachment.blendEnable = VK_FALSE;
-            }
-            states.colorBlend->attachments.push_back(attachment);
+            states.colorBlend->attachments.push_back(first);
         }
     }
     applyRenderStateObjects(*config, states);
@@ -885,6 +1324,7 @@ bool SceneBridge::syncRenderCommands(
         entry->program               = program;
         entry->material              = material;
         entry->state                 = state;
+        entry->layout                = layout;
         entry->state_commands        = stateGroup->stateCommands;
         entry->prototype_array_state = stateGroup->prototypeArrayState;
         entry->base_binding          = config->baseAttributeBinding;

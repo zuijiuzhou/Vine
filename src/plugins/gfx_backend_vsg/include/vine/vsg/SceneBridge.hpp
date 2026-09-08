@@ -6,6 +6,7 @@
 #include <vsg/nodes/Node.h>
 #include <vsg/nodes/StateGroup.h>
 #include <vsg/core/ref_ptr.h>
+#include <vsg/state/ShaderStage.h>
 #include <vsg/utils/ShaderSet.h>
 #include <vsg/utils/SharedObjects.h>
 
@@ -14,6 +15,7 @@
 #include <unordered_map>
 #include <vector>
 #include <vine/raw_ptr.hpp>
+#include <vine/graphics/StateNode.hpp>
 #include <vine/vsg/VsgMaterialManager.hpp>
 
 namespace vine::graphics
@@ -109,7 +111,29 @@ class V_VSG_API SceneBridge {
      */
     std::size_t variantReuseCount() const { return variant_reuses_; }
 
+    /** @brief Gets how many times this bridge ran the glslang stage compiler.
+     *
+     * The compiler runs once per (program, content revision) — not per vertex
+     * layout — so one program used with several custom-channel layouts counts
+     * a single compile, proving the L1a stage cache is shared across its
+     * layouts (only the per-layout ShaderSet assembly is repeated).
+     *
+     * @return Number of glslang compile passes started.
+     */
+    std::size_t programStageCompileCount() const { return program_stage_compiles_; }
+
   private:
+    /** @brief One forwarded custom vertex channel (location >= 3).
+     *
+     * Describes an extra per-vertex attribute carried past the canonical
+     * 0=position / 1=normal / 2=colour arrays: its geometry location and its
+     * AttributeBuffer components (the stride its packed floats use). */
+    struct VertexChannel
+    {
+        std::uint32_t location = 0;
+        std::uint32_t components = 0;
+    };
+
     /** @brief Retained per-geometry render node (defined in the .cpp). */
     struct Item;
 
@@ -120,56 +144,80 @@ class V_VSG_API SceneBridge {
      * no pipeline, so it is reused verbatim across material / render-state /
      * program changes (only the state wrapper is rebuilt then), and it stays
      * stable so a later geometry-only edit never re-uploads unchanged meshes.
-     * When @p opacity_carrier is true (built-in path), the per-vertex colour
-     * array is marked DYNAMIC and returned via @p out_colors so per-drawable
+     * The index stream is kept verbatim (bounds-checked, never truncated):
+     * primitive assembly is the topology's job, not the data builder's. When
+     * @p opacity_carrier is true (built-in path), the per-vertex colour array
+     * is marked DYNAMIC and returned via @p out_colors so per-drawable
      * opacity edits after upload are re-transferred on dirty().
      *
      * @param geometry        Geometry to build.
      * @param opacity_carrier True when the built-in path drives per-drawable
      *                        opacity through the vertex-colour alpha (false
      *                        when a user program owns opacity).
+     * @param topology        Primitive topology the geometry is drawn with:
+     *                        automatic normal derivation runs for Triangles
+     *                        only; Points / Lines fall back to authored
+     *                        normals or a constant default.
      * @param out_colors      Receives the per-vertex colour array the caller
      *                        keeps to drive opacity each frame (null when
      *                        @p opacity_carrier is false).
+     * @param extra_channels  Receives one entry per forwarded custom channel
+     *                        (location >= 3), in binding order after the three
+     *                        canonical arrays (ascending location).
      * @return Data commands node, or null when not buildable.
      */
     ::vsg::ref_ptr<::vsg::Commands> buildGeometryData(
         vine::raw_ptr<const vine::graphics::Geometry> geometry,
         bool opacity_carrier,
-        ::vsg::ref_ptr<::vsg::vec4Array>& out_colors);
+        vine::graphics::Topology topology,
+        ::vsg::ref_ptr<::vsg::vec4Array>& out_colors,
+        std::vector<VertexChannel>& extra_channels);
 
     /** @brief Builds (or rebuilds) the state wrapper around a data node.
      *
      * The wrapper is a vsg::StateGroup carrying the pipeline + descriptor-set
-     * binds for one (program, material, resolved-state) variant; @p data is
-     * attached as its child by the caller. Pipelines are resolved through the
-     * per-(slot, program) L1 ShaderSet cache and the per-variant L2 template
-     * cache, so repeated variants skip the configurator entirely.
+     * binds for one (program, material, resolved-state, vertex-layout) variant;
+     * @p data is attached as its child by the caller. Pipelines are resolved
+     * through the per-(program, layout) ShaderSet cache and the per-variant L2
+     * template cache, so repeated variants skip the configurator entirely. The
+     * forwarded custom channels (locations >= 3) are bound after the canonical
+     * three arrays and named vine_Attribute{location}.
      *
-     * @param data     The retained vertex-data node to wrap (non-null).
-     * @param material Bound material (may be null).
-     * @param state    Resolved render state the pipeline must honour.
-     * @param program  User shader program, or null for the built-in default.
+     * @param data           The retained vertex-data node to wrap (non-null).
+     * @param material       Bound material (may be null).
+     * @param state          Resolved render state the pipeline must honour.
+     * @param program        User shader program, or null for the built-in
+     *                       default.
+     * @param extra_channels Custom channels carried by @p data (locations >= 3),
+     *                       in binding order after the three canonical arrays.
      * @return State wrapper, or null when not buildable.
      */
     ::vsg::ref_ptr<::vsg::StateGroup> buildStateGroup(
         ::vsg::ref_ptr<::vsg::Node> data,
         vine::raw_ptr<vine::graphics::Material> material,
         const vine::graphics::ResolvedRenderState& state,
-        vine::raw_ptr<const vine::graphics::ShaderProgram> program);
+        vine::raw_ptr<const vine::graphics::ShaderProgram> program,
+        const std::vector<VertexChannel>& extra_channels);
 
     /** @brief Gets (and caches) the run-time compiled ShaderSet for a program.
      *
-     * Compiles the program's stages once per (program, slot) instead of once
-     * per geometry, so N geometry bound to the same program share a single
-     * glslang compile and ShaderSet. A compile/assembly failure is cached too
+     * Compiles the program's stages and assembles a ShaderSet once per
+     * (program, vertex layout) instead of once per geometry: N geometry bound
+     * to the same program AND carrying the same set of custom channels share a
+     * single glslang compile and ShaderSet. Besides the canonical
+     * vsg_Vertex/Normal/Color bindings (locations 0/1/2), the set declares one
+     * vine_Attribute{location} binding per forwarded custom channel, whose
+     * format follows its components. A compile/assembly failure is cached too
      * (null), so later geometry does not retry the failed compile each time.
      *
-     * @param program User program (non-null).
+     * @param program        User program (non-null).
+     * @param extra_channels Custom channels (locations >= 3) the set must
+     *                       declare, in binding order.
      * @return Compiled shader set, or null when it could not be built.
      */
     ::vsg::ref_ptr<::vsg::ShaderSet> getProgramShaderSet(
-        vine::raw_ptr<const vine::graphics::ShaderProgram> program);
+        vine::raw_ptr<const vine::graphics::ShaderProgram> program,
+        const std::vector<VertexChannel>& extra_channels);
 
     /** @brief Gets the material manager used to obtain Phong resources.
      *
@@ -207,25 +255,48 @@ class V_VSG_API SceneBridge {
     // instead of running a fresh configurator (diagnostic; see
     // variantReuseCount()).
     std::size_t variant_reuses_ = 0;
+    // Fresh glslang stage compiles started (L1a; diagnostic — see
+    // programStageCompileCount()).
+    std::size_t program_stage_compiles_ = 0;
     vine::raw_ptr<VsgMaterialManager> material_manager_ = nullptr;
     // Default manager used when the renderer does not inject one.
     VsgMaterialManager default_manager_;
     // Retained per-geometry nodes, keyed by geometry pointer for O(1) lookup.
     std::unordered_map<const vine::graphics::Geometry*, std::unique_ptr<Item>> cache_;
-    // Cached run-time compiled ShaderSet per user program (L1): every geometry
-    // bound to the same program shares one glslang compile + ShaderSet instead
-    // of recompiling per geometry. Keyed by raw pointer (program lifetime is
-    // guaranteed by the scene while in use; released with the bridge); the
-    // entry also stores the program content revision it was built from, so
-    // editing a retained program's GLSL (ShaderProgram::revision) rebuilds the
-    // compiled set instead of serving the stale one (D10).
+    // Geometries whose data was rejected (malformed attributes / out-of-range
+    // indices), keyed by the data revision they were rejected at. Kept so the
+    // rejection diagnostic prints once per revision instead of on every frame;
+    // a data revision change (or the geometry leaving the frame) clears it.
+    std::unordered_map<const vine::graphics::Geometry*, std::uint64_t> rejected_;
+    // Cached run-time compiled ShaderSet per (user program, vertex layout) (L1):
+    // every geometry bound to the same program with the SAME set of forwarded
+    // custom channels shares one glslang compile + ShaderSet instead of
+    // recompiling per geometry; a different custom-channel layout (or program)
+    // is its own entry. Keyed by a content hash; the entry stores the full
+    // (program, layout, program revision) key for collision-safe equality and
+    // so editing a retained program's GLSL (ShaderProgram::revision) rebuilds
+    // the compiled set instead of serving the stale one (D10).
     struct ProgramEntry
     {
+        const vine::graphics::ShaderProgram* program = nullptr;
+        std::uint64_t layout = 0;      // hash over the custom channels
         std::uint64_t revision = ~std::uint64_t{0};
         ::vsg::ref_ptr<::vsg::ShaderSet> shader_set;
     };
-    std::unordered_map<const vine::graphics::ShaderProgram*, ProgramEntry>
+    std::unordered_map<std::uint64_t, std::unique_ptr<ProgramEntry>>
         program_shader_sets_;
+    // Compiled SPIR-V stages per (user program, content revision) (L1a): the
+    // glslang pass runs ONCE per program content; every vertex layout of that
+    // program then shares these stages and only the ShaderSet assembly differs
+    // (L1b, program_shader_sets_). Editing a program bumps its revision and
+    // forces a fresh compile (D10).
+    struct StageEntry
+    {
+        std::uint64_t revision = ~std::uint64_t{0};
+        ::vsg::ShaderStages stages;
+    };
+    std::unordered_map<const vine::graphics::ShaderProgram*, StageEntry>
+        program_stages_;
     // Pipeline-template cache (L2), keyed by a content hash of the (program,
     // material, resolved-state) variant; the full key lives in VariantEntry
     // for collision-safe equality. The first geometry of a variant builds its
