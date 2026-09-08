@@ -1,0 +1,496 @@
+#include <gtest/gtest.h>
+
+#include <vine/graphics/Geometry.hpp>
+#include <vine/graphics/Material.hpp>
+#include <vine/graphics/RenderCommand.hpp>
+#include <vine/graphics/StateNode.hpp>
+#include <vine/vsg/SceneBridge.hpp>
+
+#include <vsg/commands/BindIndexBuffer.h>
+#include <vsg/commands/BindVertexBuffers.h>
+#include <vsg/commands/Commands.h>
+#include <vsg/commands/DrawIndexed.h>
+#include <vsg/core/Array.h>
+#include <vsg/io/Options.h>
+#include <vsg/nodes/Group.h>
+#include <vsg/utils/ShaderSet.h>
+
+#include <cmath>
+
+using namespace vine::graphics;
+using vine::math::Mat4d;
+
+namespace
+{
+
+/// Builds a shared float payload for an AttributeBuffer.
+std::shared_ptr<std::vector<float>> packedFloats(const std::vector<float>& floats)
+{
+    return std::make_shared<std::vector<float>>(floats);
+}
+
+/**
+ * @brief Builds a geometry whose location-0 buffer carries @p pos_floats with
+ * the given components stride (positions are never added through the Vec3
+ * convenience API so tests can drive arbitrary component counts).
+ */
+GeometryPtr makePackedGeometry(const std::vector<float>& pos_floats,
+                               std::uint32_t             pos_components,
+                               std::shared_ptr<vine::geometry::UInt32Array> indices = nullptr)
+{
+    auto geom = GeometryPtr(new Geometry());
+    AttributeBuffer buf;
+    buf.components = pos_components;
+    buf.data       = packedFloats(pos_floats);
+    geom->addBuffer(0, buf);
+    if (indices != nullptr) {
+        geom->setIndices(indices);
+    }
+    return geom;
+}
+
+/// Attaches a location-1 (normal) channel with the given components.
+void attachNormal(Geometry* geom, const std::vector<float>& floats, std::uint32_t components)
+{
+    AttributeBuffer buf;
+    buf.components = components;
+    buf.data       = packedFloats(floats);
+    geom->addBuffer(1, buf);
+}
+
+/// Finds the DrawIndexed command under a retained subtree.
+vsg::DrawIndexed* findDrawIndexed(vsg::Node* node)
+{
+    if (node == nullptr) {
+        return nullptr;
+    }
+    if (auto draw = node->cast<vsg::DrawIndexed>()) {
+        return draw;
+    }
+    if (auto commands = node->cast<vsg::Commands>()) {
+        for (const auto& child : commands->children) {
+            if (auto* hit = findDrawIndexed(child.get())) {
+                return hit;
+            }
+        }
+    }
+    if (auto group = node->cast<vsg::Group>()) {
+        for (const auto& child : group->children) {
+            if (auto* hit = findDrawIndexed(child.get())) {
+                return hit;
+            }
+        }
+    }
+    return nullptr;
+}
+
+/// Finds the vertex Data bound at binding @p binding under a retained subtree.
+vsg::Data* findBoundData(vsg::Node* node, std::size_t binding)
+{
+    if (node == nullptr) {
+        return nullptr;
+    }
+    if (auto bvb = node->cast<vsg::BindVertexBuffers>()) {
+        if (binding < bvb->arrays.size() && bvb->arrays[binding] != nullptr &&
+            bvb->arrays[binding]->data != nullptr) {
+            return bvb->arrays[binding]->data;
+        }
+        return nullptr;
+    }
+    if (auto commands = node->cast<vsg::Commands>()) {
+        for (const auto& child : commands->children) {
+            if (auto* hit = findBoundData(child.get(), binding)) {
+                return hit;
+            }
+        }
+    }
+    if (auto group = node->cast<vsg::Group>()) {
+        for (const auto& child : group->children) {
+            if (auto* hit = findBoundData(child.get(), binding)) {
+                return hit;
+            }
+        }
+    }
+    return nullptr;
+}
+
+/// Every normal in a retained subtree is finite (no NaN from derivation).
+bool normalsAreFinite(vsg::Node* node)
+{
+    auto* normals = findBoundData(node, 1u);
+    if (normals == nullptr) {
+        return false;
+    }
+    auto* arr = normals->cast<vsg::vec3Array>();
+    if (arr == nullptr) {
+        return false;
+    }
+    for (const auto& n : *arr) {
+        if (!std::isfinite(n.x) || !std::isfinite(n.y) || !std::isfinite(n.z)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/// The standard right-facing unit triangle (positions only, no normals).
+std::vector<float> triangleFloats(float x = 0.0f)
+{
+    return { x, 0.0f, 0.0f, x, 1.0f, 0.0f, x, 0.0f, 1.0f };
+}
+
+}  // namespace
+
+/**
+ * @brief Verifies the SceneBridge rejects vertex data that is unsafe to draw:
+ * malformed attribute strides or out-of-range indices must not reach the GPU
+ * (they would read OOB in the CPU normal derivation and validation-fault in
+ * DrawIndexed). The retained root stays empty for the rejected geometry.
+ */
+TEST(GeometrySafetyTest, OutOfRangeIndexRejectsGeometry)
+{
+    vine::vsg::SceneBridge bridge;
+    bridge.setShaderSet(vsg::createPhongShaderSet());
+    auto root     = vsg::Group::create();
+    auto material = MaterialPtr(new Material());
+
+    // One triangle's positions, but an index pointing past the 3rd vertex.
+    auto bad = makePackedGeometry(triangleFloats(), 3u,
+                                  std::make_shared<vine::geometry::UInt32Array>(
+                                      vine::geometry::UInt32Array{ 0u, 1u, 5u }));
+
+    std::vector<vsg::ref_ptr<vsg::Node>> created;
+    bridge.syncRenderCommands(std::vector<RenderCommand>{ RenderCommand(bad, material, Mat4d()) },
+                              root.get(), &created);
+
+    EXPECT_EQ(root->children.size(), 0u); // nothing drawable, nothing recorded
+    EXPECT_EQ(created.size(), 0u);
+}
+
+/**
+ * @brief An index count that is not a multiple of three has its trailing
+ * partial triangle dropped: the GPU draw count is clamped to whole triangles,
+ * so the CPU normal derivation and the draw agree (no partial primitive).
+ */
+TEST(GeometrySafetyTest, NonTriangleMultipleIndexCountIsDrawnVerbatim)
+{
+    vine::vsg::SceneBridge bridge;
+    bridge.setShaderSet(vsg::createPhongShaderSet());
+    auto root     = vsg::Group::create();
+    auto material = MaterialPtr(new Material());
+
+    // Two full triangles (6 vertices) + one stray trailing index.
+    std::vector<float> positions;
+    for (int i = 0; i < 6; ++i) {
+        const float x = static_cast<float>(i);
+        positions.push_back(x);
+        positions.push_back(0.0f);
+        positions.push_back(0.0f);
+    }
+    auto geom = makePackedGeometry(
+        positions, 3u,
+        std::make_shared<vine::geometry::UInt32Array>(
+            vine::geometry::UInt32Array{ 0u, 1u, 2u, 3u, 4u, 5u, 0u }));
+
+    std::vector<vsg::ref_ptr<vsg::Node>> created;
+    bridge.syncRenderCommands(std::vector<RenderCommand>{ RenderCommand(geom, material, Mat4d()) },
+                              root.get(), &created);
+
+    ASSERT_EQ(root->children.size(), 1u); // still drawable
+    auto* draw = findDrawIndexed(root.get());
+    ASSERT_NE(draw, nullptr);
+    // The index stream is drawn verbatim: a trailing partial triangle simply
+    // rasterises nothing, so no index is ever truncated by the data builder.
+    EXPECT_EQ(draw->indexCount, 7u);
+    EXPECT_TRUE(normalsAreFinite(root.get()));
+}
+
+/**
+ * @brief An index buffer too short for one triangle is still a legal no-op
+ * draw (a partial primitive rasterises nothing): the data path keeps it and
+ * never rejects on COUNT — only an out-of-range index rejects a geometry.
+ */
+TEST(GeometrySafetyTest, ShortIndexBufferStillDrawsNoOp)
+{
+    vine::vsg::SceneBridge bridge;
+    bridge.setShaderSet(vsg::createPhongShaderSet());
+    auto root     = vsg::Group::create();
+    auto material = MaterialPtr(new Material());
+
+    auto geom = makePackedGeometry(triangleFloats(), 3u,
+                                   std::make_shared<vine::geometry::UInt32Array>(
+                                       vine::geometry::UInt32Array{ 0u, 1u }));
+
+    std::vector<vsg::ref_ptr<vsg::Node>> created;
+    bridge.syncRenderCommands(std::vector<RenderCommand>{ RenderCommand(geom, material, Mat4d()) },
+                              root.get(), &created);
+
+    ASSERT_EQ(root->children.size(), 1u); // drawn (a no-op partial primitive)
+    auto* draw = findDrawIndexed(root.get());
+    ASSERT_NE(draw, nullptr);
+    EXPECT_EQ(draw->indexCount, 2u); // kept verbatim
+}
+
+/**
+ * @brief A vec4 position channel (components = 4) is unpacked with the 4-float
+ * stride and only its xyz used: the extra w must not shift the following
+ * vertex's position.
+ */
+TEST(GeometrySafetyTest, Vec4PositionUsesXyzSkipsW)
+{
+    vine::vsg::SceneBridge bridge;
+    bridge.setShaderSet(vsg::createPhongShaderSet());
+    auto root     = vsg::Group::create();
+    auto material = MaterialPtr(new Material());
+
+    // Three vec4 vertices: the w component (99/98/97) is large and distinct so
+    // any stride misread would corrupt the xyz read.
+    auto geom = makePackedGeometry(
+        { 1.0f, 2.0f, 3.0f, 99.0f,
+          4.0f, 5.0f, 6.0f, 98.0f,
+          7.0f, 8.0f, 9.0f, 97.0f },
+        4u,
+        std::make_shared<vine::geometry::UInt32Array>(
+            vine::geometry::UInt32Array{ 0u, 1u, 2u }));
+
+    std::vector<vsg::ref_ptr<vsg::Node>> created;
+    bridge.syncRenderCommands(std::vector<RenderCommand>{ RenderCommand(geom, material, Mat4d()) },
+                              root.get(), &created);
+
+    ASSERT_EQ(root->children.size(), 1u);
+    auto* positions = findBoundData(root.get(), 0u)->cast<vsg::vec3Array>();
+    ASSERT_NE(positions, nullptr);
+    ASSERT_EQ(positions->size(), 3u);
+    EXPECT_FLOAT_EQ((*positions)[0].x, 1.0f);
+    EXPECT_FLOAT_EQ((*positions)[0].y, 2.0f);
+    EXPECT_FLOAT_EQ((*positions)[0].z, 3.0f);
+    EXPECT_FLOAT_EQ((*positions)[1].x, 4.0f);
+    EXPECT_FLOAT_EQ((*positions)[1].y, 5.0f);
+    EXPECT_FLOAT_EQ((*positions)[1].z, 6.0f);
+    auto* draw = findDrawIndexed(root.get());
+    ASSERT_NE(draw, nullptr);
+    EXPECT_EQ(draw->indexCount, 3u);
+    EXPECT_TRUE(normalsAreFinite(root.get()));
+}
+
+/**
+ * @brief A position channel with fewer than three components (no xyz) is
+ * unusable and rejects the geometry instead of misreading it.
+ */
+TEST(GeometrySafetyTest, ShortPositionComponentsRejectGeometry)
+{
+    vine::vsg::SceneBridge bridge;
+    bridge.setShaderSet(vsg::createPhongShaderSet());
+    auto root     = vsg::Group::create();
+    auto material = MaterialPtr(new Material());
+
+    auto geom = makePackedGeometry({ 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f }, 2u);
+
+    std::vector<vsg::ref_ptr<vsg::Node>> created;
+    bridge.syncRenderCommands(std::vector<RenderCommand>{ RenderCommand(geom, material, Mat4d()) },
+                              root.get(), &created);
+
+    EXPECT_EQ(root->children.size(), 0u);
+}
+
+/**
+ * @brief A position payload whose size is not divisible by its components
+ * stride is rejected (it cannot be unpacked vertex-by-vertex).
+ */
+TEST(GeometrySafetyTest, UndivisiblePositionDataRejectsGeometry)
+{
+    vine::vsg::SceneBridge bridge;
+    bridge.setShaderSet(vsg::createPhongShaderSet());
+    auto root     = vsg::Group::create();
+    auto material = MaterialPtr(new Material());
+
+    // 8 floats with a 3-component stride: 2 complete vertices + 2 trailing.
+    auto geom = makePackedGeometry({ 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f }, 3u);
+
+    std::vector<vsg::ref_ptr<vsg::Node>> created;
+    bridge.syncRenderCommands(std::vector<RenderCommand>{ RenderCommand(geom, material, Mat4d()) },
+                              root.get(), &created);
+
+    EXPECT_EQ(root->children.size(), 0u);
+}
+
+/**
+ * @brief A vec4 normal channel is unpacked with the 4-float stride and only
+ * its xyz used (extra w skipped); the geometry still draws.
+ */
+TEST(GeometrySafetyTest, Vec4NormalSkipsW)
+{
+    vine::vsg::SceneBridge bridge;
+    bridge.setShaderSet(vsg::createPhongShaderSet());
+    auto root     = vsg::Group::create();
+    auto material = MaterialPtr(new Material());
+
+    auto geom = makePackedGeometry(triangleFloats(), 3u,
+                                   std::make_shared<vine::geometry::UInt32Array>(
+                                       vine::geometry::UInt32Array{ 0u, 1u, 2u }));
+    attachNormal(geom.get(),
+                 { 0.0f, 0.0f, 1.0f, 55.0f,
+                   0.0f, 0.0f, 1.0f, 55.0f,
+                   0.0f, 0.0f, 1.0f, 55.0f },
+                 4u);
+
+    std::vector<vsg::ref_ptr<vsg::Node>> created;
+    bridge.syncRenderCommands(std::vector<RenderCommand>{ RenderCommand(geom, material, Mat4d()) },
+                              root.get(), &created);
+
+    ASSERT_EQ(root->children.size(), 1u);
+    auto* normals = findBoundData(root.get(), 1u)->cast<vsg::vec3Array>();
+    ASSERT_NE(normals, nullptr);
+    ASSERT_EQ(normals->size(), 3u);
+    EXPECT_FLOAT_EQ((*normals)[0].x, 0.0f);
+    EXPECT_FLOAT_EQ((*normals)[0].y, 0.0f);
+    EXPECT_FLOAT_EQ((*normals)[0].z, 1.0f);
+    EXPECT_TRUE(normalsAreFinite(root.get()));
+}
+
+/**
+ * @brief A malformed OPTIONAL normal channel (non-divisible payload) is
+ * reported and ignored: the mesh still draws, deriving normals from positions.
+ */
+TEST(GeometrySafetyTest, MalformedOptionalNormalStillDraws)
+{
+    vine::vsg::SceneBridge bridge;
+    bridge.setShaderSet(vsg::createPhongShaderSet());
+    auto root     = vsg::Group::create();
+    auto material = MaterialPtr(new Material());
+
+    auto geom = makePackedGeometry(triangleFloats(), 3u,
+                                   std::make_shared<vine::geometry::UInt32Array>(
+                                       vine::geometry::UInt32Array{ 0u, 1u, 2u }));
+    // 5 floats with a 4-component stride is not divisible -> normal ignored.
+    attachNormal(geom.get(), { 0.0f, 0.0f, 1.0f, 0.0f, 0.0f }, 4u);
+
+    std::vector<vsg::ref_ptr<vsg::Node>> created;
+    bridge.syncRenderCommands(std::vector<RenderCommand>{ RenderCommand(geom, material, Mat4d()) },
+                              root.get(), &created);
+
+    ASSERT_EQ(root->children.size(), 1u);
+    EXPECT_TRUE(normalsAreFinite(root.get())); // derived, not NaN
+}
+
+/**
+ * @brief A too-short normal channel (components < 3, e.g. a UV misplaced on
+ * location 1) is ignored rather than killing the mesh; normals are derived.
+ */
+TEST(GeometrySafetyTest, ShortNormalChannelDerivesNormals)
+{
+    vine::vsg::SceneBridge bridge;
+    bridge.setShaderSet(vsg::createPhongShaderSet());
+    auto root     = vsg::Group::create();
+    auto material = MaterialPtr(new Material());
+
+    auto geom = makePackedGeometry(triangleFloats(), 3u,
+                                   std::make_shared<vine::geometry::UInt32Array>(
+                                       vine::geometry::UInt32Array{ 0u, 1u, 2u }));
+    attachNormal(geom.get(), { 0.1f, 0.2f, 0.1f, 0.2f, 0.1f, 0.2f }, 2u);
+
+    std::vector<vsg::ref_ptr<vsg::Node>> created;
+    bridge.syncRenderCommands(std::vector<RenderCommand>{ RenderCommand(geom, material, Mat4d()) },
+                              root.get(), &created);
+
+    ASSERT_EQ(root->children.size(), 1u);
+    EXPECT_TRUE(normalsAreFinite(root.get())); // derived from positions
+}
+
+/**
+ * @brief A rejected geometry is only re-evaluated when its data revision
+ * changes (the rejection diagnostic is emitted once per revision, not every
+ * frame): after the indices are fixed the same geometry draws again.
+ */
+TEST(GeometrySafetyTest, FixedDataRevisionRebuildsRejectedGeometry)
+{
+    vine::vsg::SceneBridge bridge;
+    bridge.setShaderSet(vsg::createPhongShaderSet());
+    auto root     = vsg::Group::create();
+    auto material = MaterialPtr(new Material());
+
+    auto geom = makePackedGeometry(triangleFloats(), 3u,
+                                   std::make_shared<vine::geometry::UInt32Array>(
+                                       vine::geometry::UInt32Array{ 0u, 1u, 5u }));
+
+    std::vector<vsg::ref_ptr<vsg::Node>> created;
+    bridge.syncRenderCommands(std::vector<RenderCommand>{ RenderCommand(geom, material, Mat4d()) },
+                              root.get(), &created);
+    ASSERT_EQ(root->children.size(), 0u); // rejected on first sync
+
+    // Second frame, data unchanged: still rejected, no rebuild churn.
+    created.clear();
+    bridge.syncRenderCommands(std::vector<RenderCommand>{ RenderCommand(geom, material, Mat4d()) },
+                              root.get(), &created);
+    ASSERT_EQ(root->children.size(), 0u);
+    EXPECT_EQ(created.size(), 0u);
+
+    // Fix the indices (bumps the revision): the geometry is rebuilt and drawn.
+    geom->setIndices(vine::geometry::UInt32Array{ 0u, 1u, 2u });
+    created.clear();
+    bridge.syncRenderCommands(std::vector<RenderCommand>{ RenderCommand(geom, material, Mat4d()) },
+                              root.get(), &created);
+    ASSERT_EQ(root->children.size(), 1u);
+    ASSERT_NE(findDrawIndexed(root.get()), nullptr);
+    EXPECT_EQ(findDrawIndexed(root.get())->indexCount, 3u);
+}
+
+/**
+ * @brief An indexed Topology::Points draw keeps EVERY index: the data builder
+ * must not truncate a point stream to whole triangles (a point needs only one
+ * index). Index count equals the source buffer length.
+ */
+TEST(GeometrySafetyTest, IndexedPointsKeepAllIndices)
+{
+    vine::vsg::SceneBridge bridge;
+    bridge.setShaderSet(vsg::createPhongShaderSet());
+    auto root     = vsg::Group::create();
+    auto material = MaterialPtr(new Material());
+
+    auto geom = makePackedGeometry(
+        triangleFloats(), 3u,
+        std::make_shared<vine::geometry::UInt32Array>(
+            vine::geometry::UInt32Array{ 0u, 1u, 2u, 0u, 1u, 2u, 0u }));
+
+    RenderCommand cmd(geom, material, Mat4d());
+    cmd.renderState.topology = Topology::Points;
+    std::vector<vsg::ref_ptr<vsg::Node>> created;
+    bridge.syncRenderCommands(std::vector<RenderCommand>{ cmd }, root.get(), &created);
+
+    ASSERT_EQ(root->children.size(), 1u);
+    auto* draw = findDrawIndexed(root.get());
+    ASSERT_NE(draw, nullptr);
+    EXPECT_EQ(draw->indexCount, 7u); // every point index kept
+    EXPECT_TRUE(normalsAreFinite(root.get())); // defaulted, not triangle-derived
+}
+
+/**
+ * @brief An indexed Topology::Lines draw keeps EVERY index (two indices per
+ * line); a 4-index line stream is never truncated to 3 by triangle rules.
+ */
+TEST(GeometrySafetyTest, IndexedLinesKeepAllIndices)
+{
+    vine::vsg::SceneBridge bridge;
+    bridge.setShaderSet(vsg::createPhongShaderSet());
+    auto root     = vsg::Group::create();
+    auto material = MaterialPtr(new Material());
+
+    // Four vertices -> indices {0,1,2,3} are two lines.
+    auto geom = makePackedGeometry(
+        { 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f, 0.0f },
+        3u,
+        std::make_shared<vine::geometry::UInt32Array>(
+            vine::geometry::UInt32Array{ 0u, 1u, 2u, 3u }));
+
+    RenderCommand cmd(geom, material, Mat4d());
+    cmd.renderState.topology = Topology::Lines;
+    std::vector<vsg::ref_ptr<vsg::Node>> created;
+    bridge.syncRenderCommands(std::vector<RenderCommand>{ cmd }, root.get(), &created);
+
+    ASSERT_EQ(root->children.size(), 1u);
+    auto* draw = findDrawIndexed(root.get());
+    ASSERT_NE(draw, nullptr);
+    EXPECT_EQ(draw->indexCount, 4u); // two full lines, nothing truncated
+    EXPECT_TRUE(normalsAreFinite(root.get())); // defaulted, not triangle-derived
+}
+
