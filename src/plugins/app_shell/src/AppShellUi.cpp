@@ -169,13 +169,84 @@ vine::intrusive_ptr<vine::graphics::MatrixTransform> addBox(vine::graphics::Grou
 }
 
 /**
- * @brief Builds the default demo scene: a single-pass feature showcase.
+ * @brief Builds the five-pointed-star point-sprite program.
  *
- * Exercises, in one window view, every recently landed graphics slice:
+ * One vertex input (position); the per-point colour is derived inside the
+ * vertex stage from the point's own position (HSV->RGB), and the fragment
+ * stage keeps the five outward spikes of a point sprite (gl_PointCoord,
+ * XGraph PointCloud.fs.glsl style). A POINT_LIST pipeline must write
+ * gl_PointSize or it trips VUID-VkGraphicsPipelineCreateInfo-topology-08773.
+ *
+ * @return Configured star program.
+ */
+vine::intrusive_ptr<vine::graphics::ShaderProgram> makeStarPointProgram()
+{
+    using vine::intrusive_ptr;
+    using vine::graphics::ShaderProgram;
+    using vine::graphics::ShaderStage;
+    using vine::graphics::ShaderStageType;
+
+    auto program = make_intrusive<ShaderProgram>();
+    program->setName(u8"star_sprite");
+    ShaderStage vs;
+    vs.type = ShaderStageType::Vertex;
+    vs.source = u8"#version 450\n"
+                u8"layout(push_constant) uniform PushConstants { mat4 projection; mat4 modelView; } pc;\n"
+                u8"layout(location = 0) in vec3 vsg_Vertex;\n"
+                u8"layout(location = 0) out vec4 vColor;\n"
+                // Small HSV->RGB helper so each point can carry its own
+                // rainbow colour without a colour attribute.
+                u8"vec3 hsv2rgb(vec3 c)\n"
+                u8"{\n"
+                u8"    vec3 p = abs(fract(c.xxx + vec3(0.0, 2.0 / 3.0, 1.0 / 3.0)) * 6.0 - 3.0);\n"
+                u8"    return c.z * mix(vec3(1.0), clamp(p - 1.0, 0.0, 1.0), c.y);\n"
+                u8"}\n"
+                u8"void main()\n"
+                u8"{\n"
+                u8"    gl_Position = pc.projection * pc.modelView * vec4(vsg_Vertex, 1.0);\n"
+                // A POINT_LIST pipeline must write gl_PointSize or it trips
+                // VUID-VkGraphicsPipelineCreateInfo-topology-08773. A large
+                // size leaves room for the procedural star shape in the FS.
+                u8"    gl_PointSize = 40.0;\n"
+                // Per-point colour: hue wraps around the point's angle,
+                // then shifts with height so stacked points differ.
+                u8"    float hue = 0.5 + 0.5 * atan(vsg_Vertex.z, vsg_Vertex.x) / 3.14159265;\n"
+                u8"    hue = fract(hue + vsg_Vertex.y * 0.35);\n"
+                u8"    vColor = vec4(hsv2rgb(vec3(hue, 0.85, 0.95)), 1.0);\n"
+                u8"}\n";
+    program->addStage(vs);
+    ShaderStage fs;
+    fs.type = ShaderStageType::Fragment;
+    fs.source = u8"#version 450\n"
+                u8"layout(location = 0) in vec4 vColor;\n"
+                u8"layout(location = 0) out vec4 outColor;\n"
+                u8"void main()\n"
+                u8"{\n"
+                // Centred point coordinates; keep the five outward spikes
+                // (radius follows sin(5 * angle), see XGraph
+                // PointCloud.fs.glsl), discard the rest of the square.
+                u8"    vec2 p = gl_PointCoord * 2.0 - vec2(1.0);\n"
+                u8"    if (dot(p, p) > sin(atan(p.y, p.x) * 5.0)) discard;\n"
+                u8"    outColor = vColor;\n"
+                u8"}\n";
+    program->addStage(fs);
+    return program;
+}
+
+/**
+ * @brief Builds the FORWARD feature-showcase scene (single-pass showcase).
+ *
+ * Shown when the demo pipeline preset is Forward (VINE_PIPELINE=forward). The
+ * DEFAULT demo uses Deferred with the opaque addDeferredDemoCubes scene,
+ * because the forward-only slices below would be overridden by the G-buffer
+ * geometry program. Exercises, in one window view, every forward graphics
+ * slice:
  *  - ground + lit box: MatrixTransform + Material (default Phong path)
  *  - StateNode{ PolygonMode::Line } box         -> per-subtree polygon state
  *  - StateNode{ CullMode::Back } box            -> per-subtree culling state
  *  - StateNode{ Topology::Points } + cyan user program point cloud
+ *  - StateNode{ Topology::Points } + star-sprite user program: rainbow
+ *    five-pointed stars (colour derived per point in the vertex stage)
  *  - Geometry::setProgram magenta box (runtime-compiled GLSL, official vsg
  *    "pc" projection/modelView contract)
  *  - nested MatrixTransform (world-matrix chain)
@@ -294,6 +365,40 @@ void addDemoCubes(vine::graphics::Scene* scene)
         mt->setName(u8"point_cloud_node");
         mt->setMatrix(vine::math::translate(Vec3d(-2.3, 0.75, -1.2)));
         mt->addChild(cloud);
+        state->addChild(mt);
+        root->addChild(state);
+    }
+
+    // --- Point cloud #2: StateNode{ Topology::Points } + star-sprite program --
+    // A second point-list demo: each point is drawn as a large five-pointed
+    // star sprite (procedural fragment shape via gl_PointCoord, XGraph
+    // PointCloud.fs.glsl style) whose colour is derived per point inside the
+    // vertex stage from the point's own position (no colour attribute needed).
+    {
+        auto program = makeStarPointProgram();
+
+        auto stars = make_intrusive<Geometry>();
+        stars->setName(u8"star_cloud");
+        vine::geometry::Vec3fArray points;
+        // Three stacked rings (a "some point geometry" showcase) with radius
+        // and height growing per ring.
+        for (int ring = 0; ring < 3; ++ring) {
+            const float r = 0.30f + 0.16f * static_cast<float>(ring);
+            const float y = -0.55f + 0.55f * static_cast<float>(ring);
+            for (int k = 0; k < 12; ++k) {
+                const float a = 6.2831853f * static_cast<float>(k) / 12.0f + static_cast<float>(ring);
+                points.emplace_back(r * std::cos(a), y, r * std::sin(a));
+            }
+        }
+        stars->setPositions(points);
+        stars->setProgram(program);
+
+        auto state = make_intrusive<StateNode>();
+        state->setTopology(vine::graphics::Topology::Points);
+        auto mt = make_intrusive<MatrixTransform>();
+        mt->setName(u8"star_cloud_node");
+        mt->setMatrix(vine::math::translate(Vec3d(2.05, 0.95, 0.1)));
+        mt->addChild(stars);
         state->addChild(mt);
         root->addChild(state);
     }
@@ -789,15 +894,171 @@ vine::intrusive_ptr<vine::graphics::RenderTarget> makeGbufferTarget()
 }
 
 /**
+ * @brief Adds a forward overlay over the Deferred main window (stars +
+ * translucent box).
+ *
+ * The Deferred G-buffer pass only bakes opaque content through one geometry
+ * program, so forward-only elements — the rainbow five-pointed star point
+ * cloud and the alpha-blended translucent box — are drawn by a separate
+ * forward pass STACKED over the deferred-lit window on the master camera
+ * (clear disabled -> on-top, depth-off style). They sit in open airspace over
+ * the opaque backdrop so the depth-less overdraw does not collide with the
+ * deferred geometry. Gated to the Deferred default demo; the Forward preset
+ * already renders them inside its own scene (addDemoCubes).
+ *
+ * @param render_control Render view whose engine receives the overlay pass.
+ */
+void addForwardOverlayDemo(gui::RenderControl* render_control)
+{
+    auto* engine = render_control->engine();
+    auto* camera = render_control->view() != nullptr ? render_control->view()->camera() : nullptr;
+    if (engine == nullptr || camera == nullptr) {
+        return;
+    }
+
+    using vine::intrusive_ptr;
+    using vine::graphics::BlendState;
+    using vine::graphics::Geometry;
+    using vine::graphics::Group;
+    using vine::graphics::MatrixTransform;
+    using vine::graphics::Scene;
+    using vine::graphics::StateNode;
+    using vine::graphics::Topology;
+    using vine::math::Vec3d;
+
+    auto overlay_root = make_intrusive<Group>();
+
+    // Translucent box (forward alpha blend over the opaque deferred backdrop).
+    {
+        auto state = make_intrusive<StateNode>();
+        BlendState blend;
+        blend.enabled = true;
+        blend.src = vine::graphics::BlendFactor::SrcAlpha;
+        blend.dst = vine::graphics::BlendFactor::OneMinusSrcAlpha;
+        state->setBlend(blend);
+
+        auto box = addBox(overlay_root.get(), vine::Colorf(1.0f, 0.25f, 0.25f, 1.0f), u8"translucent_overlay",
+                          Vec3d(0.0, 0.65, 1.9), Vec3d(0.55, 0.55, 0.55));
+        // On-top (depth-off) slots are lit by a pure ambient light: a WHITE
+        // ambient makes ambientColor == diffuse so the box shows its colour,
+        // and per-geometry opacity (0.5) drives the forward alpha blend.
+        if (auto* geometry = dynamic_cast<Geometry*>(box->children().front().get())) {
+            if (auto* material = geometry->material(); material != nullptr) {
+                material->setAmbient(vine::Colorf(1.0f, 1.0f, 1.0f, 1.0f));
+                material->setSpecular(vine::Colorf(0.0f, 0.0f, 0.0f, 1.0f));
+            }
+            geometry->setOpacity(0.5f);
+        }
+        state->addChild(box);
+        overlay_root->addChild(state);
+    }
+
+    // Rainbow five-pointed star point cloud (custom point-sprite program).
+    {
+        auto program = makeStarPointProgram();
+        auto stars   = make_intrusive<Geometry>();
+        stars->setName(u8"star_cloud_overlay");
+        vine::geometry::Vec3fArray points;
+        // Three stacked rings (radius and height growing per ring), identical
+        // layout to the forward showcase's star cloud.
+        for (int ring = 0; ring < 3; ++ring) {
+            const float r = 0.30f + 0.16f * static_cast<float>(ring);
+            const float y = -0.55f + 0.55f * static_cast<float>(ring);
+            for (int k = 0; k < 12; ++k) {
+                const float a = 6.2831853f * static_cast<float>(k) / 12.0f + static_cast<float>(ring);
+                points.emplace_back(r * std::cos(a), y, r * std::sin(a));
+            }
+        }
+        stars->setPositions(points);
+        stars->setProgram(program);
+
+        auto state = make_intrusive<StateNode>();
+        state->setTopology(Topology::Points);
+        auto mt = make_intrusive<MatrixTransform>();
+        mt->setName(u8"star_cloud_overlay_node");
+        // Elevated clear of the opaque stack's right side, so the depth-less
+        // overlay never collides with deferred geometry.
+        mt->setMatrix(vine::math::translate(Vec3d(2.0, 1.35, 0.1)));
+        mt->addChild(stars);
+        state->addChild(mt);
+        overlay_root->addChild(state);
+    }
+
+    auto overlay = make_intrusive<Scene>();
+    overlay->setRoot(overlay_root);
+    auto pass = make_intrusive<vine::graphics::RenderPass>();
+    pass->setName(u8"forward_overlay");
+    pass->setCamera(camera);
+    pass->setClearEnabled(false); // no clear -> on-top (depth-off) over the lit window
+    engine->addPass(pass, overlay, 40);
+}
+
+/**
+ * @brief Returns whether the demo should run the Deferred pipeline.
+ *
+ * The DEFAULT demo (no env) is now Deferred. VINE_PIPELINE=forward /
+ * forward_shadowed selects the forward preset (which shows the forward
+ * feature-showcase scene), deferred / deferred_shadowed forces Deferred, and
+ * the legacy VINE_VSG_DEFERRED_FULL alias is subsumed by the deferred default.
+ */
+bool demoUsesDeferred()
+{
+    if (const char* mode = std::getenv("VINE_PIPELINE"); mode != nullptr) {
+        return std::strcmp(mode, "deferred") == 0 || std::strcmp(mode, "deferred_shadowed") == 0;
+    }
+    return true; // default demo = Deferred
+}
+
+/**
+ * @brief Builds the DEFAULT (Deferred) demo scene: opaque material boxes only.
+ *
+ * The default demo pipeline is Deferred, whose G-buffer geometry pass writes
+ * albedo / normal / specular / view position through one geometry program.
+ * Only plain lit, OPAQUE material boxes belong here: translucent blending,
+ * polygon-line wireframes and custom per-drawable programs are forward-only
+ * features that a G-buffer pass would override or mis-light (they stay
+ * reachable under VINE_PIPELINE=forward via addDemoCubes).
+ *
+ * @param scene Scene to receive the content.
+ */
+void addDeferredDemoCubes(vine::graphics::Scene* scene)
+{
+    using vine::math::Vec3d;
+
+    auto root = vine::make_intrusive<vine::graphics::Group>();
+    scene->setRoot(root);
+
+    // Ground (like the forward scene) + a central stack and a ring of opaque
+    // coloured boxes at varied heights/positions so the lit result and the
+    // G-buffer previews (albedo / normal / position) have clear content.
+    addBox(root.get(), vine::Colorf(0.45f, 0.47f, 0.52f, 1.0f), u8"ground",
+           Vec3d(0.0, -0.05, 0.0), Vec3d(3.0, 0.05, 3.0));
+    addBox(root.get(), vine::Colorf(0.30f, 0.62f, 0.36f, 1.0f), u8"box_green",
+           Vec3d(0.0, 0.4, 0.0), Vec3d(0.5, 0.4, 0.5));
+    addBox(root.get(), vine::Colorf(0.90f, 0.30f, 0.25f, 1.0f), u8"box_red",
+           Vec3d(1.4, 0.35, 0.5), Vec3d(0.35, 0.35, 0.35));
+    addBox(root.get(), vine::Colorf(0.20f, 0.55f, 0.90f, 1.0f), u8"box_blue",
+           Vec3d(-1.4, 0.35, -0.5), Vec3d(0.35, 0.35, 0.35));
+    addBox(root.get(), vine::Colorf(0.95f, 0.72f, 0.15f, 1.0f), u8"box_gold",
+           Vec3d(-1.2, 0.3, 1.3), Vec3d(0.3, 0.3, 0.3));
+    // A tall pillar and a low slab for varied depth/position content.
+    addBox(root.get(), vine::Colorf(0.55f, 0.30f, 0.85f, 1.0f), u8"box_purple",
+           Vec3d(1.1, 0.95, -1.1), Vec3d(0.3, 0.95, 0.3));
+    addBox(root.get(), vine::Colorf(0.15f, 0.75f, 0.65f, 1.0f), u8"box_teal",
+           Vec3d(-1.6, 0.2, 0.9), Vec3d(0.5, 0.2, 0.3));
+}
+
+/**
  * @brief Assembles the main-window pipeline from the shared presets, plus an
  * axis-gizmo HUD overlay (env VINE_PIPELINE).
  *
  * Values: forward | deferred | forward_shadowed | deferred_shadowed. The
  * shadowed variants are placeholders (the shadow slice is not implemented, so
  * they assemble the same pipeline as their unshadowed counterpart). With no
- * env var the default is the FORWARD preset; set VINE_PIPELINE to switch the
- * showcase. Legacy VINE_VSG_DEFERRED_FULL is honoured as an alias for
- * deferred.
+ * env var the DEFAULT is now the DEFERRED preset (the default demo also draws
+ * the G-buffer's four colour attachments as small top-left previews); set
+ * VINE_PIPELINE=forward to switch to the forward feature-showcase scene. The
+ * legacy VINE_VSG_DEFERRED_FULL alias is subsumed by the deferred default.
  *
  * An axis gizmo mirroring the view camera is always added (configurable via
  * PipelineOptions::gizmo) and - together with any Deferred G-buffer - is kept
@@ -815,19 +1076,13 @@ void addDemoPipeline(gui::RenderControl* render_control)
         return;
     }
 
-    const char* mode = std::getenv("VINE_PIPELINE");
-    if (mode == nullptr && std::getenv("VINE_VSG_DEFERRED_FULL") != nullptr) {
-        mode = "deferred";
-    }
-
     using vine::graphics::PipelinePreset;
-    PipelinePreset preset = PipelinePreset::Forward;
-    if (mode != nullptr) {
-        if (std::strcmp(mode, "deferred") == 0 || std::strcmp(mode, "deferred_shadowed") == 0) {
-            preset = PipelinePreset::Deferred;
-        } else if (std::strcmp(mode, "forward_shadowed") == 0) {
-            preset = PipelinePreset::ForwardShadowed;
-        }
+    // Default demo preset = Deferred (see demoUsesDeferred); VINE_PIPELINE
+    // keeps forward available for the forward feature-showcase scene.
+    PipelinePreset preset = demoUsesDeferred() ? PipelinePreset::Deferred : PipelinePreset::Forward;
+    if (const char* override_mode = std::getenv("VINE_PIPELINE");
+        override_mode != nullptr && std::strcmp(override_mode, "forward_shadowed") == 0) {
+        preset = PipelinePreset::ForwardShadowed;
     }
 
     vine::graphics::RenderPipelineBuilder builder(engine);
@@ -844,6 +1099,25 @@ void addDemoPipeline(gui::RenderControl* render_control)
     auto pipeline = builder.build(preset, options);
     if (pipeline == nullptr) {
         return;
+    }
+
+    // Deferred preset: the builder's G-buffer pass published its MRT target
+    // as "GBuffer". Draw each colour attachment as a small top-left preview so
+    // the default demo shows the G-buffer alongside the lit window result
+    // (0 = albedo, 1 = view normal + shininess, 2 = specular, 3 = view pos).
+    if (preset == PipelinePreset::Deferred) {
+        const double dpr   = render_control->devicePixelRatio();
+        const int    pip_w = static_cast<int>(160.0 * dpr);
+        const int    pip_h = static_cast<int>(90.0 * dpr);
+        for (int attachment = 0; attachment < 4; ++attachment) {
+            auto preview = vine::make_intrusive<vine::graphics::ScreenPass>();
+            preview->setName(u8"gbuffer_preview");
+            preview->addInputName(u8"GBuffer");
+            preview->setSourceAttachment(attachment);
+            const int x = 8 + attachment * (pip_w + 8);
+            preview->setViewport(x, 8, pip_w, pip_h);
+            engine->addPass(preview, 120 + attachment);
+        }
     }
 
     // One creator-managed layout step keeps the (deferred) G-buffer and the
@@ -864,7 +1138,14 @@ AppShellDock buildAppShellDock(gui::MainWindow* wnd)
     // registered render backend (e.g. "vsg") by default.
     auto* render_control = new gui::RenderControl();
     manager->setCentralWidget(render_control);
-    addDemoCubes(render_control->view()->scene().get());
+    // Default demo = Deferred with an OPAQUE scene; VINE_PIPELINE=forward uses
+    // the forward feature-showcase scene (translucent / wireframe / custom
+    // point & star programs, which a G-buffer pass would override).
+    if (demoUsesDeferred()) {
+        addDeferredDemoCubes(render_control->view()->scene().get());
+    } else {
+        addDemoCubes(render_control->view()->scene().get());
+    }
     addDemoLighting(render_control);
     addOffscreenValidationPass(render_control);
     // Dev switch: VINE_VSG_SLOT_DEMO stacks a second (camera, content slot)
@@ -880,9 +1161,16 @@ AppShellDock buildAppShellDock(gui::MainWindow* wnd)
     // that reads the G-buffer and shows the lit result (S2a, A/B preview).
     addDeferredDemo(render_control);
     // Main window pipeline: env VINE_PIPELINE (forward | deferred |
-    // forward_shadowed | deferred_shadowed) selects a shared preset; default
-    // = Forward. An axis-gizmo HUD overlay rides on the built pipeline.
+    // forward_shadowed | deferred_shadowed) selects a shared preset; the
+    // DEFAULT is Deferred (demoUsesDeferred). An axis-gizmo HUD overlay rides
+    // on the built pipeline.
     addDemoPipeline(render_control);
+    // Default (Deferred) demo: a forward overlay pass stacks the star point
+    // cloud and the translucent box over the deferred-lit window (the
+    // G-buffer geometry pass only bakes opaque content).
+    if (demoUsesDeferred()) {
+        addForwardOverlayDemo(render_control);
+    }
     // Dev switch: setting VINE_SHADER_PRESET exercises the FlatShaded preset
     // through the whole engine/backend path (default = StandardPhong).
     if (std::getenv("VINE_SHADER_PRESET") != nullptr) {
