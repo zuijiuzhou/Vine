@@ -25,22 +25,12 @@
 
 #include "CommandCompleter.hpp"
 #include "CommandHistory.hpp"
+#include "Convert.hpp"
 
 V_APPFWGUI_NS_BEGIN
 
 namespace
 {
-
-QString toQString(const String& s)
-{
-    auto u16 = s.toUtf16();
-    return QString::fromStdU16String(u16);
-}
-
-String fromQString(const QString& qs)
-{
-    return String::fromUtf16((const char16_t*)qs.utf16(), qs.size());
-}
 
 QColor toQColor(const Color& c)
 {
@@ -334,14 +324,14 @@ void ConsolePanel::Impl::appendFormatted(ConsoleMessageType type, const String& 
 
     QTextCursor cursor(output->document());
     cursor.movePosition(QTextCursor::End);
-    cursor.insertText(toQString(text) + QStringLiteral("\n"), fmt);
+    cursor.insertText(Convert::toQString(text) + QStringLiteral("\n"), fmt);
     output->setTextCursor(cursor);
     output->ensureCursorVisible();
 }
 
 void ConsolePanel::Impl::onTextChanged()
 {
-    const String current = fromQString(input->text());
+    const String current = Convert::fromQString(input->text());
     if (current.empty())
     {
         // An empty prompt hides the popup; otherwise clearing the input after
@@ -366,10 +356,10 @@ void ConsolePanel::Impl::updateSuggest()
     for (const auto& entry : matches)
     {
         // VS Code-style "source: name", e.g. "app_shell: show_plugins".
-        QString text = toQString(entry.name);
+        QString text = Convert::toQString(entry.name);
         if (!entry.source.empty())
         {
-            text = toQString(entry.source) + QStringLiteral(": ") + text;
+            text = Convert::toQString(entry.source) + QStringLiteral(": ") + text;
         }
         if (!entry.aliases.empty())
         {
@@ -381,14 +371,14 @@ void ConsolePanel::Impl::updateSuggest()
                 {
                     aliases += QStringLiteral(", ");
                 }
-                aliases += toQString(alias);
+                aliases += Convert::toQString(alias);
                 first = false;
             }
             text += QStringLiteral(" (") + aliases + QStringLiteral(")");
         }
         if (!entry.description.empty())
         {
-            text += QStringLiteral("  ") + toQString(entry.description);
+            text += QStringLiteral("  ") + Convert::toQString(entry.description);
         }
         suggest->addItem(text);
     }
@@ -434,7 +424,7 @@ void ConsolePanel::Impl::onEscape()
 
 void ConsolePanel::Impl::onReturnPressed()
 {
-    String text = fromQString(input->text());
+    String text = Convert::fromQString(input->text());
     if (suggest->isVisible() && suggest->currentRow() >= 0
         && suggest->currentRow() < static_cast<int>(matches.size()))
     {
@@ -480,11 +470,11 @@ void ConsolePanel::Impl::onHistoryUp()
         suggest->setCurrentRow(row > 0 ? row - 1 : 0);
         return;
     }
-    const String current = fromQString(input->text());
+    const String current = Convert::fromQString(input->text());
     const String cmd     = history.previous(current);
     if (!cmd.empty())
     {
-        input->setText(toQString(cmd));
+        input->setText(Convert::toQString(cmd));
     }
 }
 
@@ -498,7 +488,7 @@ void ConsolePanel::Impl::onHistoryDown()
         return;
     }
     const String cmd = history.next();
-    input->setText(toQString(cmd));
+    input->setText(Convert::toQString(cmd));
 }
 
 void ConsolePanel::Impl::onTab()
@@ -510,7 +500,7 @@ void ConsolePanel::Impl::onTab()
     const int row = suggest->currentRow() >= 0 ? suggest->currentRow() : 0;
     if (row >= 0 && row < static_cast<int>(matches.size()))
     {
-        input->setText(toQString(matches[row].name));
+        input->setText(Convert::toQString(matches[row].name));
         input->setCursorPosition(input->text().size());
     }
 }

@@ -22,21 +22,12 @@
 #include <vine/appfw/Plugin.hpp>
 #include <vine/appfw/gui/UIElementData.hpp>
 
+#include "Convert.hpp"
+
 V_APPFWGUI_NS_BEGIN
 
 namespace
 {
-
-QString toQString(const String& s)
-{
-    return QString::fromStdU16String(s.toUtf16());
-}
-
-vine::String toVineString(const QString& s)
-{
-    const auto* u16 = s.utf16();
-    return vine::String::fromUtf16(reinterpret_cast<const char16_t*>(u16), s.size());
-}
 
 QString joinStrings(const std::vector<String>& list)
 {
@@ -46,7 +37,7 @@ QString joinStrings(const std::vector<String>& list)
         if (!first) {
             result += QStringLiteral(", ");
         }
-        result += toQString(s);
+        result += Convert::toQString(s);
         first = false;
     }
     return result.isEmpty() ? QStringLiteral("—") : result;
@@ -173,7 +164,7 @@ PluginManagerDialog::PluginManagerDialog(vine::appfw::PluginManager* manager)
     QObject::connect(closeBtn, &QPushButton::clicked, root, [root] { root->close(); });
 
     QObject::connect(data->list, &QListWidget::currentItemChanged, root, [this](QListWidgetItem* item, QListWidgetItem*) {
-        showDetail(item ? toVineString(item->data(Qt::UserRole).toString()) : vine::String{});
+        showDetail(item ? Convert::fromQString(item->data(Qt::UserRole).toString()) : vine::String{});
     });
 
     // Right-click menu: view a single plugin's detail / load / refresh.
@@ -192,7 +183,7 @@ PluginManagerDialog::PluginManagerDialog(vine::appfw::PluginManager* manager)
             if (item) {
                 data->list->setCurrentItem(item);
             }
-            showDetail(item ? toVineString(item->data(Qt::UserRole).toString()) : vine::String{});
+            showDetail(item ? Convert::fromQString(item->data(Qt::UserRole).toString()) : vine::String{});
         } else if (chosen == loadAction) {
             loadPlugin();
         } else if (chosen == refreshAction) {
@@ -219,7 +210,7 @@ void PluginManagerDialog::loadPlugin()
     if (file.isEmpty()) {
         return;
     }
-    data->manager->load(toVineString(file));
+    data->manager->load(Convert::fromQString(file));
     refresh();
 }
 
@@ -236,13 +227,13 @@ void PluginManagerDialog::refresh()
     int selectRow = -1;
     if (data->manager) {
         for (const auto& name : data->manager->names()) {
-            const QString display = toQString(name);
+            const QString display = Convert::toQString(name);
             auto*         item    = new QListWidgetItem(data->list);
             item->setData(Qt::UserRole, display);
             if (auto* plugin = data->manager->plugin(name)) {
                 const auto info = plugin->info();
                 if (!info.version.empty()) {
-                    item->setText(display + QStringLiteral("  v") + toQString(info.version));
+                    item->setText(display + QStringLiteral("  v") + Convert::toQString(info.version));
                 } else {
                     item->setText(display);
                 }
@@ -276,21 +267,21 @@ void PluginManagerDialog::showDetail(const vine::String& name)
     const auto info = plugin ? plugin->info() : vine::appfw::PluginInfo{};
     const auto path = data->manager->libraryPath(name);
 
-    data->nameLabel->setText(toQString(name));
-    data->versionLabel->setText(toQString(info.version));
-    data->vendorLabel->setText(toQString(info.vendor));
+    data->nameLabel->setText(Convert::toQString(name));
+    data->versionLabel->setText(Convert::toQString(info.version));
+    data->vendorLabel->setText(Convert::toQString(info.vendor));
     data->depLabel->setText(joinStrings(info.dependencies));
     data->pathLabel->setText(path.empty() ? QStringLiteral("—") : QString::fromStdString(path.string()));
-    data->descLabel->setText(toQString(info.description));
+    data->descLabel->setText(Convert::toQString(info.description));
 
     // Commands reported by the plugin.
     data->cmdTable->setRowCount(0);
     for (const auto& ci : data->manager->commandInfosForPlugin(name)) {
         const int row = data->cmdTable->rowCount();
         data->cmdTable->insertRow(row);
-        data->cmdTable->setItem(row, 0, new QTableWidgetItem(toQString(ci.name)));
-        data->cmdTable->setItem(row, 1, new QTableWidgetItem(toQString(ci.group)));
-        data->cmdTable->setItem(row, 2, new QTableWidgetItem(toQString(ci.description)));
+        data->cmdTable->setItem(row, 0, new QTableWidgetItem(Convert::toQString(ci.name)));
+        data->cmdTable->setItem(row, 1, new QTableWidgetItem(Convert::toQString(ci.group)));
+        data->cmdTable->setItem(row, 2, new QTableWidgetItem(Convert::toQString(ci.description)));
     }
 
     // Config items reported by the plugin.
@@ -301,9 +292,9 @@ void PluginManagerDialog::showDetail(const vine::String& name)
         }
         const int row = data->cfgTable->rowCount();
         data->cfgTable->insertRow(row);
-        data->cfgTable->setItem(row, 0, new QTableWidgetItem(toQString(item->key())));
-        data->cfgTable->setItem(row, 1, new QTableWidgetItem(toQString(item->label())));
-        data->cfgTable->setItem(row, 2, new QTableWidgetItem(toQString(item->description())));
+        data->cfgTable->setItem(row, 0, new QTableWidgetItem(Convert::toQString(item->key())));
+        data->cfgTable->setItem(row, 1, new QTableWidgetItem(Convert::toQString(item->label())));
+        data->cfgTable->setItem(row, 2, new QTableWidgetItem(Convert::toQString(item->description())));
     }
 
     data->stack->setCurrentIndex(1);

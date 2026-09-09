@@ -23,11 +23,6 @@ struct DPC : DockingPaneContainer {
     }
 };
 
-inline QString toQString(const String& s)
-{
-    return QString::fromUtf8(s.data(), static_cast<int>(s.size()));
-}
-
 using itype = DockingPaneContainer;
 
 struct DockPanel::Impl : public UIElementData {
@@ -79,7 +74,7 @@ void DockPanel::setTitle(const String& t)
     dptr()->title = t;
     auto* c       = impl<itype>();
     if (c)
-        DPC::setContainerName(c, toQString(t));
+        DPC::setContainerName(c, Convert::toQString(t));
 }
 
 String DockPanel::title() const
@@ -92,7 +87,7 @@ void DockPanel::setId(const String& i)
     dptr()->id = i;
     auto* c    = impl<itype>();
     if (c)
-        DPC::setContainerId(c, toQString(i));
+        DPC::setContainerId(c, Convert::toQString(i));
 }
 
 String DockPanel::id() const
@@ -137,9 +132,9 @@ void DockPanel::attach(UIObject* container)
 
     // Sync previously-set title and id
     if (!dptr()->title.empty())
-        DPC::setContainerName(dpc, toQString(dptr()->title));
+        DPC::setContainerName(dpc, Convert::toQString(dptr()->title));
     if (!dptr()->id.empty())
-        DPC::setContainerId(dpc, toQString(dptr()->id));
+        DPC::setContainerId(dpc, Convert::toQString(dptr()->id));
 
     // Install close callback via lambda — captures 'this' directly, no trampoline needed
     dpc->setCloseCallback([](DockingPaneContainer* c) -> bool {

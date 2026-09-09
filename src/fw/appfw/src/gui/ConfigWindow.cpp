@@ -21,21 +21,12 @@
 
 #include <vine/appfw/gui/UIElementData.hpp>
 
+#include "Convert.hpp"
+
 V_APPFWGUI_NS_BEGIN
 
 namespace
 {
-
-QString toQString(const String& s)
-{
-    auto u16 = s.toUtf16();
-    return QString::fromStdU16String(u16);
-}
-
-String fromQString(const QString& qs)
-{
-    return String::fromUtf16((const char16_t*)qs.utf16(), qs.size());
-}
 
 // Tab title: label > name > "General".
 String categoryTitle(const ConfigCategory* cat)
@@ -65,7 +56,7 @@ QWidget* makeEditorWidget(ConfigManager* config, const ConfigItem& item)
         auto* e = new QLineEdit();
         if (item.readOnly())
             e->setReadOnly(true);
-        QObject::connect(e, &QLineEdit::textChanged, [config, key](const QString& t) { config->setString(key, fromQString(t)); });
+        QObject::connect(e, &QLineEdit::textChanged, [config, key](const QString& t) { config->setString(key, Convert::fromQString(t)); });
         return e;
     }
     case ConfigItemType::Bool:
@@ -101,7 +92,7 @@ QWidget* makeEditorWidget(ConfigManager* config, const ConfigItem& item)
     {
         auto*      e       = new QComboBox();
         const auto choices = item.choices();
-        for (const auto& c : choices) e->addItem(toQString(c.description));
+        for (const auto& c : choices) e->addItem(Convert::toQString(c.description));
         QObject::connect(e, QOverload<int>::of(&QComboBox::currentIndexChanged), [config, key, choices](int idx) {
             if (idx < 0 || static_cast<size_t>(idx) >= choices.size())
                 return;
@@ -153,9 +144,9 @@ ConfigWindow::ConfigWindow(ConfigRegistry* registry, ConfigManager* config)
             const auto items = grp->items();
             if (items.empty())
                 continue; // Skip empty groups
-            auto* box = new QGroupBox(toQString(groupTitle(grp)));
+            auto* box = new QGroupBox(Convert::toQString(groupTitle(grp)));
             if (!grp->description().empty())
-                box->setToolTip(toQString(grp->description()));
+                box->setToolTip(Convert::toQString(grp->description()));
             auto* form = new QFormLayout(box);
             vlay->addWidget(box);
             for (const ConfigItem* item : items) {
@@ -163,9 +154,9 @@ ConfigWindow::ConfigWindow(ConfigRegistry* registry, ConfigManager* config)
                 data->editors.push_back(editor);
                 if (item->readOnly())
                     editor->setEnabled(false);
-                auto* label = new QLabel(toQString(item->label()));
+                auto* label = new QLabel(Convert::toQString(item->label()));
                 if (!item->description().empty())
-                    label->setToolTip(toQString(item->description()));
+                    label->setToolTip(Convert::toQString(item->description()));
                 form->addRow(label, editor);
                 has_item = true;
             }
@@ -175,9 +166,9 @@ ConfigWindow::ConfigWindow(ConfigRegistry* registry, ConfigManager* config)
             vlay->addWidget(tip);
         }
         scroll->setWidget(container);
-        tabs->addTab(scroll, toQString(categoryTitle(cat)));
+        tabs->addTab(scroll, Convert::toQString(categoryTitle(cat)));
         if (!cat->description().empty())
-            tabs->setTabToolTip(tabs->count() - 1, toQString(cat->description()));
+            tabs->setTabToolTip(tabs->count() - 1, Convert::toQString(cat->description()));
     }
 
     if (registry->categories().empty()) {
@@ -210,7 +201,7 @@ void ConfigWindow::refresh()
                 w->blockSignals(true);
                 switch (item->type()) {
                 case ConfigItemType::String:
-                    static_cast<QLineEdit*>(w)->setText(toQString(data->config->getString(key, item->hasDefault() ? item->defaultString() : String())));
+                    static_cast<QLineEdit*>(w)->setText(Convert::toQString(data->config->getString(key, item->hasDefault() ? item->defaultString() : String())));
                     break;
                 case ConfigItemType::Bool: static_cast<QCheckBox*>(w)->setChecked(data->config->getBool(key, item->hasDefault() && item->defaultBool())); break;
                 case ConfigItemType::Int: static_cast<QSpinBox*>(w)->setValue(data->config->getInt(key, item->hasDefault() ? item->defaultInt() : 0)); break;

@@ -77,4 +77,15 @@ DockFeatures Convert::toDockFeatures(QDockWidget::DockWidgetFeatures qfeatures)
     return features;
 }
 
+QString Convert::toQString(const String& s)
+{
+    auto u16 = s.toUtf16();
+    return QString::fromStdU16String(u16);
+}
+
+String Convert::fromQString(const QString& qs)
+{
+    return String::fromUtf16(reinterpret_cast<const char16_t*>(qs.utf16()), qs.size());
+}
+
 V_APPFWGUI_NS_END

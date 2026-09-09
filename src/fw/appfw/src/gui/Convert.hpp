@@ -2,6 +2,9 @@
 #include <QDockWidget>
 #include <QPoint>
 #include <QSize>
+#include <QString>
+
+#include <vine/String.hpp>
 
 #include <vine/appfw/gui/Gui.hpp>
 
@@ -20,6 +23,22 @@ class Convert {
 
     static QDockWidget::DockWidgetFeatures toQDockFeatures(DockFeatures features);
     static DockFeatures                    toDockFeatures(QDockWidget::DockWidgetFeatures qfeatures);
+
+    /**
+     * @brief Converts a framework string to a Qt string.
+     *
+     * @param s Framework string to convert.
+     * @return The equivalent Qt string.
+     */
+    static QString toQString(const String& s);
+
+    /**
+     * @brief Converts a Qt string to a framework string.
+     *
+     * @param qs Qt string to convert.
+     * @return The equivalent framework string.
+     */
+    static String fromQString(const QString& qs);
 };
 
 V_APPFWGUI_NS_END

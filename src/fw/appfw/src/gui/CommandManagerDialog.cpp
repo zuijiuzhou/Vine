@@ -11,17 +11,9 @@
 
 #include <vine/appfw/gui/UIElementData.hpp>
 
+#include "Convert.hpp"
+
 V_APPFWGUI_NS_BEGIN
-
-namespace
-{
-
-QString toQString(const String& s)
-{
-    return QString::fromStdU16String(s.toUtf16());
-}
-
-} // namespace
 
 V_OBJECT_META_IMPL(CommandManagerDialog, Window)
 
@@ -89,9 +81,9 @@ void CommandManagerDialog::refresh()
         const int row = data->table->rowCount();
         data->table->insertRow(row);
 
-        data->table->setItem(row, 0, new QTableWidgetItem(toQString(info.name)));
-        data->table->setItem(row, 1, new QTableWidgetItem(toQString(info.group)));
-        data->table->setItem(row, 2, new QTableWidgetItem(toQString(info.description)));
+        data->table->setItem(row, 0, new QTableWidgetItem(Convert::toQString(info.name)));
+        data->table->setItem(row, 1, new QTableWidgetItem(Convert::toQString(info.group)));
+        data->table->setItem(row, 2, new QTableWidgetItem(Convert::toQString(info.description)));
 
         QString aliases;
         bool    first = true;
@@ -99,7 +91,7 @@ void CommandManagerDialog::refresh()
             if (!first) {
                 aliases += QStringLiteral(", ");
             }
-            aliases += toQString(alias);
+            aliases += Convert::toQString(alias);
             first = false;
         }
         data->table->setItem(row, 3, new QTableWidgetItem(aliases));

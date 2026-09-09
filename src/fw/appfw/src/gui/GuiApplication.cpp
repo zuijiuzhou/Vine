@@ -66,43 +66,119 @@ namespace
 QPalette createDarkPalette()
 {
     QPalette pal;
-    pal.setColor(QPalette::Window, QColor(53, 53, 53));
-    pal.setColor(QPalette::WindowText, Qt::white);
-    pal.setColor(QPalette::Base, QColor(25, 25, 25));
-    pal.setColor(QPalette::AlternateBase, QColor(53, 53, 53));
-    pal.setColor(QPalette::ToolTipBase, QColor(53, 53, 53));
-    pal.setColor(QPalette::ToolTipText, Qt::white);
-    pal.setColor(QPalette::Text, Qt::white);
-    pal.setColor(QPalette::Button, QColor(53, 53, 53));
-    pal.setColor(QPalette::ButtonText, Qt::white);
-    pal.setColor(QPalette::BrightText, Qt::red);
-    pal.setColor(QPalette::Link, QColor(42, 130, 218));
-    pal.setColor(QPalette::Highlight, QColor(42, 130, 218));
-    pal.setColor(QPalette::HighlightedText, Qt::black);
+
+    // ------------------------ Active / Inactive (normal state) ------------------------
+    // *Window*: Generic window/panel background (e.g., main window, dialogs)
+    pal.setColor(QPalette::Window, QColor(43, 45, 48)); // very dark gray (bg)
+    // *WindowText*: Text on Window backgrounds (e.g., window title, labels)
+    pal.setColor(QPalette::WindowText, QColor(230, 230, 230)); // off-white
+
+    // *Base*: Background for text entry and item views (tables, lists, etc.)
+    pal.setColor(QPalette::Base, QColor(30, 31, 33)); // darker charcoals (very dark gray)
+    // *AlternateBase*: Alternate background for item views (odd/even rows)
+    pal.setColor(QPalette::AlternateBase, QColor(37, 39, 42)); // slightly lighter dark gray
+    // *Text*: Text on Base/AlternateBase (e.g., QTableWidgetItem text, QLineEdit text)
+    pal.setColor(QPalette::Text, QColor(225, 225, 225)); // almost white
+
+    // *Button*: Button and default control background (push buttons, checkboxes, etc.)
+    pal.setColor(QPalette::Button, QColor(55, 57, 61)); // dark gray
+    // *ButtonText*: Text on buttons/controls
+    pal.setColor(QPalette::ButtonText, QColor(230, 230, 230)); // off-white
+
+    // *Highlight*: Background for selected items or selected text
+    pal.setColor(QPalette::Highlight, QColor(45, 115, 190)); // steel blue (consistent across themes)
+    // *HighlightedText*: Text on Highlight (e.g., selected item text)
+    pal.setColor(QPalette::HighlightedText, Qt::white); // white for contrast on blue
+
+    // *ToolTipBase*: Tooltip background
+    pal.setColor(QPalette::ToolTipBase, QColor(52, 54, 58)); // dark gray
+    // *ToolTipText*: Tooltip text color
+    pal.setColor(QPalette::ToolTipText, QColor(240, 240, 240)); // nearly white
+
+    // *BrightText*: High-emphasis text (often error/warning text)
+    pal.setColor(QPalette::BrightText, QColor(255, 80, 80)); // bright red
+    // *Link*: Hyperlink text color
+    pal.setColor(QPalette::Link, QColor(80, 160, 225)); // bright blue-ish
+
+    // *Mid*: Mid-tone color, used for 3D elements (borders, separators, etc.)
+    pal.setColor(QPalette::Mid, QColor(90, 92, 96)); // mid gray
+
+    // ------------------------ Disabled state ------------------------
+    // Explicitly set the Disabled group for widgets enabled=false.
+    // *WindowText* when disabled (text on Window background)
+    pal.setColor(QPalette::Disabled, QPalette::WindowText, QColor(125, 127, 130));
+    // *Text* when disabled (text on Base/AlternateBase)
+    pal.setColor(QPalette::Disabled, QPalette::Text, QColor(125, 127, 130));
+    // *ButtonText* when disabled
+    pal.setColor(QPalette::Disabled, QPalette::ButtonText, QColor(135, 137, 140));
+
+    // *Base* when disabled (bg for disabled text controls or table cells)
+    pal.setColor(QPalette::Disabled, QPalette::Base, QColor(42, 44, 47));
+    // *AlternateBase* when disabled (usually same as Base for disabled)
+    pal.setColor(QPalette::Disabled, QPalette::AlternateBase, QColor(42, 44, 47));
+    // *Button* when disabled (bg for disabled buttons)
+    pal.setColor(QPalette::Disabled, QPalette::Button, QColor(48, 50, 53));
+    // *Highlight* when disabled (selection bg in disabled state)
+    pal.setColor(QPalette::Disabled, QPalette::Highlight, QColor(65, 80, 95));
+    // *HighlightedText* when disabled (text on disabled highlight)
+    pal.setColor(QPalette::Disabled, QPalette::HighlightedText, QColor(160, 160, 160));
+
     return pal;
 }
 
 // Classic Fusion dark palette (matches the Qt >= 6.5 Fusion dark palette).
 QPalette createLightPalette()
 {
-    // Note: since Qt >= 6.5 the Fusion standard palette follows the system
-    // light/dark scheme, so style()->standardPalette() cannot be used directly
-    // as a light palette; it must be defined explicitly.
     QPalette pal;
-    pal.setColor(QPalette::Window, QColor(239, 239, 239));
-    pal.setColor(QPalette::WindowText, Qt::black);
-    pal.setColor(QPalette::Base, Qt::white);
-    pal.setColor(QPalette::AlternateBase, QColor(247, 247, 247));
-    pal.setColor(QPalette::ToolTipBase, QColor(255, 255, 220));
-    pal.setColor(QPalette::ToolTipText, Qt::black);
-    pal.setColor(QPalette::Text, Qt::black);
-    pal.setColor(QPalette::Button, QColor(239, 239, 239));
-    pal.setColor(QPalette::ButtonText, Qt::black);
-    pal.setColor(QPalette::BrightText, Qt::red);
-    pal.setColor(QPalette::Link, QColor(0, 0, 255));
-    pal.setColor(QPalette::Highlight, QColor(42, 130, 218));
-    pal.setColor(QPalette::HighlightedText, Qt::white);
-    pal.setColor(QPalette::Mid, QColor(160, 160, 160));
+
+    // ------------------------ Active / Inactive ------------------------
+    // *Window*: Generic window/panel background
+    pal.setColor(QPalette::Window, QColor(245, 245, 245)); // very light gray
+    // *WindowText*: Text on Window backgrounds
+    pal.setColor(QPalette::WindowText, QColor(35, 35, 35)); // near-black gray
+
+    // *Base*: Background for text entry and item views
+    pal.setColor(QPalette::Base, QColor(255, 255, 255)); // white
+    // *AlternateBase*: Alternate background (e.g., odd rows)
+    pal.setColor(QPalette::AlternateBase, QColor(248, 248, 248)); // very light gray
+    // *Text*: Text on Base/AlternateBase
+    pal.setColor(QPalette::Text, QColor(35, 35, 35)); // near-black gray
+
+    // *Button*: Button and control background
+    pal.setColor(QPalette::Button, QColor(238, 238, 238)); // light gray
+    // *ButtonText*: Text on buttons/controls
+    pal.setColor(QPalette::ButtonText, QColor(35, 35, 35)); // near-black
+
+    // *Highlight*: Background for selections
+    pal.setColor(QPalette::Highlight, QColor(45, 115, 190)); // same steel blue
+    // *HighlightedText*: Text on Highlight
+    pal.setColor(QPalette::HighlightedText, Qt::white); // white
+
+    // *ToolTipBase*: Tooltip background
+    pal.setColor(QPalette::ToolTipBase, QColor(255, 255, 225)); // pale yellow
+    // *ToolTipText*: Tooltip text
+    pal.setColor(QPalette::ToolTipText, QColor(35, 35, 35)); // near-black
+
+    // *BrightText*: High-emphasis text
+    pal.setColor(QPalette::BrightText, QColor(200, 40, 40)); // dark red
+    // *Link*: Hyperlink text color
+    pal.setColor(QPalette::Link, QColor(0, 100, 190)); // blue
+
+    // *Mid*: Mid-tone (borders/separators)
+    pal.setColor(QPalette::Mid, QColor(170, 170, 170)); // medium gray
+
+    // ------------------------ Disabled state ------------------------
+    pal.setColor(QPalette::Disabled, QPalette::WindowText, QColor(155, 155, 155));
+    pal.setColor(QPalette::Disabled, QPalette::Text, QColor(155, 155, 155));
+    pal.setColor(QPalette::Disabled, QPalette::ButtonText, QColor(150, 150, 150));
+
+    pal.setColor(QPalette::Disabled, QPalette::Base, QColor(238, 238, 238));
+    pal.setColor(QPalette::Disabled, QPalette::AlternateBase, QColor(238, 238, 238));
+    pal.setColor(QPalette::Disabled, QPalette::Button, QColor(232, 232, 232));
+
+    pal.setColor(QPalette::Disabled, QPalette::Highlight, QColor(190, 200, 210));
+    pal.setColor(QPalette::Disabled, QPalette::HighlightedText, QColor(120, 120, 120));
+
     return pal;
 }
 

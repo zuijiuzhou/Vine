@@ -5,23 +5,9 @@
 
 #include <vine/appfw/gui/UIElementData.hpp>
 
+#include "Convert.hpp"
+
 V_APPFWGUI_NS_BEGIN
-
-namespace
-{
-
-QString toQString(const String& s)
-{
-    auto u16 = s.toUtf16();
-    return QString::fromStdU16String(u16);
-}
-
-String fromQString(const QString& qs)
-{
-    return String::fromUtf16((const char16_t*)qs.utf16(), qs.size());
-}
-
-} // namespace
 
 V_OBJECT_META_IMPL(Window, Control)
 
@@ -39,13 +25,13 @@ Window::~Window()
 void Window::setWindowTitle(const String& t)
 {
     if (auto* w = impl<QWidget>())
-        w->setWindowTitle(toQString(t));
+        w->setWindowTitle(Convert::toQString(t));
 }
 
 String Window::windowTitle() const
 {
     auto* w = impl<QWidget>();
-    return w ? fromQString(w->windowTitle()) : String();
+    return w ? Convert::fromQString(w->windowTitle()) : String();
 }
 
 void Window::setModal(bool on)

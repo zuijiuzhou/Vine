@@ -7,17 +7,9 @@
 
 #include <vine/appfw/gui/UIElementData.hpp>
 
+#include "Convert.hpp"
+
 V_APPFWGUI_NS_BEGIN
-
-namespace
-{
-
-QString toQString(const String& s)
-{
-    return QString::fromStdU16String(s.toUtf16());
-}
-
-} // namespace
 
 V_OBJECT_META_IMPL(AboutDialog, Window)
 
@@ -117,16 +109,16 @@ void AboutDialog::applyContent()
 {
     auto* data = dptr();
     if (data->name_label) {
-        data->name_label->setText(toQString(data->app_name));
+        data->name_label->setText(Convert::toQString(data->app_name));
     }
     if (data->version_label) {
-        data->version_label->setText(toQString(data->version));
+        data->version_label->setText(Convert::toQString(data->version));
     }
     if (data->description_label) {
-        data->description_label->setText(toQString(data->description));
+        data->description_label->setText(Convert::toQString(data->description));
     }
     if (data->copyright_label) {
-        data->copyright_label->setText(toQString(data->copyright));
+        data->copyright_label->setText(Convert::toQString(data->copyright));
     }
 }
 
