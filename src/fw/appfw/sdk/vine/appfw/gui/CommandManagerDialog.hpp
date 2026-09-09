@@ -7,8 +7,9 @@
 V_APPFWGUI_NS_BEGIN
 
 /**
- * @brief Command manager dialog: lists registered commands (name, group,
- * description, aliases) with a filter, and allows unregistering a command.
+ * @brief Command manager dialog: lists registered commands (name, aliases,
+ * source plugin, group, description) with a filter, and allows unregistering
+ * a command.
  */
 class V_APPFW_API CommandManagerDialog : public Window {
     V_OBJECT_META_DECL;

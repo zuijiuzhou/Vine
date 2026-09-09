@@ -35,11 +35,11 @@ CommandManagerDialog::CommandManagerDialog(vine::appfw::CommandManager* manager)
     auto* lay = new QVBoxLayout(root);
 
     data->filter = new QLineEdit(root);
-    data->filter->setPlaceholderText(QStringLiteral("筛选名称 / 分组 / 描述 / 别名…"));
+    data->filter->setPlaceholderText(QStringLiteral("筛选名称 / 别名 / 来源插件 / 分组 / 描述…"));
     lay->addWidget(data->filter);
 
-    data->table = new QTableWidget(0, 4, root);
-    data->table->setHorizontalHeaderLabels({ QStringLiteral("名称"), QStringLiteral("分组"), QStringLiteral("描述"), QStringLiteral("别名") });
+    data->table = new QTableWidget(0, 5, root);
+    data->table->setHorizontalHeaderLabels({ QStringLiteral("名称"), QStringLiteral("别名"), QStringLiteral("来源插件"), QStringLiteral("分组"), QStringLiteral("描述") });
     data->table->horizontalHeader()->setStretchLastSection(true);
     data->table->setSelectionBehavior(QAbstractItemView::SelectRows);
     data->table->setSelectionMode(QAbstractItemView::SingleSelection);
@@ -82,8 +82,6 @@ void CommandManagerDialog::refresh()
         data->table->insertRow(row);
 
         data->table->setItem(row, 0, new QTableWidgetItem(Convert::toQString(info.name)));
-        data->table->setItem(row, 1, new QTableWidgetItem(Convert::toQString(info.group)));
-        data->table->setItem(row, 2, new QTableWidgetItem(Convert::toQString(info.description)));
 
         QString aliases;
         bool    first = true;
@@ -94,7 +92,12 @@ void CommandManagerDialog::refresh()
             aliases += Convert::toQString(alias);
             first = false;
         }
-        data->table->setItem(row, 3, new QTableWidgetItem(aliases));
+        data->table->setItem(row, 1, new QTableWidgetItem(aliases));
+
+        const QString owner = info.owner.empty() ? QStringLiteral("主机") : Convert::toQString(info.owner);
+        data->table->setItem(row, 2, new QTableWidgetItem(owner));
+        data->table->setItem(row, 3, new QTableWidgetItem(Convert::toQString(info.group)));
+        data->table->setItem(row, 4, new QTableWidgetItem(Convert::toQString(info.description)));
     }
 
     applyFilter();
