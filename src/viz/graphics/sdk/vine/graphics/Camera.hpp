@@ -1,8 +1,6 @@
 ﻿#pragma once
 #include "graphics_global.hpp"
 
-#include "Ray.hpp"
-
 #include <vine/Object.hpp>
 #include <vine/RefCounted.hpp>
 #include <vine/String.hpp>
@@ -10,6 +8,8 @@
 #include <vine/math/Matrix4x4.hpp>
 #include <vine/math/Vector2.hpp>
 #include <vine/math/Vector3.hpp>
+
+#include "Ray.hpp"
 
 V_GRAPHICS_NS_BEGIN
 

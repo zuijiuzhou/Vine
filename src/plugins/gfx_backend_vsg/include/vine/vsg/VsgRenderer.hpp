@@ -1,11 +1,11 @@
 ﻿#pragma once
 #include "vsg_global.hpp"
 
-#include <vine/graphics/RenderBackend.hpp>
-#include <vine/raw_ptr.hpp>
-
 #include <vsg/app/Viewer.h>
 #include <vsg/core/ref_ptr.h>
+
+#include <vine/graphics/RenderBackend.hpp>
+#include <vine/raw_ptr.hpp>
 
 namespace vine::graphics
 {

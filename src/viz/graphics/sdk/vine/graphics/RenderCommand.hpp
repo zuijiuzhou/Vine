@@ -1,13 +1,14 @@
 ﻿#pragma once
 #include "graphics_global.hpp"
-#include "Geometry.hpp"
-#include "Material.hpp"
-#include "ShaderProgram.hpp"
-#include "StateNode.hpp"
 
 #include <vine/intrusive_ptr.hpp>
 #include <vine/raw_ptr.hpp>
 #include <vine/math/Matrix4x4.hpp>
+
+#include "Geometry.hpp"
+#include "Material.hpp"
+#include "ShaderProgram.hpp"
+#include "StateNode.hpp"
 
 V_GRAPHICS_NS_BEGIN
 

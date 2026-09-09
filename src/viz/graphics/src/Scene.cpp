@@ -1,5 +1,8 @@
 ﻿#include <vine/graphics/Scene.hpp>
 
+#include <algorithm>
+#include <array>
+
 #include <vine/graphics/Camera.hpp>
 #include <vine/graphics/Geometry.hpp>
 #include <vine/graphics/Group.hpp>
@@ -7,9 +10,6 @@
 #include <vine/graphics/RenderCommand.hpp>
 #include <vine/graphics/StateNode.hpp>
 #include <vine/math/Transform3.hpp>
-
-#include <algorithm>
-#include <array>
 
 V_GRAPHICS_NS_BEGIN
 

@@ -1,10 +1,10 @@
 ﻿#pragma once
 #include "vsg_global.hpp"
 
-#include <vine/raw_ptr.hpp>
-
 #include <vsg/app/Camera.h>
 #include <vsg/core/ref_ptr.h>
+
+#include <vine/raw_ptr.hpp>
 
 namespace vine::graphics
 {

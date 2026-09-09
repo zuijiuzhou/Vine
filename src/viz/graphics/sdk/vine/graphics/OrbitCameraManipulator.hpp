@@ -1,8 +1,8 @@
 ﻿#pragma once
 
-#include "CameraManipulator.hpp"
-
 #include <vine/raw_ptr.hpp>
+
+#include "CameraManipulator.hpp"
 
 V_GRAPHICS_NS_BEGIN
 

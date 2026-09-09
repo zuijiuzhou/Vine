@@ -1,10 +1,10 @@
 ﻿#include <vine/vsg/CameraBridge.hpp>
 
-#include <vine/graphics/Camera.hpp>
-
 #include <vsg/app/ProjectionMatrix.h>
 #include <vsg/app/ViewMatrix.h>
 #include <vsg/maths/vec3.h>
+
+#include <vine/graphics/Camera.hpp>
 
 V_VSG_NS_BEGIN
 

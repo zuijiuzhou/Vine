@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include "vsg_global.hpp"
 
-#include <vine/graphics/StateNode.hpp>
+#include <algorithm>
 
 #include <vsg/state/ColorBlendState.h>
 #include <vsg/state/DepthStencilState.h>
@@ -10,7 +10,7 @@
 #include <vsg/state/RasterizationState.h>
 #include <vsg/utils/GraphicsPipelineConfigurator.h>
 
-#include <algorithm>
+#include <vine/graphics/StateNode.hpp>
 
 V_VSG_NS_BEGIN
 

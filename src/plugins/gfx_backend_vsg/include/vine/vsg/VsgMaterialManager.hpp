@@ -4,13 +4,11 @@
 #include <cstddef>
 #include <functional>
 
-#include <vine/graphics/MaterialManager.hpp>
-#include <vine/raw_ptr.hpp>
-
 #include <vsg/core/ref_ptr.h>
 #include <vsg/state/material.h>
 
-#include <map>
+#include <vine/graphics/MaterialManager.hpp>
+#include <vine/raw_ptr.hpp>
 
 namespace vine::graphics
 {

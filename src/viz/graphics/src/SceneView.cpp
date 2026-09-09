@@ -1,5 +1,7 @@
 ﻿#include <vine/graphics/SceneView.hpp>
 
+#include <utility>
+
 #include <vine/graphics/Camera.hpp>
 #include <vine/graphics/CameraManipulator.hpp>
 #include <vine/graphics/OrbitCameraManipulator.hpp>
@@ -8,11 +10,8 @@
 #include <vine/graphics/RenderPipeline.hpp>
 #include <vine/graphics/RenderPipelineBuilder.hpp>
 #include <vine/graphics/Scene.hpp>
-
 #include <vine/window/InputEvent.hpp>
 #include <vine/window/MouseButton.hpp>
-
-#include <utility>
 
 V_GRAPHICS_NS_BEGIN
 

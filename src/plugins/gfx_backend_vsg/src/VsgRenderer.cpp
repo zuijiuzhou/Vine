@@ -8,25 +8,12 @@
 #include <limits>
 #include <map>
 #include <string>
+#include <typeinfo>
 
 #if defined(__GNUG__)
 #    include <cxxabi.h>
 #endif
-#include <typeinfo>
 
-#include <vine/graphics/Camera.hpp>
-#include <vine/graphics/Geometry.hpp>
-#include <vine/graphics/Group.hpp>
-#include <vine/graphics/Light.hpp>
-#include <vine/graphics/Material.hpp>
-#include <vine/graphics/Node.hpp>
-#include <vine/graphics/RenderCommand.hpp>
-#include <vine/graphics/RenderPass.hpp>
-#include <vine/graphics/RenderTarget.hpp>
-#include <vine/graphics/ShaderProgram.hpp>
-#include <vine/vsg/CameraBridge.hpp>
-#include <vine/vsg/SceneBridge.hpp>
-#include <vine/vsg/VsgMaterialManager.hpp>
 #include <vsg/app/CommandGraph.h>
 #include <vsg/app/RenderGraph.h>
 #include <vsg/app/View.h>
@@ -69,6 +56,20 @@
 #include <vsg/vk/Framebuffer.h>
 #include <vsg/vk/RenderPass.h>
 #include <vsg/vk/ResourceRequirements.h>
+
+#include <vine/graphics/Camera.hpp>
+#include <vine/graphics/Geometry.hpp>
+#include <vine/graphics/Group.hpp>
+#include <vine/graphics/Light.hpp>
+#include <vine/graphics/Material.hpp>
+#include <vine/graphics/Node.hpp>
+#include <vine/graphics/RenderCommand.hpp>
+#include <vine/graphics/RenderPass.hpp>
+#include <vine/graphics/RenderTarget.hpp>
+#include <vine/graphics/ShaderProgram.hpp>
+#include <vine/vsg/CameraBridge.hpp>
+#include <vine/vsg/SceneBridge.hpp>
+#include <vine/vsg/VsgMaterialManager.hpp>
 
 #ifdef _WIN32
 #    ifndef NOMINMAX

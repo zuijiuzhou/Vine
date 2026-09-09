@@ -1,13 +1,13 @@
 ﻿#include <vine/vsg/SceneBridge.hpp>
 
-#include <vine/graphics/Geometry.hpp>
-#include <vine/graphics/Material.hpp>
-#include <vine/graphics/Node.hpp>
-#include <vine/graphics/RenderCommand.hpp>
-#include <vine/graphics/Scene.hpp>
-#include <vine/graphics/ShaderProgram.hpp>
-#include <vine/vsg/RenderStateMapper.hpp>
-#include <vine/vsg/VsgMaterialManager.hpp>
+#include <algorithm>
+#include <cmath>
+#include <cstdint>
+#include <cstdio>
+#include <string>
+#include <unordered_set>
+#include <utility>
+
 #include <vsg/commands/BindIndexBuffer.h>
 #include <vsg/commands/BindVertexBuffers.h>
 #include <vsg/commands/Commands.h>
@@ -28,15 +28,16 @@
 #include <vsg/utils/ShaderCompiler.h>
 #include <vsg/utils/ShaderSet.h>
 
-#include "VsgUtils.hpp"
+#include <vine/graphics/Geometry.hpp>
+#include <vine/graphics/Material.hpp>
+#include <vine/graphics/Node.hpp>
+#include <vine/graphics/RenderCommand.hpp>
+#include <vine/graphics/Scene.hpp>
+#include <vine/graphics/ShaderProgram.hpp>
+#include <vine/vsg/RenderStateMapper.hpp>
+#include <vine/vsg/VsgMaterialManager.hpp>
 
-#include <algorithm>
-#include <cmath>
-#include <cstdint>
-#include <cstdio>
-#include <string>
-#include <unordered_set>
-#include <utility>
+#include "VsgUtils.hpp"
 
 V_VSG_NS_BEGIN
 

@@ -1,14 +1,14 @@
 ﻿#pragma once
 #include "graphics_global.hpp"
 
+#include <cstddef>
+#include <cstdint>
+#include <vector>
+
 #include <vine/intrusive_ptr.hpp>
 #include <vine/Object.hpp>
 #include <vine/RefCounted.hpp>
 #include <vine/String.hpp>
-
-#include <cstddef>
-#include <cstdint>
-#include <vector>
 
 V_GRAPHICS_NS_BEGIN
 

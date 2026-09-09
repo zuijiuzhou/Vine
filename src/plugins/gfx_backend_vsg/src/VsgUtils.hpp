@@ -1,7 +1,8 @@
 ﻿#pragma once
 
-#include <vine/math/Matrix4x4.hpp>
 #include <vsg/maths/mat4.h>
+
+#include <vine/math/Matrix4x4.hpp>
 
 V_VSG_NS_BEGIN
 

@@ -1,13 +1,13 @@
 ﻿#pragma once
 #include "graphics_global.hpp"
 
+#include <functional>
+#include <vector>
+
 #include <vine/RefCounted.hpp>
 #include <vine/intrusive_ptr.hpp>
 #include <vine/raw_ptr.hpp>
 #include <vine/window/window_global.hpp>
-
-#include <functional>
-#include <vector>
 
 V_WINDOW_NS_BEGIN
 struct KeyEvent;

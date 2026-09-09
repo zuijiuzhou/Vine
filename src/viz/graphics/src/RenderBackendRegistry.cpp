@@ -1,9 +1,9 @@
 ﻿#include <vine/graphics/RenderBackendRegistry.hpp>
 
-#include <vine/graphics/RenderBackend.hpp>
-
 #include <map>
 #include <mutex>
+
+#include <vine/graphics/RenderBackend.hpp>
 
 V_GRAPHICS_NS_BEGIN
 

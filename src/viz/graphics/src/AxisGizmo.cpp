@@ -1,5 +1,8 @@
 ﻿#include <vine/graphics/AxisGizmo.hpp>
 
+#include <cstdint>
+#include <utility>
+
 #include <vine/Colorf.hpp>
 #include <vine/graphics/Camera.hpp>
 #include <vine/graphics/Geometry.hpp>
@@ -9,9 +12,6 @@
 #include <vine/graphics/RenderBackend.hpp>
 #include <vine/graphics/Scene.hpp>
 #include <vine/geometry/IndexedTriangleMesh.hpp>
-
-#include <cstdint>
-#include <utility>
 
 V_GRAPHICS_NS_BEGIN
 

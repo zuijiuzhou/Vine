@@ -1,16 +1,18 @@
 ﻿#pragma once
-#include "Node.hpp"
 #include "graphics_global.hpp"
 
-#include <vine/intrusive_ptr.hpp>
-#include <vine/raw_ptr.hpp>
-#include <vine/geometry/Array.hpp>
-#include <vine/geometry/Shape.hpp>
 #include <cstddef>
 #include <cstdint>
 #include <map>
 #include <memory>
 #include <vector>
+
+#include <vine/intrusive_ptr.hpp>
+#include <vine/raw_ptr.hpp>
+#include <vine/geometry/Array.hpp>
+#include <vine/geometry/Shape.hpp>
+
+#include "Node.hpp"
 
 V_GRAPHICS_NS_BEGIN
 

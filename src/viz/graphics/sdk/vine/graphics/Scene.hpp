@@ -1,12 +1,13 @@
 ﻿#pragma once
 #include "graphics_global.hpp"
 
+#include <vector>
+
 #include <vine/Object.hpp>
 #include <vine/RefCounted.hpp>
 #include <vine/intrusive_ptr.hpp>
 #include <vine/raw_ptr.hpp>
 #include <vine/String.hpp>
-#include <vector>
 
 #include "Light.hpp"
 #include "Node.hpp"

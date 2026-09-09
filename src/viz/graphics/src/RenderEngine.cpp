@@ -1,11 +1,11 @@
 ﻿#include <vine/graphics/RenderEngine.hpp>
 
+#include <algorithm>
+
 #include <vine/graphics/RenderBackend.hpp>
 #include <vine/graphics/RenderPass.hpp>
 #include <vine/graphics/RenderTarget.hpp>
 #include <vine/graphics/Scene.hpp>
-
-#include <algorithm>
 
 V_GRAPHICS_NS_BEGIN
 

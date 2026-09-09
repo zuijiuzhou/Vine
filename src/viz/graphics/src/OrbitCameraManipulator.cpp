@@ -1,5 +1,9 @@
 ﻿#include <vine/graphics/OrbitCameraManipulator.hpp>
 
+#include <algorithm>
+#include <cmath>
+#include <limits>
+
 #include <vine/graphics/Camera.hpp>
 #include <vine/graphics/Geometry.hpp>
 #include <vine/graphics/Ray.hpp>
@@ -7,10 +11,6 @@
 #include <vine/graphics/Scene.hpp>
 #include <vine/math/Point3.hpp>
 #include <vine/math/Math.hpp>
-
-#include <algorithm>
-#include <cmath>
-#include <limits>
 
 V_GRAPHICS_NS_BEGIN
 

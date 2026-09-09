@@ -1,12 +1,12 @@
 ﻿#pragma once
 #include "graphics_global.hpp"
 
+#include <chrono>
+#include <vector>
+
 #include <vine/Colorf.hpp>
 #include <vine/intrusive_ptr.hpp>
 #include <vine/raw_ptr.hpp>
-
-#include <chrono>
-#include <vector>
 
 #include "Material.hpp"
 #include "RenderPass.hpp"

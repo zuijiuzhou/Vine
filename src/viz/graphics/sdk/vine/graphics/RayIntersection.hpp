@@ -1,14 +1,16 @@
 ﻿#pragma once
 #include "graphics_global.hpp"
-#include "Ray.hpp"
+
+#include <limits>
+#include <vector>
 
 #include <vine/math/Vector3.hpp>
 #include <vine/math/Vector2.hpp>
 #include <vine/math/Matrix4x4.hpp>
 #include <vine/intrusive_ptr.hpp>
 #include <vine/raw_ptr.hpp>
-#include <vector>
-#include <limits>
+
+#include "Ray.hpp"
 
 V_GRAPHICS_NS_BEGIN
 

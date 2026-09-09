@@ -1,5 +1,8 @@
 ﻿#include <vine/graphics/RayIntersection.hpp>
 
+#include <algorithm>
+#include <utility>
+
 #include <vine/graphics/Geometry.hpp>
 #include <vine/graphics/Group.hpp>
 #include <vine/graphics/Node.hpp>
@@ -7,9 +10,6 @@
 #include <vine/geometry/IndexedTriangleMesh.hpp>
 #include <vine/geometry/TriangleMesh.hpp>
 #include <vine/math/Transform3.hpp>
-
-#include <algorithm>
-#include <utility>
 
 V_GRAPHICS_NS_BEGIN
 

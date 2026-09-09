@@ -1,8 +1,8 @@
 ﻿#include <vine/vsg/VsgMaterialManager.hpp>
 
-#include <vine/graphics/Material.hpp>
-
 #include <vsg/state/material.h>
+
+#include <vine/graphics/Material.hpp>
 
 V_VSG_NS_BEGIN
 

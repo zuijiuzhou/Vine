@@ -1,9 +1,6 @@
 ﻿#pragma once
 #include "graphics_global.hpp"
 
-#include "RenderPass.hpp"
-#include "ShaderPreset.hpp"
-
 #include <cstdint>
 #include <vector>
 
@@ -12,6 +9,9 @@
 #include <vine/RefCounted.hpp>
 #include <vine/intrusive_ptr.hpp>
 #include <vine/raw_ptr.hpp>
+
+#include "RenderPass.hpp"
+#include "ShaderPreset.hpp"
 
 V_GRAPHICS_NS_BEGIN
 

@@ -1,6 +1,11 @@
 ﻿#pragma once
 #include "vsg_global.hpp"
 
+#include <cstddef>
+#include <memory>
+#include <unordered_map>
+#include <vector>
+
 #include <vsg/commands/Commands.h>
 #include <vsg/nodes/Group.h>
 #include <vsg/nodes/Node.h>
@@ -10,10 +15,6 @@
 #include <vsg/utils/ShaderSet.h>
 #include <vsg/utils/SharedObjects.h>
 
-#include <cstddef>
-#include <memory>
-#include <unordered_map>
-#include <vector>
 #include <vine/raw_ptr.hpp>
 #include <vine/graphics/StateNode.hpp>
 #include <vine/vsg/VsgMaterialManager.hpp>

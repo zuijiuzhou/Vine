@@ -1,9 +1,9 @@
 ﻿#include <vine/graphics/StateNode.hpp>
 
+#include <vector>
+
 #include <vine/graphics/Geometry.hpp>
 #include <vine/graphics/ShaderProgram.hpp>
-
-#include <vector>
 
 V_GRAPHICS_NS_BEGIN
 
